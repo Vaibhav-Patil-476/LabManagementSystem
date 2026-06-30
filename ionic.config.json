@@ -1,0 +1,7 @@
+{
+  "name": "LabManagementSystem",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular-standalone"
+}
