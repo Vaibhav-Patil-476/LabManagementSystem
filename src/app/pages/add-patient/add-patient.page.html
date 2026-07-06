@@ -1,0 +1,483 @@
+<div class="ion-page">
+
+  <ion-header>
+    <ion-toolbar class="booking-header">
+      <ion-buttons slot="start">
+        <ion-back-button defaultHref="/dashboard" color="light"></ion-back-button>
+      </ion-buttons>
+      <ion-title>New Booking</ion-title>
+    </ion-toolbar>
+  </ion-header>
+
+  <ion-content class="booking-content">
+
+    <div class="last-patient-bar">
+      <span class="last-label">Last Patient:</span>
+      <span class="last-name">{{ lastPatient || '—' }}</span>
+    </div>
+
+    <div class="form-card">
+      <div class="form-card-title">Patient Information</div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 0 0 80px;">
+          <label>Title</label>
+          <div class="input-wrap">
+            <ion-select [(ngModel)]="patient.title" placeholder="." interface="popover">
+              <ion-select-option value="mr">Mr.</ion-select-option>
+              <ion-select-option value="mrs">Mrs.</ion-select-option>
+              <ion-select-option value="ms">Ms.</ion-select-option>
+              <ion-select-option value="dr">Dr.</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Patient Full Name <span class="required">*</span></label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Patient Full Name" [(ngModel)]="patient.name"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Age <span class="required">*</span></label>
+          <div class="input-wrap">
+            <ion-input type="number" placeholder="Age" [(ngModel)]="patient.age"></ion-input>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Age Type</label>
+          <div class="input-wrap">
+            <ion-select [(ngModel)]="patient.ageType" placeholder="Years" interface="popover">
+              <ion-select-option value="years">Years</ion-select-option>
+              <ion-select-option value="months">Months</ion-select-option>
+              <ion-select-option value="days">Days</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Gender</label>
+          <div class="input-wrap">
+            <ion-select [(ngModel)]="patient.gender" placeholder="Male" interface="popover">
+              <ion-select-option value="male">Male</ion-select-option>
+              <ion-select-option value="female">Female</ion-select-option>
+              <ion-select-option value="other">Other</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+      </div>
+
+      <!-- REF DOC — Title + Name + Add Button -->
+      <div class="input-row">
+        <div class="input-group" style="flex: 0 0 80px;">
+          <label>Title</label>
+          <div class="input-wrap">
+            <ion-select [(ngModel)]="patient.doctorTitle" placeholder="Dr." interface="popover">
+              <ion-select-option value="dr">Dr.</ion-select-option>
+              <ion-select-option value="mr">Mr.</ion-select-option>
+              <ion-select-option value="mrs">Mrs.</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>REF DOC. <span class="required">*</span></label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Doctor Name" [(ngModel)]="patient.doctor"></ion-input>
+          </div>
+        </div>
+        <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddDoctor()">
+          <ion-icon name="add-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <!-- LAB/HOS — Name + Add Button -->
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>LAB/HOS</label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Lab Name" [(ngModel)]="patient.lab"></ion-input>
+          </div>
+        </div>
+        <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddLab()">
+          <ion-icon name="add-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>DRAWN ON</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="drawnOn" readonly></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>MOB. NO.</label>
+          <div class="input-wrap phone-wrap">
+            <span class="phone-flag">🇮🇳 +91</span>
+            <ion-input type="tel" placeholder="Mobile Number" [(ngModel)]="patient.phone"></ion-input>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>AADHAAR NUMBER</label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Enter Aadhaar Number" [(ngModel)]="patient.aadhaar"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>ADDRESS</label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Enter Address" [(ngModel)]="patient.address"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>UHID</label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="UHID" [(ngModel)]="patient.uhid"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="checkbox-row">
+        <div class="check-item">
+          <ion-checkbox [(ngModel)]="patient.eReport"></ion-checkbox>
+          <span>E-REPORT</span>
+        </div>
+        <div class="check-item">
+          <ion-checkbox [(ngModel)]="patient.clinical"></ion-checkbox>
+          <span>CLINICAL</span>
+        </div>
+        <div class="check-item">
+          <ion-checkbox [(ngModel)]="patient.file"></ion-checkbox>
+          <span>FILE</span>
+        </div>
+        <div class="check-item">
+          <ion-checkbox [(ngModel)]="patient.homeCollection"></ion-checkbox>
+          <span>HOME-COLLECTION</span>
+        </div>
+      </div>
+
+      <div class="extra-field" *ngIf="patient.clinical">
+        <div class="input-group">
+          <label>HISTORY</label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Enter the Clinical History" [(ngModel)]="patient.history"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADD FILE — only if file checked -->
+      <div class="extra-field" *ngIf="patient.file">
+
+        <!-- Hidden file input -->
+        <input type="file" id="fileInput" style="display: none" accept="image/*,application/pdf"
+          (change)="onFileSelected($event)">
+
+        <!-- Upload Box -->
+        <div class="add-file-box" (click)="triggerFileInput()">
+          <ion-icon name="attach-outline"></ion-icon>
+          <span>{{ selectedFileName || 'Add File' }}</span>
+        </div>
+
+        <!-- Preview — jar file select zali tar -->
+        <div class="file-preview" *ngIf="selectedFileName">
+          <ion-icon name="document-outline" color="primary"></ion-icon>
+          <span class="file-name">{{ selectedFileName }}</span>
+          <ion-button fill="clear" color="danger" size="small" (click)="removeFile()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+      </div>
+
+      <div class="extra-field" *ngIf="patient.homeCollection">
+        <div class="input-group">
+          <label>HOME COLLECTION DATE</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="drawnOn" readonly></ion-input>
+            <ion-icon name="calendar-outline"></ion-icon>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card" style="margin-top: 12px;">
+      <div class="form-card-title">Search Test To Add into Bill</div>
+
+      <div class="input-wrap search-test-wrap">
+        <ion-icon name="search-outline"></ion-icon>
+        <ion-input type="text" placeholder="Search Test..." [(ngModel)]="testSearch"
+          (ionInput)="searchTest()"></ion-input>
+      </div>
+
+      <div class="test-suggestions" *ngIf="showSuggestions">
+        <div class="suggestion-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
+          <span>{{ test.name }}</span>
+          <span class="sug-price">₹{{ test.mrp }}</span>
+        </div>
+      </div>
+
+      <div class="test-table">
+        <div class="test-header">
+          <div>#</div>
+          <div>Test Name</div>
+          <div>B2B</div>
+          <div>TAT</div>
+          <div>MRP</div>
+          <div>Fluid</div>
+          <div>Action</div>
+        </div>
+
+        <div class="test-empty" *ngIf="selectedTests.length === 0">
+          No Tests selected
+        </div>
+
+        <div class="test-row" *ngFor="let t of selectedTests; let i = index">
+          <div>{{ i + 1 }}</div>
+          <div>{{ t.name }}</div>
+          <div>{{ t.b2b }}</div>
+          <div>{{ t.tat }}</div>
+          <div>₹{{ t.mrp }}</div>
+          <div>{{ t.fluid }}</div>
+          <div>
+            <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <div class="subtotal-row">
+          <span>Sub Total :</span>
+          <span class="subtotal-amount">₹{{ getSubTotal() }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="sample-card" [class.disabled]="selectedSampleTests.length === 0">
+      <div class="sample-header">
+        <div>Barcode</div>
+        <div>#</div>
+        <div>Sample Type</div>
+        <div>Test Name</div>
+      </div>
+
+      <div class="empty-box" *ngIf="selectedSampleTests.length === 0">
+        Select a test to show sample details
+      </div>
+
+      <div class="sample-row" *ngFor="let s of selectedSampleTests; let i = index">
+        <div class="barcode-box">
+          <ion-input type="text" placeholder="Enter barcode" [(ngModel)]="s.barcode"></ion-input>
+          <ion-button fill="clear" size="small" color="primary" (click)="scanBarcode(s)">
+            <ion-icon name="scan-outline"></ion-icon>
+          </ion-button>
+        </div>
+        <div><span class="sample-dot" [style.background]="s.color"></span></div>
+        <div>{{ s.sampleType }}</div>
+        <div>{{ s.testName }}</div>
+      </div>
+    </div>
+
+    <div class="action-buttons">
+      <ion-button expand="block" class="save-btn" (click)="savePatient()">
+        <ion-icon name="save-outline" slot="start"></ion-icon>
+        Save Booking
+      </ion-button>
+      <ion-button expand="block" fill="outline" class="cancel-btn" (click)="cancel()">
+        Cancel
+      </ion-button>
+    </div>
+
+  </ion-content>
+
+  <!-- ADD DOCTOR MODAL -->
+  <ion-modal [isOpen]="showAddDoctor" cssClass="doctor-popup">
+
+    <ng-template>
+
+      <div class="modal-page">
+
+        <div class="modal-header">
+          <h2>Select Doctor</h2>
+
+          <ion-button fill="clear" color="danger" (click)="showAddDoctor = false">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="modal-body">
+
+          <!-- ==========================
+             DOCTOR SEARCH / DROPDOWN
+        =========================== -->
+
+          <div class="input-group" style="margin-bottom:12px;">
+            <label>Select Doctor</label>
+
+            <div class="input-wrap">
+
+              <ion-select interface="popover" placeholder="Choose Doctor" [(ngModel)]="selectedDoctor"
+                (ionChange)="selectDoctor($event.detail.value)">
+
+                <ion-select-option *ngFor="let doc of doctors" [value]="doc">
+                  {{ doc.doctor_name }}
+                </ion-select-option>
+
+              </ion-select>
+
+            </div>
+          </div>
+
+          <!-- ==========================
+             SHOW SELECTED DOCTOR BOX
+        =========================== -->
+          <div *ngIf="selectedDoctor" class="selected-box"
+           >
+
+            
+          </div>
+
+          <!-- CLOSE BUTTON -->
+          <ion-button expand="block" class="modal-save-btn" (click)="showAddDoctor = false">
+
+            <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+
+            Done
+
+          </ion-button>
+
+        </div>
+
+      </div>
+
+    </ng-template>
+
+  </ion-modal>
+
+  <!-- ADD LAB MODAL -->
+<ion-modal [isOpen]="showAddLab" cssClass="lab-popup">
+  <ng-template>
+
+    <div class="modal-page">
+      <div class="modal-header">
+        <h2>Select Lab</h2>
+        <ion-button fill="clear" color="danger" (click)="showAddLab=false">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div class="modal-body">
+
+        <div class="input-group" style="margin-bottom:12px;">
+          <label>Select Lab</label>
+          <div class="input-wrap">
+            <ion-select interface="popover"
+              placeholder="Choose Lab"
+              [(ngModel)]="selectedLab"
+              (ionChange)="selectLab($event.detail.value)">
+
+              <ion-select-option *ngFor="let lab of labs" [value]="lab">
+                {{ lab.franchiseName || lab.name }}
+              </ion-select-option>
+
+            </ion-select>
+          </div>
+        </div>
+
+        <div *ngIf="selectedLab" class="selected-box"></div>
+
+        <ion-button expand="block" class="modal-save-btn" (click)="showAddLab = false">
+          <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+          Done
+        </ion-button>
+
+      </div>
+    </div>
+
+  </ng-template>
+</ion-modal>
+
+  <!-- INVOICE MODAL -->
+  <ion-modal [isOpen]="showInvoice" (didDismiss)="showInvoice = false">
+    <ng-template>
+      <div class="invoice-page">
+        <div class="invoice-header">
+          <h2>🧪 Lab Management</h2>
+          <p>Invoice / Bill</p>
+        </div>
+
+        <div class="invoice-body">
+          <div class="invoice-row">
+            <span>Patient Name</span>
+            <span>: {{ savedPatient?.name }}</span>
+          </div>
+          <div class="invoice-row">
+            <span>Ref. Doc</span>
+            <span>: {{ savedPatient?.doctor }}</span>
+          </div>
+          <div class="invoice-row">
+            <span>Bill Date</span>
+            <span>: {{ savedPatient?.bookingDate }}</span>
+          </div>
+          <div class="invoice-row">
+            <span>Booking ID</span>
+            <span>: {{ savedPatient?.id }}</span>
+          </div>
+          <div class="invoice-row">
+            <span>Mobile</span>
+            <span>: {{ savedPatient?.phone }}</span>
+          </div>
+        </div>
+
+     <div class="input-wrap">
+  <ion-input
+    placeholder="Search Test..."
+    [(ngModel)]="testSearch"
+    (ionInput)="searchTest()">
+  </ion-input>
+</div>
+
+<div *ngIf="showSuggestions">
+  <div *ngFor="let t of filteredTests" (click)="addTest(t)">
+    {{ t.testName || t.name }} - ₹{{ t.mrp }}
+  </div>
+</div>
+
+        <div class="invoice-totals">
+          <div class="inv-total-row">
+            <span>Sub Total</span>
+            <span>₹{{ savedPatient?.totalAmount }}</span>
+          </div>
+          <div class="inv-total-row">
+            <span>Discount</span>
+            <span>₹0</span>
+          </div>
+          <div class="inv-total-row grand">
+            <span>Grand Total</span>
+            <span>₹{{ savedPatient?.totalAmount }}</span>
+          </div>
+        </div>
+
+        <div class="invoice-actions">
+          <ion-button expand="block" class="print-btn" (click)="printInvoice()">
+            <ion-icon name="print-outline" slot="start"></ion-icon>
+            Print Bill
+          </ion-button>
+          <ion-button expand="block" fill="outline" class="close-btn" (click)="closeInvoice()">
+            Close & Go to Dashboard
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+</div>

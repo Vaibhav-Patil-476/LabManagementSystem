@@ -1,0 +1,253 @@
+<ion-menu contentId="main-content" side="start" menuId="main-menu">
+  <ion-content class="menu-content">
+
+    <div class="profile-section">
+      <div class="avatar-circle">
+        <ion-icon name="person-outline" class="avatar-icon"></ion-icon>
+      </div>
+
+      <h3 class="profile-name">{{ user.name }}</h3>
+      <p class="profile-role">{{ user.email }}</p>
+    </div>
+
+    <ion-list lines="none" class="menu-list">
+
+      <ion-item button (click)="goToProfile()">
+        <ion-icon name="person-outline" slot="start" color="primary"></ion-icon>
+        <ion-label>My Profile</ion-label>
+      </ion-item>
+
+      <ion-item button class="logout-item" (click)="logout()">
+        <ion-icon name="log-out-outline" slot="start" color="danger"></ion-icon>
+        <ion-label color="danger">Logout</ion-label>
+      </ion-item>
+
+    </ion-list>
+
+  </ion-content>
+</ion-menu>
+
+<div class="ion-page" id="main-content">
+
+  <ion-content class="dashboard-content">
+
+    <!-- Header -->
+    <div class="top-header">
+
+      <div class="greeting-left">
+
+        <div class="user-avatar">
+          <ion-icon name="person-outline"></ion-icon>
+        </div>
+
+        <div class="greeting-text">
+          <h2 class="greeting-name">
+            Hi, {{ user.name }} 👋
+          </h2>
+
+          <p class="greeting-sub">
+            {{ user.email }}
+          </p>
+        </div>
+
+      </div>
+
+      <div class="header-right">
+
+        <div class="notif-btn" (click)="goToNotifications()">
+          <ion-icon name="notifications-outline"></ion-icon>
+          <span class="notif-dot"></span>
+        </div>
+
+        <ion-menu-button menu="main-menu" class="avatar-menu-btn">
+          <div class="avatar-btn">
+            <ion-icon name="person-outline"></ion-icon>
+          </div>
+        </ion-menu-button>
+
+      </div>
+
+    </div>
+
+    <!-- 👇 DATE FILTER (Stats chya var tak) -->
+    <div class="date-filter-bar">
+
+      <input type="date" class="date-input" [(ngModel)]="filterDate" (ngModelChange)="onDateChange()" />
+
+      <button *ngIf="filterDate" class="clear-btn" (click)="clearFilter()">
+        Clear
+      </button>
+
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+      <!-- ...tuza ahe tasach thev... -->
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-grid">
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <ion-icon name="people-outline"></ion-icon>
+        </div>
+
+        <div class="stat-info">
+          <h1>{{ totalPatients }}</h1>
+          <h3>Patients</h3>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <ion-icon name="beaker-outline"></ion-icon>
+        </div>
+
+        <div class="stat-info">
+          <h1>{{ totalSamples }}</h1>
+          <h3>Samples</h3>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <ion-icon name="document-text-outline"></ion-icon>
+        </div>
+
+        <div class="stat-info">
+          <h1>{{ totalReports }}</h1>
+          <h3>Reports</h3>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon">
+          <ion-icon name="calendar-outline"></ion-icon>
+        </div>
+
+        <div class="stat-info">
+          <h1>{{ totalBookings }}</h1>
+          <h3>Bookings</h3>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Services -->
+
+    <div class="section-header">
+      <h3 class="section-title">Services</h3>
+      <span class="section-sub">Provide awesome services</span>
+    </div>
+
+    <div class="services-grid">
+
+      <div class="service-card" (click)="goToPage('add-patient')">
+        <div class="service-icon">
+          <ion-icon name="person-add-outline"></ion-icon>
+        </div>
+        <span class="service-name">Add Patient</span>
+      </div>
+
+      <div class="service-card" (click)="goToPage('booking-status')">
+        <div class="service-icon">
+          <ion-icon name="clipboard-outline"></ion-icon>
+        </div>
+        <span class="service-name">Booking Status</span>
+      </div>
+
+      <div class="service-card" (click)="goToPage('reports')">
+        <div class="service-icon">
+          <ion-icon name="download-outline"></ion-icon>
+        </div>
+        <span class="service-name">Download Reports</span>
+      </div>
+
+      <div class="service-card" (click)="goToPage('bookings')">
+        <div class="service-icon">
+          <ion-icon name="list-outline"></ion-icon>
+        </div>
+        <span class="service-name">Test List</span>
+      </div>
+
+      <div class="service-card" (click)="goToPage('samples')">
+        <div class="service-icon">
+          <ion-icon name="person-circle-outline"></ion-icon>
+        </div>
+        <span class="service-name">Profile List</span>
+      </div>
+
+      <div class="service-card" (click)="goToPage('outsource')">
+        <div class="service-icon">
+          <ion-icon name="time-outline"></ion-icon>
+        </div>
+        <span class="service-name">Client History</span>
+      </div>
+
+    </div>
+    <!-- Recent Bookings -->
+
+    <div class="section-header">
+      <h3 class="section-title">Recent Bookings</h3>
+    </div>
+
+    <div class="daily-table-card">
+
+      <div class="table-note">
+        Table shows Last 5 Days Data
+      </div>
+
+      <div class="daily-header">
+        Daily Bookings
+      </div>
+
+      <div class="daily-table">
+
+        <div class="table-head">
+          <div>Date</div>
+          <div>Bookings</div>
+          <div>Samples</div>
+          <div>Received</div>
+          <div>Pending</div>
+          <div>Rejected</div>
+          <div>Tests</div>
+          <div>Amount</div>
+        </div>
+
+        <div class="table-body" *ngFor="let item of dailyBookings">
+
+          <div>{{ item.date }}</div>
+          <div>{{ item.bookings }}</div>
+          <div>{{ item.samples }}</div>
+
+          <div class="ion-progress-bar">
+
+            {{ item.received }}/{{ item.samples }}
+          </div>
+
+          <div class="bar">
+
+            {{ item.pending }}/{{ item.samples }}
+          </div>
+
+          <div class="ion-progress-bar">
+
+            {{ item.rejected }}/{{ item.samples }}
+          </div>
+
+          <div>{{ item.tests }}</div>
+
+          <div>₹{{ item.amount }}</div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+
+  </ion-content>
+
+</div>

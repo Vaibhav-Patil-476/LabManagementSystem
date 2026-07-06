@@ -1,0 +1,38 @@
+<ion-header class="ion-no-border">
+  <ion-toolbar>
+
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>
+      Notifications
+    </ion-title>
+
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="notification-content">
+
+  <div class="empty-container">
+
+    <div class="circle">
+
+      <ion-icon name="notifications-off-outline">
+      </ion-icon>
+
+    </div>
+
+    <h2>No Notifications Right Now!</h2>
+
+    <p>
+      You're up-to-date! All updates will appear here.
+    </p>
+
+    <ion-button expand="block" (click)="goBack()">
+      Go Back
+    </ion-button>
+
+  </div>
+
+</ion-content>

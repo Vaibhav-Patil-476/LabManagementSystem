@@ -1,0 +1,1 @@
+{ "/auth": { "target": "https://dev.itlabspeed.com", "secure": true, "changeOrigin": true } } 

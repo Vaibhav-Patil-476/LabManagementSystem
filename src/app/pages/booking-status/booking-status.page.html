@@ -1,0 +1,419 @@
+<ion-header>
+  <ion-toolbar class="booking-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Booking Status</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="booking-content">
+
+  <div class="form-card">
+
+    <div class="form-card-title">Booking Status</div>
+
+    <div class="table-wrapper">
+      <table class="booking-table">
+        <thead>
+          <tr>
+            <th>Booking ID / Patient ID</th>
+            <th>Name</th>
+            <th>Tests</th>
+            <th>Client Code / Doctor</th>
+            <th>Samples</th>
+            <th>Barcode</th>
+            <th>Paid / Due</th>
+            <th>Reports</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of bookings; let i = index">
+            <td>{{ item.id }}</td>
+            <td>{{ item.title | titlecase }} {{ item.name }}</td>
+            <td>{{ getTests(item) }}</td>
+            <td>{{ item.doctor }}</td>
+            <td>{{ getSamples(item) }}</td>
+            <td>{{ getBarcode(i) }}</td>
+            <td>
+              <div class="paid-due-cell">
+                <span class="paid-amt">₹{{ item.paidAmount || 0 }}</span>
+                <span class="due-amt" [class.zero]="(item.dueAmount || 0) === 0">
+                  Due: ₹{{ item.dueAmount || 0 }}
+                </span>
+              </div>
+            </td>
+            <td><span class="status pending">Pending</span></td>
+            <td>
+              <div class="action-buttons">
+                <ion-button class="action-btn edit-test" size="small" (click)="editTest(item)">
+                  <ion-icon slot="icon-only" name="flask-outline"></ion-icon>
+                </ion-button>
+                <ion-button class="action-btn edit-patient" size="small" (click)="editPatient(item)">
+                  <ion-icon slot="icon-only" name="person-outline"></ion-icon>
+                </ion-button>
+                <ion-button class="action-btn print" size="small" (click)="printBill(item)">
+                  <ion-icon slot="icon-only" name="print-outline"></ion-icon>
+                </ion-button>
+              </div>
+            </td>
+          </tr>
+
+          <tr *ngIf="bookings.length === 0">
+            <td colspan="9" class="empty-row">No Booking Found</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ===================== EDIT TEST MODAL ===================== -->
+  <ion-modal [isOpen]="isTestModalOpen" (didDismiss)="closeTestModal()" class="test-modal">
+    <ng-template>
+
+      <div class="test-modal-wrapper">
+
+        <ion-button class="close-modal-btn" (click)="closeTestModal()">
+          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+        </ion-button>
+
+        <!-- BOOKING INFO -->
+        <div class="booking-info-header">
+          <div class="booking-time">
+            Booking Time: {{ selectedBooking?.bookingDate || 'N/A' }}
+          </div>
+
+          <div class="info-grid">
+            <div class="info-col">
+              <div class="info-row">
+                <span class="info-label">Booking ID</span>
+                <span class="info-value">{{ selectedBooking?.id }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Patient Name</span>
+                <span class="info-value">{{ selectedBooking?.name | uppercase }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Age / Gender</span>
+                <span class="info-value">{{ selectedBooking?.age }} {{ selectedBooking?.ageType }} / {{
+                  selectedBooking?.gender | titlecase }}</span>
+              </div>
+            </div>
+
+            <div class="info-col">
+              <div class="info-row">
+                <span class="info-label">Ref. Doc</span>
+                <span class="info-value">{{ selectedBooking?.doctorTitle }}. {{ selectedBooking?.doctor }}</span>
+              </div>
+              <div class="info-row">
+                <span class="info-label">Lab</span>
+                <span class="info-value">{{ selectedBooking?.lab || 'SELF' }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- SEARCH -->
+        <div class="search-bar-row">
+          <ion-searchbar placeholder="Search Test To Add into Bill" [(ngModel)]="searchTerm" (ionInput)="searchTests()"
+            debounce="200">
+          </ion-searchbar>
+
+          <div class="search-dropdown" *ngIf="searchTerm && filteredTests.length > 0">
+            <div class="search-dropdown-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
+              <span>{{ test.name }}</span>
+              <span class="price">₹{{ test.mrp }}</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="update-test-tab">Update Test</div>
+
+        <!-- BODY -->
+        <div class="modal-body-grid">
+
+          <!-- LEFT: TEST TABLE -->
+          <div class="test-table-panel">
+            <table class="test-line-table">
+              <thead>
+                <tr>
+                  <th>Test Name</th>
+                  <th>Result</th>
+                  <th>Unit</th>
+                  <th>Ref Range</th>
+                  <th>Amount</th>
+                  <th>Discount</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let test of selectedTests">
+                  <td class="test-name-cell">
+                    {{ test.name }}
+                    <span class="franchise-tag" *ngIf="test.method">Method: {{ test.method }}</span>
+                  </td>
+
+                  <td>
+                    <input
+                      type="text"
+                      class="cell-input result-input"
+                      [class.abnormal]="isAbnormal(test)"
+                      [(ngModel)]="test.resultValue"
+                      placeholder="Value">
+                  </td>
+
+                  <td>
+                    <input
+                      type="text"
+                      class="cell-input unit-input"
+                      [(ngModel)]="test.unit"
+                      placeholder="Unit">
+                  </td>
+
+                  <td>
+                    <div class="range-inputs">
+                      <input
+                        type="number"
+                        class="cell-input range-input"
+                        [(ngModel)]="test.refRangeLow"
+                        placeholder="Low">
+                      <span class="range-dash">-</span>
+                      <input
+                        type="number"
+                        class="cell-input range-input"
+                        [(ngModel)]="test.refRangeHigh"
+                        placeholder="High">
+                    </div>
+                  </td>
+
+                  <td>{{ test.mrp }}</td>
+                  <td>{{ test.discount || 0 }}</td>
+                  <td>
+                    <ion-icon name="trash-outline" class="delete-icon" (click)="removeTest(test)"></ion-icon>
+                  </td>
+                </tr>
+
+                <tr *ngIf="selectedTests.length === 0">
+                  <td colspan="7" class="empty-tests">No tests added</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- RIGHT: SUMMARY -->
+          <div class="summary-side-panel">
+
+            <div class="summary-field">
+              <label>Sub Total</label>
+              <input type="text" [value]="subTotal" readonly>
+            </div>
+
+            <div class="summary-field">
+              <label>Discount</label>
+              <input type="number" [(ngModel)]="discount" (ngModelChange)="onDiscountChange()" placeholder="0">
+            </div>
+
+            <div class="summary-field">
+              <label>Total</label>
+              <input type="text" [value]="totalAmount" readonly>
+            </div>
+
+            <div class="summary-field">
+              <label>Paid</label>
+              <input type="number" [(ngModel)]="paidAmount" (ngModelChange)="onPaidChange()" placeholder="0">
+            </div>
+
+            <div class="summary-field">
+              <label>Due</label>
+              <input type="text" [value]="dueAmount" readonly [class.zero]="dueAmount === 0">
+            </div>
+
+            <div class="summary-field payment-method-field">
+              <label>Payment Method</label>
+              <select [(ngModel)]="paymentMethod">
+                <option value="cash">Cash</option>
+                <option value="upi">UPI</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+
+            <ion-button expand="block" class="save-changes-btn" (click)="updateTestBooking()">
+              Save Changes
+            </ion-button>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </ng-template>
+  </ion-modal>
+
+  <!-- ===================== EDIT PATIENT MODAL ===================== -->
+  <ion-modal [isOpen]="isPatientModalOpen" (didDismiss)="closePatientModal()" class="test-modal">
+    <ng-template>
+
+      <div class="test-modal-wrapper">
+
+        <ion-button class="close-modal-btn" (click)="closePatientModal()">
+          <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+        </ion-button>
+
+        <!-- BOOKING INFO HEADER -->
+        <div class="booking-info-header">
+          <div class="booking-time">
+            Booking Time: {{ editPatientData?.bookingDate || 'N/A' }}
+          </div>
+
+          <div class="info-grid">
+            <div class="info-col">
+              <div class="info-row">
+                <span class="info-label">Booking ID</span>
+                <span class="info-value">{{ editPatientData?.id }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="update-test-tab">Update Patient Details</div>
+
+        <!-- PATIENT EDIT FORM -->
+        <div class="patient-edit-body" *ngIf="editPatientData">
+
+          <div class="patient-form-grid">
+
+            <!-- Title -->
+            <div class="summary-field">
+              <label>Title</label>
+              <select [(ngModel)]="editPatientData.title">
+                <option value="mr">Mr</option>
+                <option value="mrs">Mrs</option>
+                <option value="ms">Ms</option>
+                <option value="dr">Dr</option>
+                <option value="master">Master</option>
+                <option value="baby">Baby</option>
+              </select>
+            </div>
+
+            <!-- Name -->
+            <div class="summary-field">
+              <label>Patient Name</label>
+              <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
+            </div>
+
+            <!-- Age -->
+            <div class="summary-field">
+              <label>Age</label>
+              <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
+            </div>
+
+            <!-- Age Type -->
+            <div class="summary-field">
+              <label>Age Type</label>
+              <select [(ngModel)]="editPatientData.ageType">
+                <option value="years">Years</option>
+                <option value="months">Months</option>
+                <option value="days">Days</option>
+              </select>
+            </div>
+
+            <!-- Gender -->
+            <div class="summary-field">
+              <label>Gender</label>
+              <select [(ngModel)]="editPatientData.gender">
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+
+            <!-- Doctor Title -->
+            <div class="summary-field">
+              <label>Doctor Title</label>
+              <select [(ngModel)]="editPatientData.doctorTitle">
+                <option value="dr">Dr</option>
+                <option value="prof">Prof</option>
+              </select>
+            </div>
+
+            <!-- Doctor -->
+            <div class="summary-field">
+              <label>Ref. Doctor</label>
+              <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name">
+            </div>
+
+            <!-- Lab -->
+            <div class="summary-field">
+              <label>Lab</label>
+              <input type="text" [(ngModel)]="editPatientData.lab" placeholder="Lab (SELF)">
+            </div>
+
+            <!-- Phone -->
+            <div class="summary-field">
+              <label>Mobile</label>
+              <input type="tel" [(ngModel)]="editPatientData.phone" placeholder="10 digit mobile" maxlength="10">
+            </div>
+
+            <!-- Aadhaar -->
+            <div class="summary-field">
+              <label>Aadhaar</label>
+              <input type="text" [(ngModel)]="editPatientData.aadhaar" placeholder="Aadhaar number" maxlength="12">
+            </div>
+
+            <!-- UHID -->
+            <div class="summary-field">
+              <label>UHID</label>
+              <input type="text" [(ngModel)]="editPatientData.uhid" placeholder="UHID">
+            </div>
+
+            <!-- Address -->
+            <div class="summary-field full-width">
+              <label>Address</label>
+              <input type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
+            </div>
+
+            <!-- History -->
+            <div class="summary-field full-width">
+              <label>Clinical History</label>
+              <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
+            </div>
+
+            <div class="summary-field full-width">
+
+              <label>Attachment</label>
+
+              <input #patientFile type="file" hidden (change)="onPatientFileSelected($event)">
+
+              <ion-button expand="block" fill="outline" (click)="patientFile.click()">
+
+                <ion-icon slot="start" name="attach-outline">
+                </ion-icon>
+
+                {{ editPatientData?.attachmentName || 'Choose File' }}
+
+              </ion-button>
+
+              <div class="selected-file" *ngIf="editPatientData?.attachmentName">
+
+                {{ editPatientData.attachmentName }}
+
+              </div>
+
+            </div>
+          </div>
+
+          <ion-button expand="block" class="save-changes-btn" (click)="updatePatient()">
+            Save Changes
+          </ion-button>
+
+        </div>
+
+      </div>
+
+    </ng-template>
+  </ion-modal>
+
+</ion-content>

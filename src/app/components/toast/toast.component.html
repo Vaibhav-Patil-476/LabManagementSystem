@@ -1,0 +1,18 @@
+<div class="toast-container">
+  <div
+    class="toast-card"
+    *ngFor="let toast of toasts"
+    [class]="'toast-' + toast.type">
+
+    <div class="toast-bar"></div>
+
+    <div class="toast-content">
+      <div class="toast-header">
+        <span class="toast-title">{{ toast.title }}</span>
+        <button class="toast-close" (click)="dismiss(toast.id)">✕</button>
+      </div>
+      <p class="toast-message">{{ toast.message }}</p>
+    </div>
+
+  </div>
+</div>

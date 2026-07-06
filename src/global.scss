@@ -35,3 +35,16 @@
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 @import '@ionic/angular/css/palettes/dark.system.css';
+ion-modal .invoice-page {
+  padding: 20px;
+  background: rgb(255, 255, 255) !important;
+  min-height: 100%;
+}
+
+ion-modal .invoice-header {
+  text-align: center;
+}
+
+ion-modal .invoice-header h2 {
+  color: #3730a3;
+}

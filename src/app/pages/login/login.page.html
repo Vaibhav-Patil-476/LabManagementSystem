@@ -1,0 +1,92 @@
+<ion-content class="login-page">
+  <div class="page-center-wrapper">
+    <div class="login-container">
+      
+      <!-- डावी बाजू (Left Panel: Logo & Branding) -->
+      <div class="left-panel">
+        <div class="branding-box">
+          <div class="logo">
+            <img src="assets/itlabspeed-logo.png" alt="ITLABSPEED DEV">
+          </div>
+          
+          <p class="tagline">Secure, fast, and AI powered LIMS for your lab.</p>
+        </div>
+      </div>
+
+      <!-- उजवी बाजू (Right Panel: Login Form) -->
+      <div class="right-panel">
+        <div class="form-wrapper">
+          
+          <h1>Login to Your Account</h1>
+          <p class="signup-text">
+            Don't have an account? <span class="link-text">Sign Up</span><br>
+            or <span class="link-text">New Patient login</span>
+          </p>
+
+          <form (ngSubmit)="login()">
+            
+            <!-- Username Input -->
+            <div class="input-group">
+              <label>Username</label>
+              <ion-item lines="none">
+                <ion-input
+                  type="email"
+                  name="email"
+                  placeholder="Enter Email / Username"
+                  [(ngModel)]="email">
+                </ion-input>
+              </ion-item>
+            </div>
+
+            <!-- Password Input -->
+            <div class="input-group">
+              <label>Password</label>
+              <ion-item lines="none">
+                <ion-input
+                  type="password"
+                  name="password"
+                  placeholder="Enter Password"
+                  [(ngModel)]="password">
+                </ion-input>
+              </ion-item>
+            </div>
+
+            <!-- Forgot Password -->
+            <div class="forgot-password">
+              <span class="link-text">Forgot Password?</span>
+            </div>
+
+            <!-- Login Button -->
+            <ion-button
+              expand="block"
+              type="submit"
+              [disabled]="!email || !password"
+              class="submit-btn">
+              Log In Securely
+            </ion-button>
+
+          </form>
+
+          <!-- Social Login Options -->
+          <div class="divider">
+            <span>Or continue with</span>
+          </div>
+
+          <div class="social-login">
+            <ion-button fill="outline" color="dark" class="social-btn">
+              GOOGLE
+            </ion-button>
+            <ion-button fill="outline" color="dark" class="social-btn">
+              APPLE
+            </ion-button>
+            <ion-button fill="outline" color="dark" class="social-btn">
+              FACEBOOK
+            </ion-button>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </div>
+</ion-content>

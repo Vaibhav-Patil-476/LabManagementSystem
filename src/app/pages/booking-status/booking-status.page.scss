@@ -1,0 +1,704 @@
+/* =====================
+   BACKGROUND
+===================== */
+.booking-content {
+  --background: #f4f5f9;
+  --padding-bottom: 20px;
+}
+
+/* =====================
+   HEADER
+===================== */
+.booking-header {
+  --background: transparent;
+  --color: #ffffff;
+
+  position: relative;
+  overflow: hidden;
+
+  &::part(background) {
+    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+  }
+
+  ion-title {
+    color: #ffffff;
+    font-size: 16px;
+    font-weight: 700;
+  }
+
+  ion-back-button {
+    --color: #ffffff;
+  }
+
+  ion-buttons,
+  ion-icon {
+    color: #ffffff;
+  }
+}
+/* =====================
+   PAGE CARD
+===================== */
+.form-card {
+  background: #fff;
+  margin: 12px;
+  border-radius: 14px;
+  padding: 16px;
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.06);
+}
+
+.form-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: #2f3a56;
+  margin-bottom: 16px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #eef0f5;
+}
+
+/* =====================
+   TABLE
+===================== */
+.table-wrapper {
+  overflow-x: auto;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+}
+
+.booking-table {
+  width: 100%;
+  min-width: 1250px;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+.booking-table thead {
+  background: #f3f4f8;
+}
+
+.booking-table th {
+  padding: 12px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #2f3a56;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e5e7eb;
+  white-space: nowrap;
+  text-align: center;
+}
+
+.booking-table td {
+  padding: 12px;
+  font-size: 13px;
+  color: #374151;
+  border-bottom: 1px solid #f1f2f6;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.booking-table tbody tr:hover {
+  background: #fafbfd;
+}
+
+/* =====================
+   PAID / DUE
+===================== */
+.paid-due-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+
+  .paid-amt {
+    font-weight: 700;
+    color: #2f3a56;
+    font-size: 12px;
+  }
+
+  .due-amt {
+    font-size: 11px;
+    font-weight: 600;
+    color: #b45309;
+
+    &.zero {
+      color: #9ca3af;
+    }
+  }
+}
+
+/* =====================
+   STATUS
+===================== */
+.status {
+  display: inline-block;
+  padding: 5px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.status.pending {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.status.processing {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.status.completed {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+/* =====================
+   ACTION BUTTONS
+===================== */
+.action-buttons {
+  display: flex;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-btn {
+  --border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+}
+
+::ng-deep .action-btn.edit-test { --background: #b45309; }
+::ng-deep .action-btn.edit-patient { --background: #2f3a56; }
+::ng-deep .action-btn.print { --background: #15803d; }
+
+/* =====================
+   EMPTY
+===================== */
+.empty-row {
+  text-align: center;
+  padding: 40px;
+  color: #9ca3af;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* =====================
+   MOBILE - main table
+===================== */
+@media (max-width: 768px) {
+  .form-card { margin: 10px; padding: 12px; }
+  .booking-table { min-width: 1150px; }
+  .booking-table th, .booking-table td { font-size: 11px; padding: 10px; }
+}
+
+
+/* =====================================================
+   EDIT TEST MODAL
+===================================================== */
+
+::ng-deep .test-modal {
+  --width: 92%;
+  --max-width: 1100px;
+  --height: 90%;
+  --max-height: 720px;
+  --border-radius: 14px;
+
+  @media (max-width: 768px) {
+    --width: 100%;
+    --height: 100%;
+    --max-width: 100%;
+    --max-height: 100%;
+    --border-radius: 0;
+  }
+}
+
+::ng-deep .test-modal-wrapper {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  background: #f4f5f9;
+  padding: 20px 24px 24px;
+  font-family: inherit;
+
+  @media (max-width: 768px) {
+    padding: 16px;
+  }
+}
+
+::ng-deep .close-modal-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  --background: #dc2626;
+  --background-hover: #b91c1c;
+  --background-activated: #991b1b;
+  --color: #fff;
+  --border-radius: 8px;
+  width: 34px;
+  height: 34px;
+  margin: 0;
+  z-index: 10;
+}
+
+::ng-deep .booking-info-header {
+  background: #fff;
+  border-radius: 12px;
+  padding: 16px 20px;
+  margin-bottom: 16px;
+  border: 1px solid #e5e7eb;
+}
+
+::ng-deep .booking-time {
+  font-size: 15px;
+  font-weight: 700;
+  color: #1f2937;
+  margin-bottom: 12px;
+}
+
+::ng-deep .info-grid {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  flex-wrap: wrap;
+
+  @media (max-width: 600px) {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+::ng-deep .info-col {
+  flex: 1;
+  min-width: 220px;
+}
+
+::ng-deep .info-row {
+  display: flex;
+  gap: 8px;
+  font-size: 13px;
+  margin-bottom: 8px;
+
+  .info-label {
+    font-weight: 600;
+    color: #6b7280;
+    min-width: 130px;
+  }
+
+  .info-value {
+    color: #1f2937;
+    font-weight: 600;
+  }
+}
+
+::ng-deep .search-bar-row {
+  position: relative;
+  max-width: 420px;
+  margin-left: auto;
+  margin-bottom: 14px;
+
+  @media (max-width: 768px) {
+    max-width: 100%;
+  }
+
+  ion-searchbar {
+    --background: #fff;
+    --border-radius: 10px;
+    --box-shadow: 0 1px 4px rgba(15, 23, 42, 0.08);
+    padding: 0;
+  }
+}
+
+::ng-deep .search-dropdown {
+  position: absolute;
+  top: 48px;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.1);
+  max-height: 220px;
+  overflow-y: auto;
+  z-index: 20;
+}
+
+::ng-deep .search-dropdown-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #374151;
+  cursor: pointer;
+  border-bottom: 1px solid #f1f2f6;
+
+  &:hover { background: #f4f5f9; }
+  &:last-child { border-bottom: none; }
+
+  .price {
+    font-weight: 700;
+    color: #2f3a56;
+  }
+}
+
+::ng-deep .update-test-tab {
+  display: inline-block;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-bottom: none;
+  border-radius: 10px 10px 0 0;
+  padding: 9px 20px;
+  font-weight: 700;
+  color: #1f2937;
+  font-size: 13px;
+  position: relative;
+  z-index: 2;
+}
+
+::ng-deep .modal-body-grid {
+  display: flex;
+  gap: 18px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 0 12px 12px 12px;
+  padding: 18px;
+
+  @media (max-width: 900px) {
+    flex-direction: column;
+  }
+}
+
+::ng-deep .test-table-panel {
+  flex: 1.6;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+::ng-deep .test-line-table {
+  width: 100%;
+  min-width: 620px;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font-size: 12px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+    padding: 10px 8px;
+    border-bottom: 2px solid #f1f2f6;
+    white-space: nowrap;
+  }
+
+  td {
+    font-size: 13px;
+    color: #374151;
+    padding: 10px 8px;
+    border-bottom: 1px solid #f1f2f6;
+    vertical-align: top;
+  }
+}
+
+::ng-deep .test-name-cell {
+  font-weight: 600;
+  color: #1f2937;
+  min-width: 140px;
+
+  .franchise-tag {
+    display: block;
+    color: #9ca3af;
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+}
+
+/* =====================================================
+   RESULT / UNIT / REF RANGE INPUT CELLS
+   (new fields for the downloadable lab report)
+===================================================== */
+::ng-deep .cell-input {
+  width: 100%;
+  min-width: 70px;
+  padding: 7px 9px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #f9fafb;
+  font-size: 12.5px;
+  color: #1f2937;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #6366f1;
+    background: #ffffff;
+  }
+}
+
+::ng-deep .result-input {
+  font-weight: 700;
+  color: #1f2937;
+
+  &.abnormal {
+    color: #dc2626;
+    font-weight: 800;
+    border-color: #fecaca;
+    background: #fef2f2;
+  }
+}
+
+::ng-deep .unit-input {
+  min-width: 60px;
+}
+
+::ng-deep .range-inputs {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+
+  .range-input {
+    min-width: 46px;
+    width: 46px;
+    text-align: center;
+  }
+
+  .range-dash {
+    color: #9ca3af;
+    font-weight: 700;
+  }
+}
+
+::ng-deep .delete-icon {
+  color: #b91c1c;
+  font-size: 18px;
+  cursor: pointer;
+
+  &:hover { color: #7f1d1d; }
+}
+
+::ng-deep .empty-tests {
+  text-align: center;
+  color: #9ca3af;
+  padding: 30px 0;
+}
+
+::ng-deep .summary-side-panel {
+  flex: 1;
+  min-width: 240px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+::ng-deep .summary-side-panel .summary-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+
+  label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+  }
+
+  input, select {
+    flex: 1;
+    max-width: 150px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    background: #f9fafb;
+    font-size: 13px;
+    color: #1f2937;
+    text-align: right;
+
+    &:focus {
+      outline: none;
+      border-color: #2f3a56;
+    }
+
+    &.zero {
+      color: #15803d;
+      font-weight: 700;
+    }
+  }
+
+  select {
+    text-align: left;
+    background: #fff;
+  }
+
+  @media (max-width: 480px) {
+    input, select { max-width: 130px; }
+  }
+}
+
+::ng-deep .save-changes-btn {
+  margin-top: 6px;
+  --background: #3a6ced;
+  --border-radius: 10px;
+  font-weight: 700;
+  font-size: 13px;
+}
+
+/* =====================================================
+   EDIT PATIENT
+===================================================== */
+
+::ng-deep .patient-edit-body{
+    background:#fff;
+    border-radius:16px;
+    padding:24px;
+}
+
+::ng-deep .patient-form-grid{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:18px 22px;
+}
+
+@media(max-width:768px){
+    ::ng-deep .patient-form-grid{
+        grid-template-columns:1fr;
+    }
+}
+
+::ng-deep .patient-form-grid .summary-field{
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+}
+
+::ng-deep .patient-form-grid .summary-field.full-width{
+    grid-column:1/-1;
+}
+
+::ng-deep .patient-form-grid label{
+
+    font-size:11px;
+    font-weight:700;
+    color:#64748b;
+    text-transform:uppercase;
+    letter-spacing:.5px;
+
+}
+
+/* ===========================
+   INPUTS
+=========================== */
+
+::ng-deep .patient-form-grid input,
+::ng-deep .patient-form-grid select,
+::ng-deep .patient-form-grid textarea{
+
+    width:100%;
+
+    height:44px;
+
+    padding:0 14px;
+
+    background:#f8faff;
+
+    border:1.5px solid #e2e8f0;
+
+    border-radius:10px;
+
+    outline:none;
+
+    font-size:13px;
+
+    color:#334155;
+
+    transition:.25s;
+
+    box-sizing:border-box;
+}
+
+::ng-deep .patient-form-grid textarea{
+
+    height:90px;
+
+    resize:none;
+
+    padding-top:12px;
+}
+
+/* Hover */
+
+::ng-deep .patient-form-grid input:hover,
+::ng-deep .patient-form-grid select:hover,
+::ng-deep .patient-form-grid textarea:hover{
+
+    border-color:#c7d2fe;
+
+    background:#ffffff;
+}
+
+/* Focus */
+
+::ng-deep .patient-form-grid input:focus,
+::ng-deep .patient-form-grid select:focus,
+::ng-deep .patient-form-grid textarea:focus{
+
+    border-color:#6366f1;
+
+    background:#ffffff;
+
+    box-shadow:0 0 0 4px rgba(99,102,241,.12);
+}
+
+/* Placeholder */
+
+::ng-deep .patient-form-grid input::placeholder,
+::ng-deep .patient-form-grid textarea::placeholder{
+
+    color:#94a3b8;
+}
+
+/* File Button */
+
+::ng-deep .patient-form-grid ion-button{
+
+    --background:#ffffff;
+
+    --color:#6366f1;
+
+    --border-color:#c7d2fe;
+
+    --border-radius:10px;
+
+    height:44px;
+
+    font-weight:600;
+}
+
+.selected-file{
+
+    margin-top:8px;
+
+    color:#6366f1;
+
+    font-size:13px;
+
+    font-weight:600;
+}
+
+/* Save Button */
+
+.save-changes-btn{
+
+    margin-top:24px;
+
+    height:50px;
+
+    --background:linear-gradient(135deg,#6366f1,#8b5cf6);
+
+    --border-radius:14px;
+
+    --box-shadow:0 6px 16px rgba(99,102,241,.3);
+
+    font-size:15px;
+
+    font-weight:700;
+}

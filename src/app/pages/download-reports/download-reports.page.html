@@ -1,0 +1,106 @@
+<ion-header>
+  <ion-toolbar class="report-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Report Download</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="report-content">
+
+  <div class="form-card">
+
+    <div class="form-card-title-row">
+      <div class="form-card-title">
+        <ion-icon name="document-text-outline"></ion-icon>
+        Ready For Download
+      </div>
+
+      <ion-button
+        class="download-btn"
+        [disabled]="selectedIds.size === 0 || isGenerating"
+        (click)="downloadSelected()">
+        <ion-icon slot="start" name="download-outline"></ion-icon>
+        {{ isGenerating ? 'Generating...' : 'Download Selected Reports' }}
+        <span class="selected-count" *ngIf="selectedIds.size > 0">({{ selectedIds.size }})</span>
+      </ion-button>
+    </div>
+
+    <div class="table-wrapper">
+      <table class="report-table">
+        <thead>
+          <tr>
+            <th class="checkbox-col">
+              <ion-checkbox
+                [checked]="allSelected"
+                [disabled]="readyReports.length === 0"
+                (ionChange)="toggleSelectAll($event.detail.checked)">
+              </ion-checkbox>
+            </th>
+            <th>Booking ID / Patient ID</th>
+            <th>Patient Name</th>
+            <th>Barcode</th>
+            <th>Tests</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr *ngFor="let item of readyReports" [class.row-selected]="isSelected(item)">
+            <td class="checkbox-col">
+              <ion-checkbox
+                [checked]="isSelected(item)"
+                (ionChange)="toggleSelect(item, $event.detail.checked)">
+              </ion-checkbox>
+            </td>
+            <td>{{ item.id }}</td>
+            <td>{{ item.title | titlecase }} {{ item.name }}</td>
+            <td>{{ getBarcode(item) }}</td>
+            <td>{{ getTests(item) }}</td>
+            <td>
+              <span class="status ready">
+                <ion-icon name="checkmark-done-outline"></ion-icon>
+                Ready
+              </span>
+            </td>
+          </tr>
+
+          <tr *ngIf="readyReports.length === 0">
+            <td colspan="6" class="empty-row">
+              No reports ready for download yet — payment pending on all bookings
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+
+  <!-- ===================== HIDDEN PRINT TEMPLATE (used for PDF generation) ===================== -->
+  <div class="pdf-template" #pdfTemplate>
+    <div class="pdf-header">
+      <h2>Lab Report Summary</h2>
+      <p>Generated on: {{ (selectedReports[0]?.bookingDate) || (null) }}</p>
+    </div>
+
+    <table class="pdf-table">
+      <thead>
+        <tr>
+          <th>Booking ID / Patient ID</th>
+          <th>Patient Name</th>
+          <th>Barcode</th>
+          <th>Tests</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngFor="let item of selectedReports">
+          <td>{{ item.id }}</td>
+          <td>{{ item.title | titlecase }} {{ item.name }}</td>
+          <td>{{ getBarcode(item) }}</td>
+          <td>{{ getTests(item) }}</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</ion-content>
