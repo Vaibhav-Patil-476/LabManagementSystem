@@ -140,9 +140,6 @@
               <thead>
                 <tr>
                   <th>Test Name</th>
-                  <th>Result</th>
-                  <th>Unit</th>
-                  <th>Ref Range</th>
                   <th>Amount</th>
                   <th>Discount</th>
                   <th>Action</th>
@@ -155,39 +152,6 @@
                     <span class="franchise-tag" *ngIf="test.method">Method: {{ test.method }}</span>
                   </td>
 
-                  <td>
-                    <input
-                      type="text"
-                      class="cell-input result-input"
-                      [class.abnormal]="isAbnormal(test)"
-                      [(ngModel)]="test.resultValue"
-                      placeholder="Value">
-                  </td>
-
-                  <td>
-                    <input
-                      type="text"
-                      class="cell-input unit-input"
-                      [(ngModel)]="test.unit"
-                      placeholder="Unit">
-                  </td>
-
-                  <td>
-                    <div class="range-inputs">
-                      <input
-                        type="number"
-                        class="cell-input range-input"
-                        [(ngModel)]="test.refRangeLow"
-                        placeholder="Low">
-                      <span class="range-dash">-</span>
-                      <input
-                        type="number"
-                        class="cell-input range-input"
-                        [(ngModel)]="test.refRangeHigh"
-                        placeholder="High">
-                    </div>
-                  </td>
-
                   <td>{{ test.mrp }}</td>
                   <td>{{ test.discount || 0 }}</td>
                   <td>
@@ -196,7 +160,7 @@
                 </tr>
 
                 <tr *ngIf="selectedTests.length === 0">
-                  <td colspan="7" class="empty-tests">No tests added</td>
+                  <td colspan="4" class="empty-tests">No tests added</td>
                 </tr>
               </tbody>
             </table>
@@ -339,16 +303,26 @@
               </select>
             </div>
 
-            <!-- Doctor -->
+            <!-- Doctor — ➕ API PICKER ADDED (Add Patient sarkha) -->
             <div class="summary-field">
               <label>Ref. Doctor</label>
-              <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name" style="flex:1;">
+                <ion-button size="small" fill="solid" color="primary" style="margin:0; flex-shrink:0;" (click)="openDoctorPicker()">
+                  <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                </ion-button>
+              </div>
             </div>
 
-            <!-- Lab -->
+            <!-- Lab — ➕ API PICKER ADDED (Add Patient sarkha) -->
             <div class="summary-field">
               <label>Lab</label>
-              <input type="text" [(ngModel)]="editPatientData.lab" placeholder="Lab (SELF)">
+              <div style="display:flex; gap:6px; align-items:center;">
+                <input type="text" [(ngModel)]="editPatientData.lab" placeholder="Lab (SELF)" style="flex:1;">
+                <ion-button size="small" fill="solid" color="primary" style="margin:0; flex-shrink:0;" (click)="openLabPicker()">
+                  <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                </ion-button>
+              </div>
             </div>
 
             <!-- Phone -->
@@ -413,6 +387,84 @@
 
       </div>
 
+    </ng-template>
+  </ion-modal>
+
+  <!-- ===================== ➕ DOCTOR PICKER MODAL (NEW ADD ONLY) ===================== -->
+  <ion-modal [isOpen]="showDoctorPicker" cssClass="doctor-popup" (didDismiss)="showDoctorPicker=false">
+    <ng-template>
+      <div class="modal-page">
+
+        <div class="modal-header">
+          <h2>Select Doctor</h2>
+          <ion-button fill="clear" color="danger" (click)="showDoctorPicker = false">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="input-group" style="margin-bottom:12px;">
+            <label>Select Doctor</label>
+            <div class="input-wrap">
+              <ion-select interface="popover" placeholder="Choose Doctor" [(ngModel)]="selectedDoctorPick"
+                (ionChange)="selectDoctorForEdit($event.detail.value)">
+
+                <ion-select-option *ngFor="let doc of doctors" [value]="doc">
+                  {{ doc.doctor_name }}
+                </ion-select-option>
+
+              </ion-select>
+            </div>
+          </div>
+
+          <ion-button expand="block" class="modal-save-btn" (click)="showDoctorPicker = false">
+            <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+            Done
+          </ion-button>
+
+        </div>
+
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ===================== ➕ LAB PICKER MODAL (NEW ADD ONLY) ===================== -->
+  <ion-modal [isOpen]="showLabPicker" cssClass="lab-popup" (didDismiss)="showLabPicker=false">
+    <ng-template>
+      <div class="modal-page">
+
+        <div class="modal-header">
+          <h2>Select Lab</h2>
+          <ion-button fill="clear" color="danger" (click)="showLabPicker = false">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="modal-body">
+
+          <div class="input-group" style="margin-bottom:12px;">
+            <label>Select Lab</label>
+            <div class="input-wrap">
+              <ion-select interface="popover" placeholder="Choose Lab" [(ngModel)]="selectedLabPick"
+                (ionChange)="selectLabForEdit($event.detail.value)">
+
+                <ion-select-option *ngFor="let lab of labs" [value]="lab">
+                  {{ lab.franchiseName || lab.name }}
+                </ion-select-option>
+
+              </ion-select>
+            </div>
+          </div>
+
+          <ion-button expand="block" class="modal-save-btn" (click)="showLabPicker = false">
+            <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+            Done
+          </ion-button>
+
+        </div>
+
+      </div>
     </ng-template>
   </ion-modal>
 

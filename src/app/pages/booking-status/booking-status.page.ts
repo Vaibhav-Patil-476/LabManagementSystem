@@ -1,18 +1,20 @@
-import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonIcon, IonModal, IonSearchbar
+  IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
+  IonSelect, IonSelectOption
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   flaskOutline, personOutline, printOutline,
-  closeOutline, trashOutline
+  closeOutline, trashOutline, addOutline, checkmarkOutline
 } from 'ionicons/icons';
 import { Subscription } from 'rxjs';
 import { BookingService, Patient, TestItem } from '../../services/booking-status';
 import { ToastService } from '../../services/toast';
+import { LabApiService } from '../../services/lab-api'; // ✅ ADDED
 
 @Component({
   selector: 'app-booking-status',
@@ -21,7 +23,8 @@ import { ToastService } from '../../services/toast';
     CommonModule,
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-    IonContent, IonButton, IonIcon, IonModal, IonSearchbar
+    IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
+    IonSelect, IonSelectOption
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './booking-status.page.html',
@@ -46,6 +49,18 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   isPatientModalOpen = false;
   editPatientData: any = null;
   private originalPatientId: string | number | null = null;
+
+  // ==========================
+  // ➕ DOCTOR / LAB PICKER (NEW ADD ONLY)
+  // Add Patient page cha exact sarkha pattern — Edit Patient modal
+  // madhun Doctor/Lab var click kela ki API varun list yete
+  // ==========================
+  showDoctorPicker = false;
+  showLabPicker = false;
+  doctors: any[] = [];
+  labs: any[] = [];
+  selectedDoctorPick: any = null;
+  selectedLabPick: any = null;
 
   // Catalog of tests available to add. Each entry carries sensible report
   // defaults (unit / reference range / method) which get copied onto the
@@ -77,14 +92,19 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   constructor(
     private bookingService: BookingService,
-    private toast: ToastService
+    private toast: ToastService,
+    private labApi: LabApiService, // ✅ ADDED
+    private ngZone: NgZone,               // ✅ ADDED — fix modal not refreshing
+    private cdr: ChangeDetectorRef        // ✅ ADDED — fix modal not refreshing
   ) {
     addIcons({
       flaskOutline,
       personOutline,
       printOutline,
       closeOutline,
-      trashOutline
+      trashOutline,
+      addOutline,
+      checkmarkOutline
     });
   }
 
@@ -172,6 +192,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   // ================= RESULT / REPORT FIELDS =================
   // Used to visually flag a value outside the reference range while
   // the lab tech is typing it in (mirrors the highlight shown on the PDF).
+  // NOTE: Result/Unit/RefRange columns UI madhun kadhle ahet (dusri team
+  // handle karte), pan hi function future madhi lagli tar tashich thevli ahe.
   isAbnormal(test: TestItem): boolean {
     const val = parseFloat(String(test.resultValue));
     if (isNaN(val) || test.refRangeLow == null || test.refRangeHigh == null) {
@@ -250,6 +272,87 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
     this.showToast('Patient updated successfully', 'success');
     this.closePatientModal();
+  }
+
+  // ================= ➕ DOCTOR PICKER (NEW ADD ONLY) =================
+  // Add Patient cha openAddDoctor() + loadDoctors() sarkha exact pattern
+  openDoctorPicker() {
+    this.selectedDoctorPick = null;
+    this.showDoctorPicker = true;
+    this.loadDoctorsForEdit();
+  }
+
+  loadDoctorsForEdit() {
+    this.labApi.getDoctors().subscribe({
+      next: (res: any) => {
+        console.log('DOCTORS (edit patient) RAW RESPONSE:', res); // keep for debug
+
+        // ✅ FIX: ngZone.run + detectChanges — modal cha content kadhi kadhi
+        // Angular cha default change detection cycle madhe update honar nahi,
+        // tyamule explicitly zone madhe run karun UI refresh force kela ahe.
+        this.ngZone.run(() => {
+          this.doctors = res?.content || res || [];
+          this.cdr.detectChanges();
+        });
+
+        if (!this.doctors || this.doctors.length === 0) {
+          this.showToast('No doctors found from server', 'warning');
+        }
+      },
+      error: (err) => {
+        console.log('DOCTORS FETCH ERROR:', err);
+        this.ngZone.run(() => {
+          this.showToast('Failed to load doctors', 'error');
+        });
+      }
+    });
+  }
+
+  selectDoctorForEdit(doc: any) {
+    if (!doc || !this.editPatientData) return;
+    this.selectedDoctorPick = { ...doc };
+    this.editPatientData.doctor = doc?.doctor_name;
+    this.editPatientData.doctorTitle = 'dr';
+    this.showDoctorPicker = false;
+  }
+
+  // ================= ➕ LAB PICKER (NEW ADD ONLY) =================
+  // Add Patient cha openAddLab() + loadLabs() sarkha exact pattern
+  openLabPicker() {
+    this.selectedLabPick = null;
+    this.showLabPicker = true;
+    this.loadLabsForEdit();
+  }
+
+  loadLabsForEdit() {
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        console.log('LABS (edit patient) RAW RESPONSE:', res); // keep for debug
+
+        // ✅ FIX: ngZone.run + detectChanges — same fix as doctors
+        this.ngZone.run(() => {
+          this.labs = res?.content || res || [];
+          this.cdr.detectChanges();
+        });
+
+        if (!this.labs || this.labs.length === 0) {
+          this.showToast('No labs found from server', 'warning');
+        }
+      },
+      error: (err) => {
+        console.log('LABS FETCH ERROR:', err);
+        this.ngZone.run(() => {
+          this.showToast('Failed to load labs', 'error');
+        });
+      }
+    });
+  }
+
+  selectLabForEdit(lab: any) {
+    if (!lab || !this.editPatientData) return;
+    this.selectedLabPick = { ...lab };
+    this.editPatientData.lab = lab?.franchiseName || lab?.name;
+    this.showLabPicker = false;
   }
 
   // ================= FILE =================

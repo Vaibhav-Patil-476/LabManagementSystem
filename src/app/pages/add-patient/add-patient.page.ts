@@ -210,16 +210,23 @@ selectDoctor(doc: any) {
       next: (res: any) => {
         const apiTests = res || [];
 
-        // API response cha shape flexible map kela ahe,
-        // jr field names thodi vegli asli tari tutnar nahi
+        // ✅ ACTUAL API FIELD NAMES CONFIRMED (real response check kela):
+        // test_name -> Test Name
+        // test_price -> MRP/Price
+        // price2 -> B2B Price
+        // tat -> TAT
+        // sampleTypeName -> Fluid / Sample Type
+        // sampleColor -> Color dot
+        // testId -> unique id
         this.allTests = (Array.isArray(apiTests) ? apiTests : []).map((t: any) => ({
-          name: t.testName || t.name || t.test_name || 'Unnamed Test',
-          b2b: t.b2b ?? t.b2bPrice ?? t.b2b_price ?? '₹0',
-          tat: t.tat || t.turnAroundTime || t.tat_time || 'N/A',
-          mrp: t.mrp ?? t.rate ?? t.price ?? 0,
-          fluid: t.fluid || t.fluidType || t.fluid_type || t.sampleType || 'N/A',
-          sampleType: t.sampleType || t.sample_type || t.fluid || 'OTHER',
-          color: t.color || '#a855f7'
+          id: t.testId,
+          name: t.test_name || 'Unnamed Test',
+          b2b: t.price2 ?? 0,
+          tat: t.tat || 'N/A',
+          mrp: t.test_price ?? 0,
+          fluid: t.sampleTypeName || 'N/A',
+          sampleType: t.sampleTypeName || 'OTHER',
+          color: t.sampleColor || '#a855f7'
         }));
 
         console.log('TESTS:', this.allTests); // keep for debug
