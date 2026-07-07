@@ -29,7 +29,7 @@ export class LoginPage {
     private router: Router,
     private toastService: ToastService,
     private authService: AuthService
-  ) {}
+  ) { }
 
   login() {
 
@@ -49,22 +49,48 @@ export class LoginPage {
 
       next: (response) => {
 
-        this.loading = false;
-
         localStorage.setItem('token', response.token);
         localStorage.setItem('username', response.username);
         localStorage.setItem('franchise', JSON.stringify(response.franchise));
         localStorage.setItem('employee', JSON.stringify(response.employee));
         localStorage.setItem('isLoggedIn', 'true');
 
-        this.toastService.success('Success', 'Login Successful');
+        // ✅ role login response madhe nahi ythe, current-user API call kar
+        this.authService.getCurrentUser().subscribe({
 
-        setTimeout(() => {
-          this.router.navigateByUrl('/dashboard', {
-            replaceUrl: true
-          });
-        }, 800);
+          next: (user) => {
 
+            this.loading = false;
+
+            const role = user?.roles?.[0]?.name || '';
+            const permissions = (user?.permissions || []).map((p: any) => p.name);
+
+            localStorage.setItem('role', role);
+            localStorage.setItem('permissions', JSON.stringify(permissions));
+            localStorage.setItem('currentUser', JSON.stringify(user));
+
+            console.log('CURRENT USER:', user);
+            console.log('ROLE:', role);
+            console.log('PERMISSIONS:', permissions);
+
+            this.toastService.success('Success', 'Login Successful');
+
+            setTimeout(() => {
+              this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+            }, 800);
+          },
+
+          error: (err) => {
+            this.loading = false;
+            console.log('CURRENT USER ERROR:', err);
+
+            this.toastService.warning('Warning', 'Logged in, but role fetch failed.');
+
+            setTimeout(() => {
+              this.router.navigateByUrl('/dashboard', { replaceUrl: true });
+            }, 800);
+          }
+        });
       },
 
       error: (error) => {
@@ -83,11 +109,7 @@ export class LoginPage {
             error.error?.message || 'Something went wrong'
           );
         }
-
       }
-
     });
-
   }
-
 }

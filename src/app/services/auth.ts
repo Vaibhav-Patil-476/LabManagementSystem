@@ -15,4 +15,9 @@ export class AuthService {
   login(data: any): Observable<any> {
     return this.http.post(`${this.api}/auth/login`, data);
   }
+
+  // ✅ ADDED — role + permissions yasathi
+  getCurrentUser(): Observable<any> {
+    return this.http.get(`${this.api}/auth/current-user`);
+  }
 }

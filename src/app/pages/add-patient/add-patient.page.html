@@ -68,7 +68,6 @@
         </div>
       </div>
 
-      <!-- REF DOC — Title + Name + Add Button -->
       <div class="input-row">
         <div class="input-group" style="flex: 0 0 80px;">
           <label>Title</label>
@@ -91,7 +90,6 @@
         </ion-button>
       </div>
 
-      <!-- LAB/HOS — Name + Add Button -->
       <div class="input-row">
         <div class="input-group" style="flex: 1;">
           <label>LAB/HOS</label>
@@ -175,20 +173,16 @@
         </div>
       </div>
 
-      <!-- ADD FILE — only if file checked -->
       <div class="extra-field" *ngIf="patient.file">
 
-        <!-- Hidden file input -->
         <input type="file" id="fileInput" style="display: none" accept="image/*,application/pdf"
           (change)="onFileSelected($event)">
 
-        <!-- Upload Box -->
         <div class="add-file-box" (click)="triggerFileInput()">
           <ion-icon name="attach-outline"></ion-icon>
           <span>{{ selectedFileName || 'Add File' }}</span>
         </div>
 
-        <!-- Preview — jar file select zali tar -->
         <div class="file-preview" *ngIf="selectedFileName">
           <ion-icon name="document-outline" color="primary"></ion-icon>
           <span class="file-name">{{ selectedFileName }}</span>
@@ -210,6 +204,9 @@
       </div>
     </div>
 
+    <!-- ==========================
+         TEST SEARCH + TABLE (ROLE BASE)
+    =========================== -->
     <div class="form-card" style="margin-top: 12px;">
       <div class="form-card-title">Search Test To Add into Bill</div>
 
@@ -222,17 +219,18 @@
       <div class="test-suggestions" *ngIf="showSuggestions">
         <div class="suggestion-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
           <span>{{ test.name }}</span>
-          <span class="sug-price">₹{{ test.mrp }}</span>
+          <span class="sug-price" *ngIf="isAdminRole">₹{{ test.mrp }}</span>
         </div>
       </div>
 
-      <div class="test-table">
-        <div class="test-header">
+      <!-- ✅ ROLE BASE COLUMN COMPRESSION -->
+      <div class="test-table" [class.staff-view]="isFranchiseRole">
+        <div class="test-header" [class.staff-view]="isFranchiseRole">
           <div>#</div>
           <div>Test Name</div>
-          <div>B2B</div>
+          <div *ngIf="isAdminRole">Price</div>
           <div>TAT</div>
-          <div>MRP</div>
+          <div *ngIf="isAdminRole">Dis</div>
           <div>Fluid</div>
           <div>Action</div>
         </div>
@@ -241,12 +239,12 @@
           No Tests selected
         </div>
 
-        <div class="test-row" *ngFor="let t of selectedTests; let i = index">
+        <div class="test-row" *ngFor="let t of selectedTests; let i = index" [class.staff-view]="isFranchiseRole">
           <div>{{ i + 1 }}</div>
           <div>{{ t.name }}</div>
-          <div>{{ t.b2b }}</div>
+          <div *ngIf="isAdminRole">₹{{ t.mrp }}</div>
           <div>{{ t.tat }}</div>
-          <div>₹{{ t.mrp }}</div>
+          <div *ngIf="isAdminRole">{{ t.dis || 0 }}</div>
           <div>{{ t.fluid }}</div>
           <div>
             <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
@@ -255,9 +253,123 @@
           </div>
         </div>
 
-        <div class="subtotal-row">
+        <!-- ✅ ADMIN -> actual Sub Total -->
+        <div class="subtotal-row" *ngIf="isAdminRole">
           <span>Sub Total :</span>
           <span class="subtotal-amount">₹{{ getSubTotal() }}</span>
+        </div>
+
+        <!-- ✅ FRANCHISE / FRANCHISE-STAFF -> masked Sub Total -->
+        <div class="subtotal-row" *ngIf="isFranchiseRole">
+          <span>Sub Total :</span>
+          <span class="subtotal-amount">.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ==========================
+         DISCOUNT / PAYMENT SECTION — ADMIN ONLY
+    =========================== -->
+    <div class="form-card" style="margin-top: 12px;" *ngIf="isAdminRole">
+      <div class="form-card-title">Billing & Payment</div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Discount Type</label>
+          <ion-radio-group [(ngModel)]="billing.discountType" (ionChange)="calculateBilling()" style="display:flex; gap:16px; margin-top:6px;">
+            <ion-item lines="none" style="--min-height:32px;">
+              <ion-radio slot="start" value="percent"></ion-radio>
+              <span style="margin-left:6px;">%</span>
+            </ion-item>
+            <ion-item lines="none" style="--min-height:32px;">
+              <ion-radio slot="start" value="fixed"></ion-radio>
+              <span style="margin-left:6px;">Fixed</span>
+            </ion-item>
+          </ion-radio-group>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Discount</label>
+          <div class="input-wrap">
+            <ion-input type="number" placeholder="0" [(ngModel)]="billing.discountValue"
+              (ionInput)="calculateBilling()"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Dis Amount</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="billing.discountAmount" readonly></ion-input>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Grand Total</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="billing.grandTotal" readonly></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Payment Mode</label>
+          <div class="input-wrap">
+            <ion-select [(ngModel)]="billing.paymentMode" interface="popover" (ionChange)="calculateBilling()">
+              <ion-select-option value="cash">Cash</ion-select-option>
+              <ion-select-option value="upi">UPI</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Cash</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="billing.cashAmount" readonly></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Paid Amount</label>
+          <div class="input-wrap">
+            <ion-input type="number" placeholder="0" [(ngModel)]="billing.paidAmount"
+              (ionInput)="calculateBilling()"></ion-input>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>UPI</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="billing.upiAmount" readonly></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Payment Transaction Id</label>
+          <div class="input-wrap">
+            <ion-input type="text" placeholder="Payment Transaction Id" [(ngModel)]="billing.transactionId"></ion-input>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-row">
+        <div class="input-group" style="flex: 1;">
+          <label>Due Amount</label>
+          <div class="input-wrap">
+            <ion-input type="text" [value]="billing.dueAmount" readonly></ion-input>
+          </div>
+        </div>
+        <div class="input-group" style="flex: 1;">
+          <label>Dis From</label>
+          <div class="input-wrap">
+            <ion-select placeholder="Select doctor" interface="popover" [(ngModel)]="billing.discountFromDoctor">
+              <ion-select-option *ngFor="let doc of doctors" [value]="doc">
+                {{ doc.doctor_name }}
+              </ion-select-option>
+            </ion-select>
+          </div>
         </div>
       </div>
     </div>
@@ -301,110 +413,75 @@
 
   <!-- ADD DOCTOR MODAL -->
   <ion-modal [isOpen]="showAddDoctor" cssClass="doctor-popup">
-
     <ng-template>
-
       <div class="modal-page">
-
         <div class="modal-header">
           <h2>Select Doctor</h2>
-
           <ion-button fill="clear" color="danger" (click)="showAddDoctor = false">
             <ion-icon name="close-outline"></ion-icon>
           </ion-button>
         </div>
 
         <div class="modal-body">
-
-          <!-- ==========================
-             DOCTOR SEARCH / DROPDOWN
-        =========================== -->
-
           <div class="input-group" style="margin-bottom:12px;">
             <label>Select Doctor</label>
-
             <div class="input-wrap">
-
               <ion-select interface="popover" placeholder="Choose Doctor" [(ngModel)]="selectedDoctor"
                 (ionChange)="selectDoctor($event.detail.value)">
-
                 <ion-select-option *ngFor="let doc of doctors" [value]="doc">
                   {{ doc.doctor_name }}
                 </ion-select-option>
-
               </ion-select>
-
             </div>
           </div>
 
-          <!-- ==========================
-             SHOW SELECTED DOCTOR BOX
-        =========================== -->
-          <div *ngIf="selectedDoctor" class="selected-box"
-           >
+          <div *ngIf="selectedDoctor" class="selected-box"></div>
 
-            
-          </div>
-
-          <!-- CLOSE BUTTON -->
           <ion-button expand="block" class="modal-save-btn" (click)="showAddDoctor = false">
-
             <ion-icon slot="start" name="checkmark-outline"></ion-icon>
-
             Done
-
           </ion-button>
-
         </div>
-
       </div>
-
     </ng-template>
-
   </ion-modal>
 
   <!-- ADD LAB MODAL -->
-<ion-modal [isOpen]="showAddLab" cssClass="lab-popup">
-  <ng-template>
-
-    <div class="modal-page">
-      <div class="modal-header">
-        <h2>Select Lab</h2>
-        <ion-button fill="clear" color="danger" (click)="showAddLab=false">
-          <ion-icon name="close-outline"></ion-icon>
-        </ion-button>
-      </div>
-
-      <div class="modal-body">
-
-        <div class="input-group" style="margin-bottom:12px;">
-          <label>Select Lab</label>
-          <div class="input-wrap">
-            <ion-select interface="popover"
-              placeholder="Choose Lab"
-              [(ngModel)]="selectedLab"
-              (ionChange)="selectLab($event.detail.value)">
-
-              <ion-select-option *ngFor="let lab of labs" [value]="lab">
-                {{ lab.franchiseName || lab.name }}
-              </ion-select-option>
-
-            </ion-select>
-          </div>
+  <ion-modal [isOpen]="showAddLab" cssClass="lab-popup">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>Select Lab</h2>
+          <ion-button fill="clear" color="danger" (click)="showAddLab=false">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
         </div>
 
-        <div *ngIf="selectedLab" class="selected-box"></div>
+        <div class="modal-body">
+          <div class="input-group" style="margin-bottom:12px;">
+            <label>Select Lab</label>
+            <div class="input-wrap">
+              <ion-select interface="popover"
+                placeholder="Choose Lab"
+                [(ngModel)]="selectedLab"
+                (ionChange)="selectLab($event.detail.value)">
+                <ion-select-option *ngFor="let lab of labs" [value]="lab">
+                  {{ lab.franchiseName || lab.name }}
+                </ion-select-option>
+              </ion-select>
+            </div>
+          </div>
 
-        <ion-button expand="block" class="modal-save-btn" (click)="showAddLab = false">
-          <ion-icon slot="start" name="checkmark-outline"></ion-icon>
-          Done
-        </ion-button>
+          <div *ngIf="selectedLab" class="selected-box"></div>
 
+          <ion-button expand="block" class="modal-save-btn" (click)="showAddLab = false">
+            <ion-icon slot="start" name="checkmark-outline"></ion-icon>
+            Done
+          </ion-button>
+        </div>
       </div>
-    </div>
-
-  </ng-template>
-</ion-modal>
+    </ng-template>
+  </ion-modal>
 
   <!-- INVOICE MODAL -->
   <ion-modal [isOpen]="showInvoice" (didDismiss)="showInvoice = false">
@@ -438,32 +515,27 @@
           </div>
         </div>
 
-     <div class="input-wrap">
-  <ion-input
-    placeholder="Search Test..."
-    [(ngModel)]="testSearch"
-    (ionInput)="searchTest()">
-  </ion-input>
-</div>
-
-<div *ngIf="showSuggestions">
-  <div *ngFor="let t of filteredTests" (click)="addTest(t)">
-    {{ t.testName || t.name }} - ₹{{ t.mrp }}
-  </div>
-</div>
-
-        <div class="invoice-totals">
+        <!-- ✅ ADMIN -> full totals -->
+        <div class="invoice-totals" *ngIf="isAdminRole">
           <div class="inv-total-row">
             <span>Sub Total</span>
             <span>₹{{ savedPatient?.totalAmount }}</span>
           </div>
           <div class="inv-total-row">
             <span>Discount</span>
-            <span>₹0</span>
+            <span>₹{{ savedPatient?.discount }}</span>
           </div>
           <div class="inv-total-row grand">
             <span>Grand Total</span>
-            <span>₹{{ savedPatient?.totalAmount }}</span>
+            <span>₹{{ savedPatient?.grandTotal }}</span>
+          </div>
+        </div>
+
+        <!-- ✅ FRANCHISE / STAFF -> masked -->
+        <div class="invoice-totals" *ngIf="isFranchiseRole">
+          <div class="inv-total-row grand">
+            <span>Total</span>
+            <span>.</span>
           </div>
         </div>
 

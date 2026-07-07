@@ -6,7 +6,7 @@ import {
   IonHeader, IonToolbar, IonTitle, IonContent,
   IonButtons, IonBackButton, IonButton, IonIcon,
   IonInput, IonSelect, IonSelectOption,
-  IonTextarea, IonCheckbox, IonModal,
+  IonTextarea, IonCheckbox, IonModal, IonRadioGroup, IonRadio, IonItem,
   AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
@@ -19,7 +19,7 @@ import {
 
 import { ToastService } from '../../services/toast';
 import { BookingService, Patient } from '../../services/booking-status';
-import { LabApiService } from '../../services/lab-api'; // ✅ ADDED
+import { LabApiService } from '../../services/lab-api';
 
 @Component({
   selector: 'app-add-patient',
@@ -31,7 +31,7 @@ import { LabApiService } from '../../services/lab-api'; // ✅ ADDED
     IonHeader, IonToolbar, IonTitle, IonContent,
     IonButtons, IonBackButton, IonButton, IonIcon,
     IonInput, IonSelect, IonSelectOption,
-    IonTextarea, IonCheckbox, IonModal
+    IonTextarea, IonCheckbox, IonModal, IonRadioGroup, IonRadio, IonItem
   ]
 })
 export class AddPatientComponent {
@@ -83,25 +83,92 @@ export class AddPatientComponent {
   };
 
   selectedTests: any[] = [];
-
-  // ⚠️ STATIC DATA REMOVED — ata purna API driven ahe.
-  // loadTests() call zalyavar hach array API cha response ne bharla jail.
   allTests: any[] = [];
-
   filteredTests: any[] = [];
   showSuggestions = false;
 
-  // ==========================
-  // ➕ DOCTORS (FETCH ONLY ADDED)
-  // ==========================
   doctors: any[] = [];
   selectedDoctor: any = null;
 
-  // ==========================
-  // ➕ LABS (NEW ADD ONLY)
-  // ==========================
   labs: any[] = [];
   selectedLab: any = null;
+
+  // ==========================
+  // ➕ ROLE BASE VISIBILITY (FINAL)
+  // ==========================
+  role: string = localStorage.getItem('role') || '';
+
+  private readonly ROLE_LAB_ADMIN = 'ROLE_LAB_ADMIN';
+  private readonly ROLE_STAFF = 'ROLE_STAFF';
+  private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
+  private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
+
+  // ✅ ROLE_LAB_ADMIN / ROLE_STAFF -> Price, Dis, Discount section sagla dista
+  get isAdminRole(): boolean {
+    return this.role === this.ROLE_LAB_ADMIN || this.role === this.ROLE_STAFF;
+  }
+
+  // ✅ ROLE_FRANCHISE / ROLE_FRANCHISE_STAFF -> Price, Dis, Discount section hide
+  get isFranchiseRole(): boolean {
+    return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF;
+  }
+
+  // ==========================
+  // ➕ BILLING / DISCOUNT SECTION (NEW ADD)
+  // ==========================
+  billing = {
+    discountType: 'percent' as 'percent' | 'fixed',
+    discountValue: 0,
+    discountAmount: 0,
+    grandTotal: 0,
+    paymentMode: 'cash',
+    cashAmount: 0,
+    upiAmount: 0,
+    paidAmount: 0,
+    dueAmount: 0,
+    transactionId: '',
+    discountFromDoctor: null as any
+  };
+
+  calculateBilling() {
+    const subTotal = this.getSubTotal();
+
+    if (this.billing.discountType === 'percent') {
+      this.billing.discountAmount = Math.round((subTotal * (this.billing.discountValue || 0)) / 100);
+    } else {
+      this.billing.discountAmount = this.billing.discountValue || 0;
+    }
+
+    this.billing.grandTotal = subTotal - this.billing.discountAmount;
+    if (this.billing.grandTotal < 0) this.billing.grandTotal = 0;
+
+    if (this.billing.paymentMode === 'cash') {
+      this.billing.cashAmount = this.billing.paidAmount || 0;
+      this.billing.upiAmount = 0;
+    } else if (this.billing.paymentMode === 'upi') {
+      this.billing.upiAmount = this.billing.paidAmount || 0;
+      this.billing.cashAmount = 0;
+    }
+
+    this.billing.dueAmount = this.billing.grandTotal - (this.billing.paidAmount || 0);
+    if (this.billing.dueAmount < 0) this.billing.dueAmount = 0;
+  }
+
+  resetBilling() {
+    this.billing = {
+      discountType: 'percent',
+      discountValue: 0,
+      discountAmount: 0,
+      grandTotal: 0,
+      paymentMode: 'cash',
+      cashAmount: 0,
+      upiAmount: 0,
+      paidAmount: 0,
+      dueAmount: 0,
+      transactionId: '',
+      discountFromDoctor: null
+    };
+  }
 
   constructor(
     private router: Router,
@@ -109,7 +176,7 @@ export class AddPatientComponent {
     private alertController: AlertController,
     private toastService: ToastService,
     private bookingService: BookingService,
-    private labApi: LabApiService // ✅ ADDED
+    private labApi: LabApiService
   ) {
     addIcons({
       'person-outline': personOutline,
@@ -128,13 +195,10 @@ export class AddPatientComponent {
     });
   }
 
-  // ==========================
-  // OPEN DOCTOR MODAL (UNCHANGED)
-  // ==========================
   openAddDoctor() {
     this.newDoctor = { title: 'dr', name: '', percentValue: '', percentType: '' };
     this.showAddDoctor = true;
-     this.loadDoctors();
+    this.loadDoctors();
   }
 
   saveDoctor() {
@@ -155,81 +219,79 @@ export class AddPatientComponent {
     );
   }
 
-  // ==========================
-  // ➕ DOCTOR FETCH (NEW ADD ONLY)
-  // ==========================
-loadDoctors() {
-  this.labApi.getDoctors().subscribe({
-    next: (res: any) => {
-      this.doctors = res || [];
-
-      console.log('DOCTORS:', this.doctors); // keep for debug
-    },
-    error: (err) => {
-      console.log(err);
-      this.toastService.error('Error', 'Failed to load doctors');
-    }
-  });
-}
-selectDoctor(doc: any) {
-  this.selectedDoctor = { ...doc };  // change detection fix
-
-  this.patient.doctor = doc?.doctor_name; // IMPORTANT FIX
-  this.patient.doctorTitle = 'dr';
-}
-
-  // ==========================
-  // ➕ LAB FETCH (NEW ADD ONLY)
-  // ==========================
-  loadLabs() {
-    this.labApi.getFranchises().subscribe({
+  loadDoctors() {
+    this.labApi.getDoctors().subscribe({
       next: (res: any) => {
-        // API kadhi array dete kadhi { content: [...] } dete, dohnhi handle
-        this.labs = res?.content || res || [];
-
-        console.log('LABS:', this.labs); // keep for debug
+        this.doctors = res || [];
+        console.log('DOCTORS:', this.doctors);
       },
       error: (err) => {
         console.log(err);
+        this.toastService.error('Error', 'Failed to load doctors');
+      }
+    });
+  }
+
+  selectDoctor(doc: any) {
+    this.selectedDoctor = { ...doc };
+    this.patient.doctor = doc?.doctor_name;
+    this.patient.doctorTitle = 'dr';
+  }
+
+  // ==========================
+  // ➕ FRANCHISE / STAFF -> swतःचा franchise use kar, API call nako (Access Denied fix)
+  // ==========================
+  loadLabs() {
+    if (this.isFranchiseRole) {
+      const ownFranchise = JSON.parse(localStorage.getItem('franchise') || 'null');
+
+      if (ownFranchise) {
+        this.labs = [ownFranchise];
+        this.selectedLab = ownFranchise;
+        this.patient.lab = ownFranchise.franchiseName || ownFranchise.name;
+      } else {
+        this.labs = [];
+      }
+
+      console.log('OWN FRANCHISE (no API call):', this.labs);
+      return;
+    }
+
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        this.labs = res?.content || res || [];
+        console.log('LABS:', this.labs);
+      },
+      error: (err) => {
+        console.log('LABS ERROR:', err);
         this.toastService.error('Error', 'Failed to load labs');
       }
     });
   }
 
   selectLab(lab: any) {
-    this.selectedLab = { ...lab }; // change detection fix
-
-    this.patient.lab = lab?.franchiseName || lab?.name; // IMPORTANT FIX
+    this.selectedLab = { ...lab };
+    this.patient.lab = lab?.franchiseName || lab?.name;
   }
 
-  // ==========================
-  // ➕ TESTS FETCH (NEW ADD ONLY)
-  // ==========================
   loadTests() {
     this.labApi.getTests().subscribe({
       next: (res: any) => {
         const apiTests = res || [];
 
-        // ✅ ACTUAL API FIELD NAMES CONFIRMED (real response check kela):
-        // test_name -> Test Name
-        // test_price -> MRP/Price
-        // price2 -> B2B Price
-        // tat -> TAT
-        // sampleTypeName -> Fluid / Sample Type
-        // sampleColor -> Color dot
-        // testId -> unique id
         this.allTests = (Array.isArray(apiTests) ? apiTests : []).map((t: any) => ({
           id: t.testId,
           name: t.test_name || 'Unnamed Test',
           b2b: t.price2 ?? 0,
           tat: t.tat || 'N/A',
           mrp: t.test_price ?? 0,
+          dis: 0,
           fluid: t.sampleTypeName || 'N/A',
           sampleType: t.sampleTypeName || 'OTHER',
           color: t.sampleColor || '#a855f7'
         }));
 
-        console.log('TESTS:', this.allTests); // keep for debug
+        console.log('TESTS:', this.allTests);
       },
       error: (err) => {
         console.log(err);
@@ -238,30 +300,21 @@ selectDoctor(doc: any) {
     });
   }
 
-  // ==========================
-  // OPEN LAB MODAL (NEW ADD ONLY)
-  // ==========================
   openAddLabApi() {
     this.loadLabs();
   }
 
-  // ==========================
-  // INIT (ONLY ADD CALL)
-  // ==========================
   ionViewWillEnter() {
-    this.loadDoctors(); // ✅ ADDED ONLY
-    this.loadLabs();    // ✅ ADDED ONLY
-    this.loadTests();   // ✅ ADDED ONLY
+    this.role = localStorage.getItem('role') || ''; // ✅ role refresh
+    this.loadDoctors();
+    this.loadLabs();
+    this.loadTests();
   }
-
-  // ==========================
-  // बाकी FULL CODE SAME AS IT IS
-  // ==========================
 
   openAddLab() {
     this.newLab = { name: '', contact: '', address: '' };
     this.showAddLab = true;
-    this.loadLabs(); // ✅ ADDED ONLY (doctor pattern sarkha)
+    this.loadLabs();
   }
 
   saveLab() {
@@ -297,6 +350,7 @@ selectDoctor(doc: any) {
         color: test.color
       });
       this.toastService.success('Test Added', test.name + ' added to bill.');
+      this.calculateBilling(); // ✅ ADDED
     } else {
       this.toastService.warning('Already Added', test.name + ' already exists.');
     }
@@ -311,6 +365,7 @@ selectDoctor(doc: any) {
       x => x.testName !== removed.name
     );
     this.toastService.warning('Test Removed', removed.name + ' removed from bill.');
+    this.calculateBilling(); // ✅ ADDED
   }
 
   getSubTotal() {
@@ -333,6 +388,7 @@ selectDoctor(doc: any) {
     this.selectedFileName = '';
     this.selectedFileBase64 = '';
     this.showSuggestions = false;
+    this.resetBilling(); // ✅ ADDED
   }
 
   async savePatient() {
@@ -361,17 +417,19 @@ selectDoctor(doc: any) {
       return;
     }
 
+    this.calculateBilling(); // ✅ ADDED — save honyaadhi final calc
+
     const patientData: Patient = {
       id: this.bookingService.generateNextId(),
       bookingDate: new Date().toLocaleString(),
       ...this.patient,
       tests: this.selectedTests,
       totalAmount: this.getSubTotal(),
-      discount: 0,
-      grandTotal: this.getSubTotal(),
-      paidAmount: 0,
-      dueAmount: this.getSubTotal(),
-      paymentMethod: 'cash'
+      discount: this.billing.discountAmount,
+      grandTotal: this.billing.grandTotal,
+      paidAmount: this.billing.paidAmount,
+      dueAmount: this.billing.dueAmount,
+      paymentMethod: this.billing.paymentMode
     };
 
     this.bookingService.addPatient(patientData);

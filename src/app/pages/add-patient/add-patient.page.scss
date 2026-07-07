@@ -704,4 +704,10 @@ ion-modal {
   border-radius:18px;
 
   margin:auto;
+}// ==========================
+// ➕ ROLE BASE TEST TABLE COLUMN FIX (staff/franchise view)
+// ==========================
+.test-header.staff-view,
+.test-row.staff-view {
+  grid-template-columns: 40px 1fr 70px 90px 60px !important;
 }

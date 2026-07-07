@@ -11,7 +11,7 @@ export class LabApiService {
   private readonly BASE_URL = environment.BASE_URL;
   private readonly LAB_ID = 3505;
 
-  constructor(private http: HttpClient) {}
+  constructor(private http: HttpClient) { }
 
   // ==========================
   // LAST BOOKING
@@ -41,14 +41,19 @@ export class LabApiService {
   }
 
   // ==========================
-  // FRANCHISE
+  // FRANCHISE data for Admin accordign to wallate 
   // ==========================
-  getFranchises(): Observable<any> {
+  getFranchisesWithWallet(): Observable<any> {
     return this.http.get(
       `${this.BASE_URL}/api/v1/lab/franchise/${this.LAB_ID}?wallet=true&page=0&size=20`
     );
   }
 
+  getFranchises(): Observable<any> {
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/franchise/${this.LAB_ID}?wallet=true&page=0&size=20`
+    );
+  }
   // ==========================
   // SAVE BOOKING
   // ==========================
