@@ -13,7 +13,8 @@ import {
   IonProgressBar,
   MenuController
 } from "@ionic/angular/standalone";
-import { Subscription, interval, forkJoin } from 'rxjs';
+import { Subscription, interval, forkJoin, of, EMPTY, Observable } from 'rxjs';
+import { switchMap, map } from 'rxjs/operators';
 
 import { addIcons } from "ionicons";
 import {
@@ -70,12 +71,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   rawBookings: any[] = [];
   dailyBookings: any[] = [];
 
-  // ✅ CHANGED — filterDate ata KADHIHI empty rahat nahi. Default
-  // "aaj cha date" ahे. Clear button kadhला — tyामुळे "all data"
-  // cha heavy/hang karnara query kadhihi trigger hoत nahi.
   filterDate: string = '';
 
   loading = false;
+
+  private loadInProgress = false;
 
   get isTopAdmin(): boolean {
     return this.roleService.isLabSideUI;
@@ -119,7 +119,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     private bookingRefresh: BookingRefreshService,
     private roleService: RoleService
   ) {
-
     addIcons({
       'people-outline': peopleOutline,
       'flask-outline': flaskOutline,
@@ -138,8 +137,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       'time-outline': timeOutline
     });
 
-    // ✅ ADDED — default filterDate = आजचा date (yyyy-mm-dd), input box
-    // madhे hach current date pहिल्यांदाच dिसेल.
     this.filterDate = this.toKey(new Date());
   }
 
@@ -148,8 +145,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       this.router.navigate(['/login']);
       return;
     }
-
-    this.initDashboard();
 
     this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => {
       this.initDashboard();
@@ -173,31 +168,51 @@ export class DashboardPage implements OnInit, OnDestroy {
   private startPolling() {
     this.pollSub?.unsubscribe();
     this.pollSub = interval(15000).subscribe(() => {
-      this.loadDashboard(true);
+      if (this.roleService.isFullAccess) {
+        this.loadDashboard(true);
+      } else {
+        // staff: heavy re-fetch नको, local recalc + हलका report-count refresh
+        this.calculateStats();
+        this.prepareDailyBookings();
+        this.refreshReportCountOnly();
+      }
     });
   }
 
   initDashboard() {
+    if (this.loadInProgress) return;
+    this.loadInProgress = true;
     this.loading = true;
 
-    this.authService.loadCurrentUser().subscribe({
-      next: () => {
-        const currentUser = this.authService.currentUserValue;
+    const existingUser = this.authService.currentUserValue;
 
-        this.user = {
-          name: currentUser?.raw?.username ?? '',
-          email: currentUser?.raw?.email ?? '',
-          role: this.roleService.currentRole
-        };
-
-        this.loadDashboard();
-      },
-      error: (err) => {
-        this.loading = false;
-        console.log('CURRENT USER ERROR:', err);
-        this.toastService.error('Error', 'Failed to load user info');
-      }
-    });
+    if (existingUser) {
+      // ✅ आधीच in-memory मध्ये आहे — परत /auth/current-user call नको
+      this.user = {
+        name: existingUser?.raw?.username ?? '',
+        email: existingUser?.raw?.email ?? '',
+        role: this.roleService.currentRole
+      };
+      this.loadDashboard();
+    } else {
+      this.authService.loadCurrentUser().subscribe({
+        next: () => {
+          const currentUser = this.authService.currentUserValue;
+          this.user = {
+            name: currentUser?.raw?.username ?? '',
+            email: currentUser?.raw?.email ?? '',
+            role: this.roleService.currentRole
+          };
+          this.loadDashboard();
+        },
+        error: (err) => {
+          this.loading = false;
+          this.loadInProgress = false;
+          console.log('CURRENT USER ERROR:', err);
+          this.toastService.error('Error', 'Failed to load user info');
+        }
+      });
+    }
   }
 
   private formatDateParam(d: Date): string {
@@ -210,22 +225,81 @@ export class DashboardPage implements OnInit, OnDestroy {
     return this.formatDateParam(d);
   }
 
-  // ==========================
-  // ✅ FINAL FIX
-  // Admin (isFullAccess): fast pre-aggregated endpoint
-  // (/dashboard/patients/new) vaparतो — top cards `filterDate`
-  // (default aaj) cha data dakhavतात, ani "Daily Bookings" list
-  // NEHMI last 5 calendar days cha (filter shivाय) — dogही
-  // parallel madhे, size-limit cha bhog nahi, hang होत nahi.
+  // ✅ UPDATED — आधी हा method sequential expand() वापरत होता,
+  // म्हणजे page 0 चा response आल्याशिवाय page 1 ची call जायचीच नाही,
+  // ...आणि तसंच पुढे. प्रत्येक extra page = एक पूर्ण round-trip
+  // (network + auth interceptor + मोठा nested JSON payload).
+  // त्यामुळे 4-5 sequential calls मिळून 4-5 सेकंद लागत होते,
+  // जरी प्रत्येक call स्वतः ५६ms ची असली तरी.
   //
-  // Staff/Franchise: per-user data confirm nahi ha fast endpoint
-  // deto ka, tyामुळे जुनाच getAllBookings() (size=150, sort desc)
-  // + client-side filterDate filter vaparला ahे — filterDate
-  // kadhihi empty nasल्यामुळे "all data" cha heavy scenario
-  // kधीच trigger hoत nahi.
-  // ==========================
+  // आता: पहिलं page आणतो (जे लागतंच — totalPages कळण्यासाठी),
+  // मग उरलेली आवश्यक pages PARALLEL (forkJoin) मध्ये मागवतो.
+  // MAX_ADDITIONAL_PAGES ही एक safety cap आहे जेणेकरून एखाद्या
+  // admin कडे खूप जास्त data असेल तर आपण चुकून खूप pages parallel
+  // मध्ये hit करून बसणार नाही. गरज पडली तर हा number वाढवता येईल.
+  private fetchBookingsForWindow(createdBy: number, daysBack: number = 5): Observable<any[]> {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - daysBack);
+    cutoff.setHours(0, 0, 0, 0);
+
+    // ⚠️ NOTE: PAGE_SIZE आधी 100 केला होता, पण backend response मध्ये
+    // प्रत्येक booking च्या आत पूर्ण nested object (tests, samples, bill,
+    // transactions, franchise, doctor, user) येतोय — त्यामुळे size=100
+    // म्हणजे 5.2 MB चा response (8+ सेकंद फक्त download/parse साठी).
+    // जोपर्यंत backend कडून हलका list DTO मिळत नाही, तोपर्यंत PAGE_SIZE
+    // छोटा ठेवणं हाच frontend कडून करता येणारा तात्पुरता उपाय आहे.
+    const PAGE_SIZE = 20;
+    const MAX_ADDITIONAL_PAGES = 4;     // ✅ safety cap — एकूण जास्तीत जास्त 5 pages (0..4)
+
+    return this.labApi.getBookingsPage(createdBy, 0, PAGE_SIZE).pipe(
+      switchMap((firstPage: any) => {
+        const firstContent: any[] = firstPage?.content || [];
+        const totalPages: number = firstPage?.totalPages ?? 1;
+        const isLast = firstPage?.last === true || totalPages <= 1;
+
+        const lastRecord = firstContent[firstContent.length - 1];
+        const lastDate = lastRecord ? new Date(lastRecord.createdOn) : null;
+        const stillInWindow = !!lastDate && lastDate >= cutoff;
+
+        // पहिल्याच page मध्ये window cover झालं / आणखी pages नाहीत
+        if (isLast || !stillInWindow || firstContent.length === 0) {
+          return of(this.filterByWindow(firstContent, cutoff));
+        }
+
+        const pagesToFetch = Math.min(totalPages - 1, MAX_ADDITIONAL_PAGES);
+        if (pagesToFetch <= 0) {
+          return of(this.filterByWindow(firstContent, cutoff));
+        }
+
+        const remainingCalls = Array.from({ length: pagesToFetch }, (_, i) =>
+          this.labApi.getBookingsPage(createdBy, i + 1, PAGE_SIZE)
+        );
+
+        // ✅ इथेच खरा fix आहे — या सगळ्या calls एकाच वेळी (parallel) जातात,
+        // एकामागोमाग एक (sequential) नाही
+        return forkJoin(remainingCalls).pipe(
+          map((pages: any[]) => {
+            let all = [...firstContent];
+            for (const pageRes of pages) {
+              all = all.concat(pageRes?.content || []);
+            }
+            return this.filterByWindow(all, cutoff);
+          })
+        );
+      })
+    );
+  }
+
+  private filterByWindow(records: any[], cutoff: Date): any[] {
+    return records.filter((r: any) => {
+      if (!r?.createdOn) return true;
+      return new Date(r.createdOn) >= cutoff;
+    });
+  }
+
   loadDashboard(silent: boolean = false) {
-    const labId = this.authService.currentUserValue?.raw?.labId;
+    const currentUser = this.authService.currentUserValue;
+    const labId = currentUser?.raw?.labId;
     const today = new Date();
 
     if (this.roleService.isFullAccess) {
@@ -246,6 +320,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       }).subscribe({
         next: ({ selected, daily }: any) => {
           this.loading = false;
+          this.loadInProgress = false;
 
           this.totalBookings = selected.totalBookingsCount || 0;
           this.totalPatients = selected.totalBookingsCount || 0;
@@ -275,6 +350,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         },
         error: (err) => {
           this.loading = false;
+          this.loadInProgress = false;
           if (!silent) {
             console.log('DASHBOARD SUMMARY ERROR:', err);
             this.toastService.error('Error', 'Failed to load dashboard data');
@@ -284,14 +360,26 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     } else {
 
-      this.labApi.getAllBookings().subscribe({
-        next: (res: any) => {
-          this.loading = false;
+      // ================================
+      // ✅ STAFF — hybrid: हलका report-count call + filtered/windowed booking fetch
+      // ================================
+      const currentUserId = currentUser?.raw?.id;
+      const currentUsername = currentUser?.raw?.username;
 
-          const allData = res?.content || res || [];
-          const currentUser = this.authService.currentUserValue;
-          const currentUsername = currentUser?.raw?.username;
-          const currentUserId = currentUser?.raw?.id;
+      const selectedStart = this.filterDate;
+      const selectedEnd = this.nextDay(this.filterDate);
+
+      forkJoin({
+        reportCount: this.labApi.getReportCount(labId, selectedStart, selectedEnd, currentUserId),
+        bookings: this.fetchBookingsForWindow(currentUserId, 5)
+      }).subscribe({
+        next: ({ reportCount, bookings }: any) => {
+          this.loading = false;
+          this.loadInProgress = false;
+
+          // ✅ reports count थेट backend कडून — कुठलाही heavy record न ओढता
+          this.totalReports =
+            (reportCount?.completecount || 0) + (reportCount?.partiallycomplete || 0);
 
           let overrideMap: any = {};
           try {
@@ -301,7 +389,9 @@ export class DashboardPage implements OnInit, OnDestroy {
             overrideMap = {};
           }
 
-          this.rawBookings = allData.filter((p: any) => {
+          // safety-net filter (backend आधीच createdBy filter करतोय,
+          // पण override-case साठी हे अजून लागतं)
+          this.rawBookings = (bookings || []).filter((p: any) => {
             const overrideUsername = overrideMap[p.bookingId];
             if (overrideUsername) return overrideUsername === currentUsername;
             const usernameMatch = !!currentUsername && p.user?.username === currentUsername;
@@ -309,13 +399,14 @@ export class DashboardPage implements OnInit, OnDestroy {
             return usernameMatch || idMatch;
           });
 
-          this.calculateStats();
-          this.prepareDailyBookings();
+          this.calculateStats();       // totalBookings/totalPatients/totalSamples (totalReports overwrite करत नाही)
+          this.prepareDailyBookings(); // rawBookings मधूनच 5-दिवसांचा breakdown (आधीच fetch झालाय, नवीन call नाही)
         },
         error: (err) => {
           this.loading = false;
+          this.loadInProgress = false;
           if (!silent) {
-            console.log('DASHBOARD BOOKINGS ERROR:', err);
+            console.log('DASHBOARD STAFF ERROR:', err);
             this.toastService.error('Error', 'Failed to load dashboard data');
           }
         }
@@ -323,9 +414,24 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
   }
 
-  // ✅ CHANGED — Staff sathi filterDate ata KADHIHI empty nasel,
-  // tyामुळे "if (this.filterDate)" cha empty/all-data path
-  // effectively kधीच hit hoत nahi — pण safety sathi filter tसाच.
+  // ✅ NEW — polling वर फक्त reports count refresh (हलका call),
+  // booking records परत ओढायचे नाहीत
+  private refreshReportCountOnly() {
+    const currentUser = this.authService.currentUserValue;
+    const labId = currentUser?.raw?.labId;
+    const currentUserId = currentUser?.raw?.id;
+    const selectedStart = this.filterDate;
+    const selectedEnd = this.nextDay(this.filterDate);
+
+    this.labApi.getReportCount(labId, selectedStart, selectedEnd, currentUserId).subscribe({
+      next: (reportCount: any) => {
+        this.totalReports =
+          (reportCount?.completecount || 0) + (reportCount?.partiallycomplete || 0);
+      },
+      error: () => { /* silent — polling error टाळा */ }
+    });
+  }
+
   calculateStats() {
     let data = this.rawBookings;
 
@@ -340,25 +446,23 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.totalPatients = data.length;
     this.totalBookings = data.length;
-    this.totalReports = data.filter((x: any) => x.reports && x.reports.length > 0).length;
+    // ✅ totalReports इथे यापुढे set होत नाही — तो आता
+    // getReportCount() API कडून येतो (loadDashboard / refreshReportCountOnly मध्ये)
     this.totalSamples = data.reduce((sum: number, p: any) => {
       return sum + (p.tests ? p.tests.length : 0);
     }, 0);
   }
 
   onDateChange() {
-    // ✅ CHANGED — date badalli ki fresh data mागाव (admin sathi
-    // navीन API call, staff sathi already-fetched rawBookings
-    // varun re-calculate)
     if (this.roleService.isFullAccess) {
       this.loadDashboard();
     } else {
       this.calculateStats();
+      this.prepareDailyBookings();
+      this.refreshReportCountOnly();   // date बदलली की reports count पण नव्याने आणा
     }
   }
 
-  // ✅ CHANGED — "Clear" ata data empty/all karत nahi, tर seedha
-  // aajच्या date var परत nेतो (safe default).
   resetToToday() {
     this.filterDate = this.toKey(new Date());
     this.onDateChange();
@@ -386,7 +490,6 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.rawBookings.forEach((p: any) => {
       const rawDate = p.createdOn || p.bookingDate || p.date;
-
       let d: Date;
 
       if (rawDate) {

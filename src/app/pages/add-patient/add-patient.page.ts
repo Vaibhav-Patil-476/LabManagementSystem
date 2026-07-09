@@ -42,11 +42,24 @@ export class AddPatientComponent {
   lastPatient = '—';
 
   patientRelation: string = 'self/ILS3505';
-
+ labSearch: string = '';
+  filteredLabs: any[] = [];
+  customFranchiseName: string = '';
+  staffLabSearch: string = '';
+  filteredStaffLabs: any[] = [];
+  showStaffLabDropdown = false;
   testSearch = '';
   showInvoice = false;
   showAddDoctor = false;
-  showAddLab = false;
+
+  // ✅ CHANGED — top-right box ata TYPE-AHEAD search आहे (click-toggle
+  // नाही) — type kelyavar showLabDropdown auto true/false hoto.
+  showLabDropdown = false;
+
+  // ✅ ADDED — STAFF sathi OLD STYLE "Add Lab" modal (Lab name / Contact
+  // / Address) — LAB/HOS field cha "+" button he ughadto.
+  showAddLabModal = false;
+
   savedPatient: any = null;
   selectedSampleTests: any[] = [];
 
@@ -102,10 +115,7 @@ export class AddPatientComponent {
   labs: any[] = [];
   selectedLab: any = null;
 
-  // ✅ ADDED — Lab picker modal sathi (Image 1 + Image 2)
-  labSearch: string = '';
-  filteredLabs: any[] = [];
-  customFranchiseName: string = '';
+
 
   doctorSearch = '';
   filteredDoctors: any[] = [];
@@ -244,8 +254,11 @@ export class AddPatientComponent {
     };
   }
 
+  // ✅ CHANGED — STAFF cha simplified "Add Doctor" modal (फक्त Doctor
+  // Name / Percent Value / Percent Type) sathi Type + Mobile Number
+  // required nahit — ते फक्त ADMIN sathi required raहतात.
   saveDoctor() {
-    if (!this.newDoctor.type) {
+    if (this.isAdminRole && !this.newDoctor.type) {
       this.toastService.error('Validation Error', 'Please select doctor type.');
       return;
     }
@@ -253,15 +266,15 @@ export class AddPatientComponent {
       this.toastService.error('Validation Error', 'Please enter doctor name.');
       return;
     }
-    if (!this.newDoctor.mobile.trim()) {
+    if (this.isAdminRole && !this.newDoctor.mobile.trim()) {
       this.toastService.error('Validation Error', 'Please enter mobile number.');
       return;
     }
 
     const payload = {
-      type: this.newDoctor.type,
+      type: this.newDoctor.type || 'Referral',
       doctor_name: this.newDoctor.name,
-      mobile_number: this.newDoctor.mobile,
+      mobile_number: this.newDoctor.mobile || '',
       degree: this.newDoctor.degree || '',
       percentValue: Number(this.newDoctor.percentValue) || 0,
       percentType: this.newDoctor.percentType || 'percent'
@@ -447,44 +460,108 @@ export class AddPatientComponent {
     });
   }
 
-  // ✅ CHANGED — lab picker modal open karताना search/customName reset
-  openAddLab() {
-    this.labSearch = '';
-    this.customFranchiseName = '';
-    this.showAddLab = true;
-    this.loadLabs();
+  // ==========================
+  // ✅ CHANGED — Top-right box + Staff LAB/HOS field donhi ata
+  // TYPE-AHEAD SEARCH (Image 1 प्रमाणे) — click-toggle nahi. Type
+  // karताच list khali yете, khali empty kela tar list band hote.
+  // ==========================
+  searchLabInput() {
+    const q = this.labSearch.trim().toLowerCase();
+
+    if (q.length > 0) {
+      this.filteredLabs = this.labs.filter(l =>
+        (l.franchiseName || l.name || '').toLowerCase().includes(q)
+      );
+      this.showLabDropdown = true;
+    } else {
+      this.filteredLabs = [];
+      this.showLabDropdown = false;
+    }
+
+    // typed text ला थेट patient.lab sobat sync ठेवतो, jenavढं list
+    // madhe match nasel tar pan custom naव save hoईल
+    this.selectedLab = null;
+    this.patient.lab = this.labSearch;
   }
 
+  // ==========================
+  // ✅ ADDED — STAFF cha LAB/HOS field sathi VEGLA (independent)
+  // search handler. Top box cha searchLabInput() la ata हात लावला
+  // nahi — tो jasa hota tasaच rahtो.
+  // ==========================
+  searchStaffLabInput() {
+    const q = this.staffLabSearch.trim().toLowerCase();
+
+    if (q.length > 0) {
+      this.filteredStaffLabs = this.labs.filter(l =>
+        (l.franchiseName || l.name || '').toLowerCase().includes(q)
+      );
+      this.showStaffLabDropdown = true;
+    } else {
+      this.filteredStaffLabs = [];
+      this.showStaffLabDropdown = false;
+    }
+
+    // ✅ typed text patient.lab sobat sync — top box प्रमाणेच
+    this.selectedLab = null;
+    this.patient.lab = this.staffLabSearch;
+  }
+
+  // ✅ LAB/HOS list item click kelyavar select karून list band
+  selectStaffLabFromPicker(lab: any) {
+    this.selectLab(lab);
+    this.staffLabSearch = lab?.franchiseName || lab?.name || '';
+    this.showStaffLabDropdown = false;
+  }
+
+  // ✅ input box la focus milalyavar (jar aधीच kahi text ahe) list
+  // punha dakhaव्यासाठी
+  onLabSearchFocus() {
+    if (this.labSearch.trim().length > 0) {
+      this.searchLabInput();
+    }
+  }
+
+  // ✅ list item click kelyavar select karून list band
+  selectLabFromPicker(lab: any) {
+    this.selectLab(lab);
+    this.labSearch = lab?.franchiseName || lab?.name || '';
+    this.showLabDropdown = false;
+  }
+
+  // ✅ ADMIN — CUSTOM FRANCHISE text box (form madhe inline, DRAWN ON नंतर)
+  onCustomFranchiseInput() {
+    if (this.customFranchiseName.trim()) {
+      this.selectedLab = null;
+      this.patient.lab = this.customFranchiseName.trim();
+      this.labSearch = this.customFranchiseName.trim();
+    } else {
+      this.patient.lab = '';
+    }
+  }
+
+  // ✅ ADDED — STAFF "Add Lab" modal ughadण्यासाठी (Image 3 प्रमाणे)
+  openAddLabModal() {
+    this.newLab = { name: '', contact: '', address: '' };
+    this.showAddLabModal = true;
+  }
+
+  // ✅ ADDED — STAFF "Add Lab" modal cha Add button (Image 3 प्रमाणे).
+  // labSearch/top-box madhe pan navin lab नाव लगेच sync होते.
   saveLab() {
     if (!this.newLab.name.trim()) {
       this.toastService.error('Validation Error', 'Please enter lab name.');
       return;
     }
     this.patient.lab = this.newLab.name;
-    this.showAddLab = false;
+    this.labSearch = this.newLab.name;
+
+    // ✅ ADDED — staff cha independent field pan sync kara
+    this.staffLabSearch = this.newLab.name;
+
+    this.selectedLab = null;
+    this.showAddLabModal = false;
     this.toastService.success('Lab Added', this.newLab.name + ' added successfully.');
-  }
-
-  // ✅ ADDED — Image 2 cha "Search collection center" box
-  searchLabInput() {
-    const q = this.labSearch.trim().toLowerCase();
-    this.filteredLabs = q
-      ? this.labs.filter(l => (l.franchiseName || l.name || '').toLowerCase().includes(q))
-      : this.labs;
-  }
-
-  // ✅ ADDED — list item click kelyavar select karून modal band
-  selectLabFromPicker(lab: any) {
-    this.selectLab(lab);
-    this.showAddLab = false;
-  }
-
-  // ✅ ADDED — Image 1 cha "Custom Franchise" text box
-  onCustomFranchiseInput() {
-    if (this.customFranchiseName.trim()) {
-      this.selectedLab = null;
-      this.patient.lab = this.customFranchiseName.trim();
-    }
   }
 
   searchTest() {
@@ -567,6 +644,15 @@ export class AddPatientComponent {
     this.doctorSearch = '';
     this.filteredDoctors = [];
     this.showDoctorSuggestions = false;
+
+    this.selectedLab = null;
+    this.customFranchiseName = '';
+    this.labSearch = '';
+    this.showLabDropdown = false;
+    this.showAddLabModal = false;
+    this.staffLabSearch = '';
+    this.filteredStaffLabs = [];
+    this.showStaffLabDropdown = false;
 
     this.resetBilling();
 

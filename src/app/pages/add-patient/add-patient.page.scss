@@ -261,6 +261,13 @@
   overflow: hidden;
   box-shadow: 0 4px 12px rgba(0,0,0,0.08);
 
+  // ==========================
+  // ✅ ADDED — safety limit, jarी overlay class nasel tarіही
+  // (jasa test-search dropdown, jya cha parent position:relative
+  // nahi) list unlimited वाढणार nahi.
+  // ==========================
+  max-height: 260px;
+  overflow-y: auto;
   .suggestion-item {
     display: flex;
     justify-content: space-between;
@@ -279,6 +286,22 @@
       color: #6366f1;
     }
   }
+}// ==========================
+// ✅ ADDED — MAIN FIX. REF DOC आणि LAB/HOS chaya dropdown la
+// "position: absolute" deun to OVERLAY बनतो — khaलच्या fields
+// la push karत nahi (screenshot madhla layout-tuटण्याचा bug
+// yामुळेच hota). Ha class fakta tya 2 dropdowns var (parent
+// cha position:relative असलेल्या ठिकाणी) vaparaycha aहे —
+// test-search dropdown var nahi (tyacha parent positioned
+// nasल्यामुळे absolute positioning tिथे tुटेल).
+// ==========================
+.test-suggestions.overlay-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  margin-bottom: 0;
 }
 
 /* =====================
@@ -996,4 +1019,82 @@ ion-modal {
   padding: 20px;
   text-align: center;
   color: var(--ion-color-medium, #888);
+}.relation-box-wrap {
+  position: relative;
+}
+
+/* ✅ ADDED — top-right "Select collection center" ata type-ahead
+   search input aहे (click-box nahi) */
+.lab-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid #c9cee8;
+  border-radius: 20px;
+  padding: 4px 12px;
+  background: #fff;
+
+  ion-input {
+    flex: 1;
+    --padding-start: 0;
+  }
+}
+
+/* ✅ ADDED — STAFF Add Lab modal cha full-width green Add button */
+.modal-add-btn.full-width {
+  width: 100%;
+  justify-content: center;
+}
+
+.lab-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  width: 280px;
+  max-width: 90vw;
+  background: #fff;
+  border: 1px solid #dfe3f2;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+  padding: 10px;
+  z-index: 999;
+}
+
+.lab-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: transparent;
+}
+
+/* --- fallback in case .lab-picker-list / item / empty are NOT
+   already defined elsewhere in your scss --- */
+.lab-picker-list {
+  max-height: 240px;
+  overflow-y: auto;
+  margin-top: 8px;
+}
+
+.lab-picker-item {
+  padding: 10px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+
+  &:hover {
+    background: #f2f4fb;
+  }
+
+  &.selected {
+    background: #e7ebff;
+    color: #3b4fd8;
+    font-weight: 600;
+  }
+}
+
+.lab-picker-empty {
+  padding: 12px;
+  text-align: center;
+  color: #9aa0b4;
+  font-size: 13px;
 }

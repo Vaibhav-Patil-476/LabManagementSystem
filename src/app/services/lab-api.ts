@@ -98,18 +98,21 @@ export class LabApiService {
   //       }
   //     }
   //   );
-  getAllBookings(): Observable<any> {
-    const params = new HttpParams()
-      .set('_t', Date.now().toString())
-      .set('page', '0')
-      .set('size', '150')
-      .set('sort', 'createdOn,desc');
 
-    return this.http.get(
-      `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
-      { params }
-    );
-  }
+// ✅ booking records — createdBy filter सह, pagination साठी
+getBookingsPage(createdBy: number, page: number, size: number = 100): Observable<any> {
+  const params = new HttpParams()
+    .set('_t', Date.now().toString())
+    .set('page', page.toString())
+    .set('size', size.toString())
+    .set('sort', 'createdOn,desc')
+    .set('createdBy', createdBy.toString());
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
+    { params }
+  );
+}
 
 getDashboardSummary(labId: number, startDate: string, endDate: string): Observable<any> {
   return this.http.get(
@@ -152,11 +155,18 @@ getDashboardSummary(labId: number, startDate: string, endDate: string): Observab
     );
   }
 
-  getReportCount(): Observable<any> {
-    return this.http.get(
-      `${this.BASE_URL}/api/v1/lab/report/allReportCount/${this.getLabId()}`
-    );
+// ✅ NEW — reports चे counts थेट backend कडून, हलका call
+getReportCount(labId: number, startDate: string, endDate: string, createdBy?: number): Observable<any> {
+  let params = new HttpParams()
+    .set('startDate', startDate)
+    .set('endDate', endDate);
+
+  if (createdBy) {
+    params = params.set('createdBy', createdBy.toString());
   }
+
+  return this.http.get(`${this.BASE_URL}/api/v1/lab/report/allReportCount/${labId}`, { params });
+}
 
   createReport(body: any): Observable<any> {
     return this.http.post(
