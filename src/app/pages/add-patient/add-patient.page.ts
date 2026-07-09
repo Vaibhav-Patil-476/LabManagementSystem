@@ -14,15 +14,16 @@ import {
   personOutline, addOutline, searchOutline,
   saveOutline, trashOutline, walletOutline,
   printOutline, calendarOutline, cameraOutline,
-  closeOutline, scanOutline, attachOutline, documentOutline
+  closeOutline, scanOutline, attachOutline, documentOutline,
+  checkmarkOutline, chevronDownOutline
 } from 'ionicons/icons';
-import { RoleService } from '../../services/role';  
+import { RoleService } from '../../services/role';
 import { ToastService } from '../../services/toast';
 import { BookingService, Patient } from '../../services/booking-status';
 import { LabApiService } from '../../services/lab-api';
 import { AuthService } from '../../services/auth';
-// ✅ import add kara
 import { BookingRefreshService } from '../../services/booking-refresh';
+
 @Component({
   selector: 'app-add-patient',
   templateUrl: './add-patient.page.html',
@@ -39,6 +40,8 @@ import { BookingRefreshService } from '../../services/booking-refresh';
 export class AddPatientComponent {
 
   lastPatient = '—';
+
+  patientRelation: string = 'self/ILS3505';
 
   testSearch = '';
   showInvoice = false;
@@ -66,6 +69,7 @@ export class AddPatientComponent {
     address: '',
     uhid: '',
     history: '',
+    otherCharges: 0,
     eReport: false,
     clinical: false,
     file: false,
@@ -73,10 +77,12 @@ export class AddPatientComponent {
   };
 
   newDoctor = {
-    title: 'dr',
+    type: 'Referral',
     name: '',
+    mobile: '',
+    degree: '',
     percentValue: '',
-    percentType: ''
+    percentType: 'percent'
   };
 
   newLab = {
@@ -96,6 +102,11 @@ export class AddPatientComponent {
   labs: any[] = [];
   selectedLab: any = null;
 
+  // ✅ ADDED — Lab picker modal sathi (Image 1 + Image 2)
+  labSearch: string = '';
+  filteredLabs: any[] = [];
+  customFranchiseName: string = '';
+
   doctorSearch = '';
   filteredDoctors: any[] = [];
   showDoctorSuggestions = false;
@@ -107,20 +118,17 @@ export class AddPatientComponent {
   private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
   private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
 
-get isTopAdmin(): boolean {
-  // ✅ FIXED — UI billing/amount columns dakhavण्यासाठी Admin+Staff dogही
-  return this.roleService.isLabSideUI;
-}
+  get isTopAdmin(): boolean {
+    return this.roleService.isLabSideUI;
+  }
 
-get hideAmounts(): boolean {
-  return this.roleService.isFranchiseSide;
-}
+  get hideAmounts(): boolean {
+    return this.roleService.isFranchiseSide;
+  }
 
-// ✅ ADDED — ha getter missing hota, tyamule "Property 'isAdminRole' does not exist" error yet hota.
-// savePatient() madhe invoice dakhavायच्या logic sathi vaparला जातो — Admin + Staff dogही sathi true.
-get isAdminRole(): boolean {
-  return this.roleService.isLabSideUI;
-}
+  get isAdminRole(): boolean {
+    return this.roleService.isLabSideUI;
+  }
 
   get isFranchiseRole(): boolean {
     return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF;
@@ -180,33 +188,35 @@ get isAdminRole(): boolean {
     };
   }
 
- constructor(
-  private router: Router,
-  private ngZone: NgZone,
-  private alertController: AlertController,
-  private toastService: ToastService,
-  private bookingService: BookingService,
-  private labApi: LabApiService,
-  private authService: AuthService,
-  private bookingRefresh: BookingRefreshService,   // ✅ ADDED
-  private roleService: RoleService                 // ✅ ADDED — hach missing hota, main bug
-) {
-  addIcons({
-    'person-outline': personOutline,
-    'add-outline': addOutline,
-    'search-outline': searchOutline,
-    'save-outline': saveOutline,
-    'trash-outline': trashOutline,
-    'wallet-outline': walletOutline,
-    'print-outline': printOutline,
-    'calendar-outline': calendarOutline,
-    'camera-outline': cameraOutline,
-    'close-outline': closeOutline,
-    'scan-outline': scanOutline,
-    'attach-outline': attachOutline,
-    'document-outline': documentOutline
-  });
-}
+  constructor(
+    private router: Router,
+    private ngZone: NgZone,
+    private alertController: AlertController,
+    private toastService: ToastService,
+    private bookingService: BookingService,
+    private labApi: LabApiService,
+    private authService: AuthService,
+    private bookingRefresh: BookingRefreshService,
+    private roleService: RoleService
+  ) {
+    addIcons({
+      'person-outline': personOutline,
+      'add-outline': addOutline,
+      'search-outline': searchOutline,
+      'save-outline': saveOutline,
+      'trash-outline': trashOutline,
+      'wallet-outline': walletOutline,
+      'print-outline': printOutline,
+      'calendar-outline': calendarOutline,
+      'camera-outline': cameraOutline,
+      'close-outline': closeOutline,
+      'scan-outline': scanOutline,
+      'attach-outline': attachOutline,
+      'document-outline': documentOutline,
+      'checkmark-outline': checkmarkOutline,
+      'chevron-down-outline': chevronDownOutline
+    });
+  }
 
   compareDoctors = (o1: any, o2: any): boolean => {
     if (!o1 || !o2) return o1 === o2;
@@ -219,33 +229,83 @@ get isAdminRole(): boolean {
   };
 
   openAddDoctor() {
-    this.newDoctor = { title: 'dr', name: '', percentValue: '', percentType: '' };
+    this.resetNewDoctorForm();
     this.showAddDoctor = true;
-    this.loadDoctors();
+  }
+
+  private resetNewDoctorForm() {
+    this.newDoctor = {
+      type: 'Referral',
+      name: '',
+      mobile: '',
+      degree: '',
+      percentValue: '',
+      percentType: 'percent'
+    };
   }
 
   saveDoctor() {
+    if (!this.newDoctor.type) {
+      this.toastService.error('Validation Error', 'Please select doctor type.');
+      return;
+    }
     if (!this.newDoctor.name.trim()) {
       this.toastService.error('Validation Error', 'Please enter doctor name.');
       return;
     }
+    if (!this.newDoctor.mobile.trim()) {
+      this.toastService.error('Validation Error', 'Please enter mobile number.');
+      return;
+    }
 
-    this.patient.doctorTitle = this.newDoctor.title;
-    this.patient.doctor = this.newDoctor.name;
+    const payload = {
+      type: this.newDoctor.type,
+      doctor_name: this.newDoctor.name,
+      mobile_number: this.newDoctor.mobile,
+      degree: this.newDoctor.degree || '',
+      percentValue: Number(this.newDoctor.percentValue) || 0,
+      percentType: this.newDoctor.percentType || 'percent'
+    };
 
-    this.showAddDoctor = false;
+    this.labApi.createDoctor(payload).subscribe({
+      next: () => {
+        this.toastService.success('Doctor Added', this.newDoctor.name + ' added successfully.');
+        this.showAddDoctor = false;
 
-    this.toastService.success(
-      'Doctor Added',
-      this.newDoctor.title.charAt(0).toUpperCase() + this.newDoctor.title.slice(1) +
-      '. ' + this.newDoctor.name + ' added successfully.'
-    );
+        this.labApi.getDoctors().subscribe({
+          next: (docs: any) => {
+            this.doctors = docs || [];
+            const created = this.doctors.find((d: any) =>
+              (d.doctor_name || '').toLowerCase() === payload.doctor_name.toLowerCase()
+            );
+            if (created) {
+              this.selectDoctor(created);
+            }
+          }
+        });
+
+        this.resetNewDoctorForm();
+      },
+      error: (err) => {
+        console.log('CREATE DOCTOR ERROR:', err);
+        this.toastService.error('Error', 'Failed to add doctor: ' + (err.error?.message || 'Unknown error'));
+      }
+    });
   }
 
   loadDoctors() {
     this.labApi.getDoctors().subscribe({
       next: (res: any) => {
         this.doctors = res || [];
+
+        if (!this.selectedDoctor) {
+          const selfDoctor = this.doctors.find((d: any) =>
+            (d.doctor_name || '').toLowerCase() === 'self'
+          );
+          if (selfDoctor) {
+            this.selectDoctor(selfDoctor);
+          }
+        }
       },
       error: (err) => {
         console.log(err);
@@ -287,6 +347,8 @@ get isAdminRole(): boolean {
     return Number(doc?.id ?? doc?.doctorId ?? doc?.doctor_id ?? 0);
   }
 
+  // ✅ CHANGED — filteredLabs pan set kartoy, jenवढं picker list
+  // lगेच populate होईल
   loadLabs() {
     if (this.isFranchiseRole) {
       const currentUser = this.authService.currentUserValue;
@@ -294,14 +356,15 @@ get isAdminRole(): boolean {
       if (currentUser && currentUser.franchiseId) {
         const ownFranchise = {
           id: currentUser.franchiseId,
-             
           franchiseName: currentUser.franchiseName
         };
         this.labs = [ownFranchise];
+        this.filteredLabs = this.labs;
         this.selectedLab = ownFranchise;
         this.patient.lab = ownFranchise.franchiseName;
       } else {
         this.labs = [];
+        this.filteredLabs = [];
       }
       return;
     }
@@ -309,6 +372,7 @@ get isAdminRole(): boolean {
     this.labApi.getFranchises().subscribe({
       next: (res: any) => {
         this.labs = res?.content || res || [];
+        this.filteredLabs = this.labs;
       },
       error: (err) => {
         console.log('LABS ERROR:', err);
@@ -371,16 +435,22 @@ get isAdminRole(): boolean {
       next: (res: any) => {
         this.lastPatient =
           res?.customerName ?? res?.name ?? res?.patientName ?? '—';
+
+        const uhid = res?.uhid ?? res?.UHID ?? '';
+        this.patientRelation = uhid ? ('self/' + uhid) : 'self/ILS3505';
       },
       error: (err) => {
         console.log('LAST PATIENT ERROR:', err);
         this.lastPatient = '—';
+        this.patientRelation = 'self/ILS3505';
       }
     });
   }
 
+  // ✅ CHANGED — lab picker modal open karताना search/customName reset
   openAddLab() {
-    this.newLab = { name: '', contact: '', address: '' };
+    this.labSearch = '';
+    this.customFranchiseName = '';
     this.showAddLab = true;
     this.loadLabs();
   }
@@ -393,6 +463,28 @@ get isAdminRole(): boolean {
     this.patient.lab = this.newLab.name;
     this.showAddLab = false;
     this.toastService.success('Lab Added', this.newLab.name + ' added successfully.');
+  }
+
+  // ✅ ADDED — Image 2 cha "Search collection center" box
+  searchLabInput() {
+    const q = this.labSearch.trim().toLowerCase();
+    this.filteredLabs = q
+      ? this.labs.filter(l => (l.franchiseName || l.name || '').toLowerCase().includes(q))
+      : this.labs;
+  }
+
+  // ✅ ADDED — list item click kelyavar select karून modal band
+  selectLabFromPicker(lab: any) {
+    this.selectLab(lab);
+    this.showAddLab = false;
+  }
+
+  // ✅ ADDED — Image 1 cha "Custom Franchise" text box
+  onCustomFranchiseInput() {
+    if (this.customFranchiseName.trim()) {
+      this.selectedLab = null;
+      this.patient.lab = this.customFranchiseName.trim();
+    }
   }
 
   searchTest() {
@@ -460,8 +552,8 @@ get isAdminRole(): boolean {
       ageType: 'years', gender: 'male',
       doctorTitle: 'dr', doctor: '', lab: '',
       phone: '', aadhaar: '', address: '',
-      uhid: '', history: '', eReport: false,
-      clinical: false, file: false, homeCollection: false
+      uhid: '', history: '', otherCharges: 0,
+      eReport: false, clinical: false, file: false, homeCollection: false
     };
     this.selectedTests = [];
     this.selectedSampleTests = [];
@@ -477,132 +569,119 @@ get isAdminRole(): boolean {
     this.showDoctorSuggestions = false;
 
     this.resetBilling();
+
+    this.loadDoctors();
   }
 
- async savePatient() {
-  if (!this.patient.name.trim() || !this.patient.age || !this.patient.phone.trim()) {
-    this.toastService.error('Validation Error', 'Please fill all required fields.');
-    return;
-  }
-  if (this.selectedTests.length === 0) {
-    this.toastService.warning('No Tests', 'Please add at least one test.');
-    return;
-  }
+  async savePatient() {
 
-  if (!this.getDoctorId(this.selectedDoctor)) {
-    this.toastService.error('Doctor Required', 'Please select doctor from the suggestion list.');
-    return;
-  }
-
-  const franchiseId = this.selectedLab?.id ?? this.selectedLab?.franchiseId ?? 0;
-
-  if (!franchiseId) {
-    this.toastService.error('Franchise Required', 'Please select a franchise/lab before booking.');
-    return;
-  }
-
-  this.calculateBilling();
-
-  const payload = {
-    customerName: this.patient.name,
-    age: Number(this.patient.age),
-    ageType: this.patient.ageType,
-    gender: this.patient.gender,
-    mobileNumber: Number(this.patient.phone),
-    address: this.patient.address || "",
-
-    customDoctorName: this.patient.doctor || "",
-    doctorid: this.getDoctorId(this.selectedDoctor),
-
-    customFranchiseLab: this.patient.lab || "",
-    customFranchiseLabId: "",
-    franchiseId: franchiseId,
-
-    tests: this.selectedTests.map(t => ({
-      testId: t.id,
-      test_name: t.name,
-      test_price: t.mrp,
-      assignedPrice: t.mrp
-    })),
-
-    subTotalAmount: this.getSubTotal(),
-    totalAmount: this.billing.grandTotal
-  };
-
-  this.labApi.createBooking(payload).subscribe({
-    next: (res: any) => {
-      this.toastService.success('Booking Saved', 'Patient booking created successfully.');
-
-      // ==========================
-      // ✅ CONFIRMED — createBooking() cha response fakta
-      // bookingId, customerName, age, gender return kartay — baki
-      // sagla (doctor/franchise/totalAmount) null/0 aste (backend limitation).
-      // Tyamule invoice sathi LOCAL form data vaparला — res varun fakta bookingId.
-      // ==========================
-      this.savedPatient = {
-        name: (this.patient.title ? this.capitalize(this.patient.title) + '. ' : '') + this.patient.name,
-        doctor: (this.patient.doctorTitle ? this.capitalize(this.patient.doctorTitle) + '. ' : '') + (this.patient.doctor || '—'),
-        bookingDate: new Date().toLocaleString('en-IN', {
-          day: '2-digit', month: '2-digit', year: 'numeric',
-          hour: '2-digit', minute: '2-digit', hour12: true
-        }),
-        id: res?.bookingId ?? '—',
-        phone: this.patient.phone,
-        totalAmount: this.getSubTotal(),
-        discount: this.billing.discountAmount,
-        grandTotal: this.billing.grandTotal
-      };
-
-      // ==========================
-      // ✅ ADDED — Backend "user" field bug workaround.
-      // Backend booking cha user/createdBy field JWT varून set न करता
-      // franchise cha assigned-staff varून set करतो (confirmed bug).
-      // Tyामुळे actual logged-in user (jyane khara booking kela) cha
-      // username, bookingId sobat locally save करतो — dashboard/
-      // booking-status var filtering sathi hach vaparaycha, backend
-      // cha chukicha user.username नाही.
-      // ==========================
-      try {
-        const actualCreatorUsername = this.authService.currentUserValue?.raw?.username ?? '';
-        const bookingId = res?.bookingId;
-
-        if (bookingId && actualCreatorUsername) {
-          const raw = localStorage.getItem('bookingCreatorOverride');
-          const map = raw ? JSON.parse(raw) : {};
-          map[bookingId] = actualCreatorUsername;
-          localStorage.setItem('bookingCreatorOverride', JSON.stringify(map));
-        }
-      } catch (e) {
-        console.log('bookingCreatorOverride save error:', e);
-      }
-
-      // ✅ Dashboard la refresh signal — manual reload lagणार nahi
-      this.bookingRefresh.triggerRefresh();
-
-      // ==========================
-      // ✅ Invoice fakta admin/staff (isAdminRole) la — franchise role la nahi
-      // ==========================
-      if (this.isAdminRole) {
-        this.showInvoice = true;
-      } else {
-        this.toastService.success('Done!', 'Redirecting to dashboard...');
-        this.resetForm();
-        setTimeout(() => {
-          this.ngZone.run(() => this.router.navigate(['/dashboard']));
-        }, 800);
-      }
-    },
-    error: (err) => {
-      console.error('Booking Error:', err);
-      this.toastService.error('Error', 'Failed to save: ' + (err.error?.message || 'Unknown error'));
+    if (!this.patient.name.trim()) {
+      this.toastService.error('Validation Error', 'Please enter patient name.');
+      return;
     }
-  });
-}
 
-// ✅ ADDED — helper for title capitalization
-private capitalize(str: string): string {
-  return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
-}
+    if (!this.patient.age) {
+      this.toastService.error('Validation Error', 'Please enter age.');
+      return;
+    }
+
+    if (!this.getDoctorId(this.selectedDoctor)) {
+      this.toastService.error('Doctor Required', 'Please select doctor from the suggestion list.');
+      return;
+    }
+
+    if (this.selectedTests.length === 0) {
+      this.toastService.warning('No Tests', 'Please add at least one test.');
+      return;
+    }
+
+    const franchiseId = this.selectedLab?.id ?? this.selectedLab?.franchiseId ?? 0;
+
+    this.calculateBilling();
+
+    const payload = {
+      customerName: this.patient.name,
+      age: Number(this.patient.age),
+      ageType: this.patient.ageType,
+      gender: this.patient.gender,
+      mobileNumber: this.patient.phone ? Number(this.patient.phone) : 0,
+      address: this.patient.address || "",
+
+      customDoctorName: this.patient.doctor || "",
+      doctorid: this.getDoctorId(this.selectedDoctor),
+
+      customFranchiseLab: this.patient.lab || "",
+      customFranchiseLabId: "",
+      franchiseId: franchiseId,
+
+      otherCharges: Number(this.patient.otherCharges) || 0,
+
+      tests: this.selectedTests.map(t => ({
+        testId: t.id,
+        test_name: t.name,
+        test_price: t.mrp,
+        assignedPrice: t.mrp
+      })),
+
+      subTotalAmount: this.getSubTotal(),
+      totalAmount: this.billing.grandTotal
+    };
+
+    this.labApi.createBooking(payload).subscribe({
+      next: (res: any) => {
+        this.toastService.success('Booking Saved', 'Patient booking created successfully.');
+
+        this.savedPatient = {
+          name: (this.patient.title ? this.capitalize(this.patient.title) + '. ' : '') + this.patient.name,
+          doctor: (this.patient.doctorTitle ? this.capitalize(this.patient.doctorTitle) + '. ' : '') + (this.patient.doctor || '—'),
+          bookingDate: new Date().toLocaleString('en-IN', {
+            day: '2-digit', month: '2-digit', year: 'numeric',
+            hour: '2-digit', minute: '2-digit', hour12: true
+          }),
+          id: res?.bookingId ?? '—',
+          phone: this.patient.phone,
+          totalAmount: this.getSubTotal(),
+          discount: this.billing.discountAmount,
+          grandTotal: this.billing.grandTotal
+        };
+
+        try {
+          const actualCreatorUsername = this.authService.currentUserValue?.raw?.username ?? '';
+          const bookingId = res?.bookingId;
+
+          if (bookingId && actualCreatorUsername) {
+            const raw = localStorage.getItem('bookingCreatorOverride');
+            const map = raw ? JSON.parse(raw) : {};
+            map[bookingId] = actualCreatorUsername;
+            localStorage.setItem('bookingCreatorOverride', JSON.stringify(map));
+          }
+        } catch (e) {
+          console.log('bookingCreatorOverride save error:', e);
+        }
+
+        this.bookingRefresh.triggerRefresh();
+
+        if (this.isAdminRole) {
+          this.showInvoice = true;
+        } else {
+          this.toastService.success('Done!', 'Redirecting to dashboard...');
+          this.resetForm();
+          setTimeout(() => {
+            this.ngZone.run(() => this.router.navigate(['/dashboard']));
+          }, 800);
+        }
+      },
+      error: (err) => {
+        console.error('Booking Error:', err);
+        this.toastService.error('Error', 'Failed to save: ' + (err.error?.message || 'Unknown error'));
+      }
+    });
+  }
+
+  private capitalize(str: string): string {
+    return str ? str.charAt(0).toUpperCase() + str.slice(1) : '';
+  }
+
   printInvoice() {
     window.print();
   }
@@ -673,5 +752,4 @@ private capitalize(str: string): string {
     this.toastService.warning('File Removed', 'File has been removed.');
   }
 
-  
 }

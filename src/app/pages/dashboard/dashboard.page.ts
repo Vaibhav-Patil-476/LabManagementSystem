@@ -13,7 +13,7 @@ import {
   IonProgressBar,
   MenuController
 } from "@ionic/angular/standalone";
-import { Subscription, interval } from 'rxjs';
+import { Subscription, interval, forkJoin } from 'rxjs';
 
 import { addIcons } from "ionicons";
 import {
@@ -38,7 +38,7 @@ import { AuthService } from '../../services/auth';
 import { LabApiService } from '../../services/lab-api';
 import { ToastService } from '../../services/toast';
 import { BookingRefreshService } from '../../services/booking-refresh';
-import { RoleService } from '../../services/role';   // ✅ ADDED
+import { RoleService } from '../../services/role';
 
 @Component({
   selector: 'app-dashboard',
@@ -70,13 +70,12 @@ export class DashboardPage implements OnInit, OnDestroy {
   rawBookings: any[] = [];
   dailyBookings: any[] = [];
 
+  // ✅ CHANGED — filterDate ata KADHIHI empty rahat nahi. Default
+  // "aaj cha date" ahे. Clear button kadhला — tyामुळे "all data"
+  // cha heavy/hang karnara query kadhihi trigger hoत nahi.
   filterDate: string = '';
-  loading = false;
 
-  // ==========================
-  // ✅ REMOVED — role constants ani manual role-check getters ata nahit.
-  // Sagla role logic RoleService (central, enum-based) madhe aहे.
-  // ==========================
+  loading = false;
 
   get isTopAdmin(): boolean {
     return this.roleService.isLabSideUI;
@@ -86,10 +85,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     return this.roleService.isFranchiseSide;
   }
 
-  // ==========================
-  // ✅ ADDED — "Aaj cha booking count" spotlight sathi.
-  // dailyBookings madhun aajcha entry shodhun count/amount return karto.
-  // ==========================
   get todayKey(): string {
     return this.toKey(new Date());
   }
@@ -122,7 +117,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     private labApi: LabApiService,
     private toastService: ToastService,
     private bookingRefresh: BookingRefreshService,
-    private roleService: RoleService   // ✅ ADDED
+    private roleService: RoleService
   ) {
 
     addIcons({
@@ -143,6 +138,9 @@ export class DashboardPage implements OnInit, OnDestroy {
       'time-outline': timeOutline
     });
 
+    // ✅ ADDED — default filterDate = आजचा date (yyyy-mm-dd), input box
+    // madhे hach current date pहिल्यांदाच dिसेल.
+    this.filterDate = this.toKey(new Date());
   }
 
   ngOnInit() {
@@ -153,7 +151,6 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.initDashboard();
 
-    // ✅ same-device/session var booking zalyavar instant refresh
     this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => {
       this.initDashboard();
     });
@@ -173,10 +170,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.pollSub?.unsubscribe();
   }
 
-  // ==========================
-  // ✅ Dusऱ्या device/browser var (admin/staff vegle logged in) zalela
-  // booking automatic disण्यासाठी polling. 15 sec ने silent auto-refresh.
-  // ==========================
   private startPolling() {
     this.pollSub?.unsubscribe();
     this.pollSub = interval(15000).subscribe(() => {
@@ -207,42 +200,132 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-// ==========================
-// ✅ FIXED — DATA VISIBILITY फक्त Admin ला full access.
-// Staff (lab-side असला तरी) फक्त स्वतःचा data बघेल.
-// Admin cha data staff ला kadhihi disणार नाही.
-// ==========================
-loadDashboard(silent: boolean = false) {
-  this.labApi.getAllBookings().subscribe({
-    next: (res: any) => {
-      this.loading = false;
+  private formatDateParam(d: Date): string {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
 
-      const allData = res?.content || res || [];
-      const currentUsername = this.authService.currentUserValue?.raw?.username;
+  private nextDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return this.formatDateParam(d);
+  }
 
-      if (this.roleService.isFullAccess) {
-        // ✅ FAKTA Lab Admin -> sagla data (staff cha pan)
-        this.rawBookings = allData;
-      } else {
-        // ✅ Staff / Franchise / Franchise-Staff -> FAKTA swतःचाच data
-        this.rawBookings = currentUsername
-          ? allData.filter((p: any) => p.user?.username === currentUsername)
-          : [];
-      }
+  // ==========================
+  // ✅ FINAL FIX
+  // Admin (isFullAccess): fast pre-aggregated endpoint
+  // (/dashboard/patients/new) vaparतो — top cards `filterDate`
+  // (default aaj) cha data dakhavतात, ani "Daily Bookings" list
+  // NEHMI last 5 calendar days cha (filter shivाय) — dogही
+  // parallel madhे, size-limit cha bhog nahi, hang होत nahi.
+  //
+  // Staff/Franchise: per-user data confirm nahi ha fast endpoint
+  // deto ka, tyामुळे जुनाच getAllBookings() (size=150, sort desc)
+  // + client-side filterDate filter vaparला ahे — filterDate
+  // kadhihi empty nasल्यामुळे "all data" cha heavy scenario
+  // kधीच trigger hoत nahi.
+  // ==========================
+  loadDashboard(silent: boolean = false) {
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const today = new Date();
 
-      this.calculateStats();
-      this.prepareDailyBookings();
-    },
-    error: (err) => {
-      this.loading = false;
-      if (!silent) {
-        console.log('DASHBOARD BOOKINGS ERROR:', err);
-        this.toastService.error('Error', 'Failed to load dashboard data');
-      }
+    if (this.roleService.isFullAccess) {
+
+      const selectedStart = this.filterDate;
+      const selectedEnd = this.nextDay(this.filterDate);
+
+      const days = Array.from({ length: 5 }, (_, i) => {
+        const d = new Date(today);
+        d.setDate(d.getDate() - i);
+        const dateStr = this.formatDateParam(d);
+        return { key: dateStr, dateStr, nextStr: this.nextDay(dateStr), display: d };
+      });
+
+      forkJoin({
+        selected: this.labApi.getDashboardSummary(labId, selectedStart, selectedEnd),
+        daily: forkJoin(days.map(d => this.labApi.getDashboardSummary(labId, d.dateStr, d.nextStr)))
+      }).subscribe({
+        next: ({ selected, daily }: any) => {
+          this.loading = false;
+
+          this.totalBookings = selected.totalBookingsCount || 0;
+          this.totalPatients = selected.totalBookingsCount || 0;
+
+          const s = selected.samples?.[0];
+          this.totalSamples = (s?.received || 0) + (s?.notReceived || 0) + (s?.outSourced || 0);
+
+          const r = selected.reports?.[0];
+          this.totalReports = r?.completed || 0;
+
+          this.dailyBookings = days.map((d, idx) => {
+            const resp: any = daily[idx];
+            const smp = resp.samples?.[0];
+            return {
+              dateKey: d.key,
+              date: d.display.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+              bookings: resp.totalBookingsCount || 0,
+              samples: (smp?.received || 0) + (smp?.notReceived || 0) + (smp?.outSourced || 0),
+              received: smp?.received || 0,
+              pending: smp?.notReceived || 0,
+              rejected: 0,
+              amount: resp.totalPaid || 0
+            };
+          });
+
+          this.rawBookings = [];
+        },
+        error: (err) => {
+          this.loading = false;
+          if (!silent) {
+            console.log('DASHBOARD SUMMARY ERROR:', err);
+            this.toastService.error('Error', 'Failed to load dashboard data');
+          }
+        }
+      });
+
+    } else {
+
+      this.labApi.getAllBookings().subscribe({
+        next: (res: any) => {
+          this.loading = false;
+
+          const allData = res?.content || res || [];
+          const currentUser = this.authService.currentUserValue;
+          const currentUsername = currentUser?.raw?.username;
+          const currentUserId = currentUser?.raw?.id;
+
+          let overrideMap: any = {};
+          try {
+            const raw = localStorage.getItem('bookingCreatorOverride');
+            overrideMap = raw ? JSON.parse(raw) : {};
+          } catch (e) {
+            overrideMap = {};
+          }
+
+          this.rawBookings = allData.filter((p: any) => {
+            const overrideUsername = overrideMap[p.bookingId];
+            if (overrideUsername) return overrideUsername === currentUsername;
+            const usernameMatch = !!currentUsername && p.user?.username === currentUsername;
+            const idMatch = !!currentUserId && p.createdBy === currentUserId;
+            return usernameMatch || idMatch;
+          });
+
+          this.calculateStats();
+          this.prepareDailyBookings();
+        },
+        error: (err) => {
+          this.loading = false;
+          if (!silent) {
+            console.log('DASHBOARD BOOKINGS ERROR:', err);
+            this.toastService.error('Error', 'Failed to load dashboard data');
+          }
+        }
+      });
     }
-  });
-}
+  }
 
+  // ✅ CHANGED — Staff sathi filterDate ata KADHIHI empty nasel,
+  // tyामुळे "if (this.filterDate)" cha empty/all-data path
+  // effectively kधीच hit hoत nahi — pण safety sathi filter tसाच.
   calculateStats() {
     let data = this.rawBookings;
 
@@ -264,12 +347,21 @@ loadDashboard(silent: boolean = false) {
   }
 
   onDateChange() {
-    this.calculateStats();
+    // ✅ CHANGED — date badalli ki fresh data mागाव (admin sathi
+    // navीन API call, staff sathi already-fetched rawBookings
+    // varun re-calculate)
+    if (this.roleService.isFullAccess) {
+      this.loadDashboard();
+    } else {
+      this.calculateStats();
+    }
   }
 
-  clearFilter() {
-    this.filterDate = '';
-    this.calculateStats();
+  // ✅ CHANGED — "Clear" ata data empty/all karत nahi, tर seedha
+  // aajच्या date var परत nेतो (safe default).
+  resetToToday() {
+    this.filterDate = this.toKey(new Date());
+    this.onDateChange();
   }
 
   goToPage(page: string) {

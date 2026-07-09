@@ -70,176 +70,270 @@
 
     <div class="date-filter-bar">
       <input type="date" class="date-input" [(ngModel)]="filterDate" (ngModelChange)="onDateChange()" />
-      <button *ngIf="filterDate" class="clear-btn" (click)="clearFilter()">
-        Clear
+      <button *ngIf="filterDate !== todayKey" class="clear-btn" (click)="resetToToday()">
+        Today
       </button>
     </div>
 
-    <div class="stats-grid">
+    <!-- ✅ Skeleton shimmer loader — jopryant data yeत nahi -->
+    <ng-container *ngIf="loading; else loadedContent">
 
-      <div class="stat-card">
-        <div class="stat-icon">
-          <ion-icon name="people-outline"></ion-icon>
-        </div>
-        <div class="stat-info">
-          <h1>{{ totalPatients }}</h1>
-          <h3>Patients</h3>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <ion-icon name="beaker-outline"></ion-icon>
-        </div>
-        <div class="stat-info">
-          <h1>{{ totalSamples }}</h1>
-          <h3>Samples</h3>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <ion-icon name="document-text-outline"></ion-icon>
-        </div>
-        <div class="stat-info">
-          <h1>{{ totalReports }}</h1>
-          <h3>Reports</h3>
-        </div>
-      </div>
-
-      <div class="stat-card">
-        <div class="stat-icon">
-          <ion-icon name="calendar-outline"></ion-icon>
-        </div>
-        <div class="stat-info">
-          <h1>{{ totalBookings }}</h1>
-          <h3>Bookings</h3>
-        </div>
-      </div>
-
-    </div>
-
-    <!-- ✅ ADDED — "Aaj chya divashi kiti booking" spotlight, ekhi glance sathi -->
-    <div class="today-spotlight">
-      <div class="spotlight-left">
-        <span class="spotlight-eyebrow">Today · {{ todayKeyLabel }}</span>
-        <div class="spotlight-count-row">
-          <h1 class="spotlight-count">{{ todayBookingsCount }}</h1>
-          <span class="spotlight-count-label">Bookings today</span>
-        </div>
-      </div>
-      <div class="spotlight-right" *ngIf="!hideAmounts">
-        <span class="spotlight-amount-label">Collected</span>
-        <span class="spotlight-amount">₹{{ todayAmount }}</span>
-      </div>
-    </div>
-
-    <div class="section-header">
-      <h3 class="section-title">Services</h3>
-      <span class="section-sub">Provide awesome services</span>
-    </div>
-
-    <div class="services-grid">
-
-      <div class="service-card" (click)="goToPage('add-patient')">
-        <div class="service-icon">
-          <ion-icon name="person-add-outline"></ion-icon>
-        </div>
-        <span class="service-name">Add Patient</span>
-      </div>
-
-      <div class="service-card" (click)="goToPage('booking-status')">
-        <div class="service-icon">
-          <ion-icon name="clipboard-outline"></ion-icon>
-        </div>
-        <span class="service-name">Booking Status</span>
-      </div>
-
-      <div class="service-card" (click)="goToPage('reports')">
-        <div class="service-icon">
-          <ion-icon name="download-outline"></ion-icon>
-        </div>
-        <span class="service-name">Download Reports</span>
-      </div>
-
-      <div class="service-card" (click)="goToPage('bookings')">
-        <div class="service-icon">
-          <ion-icon name="list-outline"></ion-icon>
-        </div>
-        <span class="service-name">Test List</span>
-      </div>
-
-      <div class="service-card" (click)="goToPage('samples')">
-        <div class="service-icon">
-          <ion-icon name="person-circle-outline"></ion-icon>
-        </div>
-        <span class="service-name">Profile List</span>
-      </div>
-
-      <div class="service-card" (click)="goToPage('outsource')">
-        <div class="service-icon">
-          <ion-icon name="time-outline"></ion-icon>
-        </div>
-        <span class="service-name">Client History</span>
-      </div>
-
-    </div>
-
-    <!-- ==========================
-         ✅ Daily Bookings — date wise, card-list (no horizontal scroll,
-         mobile professional). Recent-Bookings search/table kadhla.
-    =========================== -->
-    <div class="section-header">
-      <h3 class="section-title">Daily Bookings</h3>
-      <span class="section-sub">Last 5 days, date wise</span>
-    </div>
-
-    <div class="daily-list">
-
-      <div class="day-card" *ngFor="let item of dailyBookings" [class.is-today]="item.dateKey === todayKey">
-
-        <div class="day-card-head">
-          <span class="day-date">{{ item.date }}</span>
-          <span class="day-badge" *ngIf="item.dateKey === todayKey">Today</span>
-        </div>
-
-        <div class="day-main">
-          <div class="day-main-block">
-            <h1>{{ item.bookings }}</h1>
-            <span>Bookings</span>
+      <div class="stats-grid">
+        <div class="stat-card skeleton-card" *ngFor="let i of [1,2,3,4]">
+          <div class="skeleton-box skeleton-icon"></div>
+          <div class="stat-info">
+            <div class="skeleton-box skeleton-line-lg"></div>
+            <div class="skeleton-box skeleton-line-sm"></div>
           </div>
-          <div class="day-main-block" *ngIf="!hideAmounts">
-            <h1>₹{{ item.amount }}</h1>
-            <span>Amount</span>
+        </div>
+      </div>
+
+      <div class="today-spotlight skeleton-spotlight">
+        <div class="spotlight-left">
+          <div class="skeleton-box skeleton-line-sm" style="width:120px"></div>
+          <div class="skeleton-box skeleton-line-lg" style="width:80px; margin-top:8px"></div>
+        </div>
+        <div class="spotlight-right">
+          <div class="skeleton-box skeleton-line-sm" style="width:70px"></div>
+          <div class="skeleton-box skeleton-line-lg" style="width:90px; margin-top:8px"></div>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <h3 class="section-title">Services</h3>
+        <span class="section-sub">Provide awesome services</span>
+      </div>
+
+      <div class="services-grid">
+
+        <div class="service-card" (click)="goToPage('add-patient')">
+          <div class="service-icon">
+            <ion-icon name="person-add-outline"></ion-icon>
+          </div>
+          <span class="service-name">Add Patient</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('booking-status')">
+          <div class="service-icon">
+            <ion-icon name="clipboard-outline"></ion-icon>
+          </div>
+          <span class="service-name">Booking Status</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('reports')">
+          <div class="service-icon">
+            <ion-icon name="download-outline"></ion-icon>
+          </div>
+          <span class="service-name">Download Reports</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('bookings')">
+          <div class="service-icon">
+            <ion-icon name="list-outline"></ion-icon>
+          </div>
+          <span class="service-name">Test List</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('samples')">
+          <div class="service-icon">
+            <ion-icon name="person-circle-outline"></ion-icon>
+          </div>
+          <span class="service-name">Profile List</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('outsource')">
+          <div class="service-icon">
+            <ion-icon name="time-outline"></ion-icon>
+          </div>
+          <span class="service-name">Client History</span>
+        </div>
+
+      </div>
+
+      <div class="section-header">
+        <h3 class="section-title">Daily Bookings</h3>
+        <span class="section-sub">Last 5 days, date wise</span>
+      </div>
+
+      <div class="daily-list">
+        <div class="day-card skeleton-card" *ngFor="let i of [1,2,3]">
+          <div class="skeleton-box skeleton-line-sm" style="width:100px"></div>
+          <div class="day-main" style="margin-top:12px">
+            <div class="skeleton-box skeleton-line-lg" style="width:60px"></div>
+            <div class="skeleton-box skeleton-line-lg" style="width:80px"></div>
+          </div>
+          <div class="day-stats-row" style="margin-top:12px">
+            <div class="skeleton-box skeleton-line-sm" style="width:40px" *ngFor="let j of [1,2,3,4]"></div>
+          </div>
+        </div>
+      </div>
+
+    </ng-container>
+
+    <ng-template #loadedContent>
+
+      <div class="stats-grid">
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <ion-icon name="people-outline"></ion-icon>
+          </div>
+          <div class="stat-info">
+            <h1>{{ totalPatients }}</h1>
+            <h3>Patients</h3>
           </div>
         </div>
 
-        <div class="day-stats-row">
-          <div class="mini-stat">
-            <span class="mini-value">{{ item.samples }}</span>
-            <span class="mini-label">Samples</span>
+        <div class="stat-card">
+          <div class="stat-icon">
+            <ion-icon name="beaker-outline"></ion-icon>
           </div>
-          <div class="mini-stat received">
-            <span class="mini-value">{{ item.received }}/{{ item.samples }}</span>
-            <span class="mini-label">Received</span>
+          <div class="stat-info">
+            <h1>{{ totalSamples }}</h1>
+            <h3>Samples</h3>
           </div>
-          <div class="mini-stat pending">
-            <span class="mini-value">{{ item.pending }}/{{ item.samples }}</span>
-            <span class="mini-label">Pending</span>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <ion-icon name="document-text-outline"></ion-icon>
           </div>
-          <div class="mini-stat rejected">
-            <span class="mini-value">{{ item.rejected }}/{{ item.samples }}</span>
-            <span class="mini-label">Rejected</span>
+          <div class="stat-info">
+            <h1>{{ totalReports }}</h1>
+            <h3>Reports</h3>
+          </div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon">
+            <ion-icon name="calendar-outline"></ion-icon>
+          </div>
+          <div class="stat-info">
+            <h1>{{ totalBookings }}</h1>
+            <h3>Bookings</h3>
           </div>
         </div>
 
       </div>
 
-      <div class="empty-state" *ngIf="dailyBookings.length === 0">
-        No bookings yet. New bookings will show up here, date wise.
+      <div class="today-spotlight">
+        <div class="spotlight-left">
+          <span class="spotlight-eyebrow">Today · {{ todayKeyLabel }}</span>
+          <div class="spotlight-count-row">
+            <h1 class="spotlight-count">{{ todayBookingsCount }}</h1>
+            <span class="spotlight-count-label">Bookings today</span>
+          </div>
+        </div>
+        <div class="spotlight-right" *ngIf="!hideAmounts">
+          <span class="spotlight-amount-label">Collected</span>
+          <span class="spotlight-amount">₹{{ todayAmount }}</span>
+        </div>
       </div>
 
-    </div>
+      <div class="section-header">
+        <h3 class="section-title">Services</h3>
+        <span class="section-sub">Provide awesome services</span>
+      </div>
+
+      <div class="services-grid">
+
+        <div class="service-card" (click)="goToPage('add-patient')">
+          <div class="service-icon">
+            <ion-icon name="person-add-outline"></ion-icon>
+          </div>
+          <span class="service-name">Add Patient</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('booking-status')">
+          <div class="service-icon">
+            <ion-icon name="clipboard-outline"></ion-icon>
+          </div>
+          <span class="service-name">Booking Status</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('reports')">
+          <div class="service-icon">
+            <ion-icon name="download-outline"></ion-icon>
+          </div>
+          <span class="service-name">Download Reports</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('bookings')">
+          <div class="service-icon">
+            <ion-icon name="list-outline"></ion-icon>
+          </div>
+          <span class="service-name">Test List</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('samples')">
+          <div class="service-icon">
+            <ion-icon name="person-circle-outline"></ion-icon>
+          </div>
+          <span class="service-name">Profile List</span>
+        </div>
+
+        <div class="service-card" (click)="goToPage('outsource')">
+          <div class="service-icon">
+            <ion-icon name="time-outline"></ion-icon>
+          </div>
+          <span class="service-name">Client History</span>
+        </div>
+
+      </div>
+
+      <div class="section-header">
+        <h3 class="section-title">Daily Bookings</h3>
+        <span class="section-sub">Last 5 days, date wise</span>
+      </div>
+
+      <div class="daily-list">
+
+        <div class="day-card" *ngFor="let item of dailyBookings" [class.is-today]="item.dateKey === todayKey">
+
+          <div class="day-card-head">
+            <span class="day-date">{{ item.date }}</span>
+            <span class="day-badge" *ngIf="item.dateKey === todayKey">Today</span>
+          </div>
+
+          <div class="day-main">
+            <div class="day-main-block">
+              <h1>{{ item.bookings }}</h1>
+              <span>Bookings</span>
+            </div>
+            <div class="day-main-block" *ngIf="!hideAmounts">
+              <h1>₹{{ item.amount }}</h1>
+              <span>Amount</span>
+            </div>
+          </div>
+
+          <div class="day-stats-row">
+            <div class="mini-stat">
+              <span class="mini-value">{{ item.samples }}</span>
+              <span class="mini-label">Samples</span>
+            </div>
+            <div class="mini-stat received">
+              <span class="mini-value">{{ item.received }}/{{ item.samples }}</span>
+              <span class="mini-label">Received</span>
+            </div>
+            <div class="mini-stat pending">
+              <span class="mini-value">{{ item.pending }}/{{ item.samples }}</span>
+              <span class="mini-label">Pending</span>
+            </div>
+            <div class="mini-stat rejected">
+              <span class="mini-value">{{ item.rejected }}/{{ item.samples }}</span>
+              <span class="mini-label">Rejected</span>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="empty-state" *ngIf="dailyBookings.length === 0">
+          No bookings yet. New bookings will show up here, date wise.
+        </div>
+
+      </div>
+
+    </ng-template>
 
   </ion-content>
 

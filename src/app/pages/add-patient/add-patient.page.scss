@@ -1,4 +1,3 @@
-
 /* ===========================
    Add Patient Css
 =========================== */
@@ -35,6 +34,17 @@
   border-bottom: 1px solid #e2e8f0;
   font-size: 13px;
   color: #334155;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+
+  .last-patient-info {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+  }
 
   .last-label {
     font-weight: 600;
@@ -46,6 +56,21 @@
     font-weight: 700;
     color: #6366f1;
   }
+}
+
+/* ==========================
+   ✅ ADDED — Admin-only "self/UHID" box
+   (Image 2 top-right, "self/ILS3505" style)
+=========================== */
+.relation-box {
+  background: #f5f3ff;
+  border: 1.5px solid #c7d2fe;
+  color: #4338ca;
+  font-size: 12.5px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: 20px;
+  white-space: nowrap;
 }
 
 /* =====================
@@ -327,6 +352,40 @@
   }
 }
 
+/* ==========================
+   ✅ FIXED — Discount Type toggle
+   (jुना ion-radio-group layout tुटला होता, Image 3)
+=========================== */
+.discount-type-toggle {
+  display: flex;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.dtype-btn {
+  flex: 1;
+  min-height: 42px;
+  border: 1.5px solid #e2e8f0;
+  background: #f8faff;
+  color: #64748b;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+
+  &.active {
+    background: linear-gradient(135deg, #6366f1, #8b5cf6);
+    border-color: transparent;
+    color: #ffffff;
+    box-shadow: 0 4px 10px rgba(99, 102, 241, 0.28);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
 /* =====================
    SAMPLE CARD
 ===================== */
@@ -487,6 +546,36 @@ ion-modal {
   --box-shadow: 0 6px 16px rgba(16,185,129,0.3);
   font-size: 15px;
   font-weight: 700;
+}
+
+/* ==========================
+   ✅ ADDED — "Add Doctor" modal cha green Add button
+   (Image 1 प्रमाणे — left-aligned pill, full-width nahi)
+=========================== */
+.modal-add-btn {
+  margin-top: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 46px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #34d399, #10b981);
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 6px 16px rgba(16, 185, 129, 0.3);
+  transition: transform 0.12s ease;
+
+  ion-icon {
+    font-size: 18px;
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
 }
 
 /* =====================
@@ -654,6 +743,11 @@ ion-modal {
 
   .checkbox-row { gap: 8px; }
   .check-item span { font-size: 10px; }
+
+  .relation-box {
+    font-size: 11px;
+    padding: 6px 10px;
+  }
 }
 
 .ion-page {
@@ -864,4 +958,42 @@ ion-modal {
   grid-template-columns: 1fr 1fr;
   gap: 10px;
   margin: 0 20px;
+}.lab-picker-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+}
+
+.lab-picker-value {
+  font-weight: 500;
+}
+
+.custom-franchise-label {
+  color: var(--ion-color-primary, #3880ff);
+  font-weight: 600;
+}
+
+.lab-picker-list {
+  max-height: 320px;
+  overflow-y: auto;
+  border-top: 1px solid var(--ion-color-light-shade, #d7d8da);
+}
+
+.lab-picker-item {
+  padding: 14px 12px;
+  border-bottom: 1px solid var(--ion-color-light-shade, #e8e8e8);
+  cursor: pointer;
+  font-weight: 500;
+
+  &.selected {
+    background: var(--ion-color-light, #eef4ff);
+    color: var(--ion-color-primary, #3880ff);
+  }
+}
+
+.lab-picker-empty {
+  padding: 20px;
+  text-align: center;
+  color: var(--ion-color-medium, #888);
 }

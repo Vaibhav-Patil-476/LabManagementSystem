@@ -1,8 +1,8 @@
 import { Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
-import { AuthService } from './auth'; // ✅ tumcha actual path/filename confirm kara
+import { AuthService } from './auth';
 
 @Injectable({
   providedIn: 'root'
@@ -13,10 +13,6 @@ export class LabApiService {
 
   constructor(private http: HttpClient, private authService: AuthService) { }
 
-  // ==========================
-  // ✅ CHANGED — localStorage cha JSON.parse kadhla.
-  // Ata AuthService cha in-memory currentUser varun labId ghetla jato.
-  // ==========================
   private getLabId(): number {
     return this.authService.labId;
   }
@@ -36,6 +32,13 @@ export class LabApiService {
   getDoctors(): Observable<any[]> {
     return this.http.get<any[]>(
       `${this.BASE_URL}/api/v1/lab/doctor/d/${this.getLabId()}/true?optimize=false`
+    );
+  }
+
+  createDoctor(body: any): Observable<any> {
+    return this.http.post(
+      `${this.BASE_URL}/api/v1/lab/doctor/create`,
+      body
     );
   }
 
@@ -64,11 +67,57 @@ export class LabApiService {
     );
   }
 
+  // ==========================
+  // ✅ FIXED — MAIN SUSPECTED BUG.
+  // Ha GET call PRATYEK VELA TOCH URL hit karत hota
+  // (`/booking/patient/{labId}`), konतahi cache-busting shivaय.
+  // Tyamule browser/webview/proxy ha jुना (STALE/CACHED) response
+  // परत वापरू शकतो — jarी backend madhe navीn booking save
+  // झालेली असली तरी.
+  //
+  // Ata `_t` (current timestamp) navacha query param add kela aहे,
+  // jो PRATYEK call वेळी VEGLA असतो — tyamule browser cha कोणताही
+  // GET cache ha URL "navीन/unique" mानून SKIP karel ani backend
+  // la EKDAM FRESH request jaईल. Sobatच explicit no-cache headers
+  // pan add kele aहेत.
+  // ==========================
+  // getAllBookings(): Observable<any> {
+  //   const params = new HttpParams()
+  //     .set('_t', Date.now().toString())
+  //     .set('page', '0')
+  //     .set('size', '5000')          // ✅ ADDED — default page size cutoff टाळण्यासाठी
+  //     .set('sort', 'createdOn,desc'); // ✅ ADDED — navीन records सर्वात आधी yeतील
+
+  //   return this.http.get(
+  //     `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
+  //     {
+  //       params,
+  //       headers: {
+  //         'Cache-Control': 'no-cache, no-store, must-revalidate',
+  //         'Pragma': 'no-cache'
+  //       }
+  //     }
+  //   );
   getAllBookings(): Observable<any> {
+    const params = new HttpParams()
+      .set('_t', Date.now().toString())
+      .set('page', '0')
+      .set('size', '150')
+      .set('sort', 'createdOn,desc');
+
     return this.http.get(
-      `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`
+      `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
+      { params }
     );
   }
+
+getDashboardSummary(labId: number, startDate: string, endDate: string): Observable<any> {
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/dashboard/patients/new`,
+    { params: { labId: labId.toString(), startDate, endDate } }
+  );
+}
+  // }
 
   getSingleBooking(bookingId: number): Observable<any> {
     return this.http.get(
