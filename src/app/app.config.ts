@@ -14,10 +14,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideIonicAngular(),
     provideRouter(routes),
-    provideHttpClient(
-      withInterceptors([
-        authInterceptor
-      ])
+     provideHttpClient(withInterceptors([authInterceptor])
     )
   ]
 };

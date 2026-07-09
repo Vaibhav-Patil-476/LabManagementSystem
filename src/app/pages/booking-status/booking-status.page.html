@@ -38,9 +38,9 @@
             <td>{{ getBarcode(i) }}</td>
             <td>
               <div class="paid-due-cell">
-                <span class="paid-amt">₹{{ item.paidAmount || 0 }}</span>
+                <span class="paid-amt">{{ isAdminRole ? ('₹' + (item.paidAmount || 0)) : '...' }}</span>
                 <span class="due-amt" [class.zero]="(item.dueAmount || 0) === 0">
-                  Due: ₹{{ item.dueAmount || 0 }}
+                  Due: {{ isAdminRole ? ('₹' + (item.dueAmount || 0)) : '.' }}
                 </span>
               </div>
             </td>
@@ -124,7 +124,7 @@
           <div class="search-dropdown" *ngIf="searchTerm && filteredTests.length > 0">
             <div class="search-dropdown-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
               <span>{{ test.name }}</span>
-              <span class="price">₹{{ test.mrp }}</span>
+              <span class="price">{{ isAdminRole ? ('₹' + test.mrp) : '...' }}</span>
             </div>
           </div>
         </div>
@@ -134,7 +134,7 @@
         <!-- BODY -->
         <div class="modal-body-grid">
 
-          <!-- LEFT: TEST TABLE -->
+          <!-- LEFT: TEST TABLE — columns SAME for both roles, values masked -->
           <div class="test-table-panel">
             <table class="test-line-table">
               <thead>
@@ -152,8 +152,8 @@
                     <span class="franchise-tag" *ngIf="test.method">Method: {{ test.method }}</span>
                   </td>
 
-                  <td>{{ test.mrp }}</td>
-                  <td>{{ test.discount || 0 }}</td>
+                  <td>{{ isAdminRole ? test.mrp : '...' }}</td>
+                  <td>{{ isAdminRole ? (test.discount || 0) : '...' }}</td>
                   <td>
                     <ion-icon name="trash-outline" class="delete-icon" (click)="removeTest(test)"></ion-icon>
                   </td>
@@ -166,44 +166,62 @@
             </table>
           </div>
 
-          <!-- RIGHT: SUMMARY -->
+          <!-- RIGHT: SUMMARY — ADMIN editable, FRANCHISE/STAFF fully locked (readonly/disabled) -->
           <div class="summary-side-panel">
 
             <div class="summary-field">
               <label>Sub Total</label>
-              <input type="text" [value]="subTotal" readonly>
+              <input type="text" [value]="isAdminRole ? subTotal : '...'" readonly>
             </div>
 
             <div class="summary-field">
               <label>Discount</label>
-              <input type="number" [(ngModel)]="discount" (ngModelChange)="onDiscountChange()" placeholder="0">
+              <!-- <input type="number"
+                [(ngModel)]="discount"
+                (ngModelChange)="onDiscountChange()"
+                placeholder="0"
+                [readonly]="isFranchiseRole"
+                [attr.value]="isFranchiseRole ? '...' : null"> -->
+
+              <input type="number" [(ngModel)]="discount" (ngModelChange)="onDiscountChange()" placeholder="0"
+                [readonly]="!canEditBilling">
             </div>
 
             <div class="summary-field">
               <label>Total</label>
-              <input type="text" [value]="totalAmount" readonly>
+              <input type="text" [value]="isAdminRole ? totalAmount : '...'" readonly>
             </div>
 
             <div class="summary-field">
               <label>Paid</label>
-              <input type="number" [(ngModel)]="paidAmount" (ngModelChange)="onPaidChange()" placeholder="0">
+              <!-- <input type="number" [(ngModel)]="paidAmount" (ngModelChange)="onPaidChange()" placeholder="0"
+                [readonly]="isFranchiseRole" [attr.value]="isFranchiseRole ? '...' : null"> -->
+
+              <input type="number" [(ngModel)]="paidAmount" (ngModelChange)="onPaidChange()" placeholder="0"
+                [readonly]="!canEditBilling">
             </div>
 
             <div class="summary-field">
               <label>Due</label>
-              <input type="text" [value]="dueAmount" readonly [class.zero]="dueAmount === 0">
+              <input type="text" [value]="isAdminRole ? dueAmount : '.'" readonly [class.zero]="dueAmount === 0">
             </div>
 
             <div class="summary-field payment-method-field">
               <label>Payment Method</label>
-              <select [(ngModel)]="paymentMethod">
+              <select [(ngModel)]="paymentMethod" [disabled]="isFranchiseRole">
                 <option value="cash">Cash</option>
                 <option value="upi">UPI</option>
                 <option value="online">Online</option>
               </select>
             </div>
 
-            <ion-button expand="block" class="save-changes-btn" (click)="updateTestBooking()">
+            <!-- <ion-button expand="block" class="save-changes-btn" (click)="updateTestBooking()"
+              [disabled]="isFranchiseRole">
+              Save Changes
+            </ion-button> -->
+
+            <ion-button expand="block" class="save-changes-btn" (click)="updateTestBooking()"
+              [disabled]="!canSaveBooking">
               Save Changes
             </ion-button>
 
@@ -303,23 +321,25 @@
               </select>
             </div>
 
-            <!-- Doctor — ➕ API PICKER ADDED (Add Patient sarkha) -->
+            <!-- Doctor -->
             <div class="summary-field">
               <label>Ref. Doctor</label>
               <div style="display:flex; gap:6px; align-items:center;">
                 <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name" style="flex:1;">
-                <ion-button size="small" fill="solid" color="primary" style="margin:0; flex-shrink:0;" (click)="openDoctorPicker()">
+                <ion-button size="small" fill="solid" color="primary" style="margin:0; flex-shrink:0;"
+                  (click)="openDoctorPicker()">
                   <ion-icon slot="icon-only" name="add-outline"></ion-icon>
                 </ion-button>
               </div>
             </div>
 
-            <!-- Lab — ➕ API PICKER ADDED (Add Patient sarkha) -->
+            <!-- Lab -->
             <div class="summary-field">
               <label>Lab</label>
               <div style="display:flex; gap:6px; align-items:center;">
                 <input type="text" [(ngModel)]="editPatientData.lab" placeholder="Lab (SELF)" style="flex:1;">
-                <ion-button size="small" fill="solid" color="primary" style="margin:0; flex-shrink:0;" (click)="openLabPicker()">
+                <ion-button size="small" fill="solid" color="primary" style="margin:0; flex-shrink:0;"
+                  (click)="openLabPicker()">
                   <ion-icon slot="icon-only" name="add-outline"></ion-icon>
                 </ion-button>
               </div>
@@ -390,7 +410,7 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== ➕ DOCTOR PICKER MODAL (NEW ADD ONLY) ===================== -->
+  <!-- ===================== DOCTOR PICKER MODAL ===================== -->
   <ion-modal [isOpen]="showDoctorPicker" cssClass="doctor-popup" (didDismiss)="showDoctorPicker=false">
     <ng-template>
       <div class="modal-page">
@@ -429,7 +449,7 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== ➕ LAB PICKER MODAL (NEW ADD ONLY) ===================== -->
+  <!-- ===================== LAB PICKER MODAL ===================== -->
   <ion-modal [isOpen]="showLabPicker" cssClass="lab-popup" (didDismiss)="showLabPicker=false">
     <ng-template>
       <div class="modal-page">

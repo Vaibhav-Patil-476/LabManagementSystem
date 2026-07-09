@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnInit } from "@angular/core";
+import { Component, OnInit, OnDestroy } from "@angular/core";
 import { Router } from "@angular/router";
 import { FormsModule } from '@angular/forms';
 import {
@@ -11,9 +11,9 @@ import {
   IonMenu,
   IonMenuButton,
   IonProgressBar,
-  IonSearchbar,
   MenuController
 } from "@ionic/angular/standalone";
+import { Subscription, interval } from 'rxjs';
 
 import { addIcons } from "ionicons";
 import {
@@ -34,14 +34,11 @@ import {
   timeOutline
 } from "ionicons/icons";
 
-interface Booking {
-  bookingId: string;
-  name: string;
-  tests: string;
-  doctor: string;
-  reports: string;
-  totalAmount: number;
-}
+import { AuthService } from '../../services/auth';
+import { LabApiService } from '../../services/lab-api';
+import { ToastService } from '../../services/toast';
+import { BookingRefreshService } from '../../services/booking-refresh';
+import { RoleService } from '../../services/role';   // ✅ ADDED
 
 @Component({
   selector: 'app-dashboard',
@@ -53,7 +50,6 @@ interface Booking {
     FormsModule,
     IonContent,
     IonIcon,
-    IonSearchbar,
     IonMenu,
     IonList,
     IonItem,
@@ -62,30 +58,71 @@ interface Booking {
     IonProgressBar
   ]
 })
-export class DashboardPage implements OnInit {
+export class DashboardPage implements OnInit, OnDestroy {
 
   user: any = {};
-  searchText = '';
-  allBookings: Booking[] = [];
-  filteredData: any[] = [];
 
   totalPatients = 0;
   totalBookings = 0;
   totalReports = 0;
   totalSamples = 0;
 
-  patients: any[] = [];
-
-  bookings: Booking[] = [];
-
+  rawBookings: any[] = [];
   dailyBookings: any[] = [];
 
-  // 👇 DATE FILTER sathi navin variables
-  filterDate: string = '';          // input madhla selected date (yyyy-mm-dd)
+  filterDate: string = '';
+  loading = false;
+
+  // ==========================
+  // ✅ REMOVED — role constants ani manual role-check getters ata nahit.
+  // Sagla role logic RoleService (central, enum-based) madhe aहे.
+  // ==========================
+
+  get isTopAdmin(): boolean {
+    return this.roleService.isLabSideUI;
+  }
+
+  get hideAmounts(): boolean {
+    return this.roleService.isFranchiseSide;
+  }
+
+  // ==========================
+  // ✅ ADDED — "Aaj cha booking count" spotlight sathi.
+  // dailyBookings madhun aajcha entry shodhun count/amount return karto.
+  // ==========================
+  get todayKey(): string {
+    return this.toKey(new Date());
+  }
+
+  get todayBookingsCount(): number {
+    const today = this.dailyBookings.find(d => d.dateKey === this.todayKey);
+    return today ? today.bookings : 0;
+  }
+
+  get todayAmount(): number {
+    const today = this.dailyBookings.find(d => d.dateKey === this.todayKey);
+    return today ? today.amount : 0;
+  }
+
+  get todayKeyLabel(): string {
+    return new Date().toLocaleDateString('en-GB', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+  }
+
+  private refreshSub?: Subscription;
+  private pollSub?: Subscription;
 
   constructor(
     private router: Router,
-    private menuCtrl: MenuController
+    private menuCtrl: MenuController,
+    private authService: AuthService,
+    private labApi: LabApiService,
+    private toastService: ToastService,
+    private bookingRefresh: BookingRefreshService,
+    private roleService: RoleService   // ✅ ADDED
   ) {
 
     addIcons({
@@ -107,98 +144,132 @@ export class DashboardPage implements OnInit {
     });
 
   }
+
   ngOnInit() {
-
-    const username = localStorage.getItem('username');
-    const franchise = JSON.parse(localStorage.getItem('franchise') || '{}');
-
-    if (!username) {
+    if (!this.authService.isLoggedIn()) {
       this.router.navigate(['/login']);
       return;
     }
 
-    this.user = {
-      name: username,
-      email: franchise.email || '',
-      role: 'Lab Administrator'
-    };
+    this.initDashboard();
 
-    this.loadDashboard();
+    // ✅ same-device/session var booking zalyavar instant refresh
+    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => {
+      this.initDashboard();
+    });
+  }
+
+  ngOnDestroy() {
+    this.refreshSub?.unsubscribe();
+    this.pollSub?.unsubscribe();
   }
 
   ionViewWillEnter() {
-    this.loadDashboard();
+    this.initDashboard();
+    this.startPolling();
   }
 
-  loadDashboard() {
-    this.patients = JSON.parse(localStorage.getItem('patients') || '[]');
-    this.calculateStats();
-
-    this.bookings = this.patients
-      .slice()
-      .reverse()
-      .slice(0, 10)
-      .map((p: any) => ({
-        bookingId: p.id,
-        name: p.name,
-        tests: p.tests?.map((t: any) => t.name).join(", "),
-        doctor: p.doctor,
-        reports: p.eReport ? "Completed" : "Pending",
-        totalAmount: p.totalAmount
-      }));
-
-    this.allBookings = [...this.bookings];
-    this.prepareDailyBookings();
+  ionViewWillLeave() {
+    this.pollSub?.unsubscribe();
   }
 
-  // 👇 Stats calculate karnyacha function (filter la vaparto)
+  // ==========================
+  // ✅ Dusऱ्या device/browser var (admin/staff vegle logged in) zalela
+  // booking automatic disण्यासाठी polling. 15 sec ने silent auto-refresh.
+  // ==========================
+  private startPolling() {
+    this.pollSub?.unsubscribe();
+    this.pollSub = interval(15000).subscribe(() => {
+      this.loadDashboard(true);
+    });
+  }
+
+  initDashboard() {
+    this.loading = true;
+
+    this.authService.loadCurrentUser().subscribe({
+      next: () => {
+        const currentUser = this.authService.currentUserValue;
+
+        this.user = {
+          name: currentUser?.raw?.username ?? '',
+          email: currentUser?.raw?.email ?? '',
+          role: this.roleService.currentRole
+        };
+
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.loading = false;
+        console.log('CURRENT USER ERROR:', err);
+        this.toastService.error('Error', 'Failed to load user info');
+      }
+    });
+  }
+
+// ==========================
+// ✅ FIXED — DATA VISIBILITY फक्त Admin ला full access.
+// Staff (lab-side असला तरी) फक्त स्वतःचा data बघेल.
+// Admin cha data staff ला kadhihi disणार नाही.
+// ==========================
+loadDashboard(silent: boolean = false) {
+  this.labApi.getAllBookings().subscribe({
+    next: (res: any) => {
+      this.loading = false;
+
+      const allData = res?.content || res || [];
+      const currentUsername = this.authService.currentUserValue?.raw?.username;
+
+      if (this.roleService.isFullAccess) {
+        // ✅ FAKTA Lab Admin -> sagla data (staff cha pan)
+        this.rawBookings = allData;
+      } else {
+        // ✅ Staff / Franchise / Franchise-Staff -> FAKTA swतःचाच data
+        this.rawBookings = currentUsername
+          ? allData.filter((p: any) => p.user?.username === currentUsername)
+          : [];
+      }
+
+      this.calculateStats();
+      this.prepareDailyBookings();
+    },
+    error: (err) => {
+      this.loading = false;
+      if (!silent) {
+        console.log('DASHBOARD BOOKINGS ERROR:', err);
+        this.toastService.error('Error', 'Failed to load dashboard data');
+      }
+    }
+  });
+}
+
   calculateStats() {
-
-    // Jar date select keli asel tar fakt tya date che patients ghe
-    let data = this.patients;
+    let data = this.rawBookings;
 
     if (this.filterDate) {
-      data = this.patients.filter((p: any) => {
-        const rawDate = p.bookingDate || p.date || p.createdDate;
+      data = this.rawBookings.filter((p: any) => {
+        const rawDate = p.createdOn || p.bookingDate || p.date;
         if (!rawDate) return false;
-        const d = this.parseDate(rawDate);
+        const d = typeof rawDate === 'number' ? new Date(rawDate) : this.parseDate(rawDate);
         return this.toKey(d) === this.filterDate;
       });
     }
 
     this.totalPatients = data.length;
     this.totalBookings = data.length;
-    this.totalReports = data.filter((x: any) => x.eReport).length;
+    this.totalReports = data.filter((x: any) => x.reports && x.reports.length > 0).length;
     this.totalSamples = data.reduce((sum: number, p: any) => {
       return sum + (p.tests ? p.tests.length : 0);
     }, 0);
   }
 
-  // 👇 Date select/change zali ki call hoto
   onDateChange() {
     this.calculateStats();
   }
 
-  // 👇 Filter clear karnyacha function
   clearFilter() {
     this.filterDate = '';
     this.calculateStats();
-  }
-
-  filterBookings() {
-    const value = this.searchText.toLowerCase().trim();
-
-    if (!value) {
-      this.bookings = [...this.allBookings];
-      return;
-    }
-
-    this.bookings = this.allBookings.filter(b =>
-      b.name.toLowerCase().includes(value) ||
-      b.bookingId.toLowerCase().includes(value) ||
-      b.doctor.toLowerCase().includes(value) ||
-      b.tests.toLowerCase().includes(value)
-    );
   }
 
   goToPage(page: string) {
@@ -213,28 +284,21 @@ export class DashboardPage implements OnInit {
 
   logout() {
     this.menuCtrl.close();
-
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    localStorage.removeItem('franchise');
-    localStorage.removeItem('employee');
-    localStorage.removeItem('isLoggedIn');
-
-    this.router.navigate(['/login']);
+    this.pollSub?.unsubscribe();
+    this.authService.logout();
+    window.location.href = '/login';
   }
 
   prepareDailyBookings() {
-
     const grouped: any = {};
 
-    this.patients.forEach((p: any) => {
-
-      const rawDate = p.bookingDate || p.date || p.createdDate;
+    this.rawBookings.forEach((p: any) => {
+      const rawDate = p.createdOn || p.bookingDate || p.date;
 
       let d: Date;
 
       if (rawDate) {
-        d = this.parseDate(rawDate);
+        d = typeof rawDate === 'number' ? new Date(rawDate) : this.parseDate(rawDate);
       } else {
         d = new Date();
       }
@@ -271,9 +335,9 @@ export class DashboardPage implements OnInit {
       grouped[key].tests += sampleCount;
       grouped[key].amount += Number(p.totalAmount || 0);
 
-      if (p.tests && Array.isArray(p.tests)) {
-        p.tests.forEach((test: any) => {
-          switch ((test.status || '').toLowerCase()) {
+      if (p.samples && Array.isArray(p.samples)) {
+        p.samples.forEach((sample: any) => {
+          switch ((sample.status || '').toLowerCase()) {
             case 'received':
             case 'completed':
               grouped[key].received++;
@@ -287,13 +351,8 @@ export class DashboardPage implements OnInit {
           }
         });
       } else {
-        if (p.eReport) {
-          grouped[key].received += sampleCount;
-        } else {
-          grouped[key].pending += sampleCount;
-        }
+        grouped[key].pending += sampleCount;
       }
-
     });
 
     this.dailyBookings = Object.keys(grouped)
@@ -302,7 +361,6 @@ export class DashboardPage implements OnInit {
       .slice(0, 5);
   }
 
-  // 👇 Date la yyyy-mm-dd key banavto (comparison sathi)
   toKey(d: Date): string {
     return d.getFullYear() + '-' +
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
@@ -310,7 +368,6 @@ export class DashboardPage implements OnInit {
   }
 
   parseDate(dateStr: string): Date {
-    // Format: "7/4/2026, 1:17:17 PM"  (M/D/YYYY)
     try {
       const datePart = dateStr.split(',')[0].trim();
       const parts = datePart.split('/');
@@ -330,5 +387,4 @@ export class DashboardPage implements OnInit {
   goToNotifications() {
     this.router.navigate(['/notification']);
   }
-
 }

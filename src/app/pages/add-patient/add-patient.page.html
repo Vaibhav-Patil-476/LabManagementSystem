@@ -68,6 +68,7 @@
         </div>
       </div>
 
+      <!-- ✅ CHANGED — REF DOC. ata autocomplete search box -->
       <div class="input-row">
         <div class="input-group" style="flex: 0 0 80px;">
           <label>Title</label>
@@ -79,12 +80,26 @@
             </ion-select>
           </div>
         </div>
-        <div class="input-group" style="flex: 1;">
+
+        <div class="input-group" style="flex: 1; position: relative;">
           <label>REF DOC. <span class="required">*</span></label>
           <div class="input-wrap">
-            <ion-input type="text" placeholder="Doctor Name" [(ngModel)]="patient.doctor"></ion-input>
+            <ion-input type="text" placeholder="Search Doctor Name"
+              [(ngModel)]="doctorSearch"
+              (ionInput)="searchDoctorInput()"></ion-input>
+          </div>
+
+          <!-- ✅ ADDED — doctor suggestion dropdown -->
+          <div class="test-suggestions" *ngIf="showDoctorSuggestions">
+            <div class="suggestion-item" *ngFor="let doc of filteredDoctors" (click)="selectDoctorFromSearch(doc)">
+              <span>{{ doc.doctor_name }}</span>
+            </div>
+            <div class="suggestion-item" *ngIf="filteredDoctors.length === 0">
+              No matching doctor — click + to add new
+            </div>
           </div>
         </div>
+
         <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddDoctor()">
           <ion-icon name="add-outline"></ion-icon>
         </ion-button>
@@ -223,7 +238,6 @@
         </div>
       </div>
 
-      <!-- ✅ ROLE BASE COLUMN COMPRESSION -->
       <div class="test-table" [class.staff-view]="isFranchiseRole">
         <div class="test-header" [class.staff-view]="isFranchiseRole">
           <div>#</div>
@@ -253,13 +267,11 @@
           </div>
         </div>
 
-        <!-- ✅ ADMIN -> actual Sub Total -->
         <div class="subtotal-row" *ngIf="isAdminRole">
           <span>Sub Total :</span>
           <span class="subtotal-amount">₹{{ getSubTotal() }}</span>
         </div>
 
-        <!-- ✅ FRANCHISE / FRANCHISE-STAFF -> masked Sub Total -->
         <div class="subtotal-row" *ngIf="isFranchiseRole">
           <span>Sub Total :</span>
           <span class="subtotal-amount">.</span>
@@ -364,7 +376,10 @@
         <div class="input-group" style="flex: 1;">
           <label>Dis From</label>
           <div class="input-wrap">
-            <ion-select placeholder="Select doctor" interface="popover" [(ngModel)]="billing.discountFromDoctor">
+            <!-- ✅ CHANGED — compareWith added -->
+            <ion-select placeholder="Select doctor" interface="popover"
+              [(ngModel)]="billing.discountFromDoctor"
+              [compareWith]="compareDoctors">
               <ion-select-option *ngFor="let doc of doctors" [value]="doc">
                 {{ doc.doctor_name }}
               </ion-select-option>
@@ -426,7 +441,10 @@
           <div class="input-group" style="margin-bottom:12px;">
             <label>Select Doctor</label>
             <div class="input-wrap">
-              <ion-select interface="popover" placeholder="Choose Doctor" [(ngModel)]="selectedDoctor"
+              <!-- ✅ CHANGED — compareWith added -->
+              <ion-select interface="popover" placeholder="Choose Doctor"
+                [(ngModel)]="selectedDoctor"
+                [compareWith]="compareDoctors"
                 (ionChange)="selectDoctor($event.detail.value)">
                 <ion-select-option *ngFor="let doc of doctors" [value]="doc">
                   {{ doc.doctor_name }}
@@ -461,9 +479,11 @@
           <div class="input-group" style="margin-bottom:12px;">
             <label>Select Lab</label>
             <div class="input-wrap">
+              <!-- ✅ CHANGED — compareWith added -->
               <ion-select interface="popover"
                 placeholder="Choose Lab"
                 [(ngModel)]="selectedLab"
+                [compareWith]="compareLabs"
                 (ionChange)="selectLab($event.detail.value)">
                 <ion-select-option *ngFor="let lab of labs" [value]="lab">
                   {{ lab.franchiseName || lab.name }}
@@ -515,7 +535,6 @@
           </div>
         </div>
 
-        <!-- ✅ ADMIN -> full totals -->
         <div class="invoice-totals" *ngIf="isAdminRole">
           <div class="inv-total-row">
             <span>Sub Total</span>
@@ -531,7 +550,6 @@
           </div>
         </div>
 
-        <!-- ✅ FRANCHISE / STAFF -> masked -->
         <div class="invoice-totals" *ngIf="isFranchiseRole">
           <div class="inv-total-row grand">
             <span>Total</span>

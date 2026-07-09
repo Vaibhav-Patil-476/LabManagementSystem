@@ -50,6 +50,7 @@
     font-size: 18px;
     font-weight: 800;
     color: #ffffff;
+    letter-spacing: -0.2px;
   }
 
   .greeting-sub {
@@ -57,22 +58,6 @@
     font-size: 12px;
     color: rgba(255, 255, 255, 0.75);
     font-weight: 400;
-  }
-}
-
-.greeting-section {
-  .greeting-sub {
-    margin: 0;
-    font-size: 13px;
-    color: rgba(255, 255, 255, 0.8);
-    font-weight: 400;
-  }
-
-  .greeting-name {
-    margin: 4px 0 0;
-    font-size: 24px;
-    font-weight: 800;
-    color: #ffffff;
   }
 }
 
@@ -139,19 +124,35 @@
 }
 
 /* =====================
-   SEARCH
+   DATE FILTER
 ===================== */
-.search-wrap {
-  padding: 16px 14px 0;
-}
+.date-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px 0;
 
-ion-searchbar {
-  --background: #ffffff;
-  --color: #1e293b;
-  --placeholder-color: #94a3b8;
-  --border-radius: 14px;
-  --box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
-  padding: 0;
+  .date-input {
+    flex: 1;
+    padding: 10px 12px;
+    border: 1px solid #d8def0;
+    background: #ffffff;
+    border-radius: 12px;
+    font-size: 13px;
+    color: #334155;
+    outline: none;
+  }
+
+  .clear-btn {
+    padding: 10px 16px;
+    background: #ef4444;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+  }
 }
 
 /* =====================
@@ -166,32 +167,31 @@ ion-searchbar {
 
 .stat-card {
   background: #ffffff;
-  border-radius: 20px;
+  border-radius: 18px;
   padding: 16px 14px;
   display: flex;
   align-items: center;
   gap: 14px;
   min-height: 82px;
   border: 1px solid #eef2ff;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  transition: all 0.25s ease;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.06);
+  animation: fadeUp 0.4s ease forwards;
 }
 
 .stat-icon {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
   background: #f1f5f9;
   border: 1px solid #dbe4f0;
-
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
 
   ion-icon {
-    font-size: 22px;
-    color: #1e293b;
+    font-size: 21px;
+    color: #6366f1;
   }
 }
 
@@ -205,35 +205,83 @@ ion-searchbar {
   }
 
   h3 {
-    margin: 3px 0 2px;
-    font-size: 12px;
+    margin: 4px 0 0;
+    font-size: 11.5px;
     font-weight: 600;
-    color: #475569;
-  }
-
-  p {
-    margin: 0;
-    font-size: 11px;
-    color: #94a3b8;
+    color: #64748b;
   }
 }
 
-/* FORCE Stat Icons Same as Service Icons */
-.stats-grid .stat-card .stat-icon {
-  width: 48px !important;
-  height: 48px !important;
-  border-radius: 50% !important;
-  background: #f1f5f9 !important;
-  border: 1px solid #dbe4f0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  flex-shrink: 0 !important;
+/* =====================
+   TODAY'S BOOKINGS SPOTLIGHT
+   (signature element — quick answer to
+   "aaj kiti booking zaley")
+===================== */
+.today-spotlight {
+  margin: 16px 14px 0;
+  border-radius: 20px;
+  padding: 18px 20px;
+  background: linear-gradient(150deg, #6366f1, #8b5cf6 65%, #a855f7);
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
 }
 
-.stats-grid .stat-card .stat-icon ion-icon {
-  font-size: 22px !important;
-  color: #1e293b !important;
+.spotlight-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.spotlight-eyebrow {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.spotlight-count-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.spotlight-count {
+  margin: 0;
+  font-size: 34px;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.spotlight-count-label {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.spotlight-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.spotlight-amount-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.spotlight-amount {
+  font-size: 18px;
+  font-weight: 800;
+  color: #ffffff;
 }
 
 /* =====================
@@ -317,58 +365,6 @@ ion-searchbar {
   }
 }
 
-.stat-card {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #ffffff;
-  border-radius: 18px;
-  padding: 14px;
-  border: 1px solid #e8edf5;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  animation: fadeUp 0.4s ease forwards;
-
-  .stat-icon {
-    width: 46px;
-    height: 46px;
-    border-radius: 14px;
-    background: #ffffff;
-    border: 1.5px solid #d7e6dc;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-
-    ion-icon {
-      font-size: 22px;
-      color: #72c3a6;
-    }
-  }
-
-  .stat-info {
-    h1 {
-      margin: 0;
-      font-size: 20px;
-      font-weight: 800;
-      color: #0f172a;
-      line-height: 1;
-    }
-
-    h3 {
-      margin: 3px 0 2px;
-      font-size: 12px;
-      font-weight: 600;
-      color: #475569;
-    }
-
-    p {
-      margin: 0;
-      font-size: 11px;
-      color: #94a3b8;
-    }
-  }
-}
-
 /* =====================
    SIDE MENU
 ===================== */
@@ -439,117 +435,129 @@ ion-searchbar {
 }
 
 /* =====================
-   TABLE
+   DAILY BOOKINGS — vertical card list
+   (mobile-first, no horizontal scroll)
 ===================== */
-.table-wrapper {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
-  overflow: hidden;
-  margin: 0 14px 20px;
+.daily-list {
+  padding: 0 14px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
 }
 
-.table-empty {
-  text-align: center;
-  padding: 24px;
-  font-size: 13px;
-  color: #94a3b8;
+.day-card {
   background: #ffffff;
+  border-radius: 18px;
+  padding: 16px 16px 14px;
+  border: 1px solid #eef2ff;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.06);
+
+  &.is-today {
+    border: 1.5px solid #8b5cf6;
+    box-shadow: 0 6px 18px rgba(139, 92, 246, 0.15);
+  }
 }
 
-.table-scroll {
-  width: 100%;
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.table-header,
-.table-row {
-  display: grid;
-  grid-template-columns: 70px 1fr 1fr 70px 90px;
-  min-width: 100%;
-  padding: 12px 14px;
+.day-card-head {
+  display: flex;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
+  margin-bottom: 12px;
 }
 
-.table-header {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  color: #ffffff;
-  font-size: 11px;
+.day-date {
+  font-size: 13px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.day-badge {
+  font-size: 10px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.4px;
-  border-bottom: 1px solid #ddd6fe;
-}
-
-.table-row {
-  font-size: 12px;
-  color: #334155;
-  border-bottom: 1px solid #f1f5f9;
-  transition: background 0.15s;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background: #f8f8ff;
-  }
-
-  div {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-}
-
-.badge-pending {
-  background: #fff7ed;
-  color: #ea580c;
-  border: 1px solid #fed7aa;
-  padding: 3px 8px;
+  color: #ffffff;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  padding: 3px 10px;
   border-radius: 20px;
-  font-size: 10px;
-  font-weight: 600;
-  display: inline-block;
 }
 
-.badge-completed {
-  background: #f0fdf4;
-  color: #16a34a;
-  border: 1px solid #bbf7d0;
-  padding: 3px 8px;
-  border-radius: 20px;
-  font-size: 10px;
-  font-weight: 600;
-  display: inline-block;
-}
-
-.date-filter-bar {
+.day-main {
   display: flex;
+  gap: 24px;
+  margin-bottom: 14px;
+}
+
+.day-main-block {
+  display: flex;
+  flex-direction: column;
+
+  h1 {
+    margin: 0;
+    font-size: 22px;
+    font-weight: 800;
+    color: #0f172a;
+    line-height: 1;
+  }
+
+  span {
+    margin-top: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    color: #94a3b8;
+  }
+}
+
+.day-stats-row {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.mini-stat {
+  display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 10px 16px;
+  gap: 2px;
+  background: #f8f9ff;
+  border-radius: 12px;
+  padding: 8px 4px;
 
-  .date-input {
-    flex: 1;
-    padding: 10px 12px;
-    border: 1px solid #d1d5db;
-    border-radius: 10px;
-    font-size: 14px;
-    outline: none;
+  .mini-value {
+    font-size: 13px;
+    font-weight: 700;
+    color: #334155;
   }
 
-  .clear-btn {
-    padding: 10px 16px;
-    background: #ef4444;
-    color: #fff;
-    border: none;
-    border-radius: 10px;
-    font-size: 14px;
-    cursor: pointer;
+  .mini-label {
+    font-size: 9.5px;
+    font-weight: 600;
+    color: #94a3b8;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
   }
+
+  &.received .mini-value {
+    color: #16a34a;
+  }
+
+  &.pending .mini-value {
+    color: #ea580c;
+  }
+
+  &.rejected .mini-value {
+    color: #dc2626;
+  }
+}
+
+.empty-state {
+  text-align: center;
+  padding: 28px 16px;
+  font-size: 13px;
+  color: #94a3b8;
+  background: #ffffff;
+  border-radius: 18px;
+  border: 1px dashed #dbe4f0;
 }
 
 /* =====================
@@ -587,95 +595,27 @@ ion-searchbar {
   .service-card {
     padding: 14px 8px 12px;
   }
+
+  .today-spotlight {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .spotlight-right {
+    border-left: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.3);
+    padding-left: 0;
+    padding-top: 10px;
+    align-items: flex-start;
+    width: 100%;
+  }
+
+  .day-stats-row {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 .ion-page {
   width: 100%;
   height: 100%;
-}
-
-//table booking data 
-
-.daily-table-card {
-
-  margin-top: 20px;
-  border-radius: 14px;
-  overflow: hidden;
-  background: #fff;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, .08);
-
-}
-
-.table-note {
-
-  color: #ff5a5a;
-  padding: 10px 15px;
-  font-size: 14px;
-
-}
-
-.daily-header {
-
-  background: linear-gradient(160deg, #6366f1, #8b5cf6);
-  color: #fff;
-  text-align: center;
-  font-size: 20px;
-  font-weight: 700;
-  padding: 14px;
-
-}
-
-.daily-table {
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-.table-head,
-.table-body {
-  display: grid;
-  grid-template-columns: 140px 110px 110px 170px 170px 170px 100px 130px;
-  min-width: 1100px;
-}
-
-.table-head div {
-  font-weight: 700;
-  white-space: nowrap;
-  text-align: center;
-  margin: 10px;
-}
-
-.table-body div {
-  padding: 14px;
-  border: 1px solid #e5e5e5;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-}
-
-.table-body {
-
-  background: #fff;
-
-}
-
-.bar {
-
-  text-align: center;
-  --background: #e5e7eb;
-}
-
-@media(max-width:768px) {
-
-  .daily-header {
-
-    font-size: 18px;
-
-  }
-
-  .table-note {
-
-    font-size: 13px;
-
-  }
-
 }

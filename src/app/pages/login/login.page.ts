@@ -1,8 +1,14 @@
 import { Component } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { IonicModule } from '@ionic/angular';
 import { Router, RouterModule } from '@angular/router';
+import {
+  IonContent,
+  IonItem,
+  IonInput,
+  IonButton,
+  IonSpinner
+} from '@ionic/angular/standalone';
 
 import { ToastService } from '../../services/toast';
 import { AuthService } from '../../services/auth';
@@ -15,8 +21,12 @@ import { AuthService } from '../../services/auth';
   imports: [
     CommonModule,
     FormsModule,
-    IonicModule,
-    RouterModule
+    RouterModule,
+    IonContent,
+    IonItem,
+    IonInput,
+    IonButton,
+    IonSpinner
   ]
 })
 export class LoginPage {
@@ -40,6 +50,9 @@ export class LoginPage {
 
     this.loading = true;
 
+    // ✅ jhuna session clear
+    this.authService.logout();
+
     const body = {
       username: this.email,
       password: this.password
@@ -49,54 +62,36 @@ export class LoginPage {
 
       next: (response) => {
 
-        localStorage.setItem('token', response.token);
-        localStorage.setItem('username', response.username);
-        localStorage.setItem('franchise', JSON.stringify(response.franchise));
-        localStorage.setItem('employee', JSON.stringify(response.employee));
-        localStorage.setItem('isLoggedIn', 'true');
+        // ✅ FAKTA token sessionStorage madhe
+        this.authService.setToken(response.token);
 
-        // ✅ role login response madhe nahi ythe, current-user API call kar
-        this.authService.getCurrentUser().subscribe({
+        // ✅ role/franchise/permissions — API varun fresh ghenar, save nahi karat
+        this.authService.loadCurrentUser().subscribe({
 
           next: (user) => {
-
             this.loading = false;
 
-            const role = user?.roles?.[0]?.name || '';
-            const permissions = (user?.permissions || []).map((p: any) => p.name);
-
-            localStorage.setItem('role', role);
-            localStorage.setItem('permissions', JSON.stringify(permissions));
-            localStorage.setItem('currentUser', JSON.stringify(user));
-
             console.log('CURRENT USER:', user);
-            console.log('ROLE:', role);
-            console.log('PERMISSIONS:', permissions);
+            console.log('ROLE:', this.authService.role);
 
             this.toastService.success('Success', 'Login Successful');
 
-            setTimeout(() => {
-              this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-            }, 800);
+            // ✅ router.navigate vaparla — full page reload nako,
+            // token sessionStorage madhe ahech, in-memory user data pan lगेच bharla
+            this.router.navigate(['/dashboard']);
           },
 
           error: (err) => {
             this.loading = false;
             console.log('CURRENT USER ERROR:', err);
-
             this.toastService.warning('Warning', 'Logged in, but role fetch failed.');
-
-            setTimeout(() => {
-              this.router.navigateByUrl('/dashboard', { replaceUrl: true });
-            }, 800);
+            this.router.navigate(['/dashboard']);
           }
         });
       },
 
       error: (error) => {
-
         this.loading = false;
-
         console.log(error);
 
         if (error.status === 401) {

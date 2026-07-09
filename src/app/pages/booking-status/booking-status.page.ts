@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-  IonSelect, IonSelectOption
+  IonSelect, IonSelectOption, AlertController
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
@@ -14,7 +14,7 @@ import {
 import { Subscription } from 'rxjs';
 import { BookingService, Patient, TestItem } from '../../services/booking-status';
 import { ToastService } from '../../services/toast';
-import { LabApiService } from '../../services/lab-api'; // ✅ ADDED
+import { LabApiService } from '../../services/lab-api';
 
 @Component({
   selector: 'app-booking-status',
@@ -50,11 +50,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   editPatientData: any = null;
   private originalPatientId: string | number | null = null;
 
-  // ==========================
-  // ➕ DOCTOR / LAB PICKER (NEW ADD ONLY)
-  // Add Patient page cha exact sarkha pattern — Edit Patient modal
-  // madhun Doctor/Lab var click kela ki API varun list yete
-  // ==========================
   showDoctorPicker = false;
   showLabPicker = false;
   doctors: any[] = [];
@@ -62,40 +57,36 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   selectedDoctorPick: any = null;
   selectedLabPick: any = null;
 
-  // Catalog of tests available to add. Each entry carries sensible report
-  // defaults (unit / reference range / method) which get copied onto the
-  // test the moment it's added to a booking — the lab tech only needs to
-  // type the actual RESULT value once the test is performed.
-  availableTests: TestItem[] = [
-    {
-      name: 'Blood Test', b2b: '₹150', tat: '24hr', mrp: 200, fluid: 'Blood', sampleType: 'BLOOD', color: '#ef4444',
-      unit: 'g/dL', refRangeLow: 12, refRangeHigh: 16, method: 'Automated'
-    },
-    {
-      name: 'CBC', b2b: '₹120', tat: '6hr', mrp: 180, fluid: 'EDTA', sampleType: 'EDTA', color: '#a855f7',
-      unit: 'cells/mcL', refRangeLow: 4500, refRangeHigh: 11000, method: 'Automated'
-    },
-    {
-      name: 'Thyroid (T3T4)', b2b: '₹300', tat: '24hr', mrp: 450, fluid: 'Serum', sampleType: 'SERUM', color: '#ef4444',
-      unit: 'ng/dL', refRangeLow: 80, refRangeHigh: 200, method: 'CLIA'
-    },
-    {
-      name: '25-OH Vitamin D3 (Total)', b2b: '₹600', tat: '48hr', mrp: 800, fluid: 'Serum', sampleType: 'SERUM', color: '#ef4444',
-      unit: 'ng/mL', refRangeLow: 30, refRangeHigh: 120, method: 'CLIA',
-      referenceNote:
-        'Deficiency     : < 20 ng/mL\n' +
-        'Insufficiency  : 20–30 ng/mL\n' +
-        'Sufficiency    : 30–100 ng/mL\n' +
-        'Toxicity       : > 100 ng/mL'
-    }
-  ];
+  // ==========================
+  // ➕ ROLE BASE VISIBILITY
+  // ==========================
+  role: string = localStorage.getItem('role') || '';
+
+  private readonly ROLE_LAB_ADMIN = 'ROLE_LAB_ADMIN';
+  private readonly ROLE_STAFF = 'ROLE_STAFF';
+  private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
+  private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
+
+  get isAdminRole(): boolean {
+    return this.role === this.ROLE_LAB_ADMIN || this.role === this.ROLE_STAFF;
+  }
+
+  get isFranchiseRole(): boolean {
+    return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF;
+  }
+
+  // ==========================
+  // ➕ REAL API TESTS (static catalog kadhla)
+  // ==========================
+  availableTests: TestItem[] = [];
 
   constructor(
     private bookingService: BookingService,
     private toast: ToastService,
-    private labApi: LabApiService, // ✅ ADDED
-    private ngZone: NgZone,               // ✅ ADDED — fix modal not refreshing
-    private cdr: ChangeDetectorRef        // ✅ ADDED — fix modal not refreshing
+    private labApi: LabApiService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef,
+    private alertController: AlertController
   ) {
     addIcons({
       flaskOutline,
@@ -108,7 +99,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     });
   }
 
-  // ================= TOAST =================
   showToast(msg: string, type: 'success' | 'error' | 'warning' = 'success') {
     if (type === 'success') this.toast.success('Success', msg);
     else if (type === 'error') this.toast.error('Error', msg);
@@ -116,16 +106,46 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   ngOnInit() {
+    this.role = localStorage.getItem('role') || ''; // ✅ role refresh
+    this.loadAvailableTests();
+
     this.sub = this.bookingService.patients$.subscribe(data => {
       this.bookings = data;
     });
+  }
+
+  // ✅ ADDED — page var parat aalyavar (tab switch / navigation) role refresh
+  ionViewWillEnter() {
+    this.role = localStorage.getItem('role') || '';
   }
 
   ngOnDestroy() {
     this.sub?.unsubscribe();
   }
 
-  // ================= TABLE HELPERS =================
+  // ==========================
+  // ➕ REAL TESTS API (Add Patient sarkha loadTests())
+  // ==========================
+  loadAvailableTests() {
+    this.labApi.getTests().subscribe({
+      next: (res: any) => {
+        const apiTests = res || [];
+        this.availableTests = (Array.isArray(apiTests) ? apiTests : []).map((t: any) => ({
+          name: t.test_name || 'Unnamed Test',
+          b2b: t.price2 ?? 0,
+          tat: t.tat || 'N/A',
+          mrp: t.test_price ?? 0,
+          fluid: t.sampleTypeName || 'N/A',
+          sampleType: t.sampleTypeName || 'OTHER',
+          color: t.sampleColor || '#a855f7'
+        }));
+      },
+      error: (err) => {
+        console.log('AVAILABLE TESTS ERROR:', err);
+      }
+    });
+  }
+
   getTests(item: Patient): string {
     return (item.tests || []).map(t => t.name).join(', ') || '-';
   }
@@ -143,7 +163,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.showToast('Bill printing started', 'success');
   }
 
-  // ================= TEST MODAL =================
   editTest(item: Patient) {
     this.selectedBooking = item;
     this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
@@ -154,6 +173,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.filteredTests = [];
     this.isTestModalOpen = true;
   }
+
+
 
   closeTestModal() {
     this.isTestModalOpen = false;
@@ -176,24 +197,33 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   addTest(test: TestItem) {
-    // clone from catalog so unit/refRange/method come pre-filled,
-    // but resultValue always starts blank — it gets typed in after testing
     this.selectedTests.push({ ...test, resultValue: '' });
     this.searchTerm = '';
     this.filteredTests = [];
     this.showToast(`${test.name} added`, 'success');
   }
 
-  removeTest(test: TestItem) {
-    this.selectedTests = this.selectedTests.filter(t => t.name !== test.name);
-    this.showToast(`${test.name} removed`, 'warning');
+  // ==========================
+  // ➕ DELETE CONFIRMATION POPUP
+  // ==========================
+  async removeTest(test: TestItem) {
+    const alert = await this.alertController.create({
+      header: 'Delete Test',
+      message: `Are you sure you want to delete "${test.name}"?`,
+      buttons: [
+        { text: 'No', role: 'cancel' },
+        {
+          text: 'Yes, Delete',
+          handler: () => {
+            this.selectedTests = this.selectedTests.filter(t => t.name !== test.name);
+            this.showToast(`${test.name} removed`, 'warning');
+          }
+        }
+      ]
+    });
+    await alert.present();
   }
 
-  // ================= RESULT / REPORT FIELDS =================
-  // Used to visually flag a value outside the reference range while
-  // the lab tech is typing it in (mirrors the highlight shown on the PDF).
-  // NOTE: Result/Unit/RefRange columns UI madhun kadhle ahet (dusri team
-  // handle karte), pan hi function future madhi lagli tar tashich thevli ahe.
   isAbnormal(test: TestItem): boolean {
     const val = parseFloat(String(test.resultValue));
     if (isNaN(val) || test.refRangeLow == null || test.refRangeHigh == null) {
@@ -202,18 +232,44 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return val < test.refRangeLow || val > test.refRangeHigh;
   }
 
-  // ================= FIXED FUNCTIONS =================
+  // onDiscountChange() {
+  //   if (this.isFranchiseRole) {
+  //     this.discount = 0; // ✅ ADDED — franchise/staff kadhihi discount badlu shakat nahi
+  //     return;
+  //   }
+  //   if (this.discount < 0) this.discount = 0;
+  //   if (this.discount > this.subTotal) this.discount = this.subTotal;
+  // }
+
   onDiscountChange() {
-    if (this.discount < 0) this.discount = 0;
-    if (this.discount > this.subTotal) this.discount = this.subTotal;
+  if (!this.canEditBilling) {
+    this.discount = 0;
+    return;
   }
+
+  if (this.discount < 0) this.discount = 0;
+  if (this.discount > this.subTotal) this.discount = this.subTotal;
+}
+
+  // onPaidChange() {
+  //   if (this.isFranchiseRole) {
+  //     this.paidAmount = 0; // ✅ ADDED — franchise/staff kadhihi paid amount badlu shakat nahi
+  //     return;
+  //   }
+  //   if (this.paidAmount < 0) this.paidAmount = 0;
+  //   if (this.paidAmount > this.totalAmount) this.paidAmount = this.totalAmount;
+  // }
 
   onPaidChange() {
-    if (this.paidAmount < 0) this.paidAmount = 0;
-    if (this.paidAmount > this.totalAmount) this.paidAmount = this.totalAmount;
+  if (!this.canEditBilling) {
+    this.paidAmount = 0;
+    return;
   }
 
-  // ================= CALCULATIONS =================
+  if (this.paidAmount < 0) this.paidAmount = 0;
+  if (this.paidAmount > this.totalAmount) this.paidAmount = this.totalAmount;
+}
+
   get subTotal(): number {
     return this.selectedTests.reduce((s, t) => s + Number(t.mrp || 0), 0);
   }
@@ -246,7 +302,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.closeTestModal();
   }
 
-  // ================= PATIENT =================
   editPatient(item: Patient) {
     this.editPatientData = JSON.parse(JSON.stringify(item));
     this.originalPatientId = item.id;
@@ -274,8 +329,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.closePatientModal();
   }
 
-  // ================= ➕ DOCTOR PICKER (NEW ADD ONLY) =================
-  // Add Patient cha openAddDoctor() + loadDoctors() sarkha exact pattern
   openDoctorPicker() {
     this.selectedDoctorPick = null;
     this.showDoctorPicker = true;
@@ -285,11 +338,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   loadDoctorsForEdit() {
     this.labApi.getDoctors().subscribe({
       next: (res: any) => {
-        console.log('DOCTORS (edit patient) RAW RESPONSE:', res); // keep for debug
-
-        // ✅ FIX: ngZone.run + detectChanges — modal cha content kadhi kadhi
-        // Angular cha default change detection cycle madhe update honar nahi,
-        // tyamule explicitly zone madhe run karun UI refresh force kela ahe.
         this.ngZone.run(() => {
           this.doctors = res?.content || res || [];
           this.cdr.detectChanges();
@@ -316,8 +364,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.showDoctorPicker = false;
   }
 
-  // ================= ➕ LAB PICKER (NEW ADD ONLY) =================
-  // Add Patient cha openAddLab() + loadLabs() sarkha exact pattern
   openLabPicker() {
     this.selectedLabPick = null;
     this.showLabPicker = true;
@@ -325,11 +371,20 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   loadLabsForEdit() {
+    if (this.isFranchiseRole) {
+      const ownFranchise = JSON.parse(localStorage.getItem('franchise') || 'null');
+
+      this.ngZone.run(() => {
+        this.labs = ownFranchise ? [ownFranchise] : [];
+        this.cdr.detectChanges();
+      });
+
+      console.log('OWN FRANCHISE (no API call):', this.labs);
+      return;
+    }
+
     this.labApi.getFranchises().subscribe({
       next: (res: any) => {
-        console.log('LABS (edit patient) RAW RESPONSE:', res); // keep for debug
-
-        // ✅ FIX: ngZone.run + detectChanges — same fix as doctors
         this.ngZone.run(() => {
           this.labs = res?.content || res || [];
           this.cdr.detectChanges();
@@ -355,7 +410,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.showLabPicker = false;
   }
 
-  // ================= FILE =================
   onPatientFileSelected(event: any) {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -366,5 +420,18 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       this.editPatientData.attachmentName = file.name;
     };
     reader.readAsDataURL(file);
+  }
+
+  get canEditBilling(): boolean {
+    return this.role === this.ROLE_LAB_ADMIN;
+  }
+
+  get canSaveBooking(): boolean {
+    return (
+      this.role === this.ROLE_LAB_ADMIN ||
+      this.role === this.ROLE_STAFF ||
+      this.role === this.ROLE_FRANCHISE ||
+      this.role === this.ROLE_FRANCHISE_STAFF
+    );
   }
 }

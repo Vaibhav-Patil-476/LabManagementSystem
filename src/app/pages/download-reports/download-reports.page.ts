@@ -206,4 +206,5 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       this.currentPdfPatient = null;
     }
   }
+  
 }

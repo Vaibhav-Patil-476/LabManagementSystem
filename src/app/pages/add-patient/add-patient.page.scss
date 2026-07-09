@@ -710,4 +710,158 @@ ion-modal {
 .test-header.staff-view,
 .test-row.staff-view {
   grid-template-columns: 40px 1fr 70px 90px 60px !important;
+}// ✅ ADDED — Professional Invoice Styling (itlabspeed style)
+.inv-close-btn {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.inv-logo-wrap {
+  text-align: center;
+  padding: 8px 0;
+
+  .inv-logo {
+    max-width: 220px;
+    height: auto;
+  }
+}
+
+.inv-divider {
+  border: none;
+  border-top: 2px solid #6c5ce7;
+  margin: 8px 0 16px;
+}
+
+.inv-details-card {
+  padding: 0 20px 12px;
+}
+
+.inv-detail-row {
+  display: flex;
+  gap: 8px;
+  padding: 4px 0;
+  font-size: 14px;
+
+  .inv-label {
+    flex: 0 0 140px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .inv-colon {
+    flex: 0 0 10px;
+  }
+
+  .inv-value {
+    flex: 1;
+    color: #555;
+  }
+}
+
+.inv-table-card {
+  margin: 0 20px 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.inv-table-header, .inv-table-row {
+  display: grid;
+  grid-template-columns: 40px 1fr 70px 60px 70px;
+  padding: 8px 10px;
+  font-size: 13px;
+  align-items: center;
+}
+
+.inv-table-header {
+  background: #6c5ce7;
+  color: #fff;
+  font-weight: 600;
+}
+
+.inv-table-row {
+  border-top: 1px solid #eee;
+}
+
+.inv-sample-header, .inv-sample-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr 2fr;
+  padding: 8px 10px;
+  font-size: 13px;
+  align-items: center;
+  gap: 8px;
+}
+
+.inv-sample-header {
+  background: #6c5ce7;
+  color: #fff;
+  font-weight: 600;
+}
+
+.inv-sample-row {
+  border-top: 1px solid #eee;
+}
+
+.inv-barcode-input {
+  width: 100%;
+  padding: 6px 8px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 13px;
+}
+
+.inv-sample-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.inv-summary-card {
+  margin: 0 20px 12px;
+  padding: 12px;
+  border: 1px solid #eee;
+  border-radius: 8px;
+  background: #f8f8ff;
+}
+
+.inv-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+
+  span:first-child {
+    flex: 0 0 120px;
+    font-weight: 600;
+    color: #333;
+  }
+
+  .inv-colon {
+    flex: 0 0 10px;
+  }
+
+  input {
+    flex: 1;
+    padding: 6px 10px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    text-align: right;
+    background: #fff;
+    font-weight: 600;
+  }
+}
+
+.inv-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 20px 12px;
+  font-size: 14px;
+}
+
+.inv-action-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 0 20px;
 }

@@ -31,7 +31,6 @@
 
   <ion-content class="dashboard-content">
 
-    <!-- Header -->
     <div class="top-header">
 
       <div class="greeting-left">
@@ -69,30 +68,19 @@
 
     </div>
 
-    <!-- 👇 DATE FILTER (Stats chya var tak) -->
     <div class="date-filter-bar">
-
       <input type="date" class="date-input" [(ngModel)]="filterDate" (ngModelChange)="onDateChange()" />
-
       <button *ngIf="filterDate" class="clear-btn" (click)="clearFilter()">
         Clear
       </button>
-
     </div>
 
-    <!-- Stats -->
-    <div class="stats-grid">
-      <!-- ...tuza ahe tasach thev... -->
-    </div>
-
-    <!-- Stats -->
     <div class="stats-grid">
 
       <div class="stat-card">
         <div class="stat-icon">
           <ion-icon name="people-outline"></ion-icon>
         </div>
-
         <div class="stat-info">
           <h1>{{ totalPatients }}</h1>
           <h3>Patients</h3>
@@ -103,7 +91,6 @@
         <div class="stat-icon">
           <ion-icon name="beaker-outline"></ion-icon>
         </div>
-
         <div class="stat-info">
           <h1>{{ totalSamples }}</h1>
           <h3>Samples</h3>
@@ -114,7 +101,6 @@
         <div class="stat-icon">
           <ion-icon name="document-text-outline"></ion-icon>
         </div>
-
         <div class="stat-info">
           <h1>{{ totalReports }}</h1>
           <h3>Reports</h3>
@@ -125,7 +111,6 @@
         <div class="stat-icon">
           <ion-icon name="calendar-outline"></ion-icon>
         </div>
-
         <div class="stat-info">
           <h1>{{ totalBookings }}</h1>
           <h3>Bookings</h3>
@@ -134,7 +119,20 @@
 
     </div>
 
-    <!-- Services -->
+    <!-- ✅ ADDED — "Aaj chya divashi kiti booking" spotlight, ekhi glance sathi -->
+    <div class="today-spotlight">
+      <div class="spotlight-left">
+        <span class="spotlight-eyebrow">Today · {{ todayKeyLabel }}</span>
+        <div class="spotlight-count-row">
+          <h1 class="spotlight-count">{{ todayBookingsCount }}</h1>
+          <span class="spotlight-count-label">Bookings today</span>
+        </div>
+      </div>
+      <div class="spotlight-right" *ngIf="!hideAmounts">
+        <span class="spotlight-amount-label">Collected</span>
+        <span class="spotlight-amount">₹{{ todayAmount }}</span>
+      </div>
+    </div>
 
     <div class="section-header">
       <h3 class="section-title">Services</h3>
@@ -186,67 +184,62 @@
       </div>
 
     </div>
-    <!-- Recent Bookings -->
 
+    <!-- ==========================
+         ✅ Daily Bookings — date wise, card-list (no horizontal scroll,
+         mobile professional). Recent-Bookings search/table kadhla.
+    =========================== -->
     <div class="section-header">
-      <h3 class="section-title">Recent Bookings</h3>
+      <h3 class="section-title">Daily Bookings</h3>
+      <span class="section-sub">Last 5 days, date wise</span>
     </div>
 
-    <div class="daily-table-card">
+    <div class="daily-list">
 
-      <div class="table-note">
-        Table shows Last 5 Days Data
-      </div>
+      <div class="day-card" *ngFor="let item of dailyBookings" [class.is-today]="item.dateKey === todayKey">
 
-      <div class="daily-header">
-        Daily Bookings
-      </div>
-
-      <div class="daily-table">
-
-        <div class="table-head">
-          <div>Date</div>
-          <div>Bookings</div>
-          <div>Samples</div>
-          <div>Received</div>
-          <div>Pending</div>
-          <div>Rejected</div>
-          <div>Tests</div>
-          <div>Amount</div>
+        <div class="day-card-head">
+          <span class="day-date">{{ item.date }}</span>
+          <span class="day-badge" *ngIf="item.dateKey === todayKey">Today</span>
         </div>
 
-        <div class="table-body" *ngFor="let item of dailyBookings">
-
-          <div>{{ item.date }}</div>
-          <div>{{ item.bookings }}</div>
-          <div>{{ item.samples }}</div>
-
-          <div class="ion-progress-bar">
-
-            {{ item.received }}/{{ item.samples }}
+        <div class="day-main">
+          <div class="day-main-block">
+            <h1>{{ item.bookings }}</h1>
+            <span>Bookings</span>
           </div>
-
-          <div class="bar">
-
-            {{ item.pending }}/{{ item.samples }}
+          <div class="day-main-block" *ngIf="!hideAmounts">
+            <h1>₹{{ item.amount }}</h1>
+            <span>Amount</span>
           </div>
+        </div>
 
-          <div class="ion-progress-bar">
-
-            {{ item.rejected }}/{{ item.samples }}
+        <div class="day-stats-row">
+          <div class="mini-stat">
+            <span class="mini-value">{{ item.samples }}</span>
+            <span class="mini-label">Samples</span>
           </div>
-
-          <div>{{ item.tests }}</div>
-
-          <div>₹{{ item.amount }}</div>
-
+          <div class="mini-stat received">
+            <span class="mini-value">{{ item.received }}/{{ item.samples }}</span>
+            <span class="mini-label">Received</span>
+          </div>
+          <div class="mini-stat pending">
+            <span class="mini-value">{{ item.pending }}/{{ item.samples }}</span>
+            <span class="mini-label">Pending</span>
+          </div>
+          <div class="mini-stat rejected">
+            <span class="mini-value">{{ item.rejected }}/{{ item.samples }}</span>
+            <span class="mini-label">Rejected</span>
+          </div>
         </div>
 
       </div>
 
+      <div class="empty-state" *ngIf="dailyBookings.length === 0">
+        No bookings yet. New bookings will show up here, date wise.
+      </div>
+
     </div>
-
-
 
   </ion-content>
 
