@@ -19,10 +19,14 @@ export class RoleService {
     return this.authService.role;
   }
 
-  // ==========================
-  // ✅ FIXED — FAKTA Lab Admin la "sagla data" access.
-  // Staff (lab-side asला tरीही) fakta swतःचाच data baघेल.
-  // ==========================
+  get canViewBilling(): boolean {
+    return this.currentRole === AppRole.LAB_ADMIN;
+  }
+
+  get canEditPayment(): boolean {
+    return this.currentRole === AppRole.LAB_ADMIN;
+  }
+
   get isFullAccess(): boolean {
     return this.currentRole === AppRole.LAB_ADMIN;
   }
@@ -40,8 +44,6 @@ export class RoleService {
     return this.currentRole === AppRole.STAFF;
   }
 
-  // ✅ UI-level "admin-style" features (billing, price column etc.)
-  // dakhavण्यासाठी — Admin + Staff dogही, pण data-visibility साठी नाही
   get isLabSideUI(): boolean {
     return this.currentRole === AppRole.LAB_ADMIN ||
            this.currentRole === AppRole.STAFF;

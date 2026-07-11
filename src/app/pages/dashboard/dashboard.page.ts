@@ -165,17 +165,12 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.pollSub?.unsubscribe();
   }
 
+  // staff aani admin doghansathi silent poorna refresh — loadDashboard(true)
+  // aatach selected filterDate sathi dedicated fast call karto.
   private startPolling() {
     this.pollSub?.unsubscribe();
     this.pollSub = interval(15000).subscribe(() => {
-      if (this.roleService.isFullAccess) {
-        this.loadDashboard(true);
-      } else {
-        // staff: heavy re-fetch नको, local recalc + हलका report-count refresh
-        this.calculateStats();
-        this.prepareDailyBookings();
-        this.refreshReportCountOnly();
-      }
+      this.loadDashboard(true);
     });
   }
 
@@ -187,7 +182,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     const existingUser = this.authService.currentUserValue;
 
     if (existingUser) {
-      // ✅ आधीच in-memory मध्ये आहे — परत /auth/current-user call नको
       this.user = {
         name: existingUser?.raw?.username ?? '',
         email: existingUser?.raw?.email ?? '',
@@ -225,76 +219,41 @@ export class DashboardPage implements OnInit, OnDestroy {
     return this.formatDateParam(d);
   }
 
-  // ✅ UPDATED — आधी हा method sequential expand() वापरत होता,
-  // म्हणजे page 0 चा response आल्याशिवाय page 1 ची call जायचीच नाही,
-  // ...आणि तसंच पुढे. प्रत्येक extra page = एक पूर्ण round-trip
-  // (network + auth interceptor + मोठा nested JSON payload).
-  // त्यामुळे 4-5 sequential calls मिळून 4-5 सेकंद लागत होते,
-  // जरी प्रत्येक call स्वतः ५६ms ची असली तरी.
-  //
-  // आता: पहिलं page आणतो (जे लागतंच — totalPages कळण्यासाठी),
-  // मग उरलेली आवश्यक pages PARALLEL (forkJoin) मध्ये मागवतो.
-  // MAX_ADDITIONAL_PAGES ही एक safety cap आहे जेणेकरून एखाद्या
-  // admin कडे खूप जास्त data असेल तर आपण चुकून खूप pages parallel
-  // मध्ये hit करून बसणार नाही. गरज पडली तर हा number वाढवता येईल.
-  private fetchBookingsForWindow(createdBy: number, daysBack: number = 5): Observable<any[]> {
-    const cutoff = new Date();
-    cutoff.setDate(cutoff.getDate() - daysBack);
-    cutoff.setHours(0, 0, 0, 0);
+  // Fast, backend-side date-filtered booking-status/new endpoint,
+  // pratyek divsasathi PARALLEL (forkJoin) madhe.
+  // IMPORTANT: Spring pageable 0-indexed ahe (response cha pageable/offset
+  // confirm karto), tyamule page=0 pathvaycha - page=1 pathvla tar te
+  // dusri page (records 21-40) magte ani kami-data asलelya divsansathi
+  // content rikama yeto.
+  // createdBy backend support karat nahi (booking-status/new cha real
+  // request madhe to nahiye) - tyamule ithe pathwat nahi; actual
+  // user-specific filtering client-side applyOverrideFilter() karto.
+  private fetchBookingsForWindow(daysBack: number = 5): Observable<any[]> {
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const today = new Date();
 
-    // ⚠️ NOTE: PAGE_SIZE आधी 100 केला होता, पण backend response मध्ये
-    // प्रत्येक booking च्या आत पूर्ण nested object (tests, samples, bill,
-    // transactions, franchise, doctor, user) येतोय — त्यामुळे size=100
-    // म्हणजे 5.2 MB चा response (8+ सेकंद फक्त download/parse साठी).
-    // जोपर्यंत backend कडून हलका list DTO मिळत नाही, तोपर्यंत PAGE_SIZE
-    // छोटा ठेवणं हाच frontend कडून करता येणारा तात्पुरता उपाय आहे.
-    const PAGE_SIZE = 20;
-    const MAX_ADDITIONAL_PAGES = 4;     // ✅ safety cap — एकूण जास्तीत जास्त 5 pages (0..4)
+    const dayRanges = Array.from({ length: daysBack }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = this.formatDateParam(d);
+      return { start: dateStr, end: this.nextDay(dateStr) };
+    });
 
-    return this.labApi.getBookingsPage(createdBy, 0, PAGE_SIZE).pipe(
-      switchMap((firstPage: any) => {
-        const firstContent: any[] = firstPage?.content || [];
-        const totalPages: number = firstPage?.totalPages ?? 1;
-        const isLast = firstPage?.last === true || totalPages <= 1;
+    const PAGE_SIZE = 200;
 
-        const lastRecord = firstContent[firstContent.length - 1];
-        const lastDate = lastRecord ? new Date(lastRecord.createdOn) : null;
-        const stillInWindow = !!lastDate && lastDate >= cutoff;
+    const calls = dayRanges.map(r =>
+      this.labApi.getBookingStatusNew(labId, 0, PAGE_SIZE, r.start, r.end)
+    );
 
-        // पहिल्याच page मध्ये window cover झालं / आणखी pages नाहीत
-        if (isLast || !stillInWindow || firstContent.length === 0) {
-          return of(this.filterByWindow(firstContent, cutoff));
+    return forkJoin(calls).pipe(
+      map((pages: any[]) => {
+        let all: any[] = [];
+        for (const pageRes of pages) {
+          all = all.concat(pageRes?.content || pageRes || []);
         }
-
-        const pagesToFetch = Math.min(totalPages - 1, MAX_ADDITIONAL_PAGES);
-        if (pagesToFetch <= 0) {
-          return of(this.filterByWindow(firstContent, cutoff));
-        }
-
-        const remainingCalls = Array.from({ length: pagesToFetch }, (_, i) =>
-          this.labApi.getBookingsPage(createdBy, i + 1, PAGE_SIZE)
-        );
-
-        // ✅ इथेच खरा fix आहे — या सगळ्या calls एकाच वेळी (parallel) जातात,
-        // एकामागोमाग एक (sequential) नाही
-        return forkJoin(remainingCalls).pipe(
-          map((pages: any[]) => {
-            let all = [...firstContent];
-            for (const pageRes of pages) {
-              all = all.concat(pageRes?.content || []);
-            }
-            return this.filterByWindow(all, cutoff);
-          })
-        );
+        return all;
       })
     );
-  }
-
-  private filterByWindow(records: any[], cutoff: Date): any[] {
-    return records.filter((r: any) => {
-      if (!r?.createdOn) return true;
-      return new Date(r.createdOn) >= cutoff;
-    });
   }
 
   loadDashboard(silent: boolean = false) {
@@ -360,9 +319,12 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     } else {
 
-      // ================================
-      // ✅ STAFF — hybrid: हलका report-count call + filtered/windowed booking fetch
-      // ================================
+      // STAFF - 3 goshti veglya kelya:
+      // 1) reportCount - halka count call
+      // 2) selectedDayBookings - USER NE SELECT KELELYA filterDate sathi
+      //    THET fast date-filtered call (booking-status/new, page=0!).
+      // 3) rollingWindowBookings - "Daily Bookings" (last 5 days) sathi
+      //    vegla, filterDate war depend nasnara data
       const currentUserId = currentUser?.raw?.id;
       const currentUsername = currentUser?.raw?.username;
 
@@ -371,36 +333,41 @@ export class DashboardPage implements OnInit, OnDestroy {
 
       forkJoin({
         reportCount: this.labApi.getReportCount(labId, selectedStart, selectedEnd, currentUserId),
-        bookings: this.fetchBookingsForWindow(currentUserId, 5)
+        selectedDayBookings: this.labApi.getBookingStatusNew(
+          labId, 0, 500, selectedStart, selectedEnd
+        ),
+        rollingWindowBookings: this.fetchBookingsForWindow(5)
       }).subscribe({
-        next: ({ reportCount, bookings }: any) => {
+        next: ({ reportCount, selectedDayBookings, rollingWindowBookings }: any) => {
           this.loading = false;
           this.loadInProgress = false;
 
-          // ✅ reports count थेट backend कडून — कुठलाही heavy record न ओढता
           this.totalReports =
             (reportCount?.completecount || 0) + (reportCount?.partiallycomplete || 0);
 
-          let overrideMap: any = {};
-          try {
-            const raw = localStorage.getItem('bookingCreatorOverride');
-            overrideMap = raw ? JSON.parse(raw) : {};
-          } catch (e) {
-            overrideMap = {};
-          }
-
-          // safety-net filter (backend आधीच createdBy filter करतोय,
-          // पण override-case साठी हे अजून लागतं)
-          this.rawBookings = (bookings || []).filter((p: any) => {
-            const overrideUsername = overrideMap[p.bookingId];
-            if (overrideUsername) return overrideUsername === currentUsername;
+          // ✅ CHANGED — "bookingCreatorOverride" localStorage map kadhun
+          // takla. Data secure nasतो asa localStorage madhe store-fetch
+          // karne — ownership filtering ata FAKTA real API cha response
+          // (createdBy / user.username) varunच hote, koणताही client-side
+          // override shakya nahi.
+          const applyOverrideFilter = (list: any[]) => (list || []).filter((p: any) => {
             const usernameMatch = !!currentUsername && p.user?.username === currentUsername;
             const idMatch = !!currentUserId && p.createdBy === currentUserId;
             return usernameMatch || idMatch;
           });
 
-          this.calculateStats();       // totalBookings/totalPatients/totalSamples (totalReports overwrite करत नाही)
-          this.prepareDailyBookings(); // rawBookings मधूनच 5-दिवसांचा breakdown (आधीच fetch झालाय, नवीन call नाही)
+          const selectedContent = selectedDayBookings?.content || selectedDayBookings || [];
+          const selectedFiltered = applyOverrideFilter(selectedContent);
+
+          this.totalPatients = selectedFiltered.length;
+          this.totalBookings = selectedFiltered.length;
+          this.totalSamples = selectedFiltered.reduce(
+            (sum: number, p: any) => sum + (p.tests ? p.tests.length : 0),
+            0
+          );
+
+          this.rawBookings = applyOverrideFilter(rollingWindowBookings);
+          this.prepareDailyBookings();
         },
         error: (err) => {
           this.loading = false;
@@ -412,24 +379,6 @@ export class DashboardPage implements OnInit, OnDestroy {
         }
       });
     }
-  }
-
-  // ✅ NEW — polling वर फक्त reports count refresh (हलका call),
-  // booking records परत ओढायचे नाहीत
-  private refreshReportCountOnly() {
-    const currentUser = this.authService.currentUserValue;
-    const labId = currentUser?.raw?.labId;
-    const currentUserId = currentUser?.raw?.id;
-    const selectedStart = this.filterDate;
-    const selectedEnd = this.nextDay(this.filterDate);
-
-    this.labApi.getReportCount(labId, selectedStart, selectedEnd, currentUserId).subscribe({
-      next: (reportCount: any) => {
-        this.totalReports =
-          (reportCount?.completecount || 0) + (reportCount?.partiallycomplete || 0);
-      },
-      error: () => { /* silent — polling error टाळा */ }
-    });
   }
 
   calculateStats() {
@@ -446,21 +395,13 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.totalPatients = data.length;
     this.totalBookings = data.length;
-    // ✅ totalReports इथे यापुढे set होत नाही — तो आता
-    // getReportCount() API कडून येतो (loadDashboard / refreshReportCountOnly मध्ये)
     this.totalSamples = data.reduce((sum: number, p: any) => {
       return sum + (p.tests ? p.tests.length : 0);
     }, 0);
   }
 
   onDateChange() {
-    if (this.roleService.isFullAccess) {
-      this.loadDashboard();
-    } else {
-      this.calculateStats();
-      this.prepareDailyBookings();
-      this.refreshReportCountOnly();   // date बदलली की reports count पण नव्याने आणा
-    }
+    this.loadDashboard();
   }
 
   resetToToday() {
@@ -581,5 +522,13 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   goToNotifications() {
     this.router.navigate(['/notification']);
+  }
+
+  
+
+  // ✅ NEW — "Ashford Collection" (Collected amount block) FAKTA
+  // real Lab Admin la disel. Staff ani Franchise doghanhi la nahi.
+  get canViewCollection(): boolean {
+    return this.roleService.isLabAdmin;
   }
 }

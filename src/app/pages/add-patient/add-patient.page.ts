@@ -42,7 +42,7 @@ export class AddPatientComponent {
   lastPatient = '—';
 
   patientRelation: string = 'self/ILS3505';
- labSearch: string = '';
+  labSearch: string = '';
   filteredLabs: any[] = [];
   customFranchiseName: string = '';
   staffLabSearch: string = '';
@@ -52,12 +52,7 @@ export class AddPatientComponent {
   showInvoice = false;
   showAddDoctor = false;
 
-  // ✅ CHANGED — top-right box ata TYPE-AHEAD search आहे (click-toggle
-  // नाही) — type kelyavar showLabDropdown auto true/false hoto.
   showLabDropdown = false;
-
-  // ✅ ADDED — STAFF sathi OLD STYLE "Add Lab" modal (Lab name / Contact
-  // / Address) — LAB/HOS field cha "+" button he ughadto.
   showAddLabModal = false;
 
   savedPatient: any = null;
@@ -115,8 +110,6 @@ export class AddPatientComponent {
   labs: any[] = [];
   selectedLab: any = null;
 
-
-
   doctorSearch = '';
   filteredDoctors: any[] = [];
   showDoctorSuggestions = false;
@@ -127,7 +120,25 @@ export class AddPatientComponent {
   private readonly ROLE_STAFF = 'ROLE_STAFF';
   private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
   private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
-
+  private readonly DEFAULT_FRANCHISE: any = {
+    franchiseId: 2541,
+    id: 2541,
+    franchiseName: 'dar',
+    name: 'dar',
+    centerCode: 'dar',
+    lockReport: false,
+    lockReportAmount: 0.0,
+    accessMode: 'false',
+    balanceNegative: false,
+    paidType: 'postpaid',
+    wallet: null,
+    superFranchiseActive: true,
+    franchiseActive: false,
+    subFranchiseActive: false,
+    processAt: true,
+    nablOnReport: true,
+    labId: 3505
+  };
   get isTopAdmin(): boolean {
     return this.roleService.isLabSideUI;
   }
@@ -142,6 +153,10 @@ export class AddPatientComponent {
 
   get isFranchiseRole(): boolean {
     return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF;
+  }
+
+  get isStaffRole(): boolean {
+    return this.role === this.ROLE_STAFF;
   }
 
   billing = {
@@ -254,9 +269,6 @@ export class AddPatientComponent {
     };
   }
 
-  // ✅ CHANGED — STAFF cha simplified "Add Doctor" modal (फक्त Doctor
-  // Name / Percent Value / Percent Type) sathi Type + Mobile Number
-  // required nahit — ते फक्त ADMIN sathi required raहतात.
   saveDoctor() {
     if (this.isAdminRole && !this.newDoctor.type) {
       this.toastService.error('Validation Error', 'Please select doctor type.');
@@ -360,38 +372,91 @@ export class AddPatientComponent {
     return Number(doc?.id ?? doc?.doctorId ?? doc?.doctor_id ?? 0);
   }
 
-  // ✅ CHANGED — filteredLabs pan set kartoy, jenवढं picker list
-  // lगेच populate होईल
   loadLabs() {
+
+    if (this.role === this.ROLE_STAFF) {
+      const currentUser = this.authService.currentUserValue;
+      const raw: any = (currentUser as any)?.raw || {};
+
+      const ownLab = {
+        id: raw.labId,
+        franchiseId: raw.labId,
+        franchiseName: raw.labName || 'Lab',
+        centerCode: raw.labCode || ''
+      };
+
+      this.labs = [ownLab];
+      this.filteredLabs = [...this.labs];
+      this.selectedLab = ownLab;
+      this.patient.lab = ownLab.franchiseName;
+      this.staffLabSearch = ownLab.franchiseName;
+      this.labSearch = ownLab.franchiseName;
+      return;
+    }
+
     if (this.isFranchiseRole) {
       const currentUser = this.authService.currentUserValue;
 
-      if (currentUser && currentUser.franchiseId) {
+      const fId = (currentUser as any)?.franchiseId ?? (currentUser as any)?.raw?.franchiseId;
+      const fName = (currentUser as any)?.franchiseName ?? (currentUser as any)?.raw?.franchiseName;
+
+      if (fId) {
         const ownFranchise = {
-          id: currentUser.franchiseId,
-          franchiseName: currentUser.franchiseName
+          id: fId,
+          franchiseId: fId,
+          franchiseName: fName || 'SELF'
         };
+
         this.labs = [ownFranchise];
-        this.filteredLabs = this.labs;
+        this.filteredLabs = [...this.labs];
         this.selectedLab = ownFranchise;
         this.patient.lab = ownFranchise.franchiseName;
+        this.labSearch = ownFranchise.franchiseName;
       } else {
-        this.labs = [];
-        this.filteredLabs = [];
+        console.log('FRANCHISE ROLE: franchiseId currentUser var sapadla nahi, DEFAULT_FRANCHISE vaparat ahe');
+        this.labs = [this.DEFAULT_FRANCHISE];
+        this.filteredLabs = [...this.labs];
+        this.selectedLab = this.DEFAULT_FRANCHISE;
+        this.patient.lab = this.DEFAULT_FRANCHISE.franchiseName;
+        this.labSearch = this.DEFAULT_FRANCHISE.franchiseName;
       }
+
       return;
     }
 
     this.labApi.getFranchises().subscribe({
       next: (res: any) => {
+
         this.labs = res?.content || res || [];
-        this.filteredLabs = this.labs;
+        this.filteredLabs = [...this.labs];
+
+        let defaultLab = this.labs.find(
+          (x: any) => (x.franchiseId ?? x.id) === this.DEFAULT_FRANCHISE.franchiseId
+        );
+
+        if (!defaultLab) {
+          defaultLab = this.DEFAULT_FRANCHISE;
+          this.labs = [defaultLab, ...this.labs];
+          this.filteredLabs = [...this.labs];
+        }
+
+        this.selectedLab = defaultLab;
+        this.labSearch = defaultLab.franchiseName;
+        this.staffLabSearch = defaultLab.franchiseName;
+        this.patient.lab = defaultLab.franchiseName;
       },
       error: (err) => {
-        console.log('LABS ERROR:', err);
-        this.toastService.error('Error', 'Failed to load labs');
+        console.log('LABS ERROR (using default franchise fallback):', err?.status || err);
+
+        this.labs = [this.DEFAULT_FRANCHISE];
+        this.filteredLabs = [...this.labs];
+        this.selectedLab = this.DEFAULT_FRANCHISE;
+        this.labSearch = this.DEFAULT_FRANCHISE.franchiseName;
+        this.staffLabSearch = this.DEFAULT_FRANCHISE.franchiseName;
+        this.patient.lab = this.DEFAULT_FRANCHISE.franchiseName;
       }
     });
+
   }
 
   selectLab(lab: any) {
@@ -443,13 +508,42 @@ export class AddPatientComponent {
     });
   }
 
+  // ==========================
+  // ✅ CHANGED — "Last Patient" ata REAL API cha booking-status/new
+  // varun banवला जातो (koणताही separate "getLastBooking" summary API
+  // varun sagळ्या lab cha last booking nahi ghetला):
+  //   - ROLE_LAB_ADMIN -> sagळ्या lab madhल्या bookings (admin + staff)
+  //     madhून sagळ्यात अलीकडचं booking dakhavto.
+  //   - baki sagle roles (STAFF / FRANCHISE / FRANCHISE_STAFF) -> फक्त
+  //     tya user ने (currentUserId) स्वतः केलेल्या bookings madhून
+  //     सगळ्यात अलीकडचं booking dakhavto — dusऱ्या konachaहि (jasa
+  //     admin cha) booking staff la disत nahi.
+  // ==========================
   loadLastPatient() {
-    this.labApi.getLastBooking().subscribe({
-      next: (res: any) => {
-        this.lastPatient =
-          res?.customerName ?? res?.name ?? res?.patientName ?? '—';
+    const labId = this.labApi.getCurrentLabId();
+    const currentUser = this.authService.currentUserValue;
+    const currentUserId = (currentUser as any)?.raw?.id;
 
-        const uhid = res?.uhid ?? res?.UHID ?? '';
+    // wide-enough window jenavढं recent-most booking miss होणार नाही
+    const today = new Date();
+    const toDateExclusive = this.formatDateParam(this.addDays(today, 1));
+    const fromDate = this.formatDateParam(this.addDays(today, -60));
+
+    this.labApi.getBookingStatusNew(labId, 0, 500, fromDate, toDateExclusive).subscribe({
+      next: (res: any) => {
+        let list = res?.content || res || [];
+        list = Array.isArray(list) ? list : [];
+
+        if (this.role !== this.ROLE_LAB_ADMIN && currentUserId) {
+          list = list.filter((b: any) => b.createdBy === currentUserId);
+        }
+
+        list.sort((a: any, b: any) => (b.createdOn || 0) - (a.createdOn || 0));
+
+        const last = list[0];
+        this.lastPatient = last?.customerName ?? '—';
+
+        const uhid = last?.uhidNumber ?? last?.uhid ?? last?.UHID ?? '';
         this.patientRelation = uhid ? ('self/' + uhid) : 'self/ILS3505';
       },
       error: (err) => {
@@ -460,11 +554,16 @@ export class AddPatientComponent {
     });
   }
 
-  // ==========================
-  // ✅ CHANGED — Top-right box + Staff LAB/HOS field donhi ata
-  // TYPE-AHEAD SEARCH (Image 1 प्रमाणे) — click-toggle nahi. Type
-  // karताच list khali yете, khali empty kela tar list band hote.
-  // ==========================
+  private formatDateParam(d: Date): string {
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  }
+
+  private addDays(d: Date, days: number): Date {
+    const copy = new Date(d);
+    copy.setDate(copy.getDate() + days);
+    return copy;
+  }
+
   searchLabInput() {
     const q = this.labSearch.trim().toLowerCase();
 
@@ -478,18 +577,13 @@ export class AddPatientComponent {
       this.showLabDropdown = false;
     }
 
-    // typed text ला थेट patient.lab sobat sync ठेवतो, jenavढं list
-    // madhe match nasel tar pan custom naव save hoईल
     this.selectedLab = null;
     this.patient.lab = this.labSearch;
   }
 
-  // ==========================
-  // ✅ ADDED — STAFF cha LAB/HOS field sathi VEGLA (independent)
-  // search handler. Top box cha searchLabInput() la ata हात लावला
-  // nahi — tो jasa hota tasaच rahtो.
-  // ==========================
   searchStaffLabInput() {
+    if (this.isStaffRole) return;
+
     const q = this.staffLabSearch.trim().toLowerCase();
 
     if (q.length > 0) {
@@ -502,34 +596,27 @@ export class AddPatientComponent {
       this.showStaffLabDropdown = false;
     }
 
-    // ✅ typed text patient.lab sobat sync — top box प्रमाणेच
     this.selectedLab = null;
     this.patient.lab = this.staffLabSearch;
   }
 
-  // ✅ LAB/HOS list item click kelyavar select karून list band
   selectStaffLabFromPicker(lab: any) {
     this.selectLab(lab);
     this.staffLabSearch = lab?.franchiseName || lab?.name || '';
     this.showStaffLabDropdown = false;
   }
 
-  // ✅ input box la focus milalyavar (jar aधीच kahi text ahe) list
-  // punha dakhaव्यासाठी
   onLabSearchFocus() {
-    if (this.labSearch.trim().length > 0) {
-      this.searchLabInput();
-    }
+    this.filteredLabs = [...this.labs];
+    this.showLabDropdown = true;
   }
 
-  // ✅ list item click kelyavar select karून list band
   selectLabFromPicker(lab: any) {
     this.selectLab(lab);
     this.labSearch = lab?.franchiseName || lab?.name || '';
     this.showLabDropdown = false;
   }
 
-  // ✅ ADMIN — CUSTOM FRANCHISE text box (form madhe inline, DRAWN ON नंतर)
   onCustomFranchiseInput() {
     if (this.customFranchiseName.trim()) {
       this.selectedLab = null;
@@ -540,14 +627,12 @@ export class AddPatientComponent {
     }
   }
 
-  // ✅ ADDED — STAFF "Add Lab" modal ughadण्यासाठी (Image 3 प्रमाणे)
   openAddLabModal() {
+    if (this.isStaffRole) return;
     this.newLab = { name: '', contact: '', address: '' };
     this.showAddLabModal = true;
   }
 
-  // ✅ ADDED — STAFF "Add Lab" modal cha Add button (Image 3 प्रमाणे).
-  // labSearch/top-box madhe pan navin lab नाव लगेच sync होते.
   saveLab() {
     if (!this.newLab.name.trim()) {
       this.toastService.error('Validation Error', 'Please enter lab name.');
@@ -556,7 +641,6 @@ export class AddPatientComponent {
     this.patient.lab = this.newLab.name;
     this.labSearch = this.newLab.name;
 
-    // ✅ ADDED — staff cha independent field pan sync kara
     this.staffLabSearch = this.newLab.name;
 
     this.selectedLab = null;
@@ -657,6 +741,8 @@ export class AddPatientComponent {
     this.resetBilling();
 
     this.loadDoctors();
+    this.loadLabs();
+    this.loadLastPatient(); // ✅ ADDED — booking save झाल्यावर "Last Patient" refresh व्हावा
   }
 
   async savePatient() {
@@ -678,6 +764,14 @@ export class AddPatientComponent {
 
     if (this.selectedTests.length === 0) {
       this.toastService.warning('No Tests', 'Please add at least one test.');
+      return;
+    }
+
+    if (!this.selectedLab) {
+      this.toastService.error(
+        'Franchise Required',
+        'Please select collection center.'
+      );
       return;
     }
 
@@ -730,20 +824,6 @@ export class AddPatientComponent {
           discount: this.billing.discountAmount,
           grandTotal: this.billing.grandTotal
         };
-
-        try {
-          const actualCreatorUsername = this.authService.currentUserValue?.raw?.username ?? '';
-          const bookingId = res?.bookingId;
-
-          if (bookingId && actualCreatorUsername) {
-            const raw = localStorage.getItem('bookingCreatorOverride');
-            const map = raw ? JSON.parse(raw) : {};
-            map[bookingId] = actualCreatorUsername;
-            localStorage.setItem('bookingCreatorOverride', JSON.stringify(map));
-          }
-        } catch (e) {
-          console.log('bookingCreatorOverride save error:', e);
-        }
 
         this.bookingRefresh.triggerRefresh();
 
@@ -836,6 +916,12 @@ export class AddPatientComponent {
     const fileInput = document.getElementById('fileInput') as HTMLInputElement;
     if (fileInput) fileInput.value = '';
     this.toastService.warning('File Removed', 'File has been removed.');
+  }
+
+  toggleLabDropdown() {
+    if (this.isStaffRole) return;
+    this.filteredLabs = [...this.labs];
+    this.showLabDropdown = !this.showLabDropdown;
   }
 
 }

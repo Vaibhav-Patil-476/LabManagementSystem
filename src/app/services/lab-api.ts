@@ -67,60 +67,88 @@ export class LabApiService {
     );
   }
 
-  // ==========================
-  // ✅ FIXED — MAIN SUSPECTED BUG.
-  // Ha GET call PRATYEK VELA TOCH URL hit karत hota
-  // (`/booking/patient/{labId}`), konतahi cache-busting shivaय.
-  // Tyamule browser/webview/proxy ha jुना (STALE/CACHED) response
-  // परत वापरू शकतो — jarी backend madhe navीn booking save
-  // झालेली असली तरी.
+  // Juna generic/heavy endpoint. Booking-status page cha client-side
+  // safety-net flow sathi ajun vaparat ahe, pan dashboard ata yavar
+  // avlambun nahi.
+  getBookingsPage(
+    createdBy: number,
+    page: number,
+    size: number = 50,
+    filters?: {
+      fromDate?: string;
+      toDate?: string;
+      franchiseId?: any;
+      reportStatus?: string;
+      search?: string;
+    }
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('_t', Date.now().toString())
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('sort', 'createdOn,desc')
+      .set('createdBy', createdBy.toString());
+
+    if (filters) {
+      if (filters.fromDate) params = params.set('fromDate', filters.fromDate);
+      if (filters.toDate) params = params.set('toDate', filters.toDate);
+      if (filters.franchiseId !== undefined && filters.franchiseId !== null) {
+        params = params.set('franchiseId', filters.franchiseId.toString());
+      }
+      if (filters.reportStatus) params = params.set('reportStatus', filters.reportStatus);
+      if (filters.search) params = params.set('search', filters.search);
+    }
+
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
+      { params }
+    );
+  }
+
+  // FAST endpoint — company app pramane server-side date + franchise
+  // filtering karto, tyamule payload halka ani jalad yeto.
+  // booking-status page ani dashboard doghansathi hach vaparla jato.
   //
-  // Ata `_t` (current timestamp) navacha query param add kela aहे,
-  // jो PRATYEK call वेळी VEGLA असतो — tyamule browser cha कोणताही
-  // GET cache ha URL "navीन/unique" mानून SKIP karel ani backend
-  // la EKDAM FRESH request jaईल. Sobatच explicit no-cache headers
-  // pan add kele aहेत.
-  // ==========================
-  // getAllBookings(): Observable<any> {
-  //   const params = new HttpParams()
-  //     .set('_t', Date.now().toString())
-  //     .set('page', '0')
-  //     .set('size', '5000')          // ✅ ADDED — default page size cutoff टाळण्यासाठी
-  //     .set('sort', 'createdOn,desc'); // ✅ ADDED — navीन records सर्वात आधी yeतील
+  // NOTE 1: 'page' 0-INDEXED AHE (Spring Pageable — response cha
+  // pageable.pageNumber / offset confirm karto). Pahili/ekmev page sathi
+  // 0 pathva, 1 nahi — nahitar backend "dusri page" (records 21-40)
+  // magto ani thoda data aslelya divsansathi content rikama yeto.
+  //
+  // NOTE 2: 'createdBy' backend support karat nahi (real company
+  // network request madhe to param nahiye) — pathvla tar backend
+  // content rikama parat karto. Staff-specific filtering client-side
+  // (dashboard.page.ts cha applyOverrideFilter) karaycha.
+  getBookingStatusNew(
+    labId: number,
+    page: number,
+    size: number,
+    startDate: string,
+    endDate: string,
+    franchiseId?: any
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('optimize', 'false')
+      .set('page', page.toString())
+      .set('size', size.toString())
+      .set('startDate', startDate)
+      .set('endDate', endDate);
 
-  //   return this.http.get(
-  //     `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
-  //     {
-  //       params,
-  //       headers: {
-  //         'Cache-Control': 'no-cache, no-store, must-revalidate',
-  //         'Pragma': 'no-cache'
-  //       }
-  //     }
-  //   );
+    if (franchiseId !== undefined && franchiseId !== null) {
+      params = params.set('franchiseId', franchiseId.toString());
+    }
 
-// ✅ booking records — createdBy filter सह, pagination साठी
-getBookingsPage(createdBy: number, page: number, size: number = 100): Observable<any> {
-  const params = new HttpParams()
-    .set('_t', Date.now().toString())
-    .set('page', page.toString())
-    .set('size', size.toString())
-    .set('sort', 'createdOn,desc')
-    .set('createdBy', createdBy.toString());
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/booking-status/new/${labId}`,
+      { params }
+    );
+  }
 
-  return this.http.get(
-    `${this.BASE_URL}/api/v1/lab/booking/patient/${this.getLabId()}`,
-    { params }
-  );
-}
-
-getDashboardSummary(labId: number, startDate: string, endDate: string): Observable<any> {
-  return this.http.get(
-    `${this.BASE_URL}/api/v1/lab/dashboard/patients/new`,
-    { params: { labId: labId.toString(), startDate, endDate } }
-  );
-}
-  // }
+  getDashboardSummary(labId: number, startDate: string, endDate: string): Observable<any> {
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/dashboard/patients/new`,
+      { params: { labId: labId.toString(), startDate, endDate } }
+    );
+  }
 
   getSingleBooking(bookingId: number): Observable<any> {
     return this.http.get(
@@ -155,18 +183,17 @@ getDashboardSummary(labId: number, startDate: string, endDate: string): Observab
     );
   }
 
-// ✅ NEW — reports चे counts थेट backend कडून, हलका call
-getReportCount(labId: number, startDate: string, endDate: string, createdBy?: number): Observable<any> {
-  let params = new HttpParams()
-    .set('startDate', startDate)
-    .set('endDate', endDate);
+  getReportCount(labId: number, startDate: string, endDate: string, createdBy?: number): Observable<any> {
+    let params = new HttpParams()
+      .set('startDate', startDate)
+      .set('endDate', endDate);
 
-  if (createdBy) {
-    params = params.set('createdBy', createdBy.toString());
+    if (createdBy) {
+      params = params.set('createdBy', createdBy.toString());
+    }
+
+    return this.http.get(`${this.BASE_URL}/api/v1/lab/report/allReportCount/${labId}`, { params });
   }
-
-  return this.http.get(`${this.BASE_URL}/api/v1/lab/report/allReportCount/${labId}`, { params });
-}
 
   createReport(body: any): Observable<any> {
     return this.http.post(
@@ -186,5 +213,30 @@ getReportCount(labId: number, startDate: string, endDate: string, createdBy?: nu
     return this.http.get(
       `${this.BASE_URL}/api/v1/lab/dashboard/patients`
     );
+  }
+
+  updateSampleStatusBulk(body: { barcode: string; userId: number; status: string }[]): Observable<any> {
+    return this.http.post(
+      `${this.BASE_URL}/api/v1/lab/logistic/sample/update/bulk`,
+      body
+    );
+  }
+
+  updatePatient(labId: number, bookingId: number, body: any): Observable<any> {
+    return this.http.put(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/updatePatient/${labId}/${bookingId}`,
+      body
+    );
+  }
+
+  updateTestMaster(testId: number, body: any): Observable<any> {
+    return this.http.put(
+      `${this.BASE_URL}/api/lab/report-master/tests/update/${testId}`,
+      body
+    );
+  }
+
+  getCurrentLabId(): number {
+    return this.getLabId();
   }
 }

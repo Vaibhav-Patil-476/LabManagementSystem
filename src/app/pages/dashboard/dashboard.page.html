@@ -224,7 +224,7 @@
             <span class="spotlight-count-label">Bookings today</span>
           </div>
         </div>
-        <div class="spotlight-right" *ngIf="!hideAmounts">
+        <div class="spotlight-right" *ngIf="canViewCollection">
           <span class="spotlight-amount-label">Collected</span>
           <span class="spotlight-amount">₹{{ todayAmount }}</span>
         </div>
@@ -300,7 +300,7 @@
               <h1>{{ item.bookings }}</h1>
               <span>Bookings</span>
             </div>
-            <div class="day-main-block" *ngIf="!hideAmounts">
+            <div class="day-main-block" *ngIf="canViewCollection">
               <h1>₹{{ item.amount }}</h1>
               <span>Amount</span>
             </div>
