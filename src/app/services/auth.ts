@@ -4,6 +4,7 @@ import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { environment } from '../../environments/environment';
 
 export interface CurrentUser {
+  userId: number;
   role: string;
   franchiseId: number;
   franchiseName: string;
@@ -58,10 +59,16 @@ export class AuthService {
     const franchiseName = res?.franchise?.franchiseName ?? '';
     const labId = res?.lab?.labId ?? res?.labId ?? 0;
 
+    // TODO: confirm the exact key against the real /auth/current-user payload
+    // (log `res` once and check) — falls back through the common names so this
+    // keeps working even if it's nested under a different key than expected.
+    const userId = res?.id ?? res?.userId ?? res?.staffId ?? res?.user?.id ?? 0;
+
     const role = res?.roles?.[0]?.name ?? '';
     const permissions = (res?.permissions || []).map((p: any) => p.name);
 
     return {
+      userId: Number(userId) || 0,
       role,
       franchiseId: Number(franchiseId) || 0,
       franchiseName: franchiseName || '',
@@ -73,6 +80,10 @@ export class AuthService {
 
   get currentUserValue(): CurrentUser | null {
     return this.currentUserSubject.value;
+  }
+
+  get userId(): number {
+    return this.currentUserSubject.value?.userId || 0;
   }
 
   get role(): string {

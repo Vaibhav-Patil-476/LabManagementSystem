@@ -49,6 +49,12 @@ export class RoleService {
            this.currentRole === AppRole.STAFF;
   }
 
+  // Only Lab Admin can download the generated report PDFs.
+  // Staff can view report status only (In Process / Pending / Complete etc.)
+  get canDownloadReports(): boolean {
+    return this.currentRole === AppRole.LAB_ADMIN;
+  }
+
   hasRole(...roles: AppRole[]): boolean {
     return roles.includes(this.currentRole as AppRole);
   }

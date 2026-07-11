@@ -6,6 +6,6 @@ import { ToastComponent } from './components/toast/toast.component';
   selector: 'app-root',
   templateUrl: './app.component.html',
   standalone: true,
-  imports: [IonApp, IonRouterOutlet,ToastComponent],
+  imports: [IonApp, IonRouterOutlet, ToastComponent],
 })
 export class AppComponent {}

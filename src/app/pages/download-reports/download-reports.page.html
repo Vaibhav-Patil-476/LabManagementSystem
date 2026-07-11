@@ -3,87 +3,155 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/dashboard"></ion-back-button>
     </ion-buttons>
-    <ion-title>Report Download</ion-title>
+    <ion-title>{{ roleService.canDownloadReports ? 'Report Download' : 'Report Status' }}</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="report-content">
 
-  <div class="form-card">
-
-    <div class="form-card-title-row">
-      <div class="form-card-title">
-        <ion-icon name="document-text-outline"></ion-icon>
-        Ready For Download
-      </div>
-
-      <ion-button
-        class="download-btn"
-        [disabled]="selectedIds.size === 0 || isGenerating"
-        (click)="downloadSelected()">
-        <ion-icon slot="start" name="download-outline"></ion-icon>
-        {{ isGenerating ? 'Generating...' : 'Download Selected Reports' }}
-        <span class="selected-count" *ngIf="selectedIds.size > 0">({{ selectedIds.size }})</span>
-      </ion-button>
-    </div>
-
-    <div class="table-wrapper">
-      <table class="report-table">
-        <thead>
-          <tr>
-            <th class="checkbox-col">
-              <ion-checkbox
-                [checked]="allSelected"
-                [disabled]="readyReports.length === 0"
-                (ionChange)="toggleSelectAll($event.detail.checked)">
-              </ion-checkbox>
-            </th>
-            <th>Booking ID / Patient ID</th>
-            <th>Patient Name</th>
-            <th>Barcode</th>
-            <th>Tests</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of readyReports" [class.row-selected]="isSelected(item)">
-            <td class="checkbox-col">
-              <ion-checkbox
-                [checked]="isSelected(item)"
-                (ionChange)="toggleSelect(item, $event.detail.checked)">
-              </ion-checkbox>
-            </td>
-            <td>{{ item.id }}</td>
-            <td>{{ item.title | titlecase }} {{ item.name }}</td>
-            <td>{{ getBarcode(item) }}</td>
-            <td>{{ getTests(item) }}</td>
-            <td>
-              <span class="status ready">
-                <ion-icon name="checkmark-done-outline"></ion-icon>
-                Ready
-              </span>
-            </td>
-          </tr>
-
-          <tr *ngIf="readyReports.length === 0">
-            <td colspan="6" class="empty-row">
-              No reports ready for download yet — payment pending on all bookings
-            </td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
+  <!-- ===================== TOP BAR ===================== -->
+  <div class="top-bar">
+    <span class="total-pill">Total Bookings: {{ totalBookings }}</span>
+    <span class="refresh-hint">"Please refresh to see the latest data."</span>
   </div>
 
-  <!-- ===================== HIDDEN PRINT TEMPLATE (used for PDF generation) ===================== -->
-  <div class="pdf-template" #pdfTemplate>
-    <div class="pdf-header">
-      <h2>Lab Report Summary</h2>
-      <p>Generated on: {{ (selectedReports[0]?.bookingDate) || (null) }}</p>
+  <!-- ===================== FILTER BAR ===================== -->
+  <div class="filter-bar">
+    <div class="search-box">
+      <ion-icon name="search-outline"></ion-icon>
+      <input
+        type="text"
+        placeholder="Quick search"
+        [(ngModel)]="quickSearch" />
     </div>
 
-    <table class="pdf-table">
+    <select
+      class="filter-select"
+      *ngIf="roleService.isLabAdmin"
+      [(ngModel)]="franchiseId"
+      (ngModelChange)="onFranchiseChange($event)">
+      <option [ngValue]="null">Select franchise</option>
+      <!-- TODO: bind *ngFor="let f of franchises" once franchise list API is wired here -->
+    </select>
+
+    <div class="date-range">
+      <input type="date" [(ngModel)]="fromDate" (ngModelChange)="onDateRangeChange()" />
+      <span>-</span>
+      <input type="date" [(ngModel)]="toDate" (ngModelChange)="onDateRangeChange()" />
+    </div>
+
+    <button class="refresh-btn" (click)="loadData()" [disabled]="isLoading">
+      <ion-icon name="refresh-outline"></ion-icon>
+    </button>
+  </div>
+
+  <!-- ===================== STATUS TABS ===================== -->
+  <div class="status-tabs">
+    <div
+      *ngFor="let tab of tabs"
+      class="status-tab"
+      [class.active]="activeTab === tab.key"
+      (click)="setTab(tab.key)">
+      <span class="tab-label">{{ tab.label }}</span>
+      <span class="tab-count" [ngClass]="tab.badgeClass">{{ bucketCount[tab.key] }}</span>
+    </div>
+  </div>
+
+  <!-- Download is ONLY visible to Lab Admin, and ONLY on the Complete tab -->
+  <div class="download-row" *ngIf="canShowDownloadControls">
+    <ion-button
+      class="download-btn"
+      [disabled]="selectedIds.size === 0 || isGenerating"
+      (click)="downloadSelected()">
+      <ion-icon slot="start" name="download-outline"></ion-icon>
+      {{ isGenerating ? 'Generating...' : 'Download Selected Reports' }}
+      <span class="selected-count" *ngIf="selectedIds.size > 0">({{ selectedIds.size }})</span>
+    </ion-button>
+  </div>
+
+  <!-- ===================== TABLE ===================== -->
+  <div class="table-wrapper">
+    <table class="report-table">
+      <thead>
+        <tr>
+          <th class="checkbox-col" *ngIf="canShowDownloadControls">
+            <ion-checkbox
+              [checked]="allSelected"
+              [disabled]="rowsForActiveTab.length === 0"
+              (ionChange)="toggleSelectAll($event.detail.checked)">
+            </ion-checkbox>
+          </th>
+          <th>Booking ID / Patient Id</th>
+          <th>Name</th>
+          <th>Tests</th>
+          <th *ngIf="roleService.isLabAdmin">Client Code/Doctor</th>
+          <th *ngIf="roleService.isLabAdmin">Samples</th>
+          <th>Barcode</th>
+          <th *ngIf="roleService.isLabAdmin">Reports</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr *ngIf="isLoading">
+          <td [attr.colspan]="8" class="empty-row">
+            <ion-spinner name="dots"></ion-spinner> Loading...
+          </td>
+        </tr>
+
+        <tr *ngFor="let item of rowsForActiveTab" [class.row-selected]="isSelected(item)">
+          <td class="checkbox-col" *ngIf="canShowDownloadControls">
+            <ion-checkbox
+              [checked]="isSelected(item)"
+              (ionChange)="toggleSelect(item, $event.detail.checked)">
+            </ion-checkbox>
+          </td>
+
+          <td class="id-col">
+            <a class="id-link">{{ item.bookingId }}</a><br />
+            <span class="sub-text">{{ item.patientId }}</span><br />
+            <span class="sub-text">{{ item.bookingDate | date:'M/d/yyyy, h:mm:ss a' }}</span>
+          </td>
+
+          <td>
+            <a class="id-link">{{ item.title | titlecase }} {{ item.name }}</a><br />
+            <span class="sub-text" *ngIf="item.genderAge">({{ item.genderAge }})</span>
+          </td>
+
+          <td>
+            <div class="test-row" *ngFor="let t of item.tests">
+              <span class="test-name">{{ t.name }}</span>
+              <span class="status-pill" [ngClass]="'status-' + (t.status | lowercase)">{{ t.status }}</span>
+            </div>
+          </td>
+
+          <td *ngIf="roleService.isLabAdmin" class="center-col">{{ item.doctorName }}</td>
+          <td *ngIf="roleService.isLabAdmin" class="center-col">{{ item.sampleCount }}</td>
+
+          <td>
+            <div *ngFor="let b of item.barcodes">{{ b }}</div>
+          </td>
+
+          <td *ngIf="roleService.isLabAdmin" class="center-col">
+            <span class="reports-pill" [class.reports-complete]="reportsComplete(item)">
+              {{ reportsFraction(item) }}
+            </span>
+          </td>
+        </tr>
+
+        <tr *ngIf="!isLoading && rowsForActiveTab.length === 0">
+          <td [attr.colspan]="8" class="empty-row">No data available</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ===================== HIDDEN PRINT TEMPLATE (used for PDF generation, admin only) ===================== -->
+  <div class="pdf-template" #pdfTemplate *ngIf="roleService.canDownloadReports">
+    <div class="pdf-header">
+      <h2>Lab Report Summary</h2>
+      <p>Generated on: {{ (currentPdfPatient?.bookingDate) || (null) }}</p>
+    </div>
+
+    <table class="pdf-table" *ngIf="currentPdfPatient as item">
       <thead>
         <tr>
           <th>Booking ID / Patient ID</th>
@@ -93,10 +161,10 @@
         </tr>
       </thead>
       <tbody>
-        <tr *ngFor="let item of selectedReports">
-          <td>{{ item.id }}</td>
+        <tr>
+          <td>{{ item.bookingId }}</td>
           <td>{{ item.title | titlecase }} {{ item.name }}</td>
-          <td>{{ getBarcode(item) }}</td>
+          <td>{{ item.barcodes.join(', ') }}</td>
           <td>{{ getTests(item) }}</td>
         </tr>
       </tbody>

@@ -1,287 +1,485 @@
-.login-page {
-  --background: linear-gradient(135deg,
-      #a3e4d7 0%,
-      #76d7c4 50%,
-      #48c9b0 100%);
-  --overflow: auto;
+// =========================
+// Header — purple/indigo gradient like Booking Status
+// =========================
+.report-header {
+  --background: linear-gradient(135deg, #7c6ff0, #6a5cff);
+  --color: #ffffff;
+
+  ion-title {
+    font-weight: 800;
+    font-size: 1.2rem;
+  }
+
+  ion-back-button {
+    --color: #ffffff;
+  }
 }
 
-.login-page::part(scroll) {
+.report-content {
+  --background: var(--app-bg);
+}
+
+// =========================
+// Top bar — "Total Bookings" pill + refresh hint
+// =========================
+.top-bar {
   display: flex;
-  justify-content: center;
   align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding: 16px 16px 0;
 }
 
-/* Center Wrapper */
-.page-center-wrapper {
+.total-pill {
+  background: linear-gradient(135deg, #7c6ff0, #6a5cff);
+  color: #ffffff;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 10px 18px;
+  border-radius: 999px;
+  box-shadow: 0 6px 16px rgba(108, 92, 231, 0.28);
+}
+
+.refresh-hint {
+  color: #d6336c;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+// =========================
+// Filter bar
+// =========================
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: center;
+  padding: 16px;
+}
+
+.search-box {
   display: flex;
   align-items: center;
-  justify-content: center;
-  min-height: 100dvh;
-  padding: 40px 20px;
-  box-sizing: border-box;
-}
-
-/* Main Card */
-.login-container {
-  display: flex;
-  width: 100%;
-  max-width: 1000px;
-  min-height: 600px;
-  background: #ffffff;
-  border-radius: 28px;
-  overflow: hidden;
-  box-shadow: 0 20px 45px rgba(11, 132, 110, 0.14);
-}
-
-/* =========================
-  LEFT PANEL
-========================= */
-
-.left-panel {
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid #e1e3ec;
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 46px;
   flex: 1;
-  background: #f4fbf9;
+  min-width: 200px;
+
+  ion-icon {
+    color: var(--text-faint);
+    font-size: 1.1rem;
+  }
+
+  input {
+    border: none;
+    outline: none;
+    flex: 1;
+    height: 100%;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+
+    &::placeholder {
+      color: var(--text-faint);
+    }
+  }
+}
+
+.filter-select {
+  height: 46px;
+  border: 1px solid #e1e3ec;
+  border-radius: 12px;
+  padding: 0 14px;
+  background: var(--card-bg);
+  color: var(--text-primary);
+  font-size: 0.9rem;
+  min-width: 180px;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--card-bg);
+  border: 1px solid #e1e3ec;
+  border-radius: 12px;
+  padding: 0 12px;
+  height: 46px;
+
+  input[type="date"] {
+    border: none;
+    outline: none;
+    font-size: 0.85rem;
+    color: var(--text-primary);
+    background: transparent;
+  }
+
+  span {
+    color: var(--text-faint);
+  }
+}
+
+.refresh-btn {
+  appearance: none;
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: 46px;
+  height: 46px;
+  min-width: 46px;
+  max-width: 46px;
+  padding: 0;
+  margin: 0;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #7c6ff0, #6a5cff);
+  color: #ffffff;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 40px;
-  border-right: 1px solid #e8f8f5;
+  box-shadow: 0 6px 16px rgba(108, 92, 231, 0.28);
+  cursor: pointer;
+  flex-shrink: 0;
 
-  .branding-box {
+  ion-icon {
+    font-size: 1.2rem;
+    pointer-events: none;
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}
+
+// =========================
+// Status tabs
+// =========================
+.status-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 0 16px 4px;
+}
+
+.status-tab {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  background: var(--card-bg);
+  border: 1px solid #e1e3ec;
+  cursor: pointer;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  transition: all 0.15s ease;
+
+  &.active {
+    background: #efedff;
+    border-color: #6a5cff;
+    color: #5a4fd6;
+    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.15);
+  }
+
+  .tab-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 6px;
+    border-radius: 999px;
+    color: #ffffff;
+    font-size: 0.75rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .badge-complete   { background: #2ecc71; }
+  .badge-clinical   { background: #4a90e2; }
+  .badge-partial    { background: #eb5292; }
+  .badge-pending    { background: #f2994a; }
+  .badge-snr        { background: #c239e0; }
+}
+
+// =========================
+// Download row (admin + Complete tab only)
+// =========================
+.download-row {
+  padding: 12px 16px 0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.download-btn {
+  --background: linear-gradient(135deg, #7c6ff0, #6a5cff);
+  --background-activated: linear-gradient(135deg, #6a5cff, #5847e0);
+  --box-shadow: 0 8px 20px rgba(108, 92, 231, 0.3);
+  --color: #ffffff;
+  --border-radius: 12px;
+  height: 44px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  text-transform: none;
+
+  .selected-count {
+    margin-left: 6px;
+    opacity: 0.9;
+  }
+}
+
+// =========================
+// Table
+// =========================
+.table-wrapper {
+  overflow-x: auto;
+  margin: 16px;
+  background: var(--card-bg);
+  border-radius: 16px;
+  box-shadow: 0 8px 24px rgba(30, 30, 60, 0.06);
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+
+  th {
+    text-align: left;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    padding: 14px 16px;
+    border-bottom: 2px solid #f0f1f8;
+    white-space: nowrap;
+    background: #f9f9fd;
+  }
+
+  td {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    color: var(--text-primary);
+    border-bottom: 1px solid #f0f1f8;
+    vertical-align: top;
+  }
+
+  .id-link {
+    color: #4a5cff;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover { text-decoration: underline; }
+  }
+
+  .sub-text {
+    color: var(--text-faint);
+    font-size: 0.78rem;
+  }
+
+  .checkbox-col {
+    width: 40px;
+  }
+
+  .center-col {
     text-align: center;
+  }
 
-    .logo {
-      background: #fff;
-      padding: 18px 28px;
-      border-radius: 16px;
-      box-shadow: 0 5px 18px rgba(0, 0, 0, 0.05);
-      display: inline-block;
-      margin-bottom: 25px;
-      border: 1px solid #e2e8f0;
+  .row-selected {
+    background: #f5f4ff;
+  }
 
-      filter: drop-shadow(0px 6px 15px rgba(88, 211, 115, 0.35));
+  .empty-row {
+    text-align: center;
+    padding: 30px 12px;
+    color: var(--text-faint);
+    font-style: italic;
+  }
+}
 
-      img {
-        max-width: 180px;
-        height: auto;
-      }
-    }
+.test-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+
+  .test-name {
+    font-weight: 600;
+  }
+}
+
+.status-pill {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #ffffff;
+  white-space: nowrap;
+
+  &.status-in\ process { background: #f2994a; }
+  &.status-pending      { background: #9299b8; }
+  &.status-complete     { background: #2ecc71; }
+  &.status-clinical     { background: #4a90e2; }
+  &.status-snr          { background: #c239e0; }
+}
+
+.reports-pill {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  background: #ffe3e3;
+  color: #e03131;
+
+  &.reports-complete {
+    background: #d3f9d8;
+    color: #2b8a3e;
+  }
+}
+
+// =========================
+// Hidden PDF template
+// =========================
+.pdf-template {
+  position: fixed;
+  top: -9999px;
+  left: -9999px;
+  width: 210mm;
+  background: var(--card-bg);
+  padding: 24px;
+  box-sizing: border-box;
+
+  .pdf-header {
+    text-align: center;
+    margin-bottom: 20px;
 
     h2 {
-      color: #0b846e;
-      font-size: 1.7rem;
-      font-weight: 700;
-      margin: 12px 0;
-      letter-spacing: -0.3px;
+      color: #5a4fd6;
+      margin: 0 0 4px;
     }
 
-    .tagline {
-      color: #4a5568;
-      font-size: 0.95rem;
-      max-width: 260px;
-      margin: auto;
-      line-height: 1.6;
-    }
-  }
-}
-
-/* =========================
-  RIGHT PANEL
-========================= */
-
-.right-panel {
-  flex: 1.2;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 40px;
-
-  .form-wrapper {
-    width: 100%;
-    max-width: 380px;
-
-    h1 {
-      font-size: 2rem;
-      font-weight: 800;
-      color: #1a202c;
-      margin-bottom: 8px;
-      letter-spacing: -0.4px;
-    }
-
-    .signup-text {
-      font-size: 0.9rem;
-      color: #718096;
-      margin-bottom: 30px;
-      line-height: 1.6;
-    }
-
-    .link-text {
-      color: #0b846e;
-      font-weight: 600;
-      cursor: pointer;
-
-      &:hover {
-        text-decoration: underline;
-      }
-    }
-
-    .input-group {
-      margin-bottom: 18px;
-
-      label {
-        display: block;
-        font-size: 0.9rem;
-        color: #4a5568;
-        margin-bottom: 8px;
-        font-weight: 600;
-      }
-
-      ion-item {
-        --background: #f8fafc;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        --padding-start: 14px;
-        height: 54px;
-        transition: border-color 0.15s ease;
-
-        &.item-has-focus {
-          border-color: #0b846e;
-        }
-
-        ion-input {
-          font-size: 0.95rem;
-          --placeholder-color: #a0aec0;
-        }
-      }
-    }
-
-    .forgot-password {
-      text-align: right;
-      margin-top: -5px;
-      margin-bottom: 25px;
+    p {
+      color: var(--text-faint);
       font-size: 0.85rem;
+      margin: 0;
+    }
+  }
+
+  .pdf-table {
+    width: 100%;
+    border-collapse: collapse;
+
+    th, td {
+      border: 1px solid #e1e3ec;
+      padding: 8px 10px;
+      font-size: 0.85rem;
+      text-align: left;
     }
 
-    .submit-btn {
-      margin-top: 20px;
-      --background: linear-gradient(135deg, #58d373, #2fb380);
-      --background-activated: linear-gradient(135deg, #4fc267, #29a175);
-      --box-shadow: 0 8px 20px rgba(47, 179, 128, 0.28);
-      --color: #ffffff;
-      --border-radius: 12px;
-      height: 50px;
-      font-weight: 700;
-      font-size: 1rem;
-      text-transform: none;
-
-      ion-spinner {
-        --color: #ffffff;
-      }
-    }
-
-    .divider {
-      text-align: center;
-      margin: 25px 0 20px;
-      position: relative;
-
-      &::before {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        height: 1px;
-        background: #e2e8f0;
-        z-index: 1;
-      }
-
-      span {
-        background: #fff;
-        padding: 0 12px;
-        color: #a0aec0;
-        font-size: 0.8rem;
-        position: relative;
-        z-index: 2;
-      }
-    }
-
-    .social-login {
-      display: flex;
-      gap: 10px;
-
-      .social-btn {
-        flex: 1;
-        --border-radius: 10px;
-        --border-width: 1px;
-        --border-color: #cbd5e1;
-        font-size: 0.72rem;
-        font-weight: 700;
-        height: 40px;
-        letter-spacing: 0.5px;
-      }
+    th {
+      background: #efedff;
+      color: #5a4fd6;
     }
   }
 }
 
-/* =========================
-  MOBILE VIEW
-========================= */
+// =========================
+// Mobile
+// =========================
 @media (max-width: 768px) {
-  .page-center-wrapper {
-    min-height: 100dvh;
-    padding: 0;
-    align-items: stretch;
+  .top-bar {
+    padding: 12px 12px 0;
   }
 
-  .login-container {
+  .total-pill {
+    font-size: 0.8rem;
+    padding: 8px 14px;
+  }
+
+  .refresh-hint {
+    font-size: 0.78rem;
+  }
+
+  .filter-bar {
     flex-direction: column;
+    align-items: stretch;
+    padding: 12px;
+    gap: 10px;
+  }
+
+  .search-box,
+  .filter-select,
+  .date-range {
     width: 100%;
-    max-width: 100%;
-    min-height: 100dvh;
-    margin: 0;
-    border-radius: 0;
-    box-shadow: none;
+    height: 42px;
   }
 
-  .left-panel {
-    flex: none;
-    display: flex;
-    justify-content: center;
-    padding: max(32px, env(safe-area-inset-top)) 20px 18px;
-    background: linear-gradient(135deg, #a3e4d7 0%, #48c9b0 100%);
-    border-right: none;
+  // Refresh button gets its own row, pinned to the left — not stretched full-width.
+  .refresh-btn {
+    align-self: flex-start;
+    width: 38px;
+    height: 38px;
+    min-width: 38px;
+    max-width: 38px;
+    border-radius: 10px;
+
+    ion-icon {
+      font-size: 1rem;
+    }
   }
 
-  .left-panel .branding-box .logo {
-    margin-bottom: 0;
-    padding: 14px 22px;
+  // Status tab chips — compact, horizontally scrollable, sized for a phone screen.
+  .status-tabs {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 0 12px 4px;
+    gap: 8px;
+    -webkit-overflow-scrolling: touch;
   }
 
-  .left-panel .branding-box h2,
-  .left-panel .branding-box .tagline {
-    display: none;
+  .status-tab {
+    padding: 6px 10px;
+    gap: 6px;
+    font-size: 0.72rem;
+    border-radius: 10px;
+    flex-shrink: 0;
+
+    .tab-count {
+      min-width: 18px;
+      height: 18px;
+      font-size: 0.62rem;
+      padding: 0 5px;
+    }
   }
 
-  .left-panel .branding-box .logo img {
-    max-width: 120px;
-    height: auto;
+  // Download button — compact pill instead of a full-width block.
+  .download-row {
+    padding: 10px 12px 0;
+    justify-content: flex-start;
   }
 
-  .right-panel {
-    flex: 1;
-    width: 100%;
-    padding: 28px 22px max(28px, env(safe-area-inset-bottom));
-    align-items: flex-start;
-    border-radius: 24px 24px 0 0;
-    background: #ffffff;
-    margin-top: -18px;
+  .download-btn {
+    height: 38px;
+    font-size: 0.75rem;
+    --border-radius: 10px;
+    --padding-start: 14px;
+    --padding-end: 14px;
+
+    ion-icon {
+      font-size: 0.9rem;
+    }
+
+    .selected-count {
+      margin-left: 4px;
+    }
   }
 
-  .right-panel .form-wrapper {
-    max-width: 100%;
-  }
-
-  .right-panel .form-wrapper h1 {
-    font-size: 1.5rem;
+  .table-wrapper {
+    margin: 12px;
   }
 }

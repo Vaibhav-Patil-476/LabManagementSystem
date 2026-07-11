@@ -165,8 +165,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.pollSub?.unsubscribe();
   }
 
-  // staff aani admin doghansathi silent poorna refresh — loadDashboard(true)
-  // aatach selected filterDate sathi dedicated fast call karto.
   private startPolling() {
     this.pollSub?.unsubscribe();
     this.pollSub = interval(15000).subscribe(() => {
@@ -219,15 +217,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     return this.formatDateParam(d);
   }
 
-  // Fast, backend-side date-filtered booking-status/new endpoint,
-  // pratyek divsasathi PARALLEL (forkJoin) madhe.
-  // IMPORTANT: Spring pageable 0-indexed ahe (response cha pageable/offset
-  // confirm karto), tyamule page=0 pathvaycha - page=1 pathvla tar te
-  // dusri page (records 21-40) magte ani kami-data asलelya divsansathi
-  // content rikama yeto.
-  // createdBy backend support karat nahi (booking-status/new cha real
-  // request madhe to nahiye) - tyamule ithe pathwat nahi; actual
-  // user-specific filtering client-side applyOverrideFilter() karto.
   private fetchBookingsForWindow(daysBack: number = 5): Observable<any[]> {
     const labId = this.authService.currentUserValue?.raw?.labId;
     const today = new Date();
@@ -319,12 +308,6 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     } else {
 
-      // STAFF - 3 goshti veglya kelya:
-      // 1) reportCount - halka count call
-      // 2) selectedDayBookings - USER NE SELECT KELELYA filterDate sathi
-      //    THET fast date-filtered call (booking-status/new, page=0!).
-      // 3) rollingWindowBookings - "Daily Bookings" (last 5 days) sathi
-      //    vegla, filterDate war depend nasnara data
       const currentUserId = currentUser?.raw?.id;
       const currentUsername = currentUser?.raw?.username;
 
@@ -345,11 +328,6 @@ export class DashboardPage implements OnInit, OnDestroy {
           this.totalReports =
             (reportCount?.completecount || 0) + (reportCount?.partiallycomplete || 0);
 
-          // ✅ CHANGED — "bookingCreatorOverride" localStorage map kadhun
-          // takla. Data secure nasतो asa localStorage madhe store-fetch
-          // karne — ownership filtering ata FAKTA real API cha response
-          // (createdBy / user.username) varunच hote, koणताही client-side
-          // override shakya nahi.
           const applyOverrideFilter = (list: any[]) => (list || []).filter((p: any) => {
             const usernameMatch = !!currentUsername && p.user?.username === currentUsername;
             const idMatch = !!currentUserId && p.createdBy === currentUserId;
@@ -524,10 +502,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.router.navigate(['/notification']);
   }
 
-  
-
-  // ✅ NEW — "Ashford Collection" (Collected amount block) FAKTA
-  // real Lab Admin la disel. Staff ani Franchise doghanhi la nahi.
   get canViewCollection(): boolean {
     return this.roleService.isLabAdmin;
   }

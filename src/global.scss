@@ -34,7 +34,7 @@
 
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
-@import '@ionic/angular/css/palettes/dark.system.css';
+/* @import '@ionic/angular/css/palettes/dark.system.css'; */
 ion-modal .invoice-page {
   padding: 20px;
   background: rgb(255, 255, 255) !important;
@@ -47,4 +47,23 @@ ion-modal .invoice-header {
 
 ion-modal .invoice-header h2 {
   color: #3730a3;
+}:root {
+  --app-bg: #f0f4ff;
+  --card-bg: #ffffff;
+  --card-border: #eef2ff;
+  --card-shadow: rgba(99, 102, 241, 0.06);
+  --text-primary: #0f172a;
+  --text-secondary: #1e293b;
+  --text-muted: #64748b;
+  --text-faint: #94a3b8;
+  --input-bg: #ffffff;
+  --input-border: #d8def0;
+  --skeleton-base: #e8e8e8;
+  --skeleton-shine: #d8d8d8;
+  --menu-bg: #fafaff;
+  --divider: #e2e8f0;
+  --mini-stat-bg: #f8f9ff;
+  --icon-bg: #f1f5f9;
+  --icon-border: #dbe4f0;
+  --icon-color: #6366f1;
 }

@@ -1,6 +1,6 @@
 .notification-content {
 
-  --background:#f5f7ff;
+  --background: var(--app-bg);
 
 }
 
@@ -49,14 +49,14 @@ h2{
   margin:0;
   font-size:24px;
   font-weight:700;
-  color:#222;
+  color: var(--text-primary);
 
 }
 
 p{
 
   margin-top:12px;
-  color:#777;
+  color: var(--text-muted);
   line-height:24px;
   font-size:15px;
   max-width:280px;
