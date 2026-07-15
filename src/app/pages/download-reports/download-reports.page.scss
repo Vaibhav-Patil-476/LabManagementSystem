@@ -1,13 +1,55 @@
+// ==========================================================
+// PREMIUM ENTERPRISE DESIGN SYSTEM — Report Status / Download
+// Recolored to match Dashboard's teal identity (--brand: #087b76).
+// Same token set as booking-status.page.scss — keep in sync.
+// ==========================================================
+:host {
+  --primary: #087b76;
+  --primary-dark: #075f5d;
+  --primary-light: #d9f0ee;
+  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
+
+  --success: #16866e;
+  --success-bg: #d8f2ed;
+  --warning: #bd7d19;
+  --warning-bg: #fff0d9;
+  --danger: #c05262;
+  --danger-bg: #ffebef;
+  --info: #2470b9;
+  --info-bg: #e1efff;
+  --teal: #087b76;
+  --pink: #bd526f;
+  --purple: #7856c9;
+  --gray-accent: #8fa1a5;
+
+  --border-color: #e4eded;
+  --section-bg: #f5f9f9;
+
+  --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
+  --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
+  --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
+  --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
+  --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
+
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+}
+
 // =========================
-// Header — purple/indigo gradient like Booking Status
+// Header
 // =========================
 .report-header {
-  --background: linear-gradient(135deg, #7c6ff0, #6a5cff);
+  --background: var(--brand-gradient);
   --color: #ffffff;
 
   ion-title {
-    font-weight: 800;
-    font-size: 1.2rem;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.2px;
   }
 
   ion-back-button {
@@ -16,217 +58,569 @@
 }
 
 .report-content {
-  --background: var(--app-bg);
+  --background: var(--app-bg, #f4f8f8);
+  --padding-start: 0;
+  --padding-end: 0;
 }
 
 // =========================
-// Top bar — "Total Bookings" pill + refresh hint
+// Top bar
 // =========================
 .top-bar {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: 12px;
   flex-wrap: wrap;
-  padding: 16px 16px 0;
+  padding: 18px 16px 0;
 }
 
 .total-pill {
-  background: linear-gradient(135deg, #7c6ff0, #6a5cff);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--brand-gradient);
   color: #ffffff;
   font-weight: 700;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   padding: 10px 18px;
-  border-radius: 999px;
-  box-shadow: 0 6px 16px rgba(108, 92, 231, 0.28);
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-glow);
+
+  ion-icon {
+    font-size: 15px;
+  }
 }
 
 .refresh-hint {
-  color: #d6336c;
-  font-weight: 700;
-  font-size: 0.9rem;
-}
-
-// =========================
-// Filter bar
-// =========================
-.filter-bar {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px;
+  display: inline-flex;
   align-items: center;
-  padding: 16px;
-}
-
-.search-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--card-bg);
-  border: 1px solid #e1e3ec;
-  border-radius: 12px;
-  padding: 0 14px;
-  height: 46px;
-  flex: 1;
-  min-width: 200px;
+  gap: 6px;
+  color: var(--pink);
+  background: var(--danger-bg);
+  font-weight: 600;
+  font-size: 0.8rem;
+  padding: 8px 12px;
+  border-radius: var(--r-pill);
 
   ion-icon {
-    color: var(--text-faint);
-    font-size: 1.1rem;
+    font-size: 14px;
+  }
+}
+
+// ==========================================================
+// FILTER BAR — same pattern used on Booking Status page, so both
+// pages behave/look identical.
+// ==========================================================
+.filter-bar {
+  position: relative;
+  z-index: 3;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  padding: 14px 16px 4px;
+}
+
+.filter-field {
+  flex: 1 1 140px;
+  min-width: 130px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  padding: 0 12px;
+  height: 44px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+  select,
+  input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dark, #14222e);
+  }
+
+  ion-icon {
+    color: var(--gray-accent);
+    margin-right: 8px;
+    flex-shrink: 0;
+    font-size: 16px;
+  }
+
+  &:focus-within {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
+  }
+}
+
+.search-field input::placeholder {
+  color: #9aabae;
+}
+
+// ==========================================================
+// FILTER FIELDS — search / franchise / date all share the same
+// height + icon-badge treatment so they read as one consistent row.
+// ==========================================================
+.search-field,
+.select-field,
+.date-field {
+  height: 58px;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.search-field {
+  .search-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+      color: var(--primary);
+      font-size: 18px;
+      margin: 0;
+    }
   }
 
   input {
-    border: none;
-    outline: none;
-    flex: 1;
-    height: 100%;
-    font-size: 0.9rem;
-    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dark, #14222e);
+  }
 
-    &::placeholder {
-      color: var(--text-faint);
+  input::placeholder {
+    color: #9aabae;
+    font-weight: 500;
+  }
+}
+
+.select-field {
+  overflow: hidden;
+
+  .select-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+      color: var(--primary);
+      font-size: 18px;
+      margin: 0;
     }
   }
-}
 
-.filter-select {
-  height: 46px;
-  border: 1px solid #e1e3ec;
-  border-radius: 12px;
-  padding: 0 14px;
-  background: var(--card-bg);
-  color: var(--text-primary);
-  font-size: 0.9rem;
-  min-width: 180px;
-}
-
-.date-range {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--card-bg);
-  border: 1px solid #e1e3ec;
-  border-radius: 12px;
-  padding: 0 12px;
-  height: 46px;
-
-  input[type="date"] {
-    border: none;
-    outline: none;
-    font-size: 0.85rem;
-    color: var(--text-primary);
-    background: transparent;
+  ion-select {
+    flex: 1 1 auto;
+    width: 100%;
+    height: 100%;
+    min-width: 0;
+    --padding-start: 0;
+    --padding-end: 4px;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --placeholder-color: #9aabae;
+    --placeholder-opacity: 1;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dark, #14222e);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
   }
 
-  span {
-    color: var(--text-faint);
+  ion-select::part(text),
+  ion-select::part(placeholder) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  ion-select::part(icon) {
+    color: var(--gray-accent);
+  }
+}
+
+// ion-popover cha overlay-portaled panel — ::ng-deep havाच.
+:host ::ng-deep ion-select-popover,
+:host ::ng-deep ion-popover {
+  --width: min(320px, 92vw);
+  --max-height: min(360px, 70vh);
+  --box-shadow: var(--shadow-lg);
+  --backdrop-opacity: 0.28;
+
+  &::part(content) {
+    border-radius: var(--r-md);
+  }
+
+  ion-list {
+    padding: 4px;
+  }
+
+  ion-item {
+    --min-height: 44px;
+    font-size: 13.5px;
+  }
+}
+
+.date-field {
+  flex: 1 1 260px;
+  cursor: pointer;
+  position: relative;
+  z-index: 5;
+  overflow: visible;
+  background: var(--card-bg, #fff);
+  border-width: 1.5px;
+
+  .date-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+      color: var(--primary);
+      font-size: 18px;
+      margin: 0;
+    }
+  }
+
+  .date-trigger-btn {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dark, #14222e);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.1px;
+  }
+
+  &:hover {
+    border-color: rgba(8, 123, 118, 0.4);
+    background: var(--primary-light);
   }
 }
 
 .refresh-btn {
-  appearance: none;
-  -webkit-appearance: none;
-  box-sizing: border-box;
-  width: 46px;
-  height: 46px;
-  min-width: 46px;
-  max-width: 46px;
-  padding: 0;
+  --border-radius: var(--r-sm);
+  --color: #fff;
   margin: 0;
-  border: none;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #7c6ff0, #6a5cff);
-  color: #ffffff;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 6px 16px rgba(108, 92, 231, 0.28);
-  cursor: pointer;
+  height: 58px;
+  width: 58px;
   flex-shrink: 0;
+  --box-shadow: var(--shadow-glow);
 
-  ion-icon {
-    font-size: 1.2rem;
-    pointer-events: none;
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
   }
 
-  &:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
+  &:active::part(native) {
+    transform: scale(0.94);
   }
+}
+
+// Below 480px, stack every filter field full-width.
+@media (max-width: 480px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field,
+  .date-field {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .refresh-btn {
+    width: 100%;
+  }
+}
+
+// ==========================================================
+// Material date-range-picker integration — identical to Booking
+// Status page, so the calendar UI/behaviour matches everywhere.
+// ==========================================================
+.hidden-range-field {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+::ng-deep .cdk-overlay-container {
+  z-index: 99999 !important;
+}
+
+::ng-deep .mat-datepicker-content {
+  z-index: 99999 !important;
+  background-color: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16)) !important;
+}
+
+::ng-deep .mat-calendar {
+  background-color: #ffffff !important;
+}
+
+::ng-deep .mat-calendar-body-selected {
+  background-color: var(--primary, #087b76) !important;
+  color: #ffffff !important;
+}
+
+::ng-deep .mat-calendar-body-in-range::before {
+  background: var(--primary-light, #d9f0ee) !important;
+}
+
+::ng-deep .mat-calendar-body-comparison-bridge-start::before,
+::ng-deep .mat-calendar-body-comparison-bridge-end::before,
+::ng-deep .mat-calendar-body-range-start::before,
+::ng-deep .mat-calendar-body-range-end::before {
+  background: var(--primary-light, #d9f0ee) !important;
+}
+
+::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+  border-color: var(--primary, #087b76) !important;
+}
+
+::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+  background-color: var(--primary-light, #d9f0ee) !important;
 }
 
 // =========================
 // Status tabs
 // =========================
+.status-tabs-wrapper {
+  padding: 4px 16px 8px;
+  // fade edges so a scrollable row doesn't look abruptly cut off
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+
 .status-tabs {
   display: flex;
-  flex-wrap: wrap;
+  align-items: stretch;
   gap: 10px;
-  padding: 0 16px 4px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 14px 10px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
 }
 
 .status-tab {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  border-radius: 12px;
-  background: var(--card-bg);
-  border: 1px solid #e1e3ec;
+  gap: 9px;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
   cursor: pointer;
-  font-weight: 700;
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  transition: all 0.15s ease;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 
-  &.active {
-    background: #efedff;
-    border-color: #6a5cff;
-    color: #5a4fd6;
-    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.15);
+  .tab-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.badge-complete { background: var(--success); }
+    &.badge-clinical { background: var(--info); }
+    &.badge-partial  { background: var(--pink); }
+    &.badge-pending  { background: var(--warning); }
+    &.badge-snr      { background: var(--purple); }
+  }
+
+  .tab-label {
+    font-weight: 700;
+    font-size: 0.85rem;
+    color: #56696c;
+    transition: color 0.15s ease;
   }
 
   .tab-count {
-    min-width: 22px;
-    height: 22px;
-    padding: 0 6px;
-    border-radius: 999px;
+    min-width: 24px;
+    height: 24px;
+    padding: 0 7px;
+    border-radius: var(--r-pill);
     color: #ffffff;
-    font-size: 0.75rem;
+    font-size: 0.74rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-weight: 800;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+
+    &.badge-complete { background: var(--success); }
+    &.badge-clinical { background: var(--info); }
+    &.badge-partial  { background: var(--pink); }
+    &.badge-pending  { background: var(--warning); }
+    &.badge-snr      { background: var(--purple); }
   }
 
-  .badge-complete   { background: #2ecc71; }
-  .badge-clinical   { background: #4a90e2; }
-  .badge-partial    { background: #eb5292; }
-  .badge-pending    { background: #f2994a; }
-  .badge-snr        { background: #c239e0; }
+  &:hover {
+    border-color: rgba(8, 123, 118, 0.35);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &.active {
+    background: var(--brand-gradient);
+    border-color: transparent;
+    box-shadow: var(--shadow-glow);
+
+    .tab-dot {
+      background: #ffffff;
+    }
+
+    .tab-label {
+      color: #ffffff;
+    }
+
+    .tab-count {
+      background: rgba(255, 255, 255, 0.22) !important;
+      box-shadow: none;
+    }
+  }
 }
 
-// =========================
-// Download row (admin + Complete tab only)
-// =========================
+@media (max-width: 480px) {
+  .status-tabs-wrapper {
+    padding: 4px 0 8px;
+  }
+
+  .status-tabs {
+    padding: 4px 16px 10px;
+  }
+
+  .status-tab {
+    padding: 10px 14px;
+
+    .tab-label {
+      font-size: 0.8rem;
+    }
+  }
+}
+
+// ==========================================================
+// DOWNLOAD ROW — compact, premium pill button matching the
+// status-tabs treatment (small, gradient, tight shadow, crisp
+// press feedback) instead of the old full-width bulky button.
+// ==========================================================
 .download-row {
-  padding: 12px 16px 0;
+  padding: 4px 16px 4px;
   display: flex;
   justify-content: flex-end;
 }
 
 .download-btn {
-  --background: linear-gradient(135deg, #7c6ff0, #6a5cff);
-  --background-activated: linear-gradient(135deg, #6a5cff, #5847e0);
-  --box-shadow: 0 8px 20px rgba(108, 92, 231, 0.3);
+  --background: var(--brand-gradient);
+  --background-activated: linear-gradient(135deg, #06635f, #044c4a);
+  --background-hover: linear-gradient(135deg, #0a938c, #087b76);
+  --box-shadow: 0 4px 14px rgba(8, 123, 118, 0.24);
   --color: #ffffff;
-  --border-radius: 12px;
-  height: 44px;
+  --border-radius: var(--r-pill);
+  --padding-start: 16px;
+  --padding-end: 16px;
+  height: 38px;
+  margin: 0;
   font-weight: 700;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.1px;
   text-transform: none;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+
+  ion-icon {
+    font-size: 15px;
+    margin-right: 2px;
+  }
+
+  .btn-label {
+    white-space: nowrap;
+  }
 
   .selected-count {
-    margin-left: 6px;
-    opacity: 0.9;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 5px;
+    margin-left: 8px;
+    border-radius: var(--r-pill);
+    background: rgba(255, 255, 255, 0.24);
+    font-size: 0.7rem;
+    font-weight: 800;
+  }
+
+  &:not([disabled]):hover {
+    --box-shadow: 0 6px 18px rgba(8, 123, 118, 0.32);
+  }
+
+  &:not([disabled]):active {
+    transform: scale(0.96);
+  }
+
+  &[disabled] {
+    --background: #dde6e6;
+    --box-shadow: none;
+    --color: #a3b2b1;
+    opacity: 1;
+  }
+}
+
+@media (max-width: 480px) {
+  .download-row {
+    justify-content: stretch;
+  }
+
+  .download-btn {
+    width: 100%;
+    height: 40px;
   }
 }
 
@@ -236,9 +630,11 @@
 .table-wrapper {
   overflow-x: auto;
   margin: 16px;
-  background: var(--card-bg);
-  border-radius: 16px;
-  box-shadow: 0 8px 24px rgba(30, 30, 60, 0.06);
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(8, 123, 118, 0.06);
+  box-sizing: border-box;
 }
 
 .report-table {
@@ -247,34 +643,39 @@
 
   th {
     text-align: left;
-    font-size: 0.8rem;
+    font-size: 0.75rem;
     font-weight: 700;
-    color: var(--text-muted);
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #3d4f52;
     padding: 14px 16px;
-    border-bottom: 2px solid #f0f1f8;
+    border-bottom: 2px solid var(--section-bg);
     white-space: nowrap;
-    background: #f9f9fd;
+    background: var(--section-bg);
   }
 
   td {
     padding: 14px 16px;
-    font-size: 0.9rem;
-    color: var(--text-primary);
-    border-bottom: 1px solid #f0f1f8;
+    font-size: 0.88rem;
+    color: var(--text-dark, #14222e);
+    border-bottom: 1px solid #edf3f3;
     vertical-align: top;
   }
 
   .id-link {
-    color: #4a5cff;
+    color: var(--primary);
     font-weight: 700;
     text-decoration: none;
     cursor: pointer;
+    border-bottom: 1.5px dashed rgba(8, 123, 118, 0.35);
 
-    &:hover { text-decoration: underline; }
+    &:hover {
+      border-bottom-style: solid;
+    }
   }
 
   .sub-text {
-    color: var(--text-faint);
+    color: var(--gray-accent);
     font-size: 0.78rem;
   }
 
@@ -287,14 +688,47 @@
   }
 
   .row-selected {
-    background: #f5f4ff;
+    background: var(--primary-light);
   }
 
   .empty-row {
     text-align: center;
-    padding: 30px 12px;
-    color: var(--text-faint);
-    font-style: italic;
+    padding: 0;
+  }
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-left: auto;
+  gap: 8px;
+  padding: 40px 0;
+  color: var(--gray-accent);
+
+  ion-icon {
+    font-size: 34px;
+    opacity: 0.6;
+  }
+
+  span {
+    font-size: 13px;
+    font-weight: 600;
+  }
+}
+
+.loading-inline {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 24px 0;
+  color: var(--gray-accent);
+  font-size: 0.85rem;
+  font-weight: 600;
+
+  ion-spinner {
+    color: var(--primary);
   }
 }
 
@@ -313,44 +747,60 @@
 .status-pill {
   display: inline-block;
   padding: 3px 10px;
-  border-radius: 999px;
-  font-size: 0.68rem;
+  border-radius: var(--r-pill);
+  font-size: 0.66rem;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.2px;
   color: #ffffff;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 
-  &.status-in\ process { background: #f2994a; }
-  &.status-pending      { background: #9299b8; }
-  &.status-complete     { background: #2ecc71; }
-  &.status-clinical     { background: #4a90e2; }
-  &.status-snr          { background: #c239e0; }
+  &.status-in\ process { background: var(--warning); }
+  &.status-pending      { background: var(--gray-accent); }
+  &.status-complete     { background: var(--success); }
+  &.status-clinical     { background: var(--info); }
+  &.status-snr          { background: var(--purple); }
 }
 
 .reports-pill {
   display: inline-block;
   padding: 4px 12px;
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   font-size: 0.8rem;
   font-weight: 700;
-  background: #ffe3e3;
-  color: #e03131;
+  background: var(--danger-bg);
+  color: var(--danger);
 
   &.reports-complete {
-    background: #d3f9d8;
-    color: #2b8a3e;
+    background: var(--success-bg);
+    color: var(--success);
+  }
+}
+
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 14px;
+
+  ion-button {
+    --border-radius: var(--r-pill);
+    --border-color: var(--primary);
+    --color: var(--primary);
+    font-weight: 700;
+    font-size: 0.85rem;
   }
 }
 
 // =========================
-// Hidden PDF template
+// Hidden PDF template (rendered off-screen by TS for report generation)
 // =========================
 .pdf-template {
   position: fixed;
   top: -9999px;
   left: -9999px;
   width: 210mm;
-  background: var(--card-bg);
+  background: var(--card-bg, #fff);
   padding: 24px;
   box-sizing: border-box;
 
@@ -359,12 +809,12 @@
     margin-bottom: 20px;
 
     h2 {
-      color: #5a4fd6;
+      color: var(--primary-dark);
       margin: 0 0 4px;
     }
 
     p {
-      color: var(--text-faint);
+      color: var(--gray-accent);
       font-size: 0.85rem;
       margin: 0;
     }
@@ -374,112 +824,17 @@
     width: 100%;
     border-collapse: collapse;
 
-    th, td {
-      border: 1px solid #e1e3ec;
+    th,
+    td {
+      border: 1px solid var(--border-color);
       padding: 8px 10px;
       font-size: 0.85rem;
       text-align: left;
     }
 
     th {
-      background: #efedff;
-      color: #5a4fd6;
+      background: var(--primary-light);
+      color: var(--primary-dark);
     }
-  }
-}
-
-// =========================
-// Mobile
-// =========================
-@media (max-width: 768px) {
-  .top-bar {
-    padding: 12px 12px 0;
-  }
-
-  .total-pill {
-    font-size: 0.8rem;
-    padding: 8px 14px;
-  }
-
-  .refresh-hint {
-    font-size: 0.78rem;
-  }
-
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-    padding: 12px;
-    gap: 10px;
-  }
-
-  .search-box,
-  .filter-select,
-  .date-range {
-    width: 100%;
-    height: 42px;
-  }
-
-  // Refresh button gets its own row, pinned to the left — not stretched full-width.
-  .refresh-btn {
-    align-self: flex-start;
-    width: 38px;
-    height: 38px;
-    min-width: 38px;
-    max-width: 38px;
-    border-radius: 10px;
-
-    ion-icon {
-      font-size: 1rem;
-    }
-  }
-
-  // Status tab chips — compact, horizontally scrollable, sized for a phone screen.
-  .status-tabs {
-    overflow-x: auto;
-    flex-wrap: nowrap;
-    padding: 0 12px 4px;
-    gap: 8px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .status-tab {
-    padding: 6px 10px;
-    gap: 6px;
-    font-size: 0.72rem;
-    border-radius: 10px;
-    flex-shrink: 0;
-
-    .tab-count {
-      min-width: 18px;
-      height: 18px;
-      font-size: 0.62rem;
-      padding: 0 5px;
-    }
-  }
-
-  // Download button — compact pill instead of a full-width block.
-  .download-row {
-    padding: 10px 12px 0;
-    justify-content: flex-start;
-  }
-
-  .download-btn {
-    height: 38px;
-    font-size: 0.75rem;
-    --border-radius: 10px;
-    --padding-start: 14px;
-    --padding-end: 14px;
-
-    ion-icon {
-      font-size: 0.9rem;
-    }
-
-    .selected-count {
-      margin-left: 4px;
-    }
-  }
-
-  .table-wrapper {
-    margin: 12px;
   }
 }

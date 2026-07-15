@@ -1,17 +1,21 @@
-import { Component, OnInit, OnDestroy, ViewChild, ElementRef, CUSTOM_ELEMENTS_SCHEMA } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner
+  IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner,
+  IonSelect, IonSelectOption
 } from '@ionic/angular/standalone';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { addIcons } from 'ionicons';
 import {
   downloadOutline, documentTextOutline, checkmarkDoneOutline,
-  refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline
+  refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
+  businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
 } from 'ionicons/icons';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
+import { firstValueFrom } from 'rxjs';
 
 import { LabApiService } from '../../services/lab-api';
 import { AuthService } from '../../services/auth';
@@ -19,15 +23,33 @@ import { RoleService } from '../../services/role';
 import { ToastService } from '../../services/toast';
 
 // ---------------------------------------------------------------------------
-// Status buckets — same 5 buckets shown on the Booking Status screen
-// (Complete / Clinical / Partially Complete / Pending / SNR).
-// Download is allowed ONLY on the COMPLETE bucket, and ONLY for Lab Admin.
+// ✅ REWRITE — booking-status page cha (proven, reliable) pattern vaparला:
+// backend cha /report/all/{labId}?reportStatus=X param आधीच confirm झालं
+// आहे ki तो काम करत नाहीये (COMPLETE tab madhе PENDING bookings yayचे,
+// sगळ्या tabs madhे same data). Booking-status page ha problem आधीच
+// टाळतो कारण tो कधीच backend status-filter var bharosा थेवत nahi —
+// फक्त date+franchise backend कडून घेतो, status pratyek booking sathी
+// tyacha tests cha statuses varून CLIENT-SIDE स्वतः काढतो.
+//
+// Ha page ata तेच exact karto: eकच call (getBookingStatusNew — booking
+// status page वापरतो तोच fast/reliable endpoint), ani sगळे 5 buckets
+// (COMPLETE/CLINICAL/PARTIALLY_COMPLETE/PENDING/SNR) client-side derive
+// hotात. No localStorage kुठेही — फक्त in-memory (`bookings` array),
+// component destroy झाल्यावर nिघून जातो.
+//
+// ✅ FILTER-BAR REWRITE (this pass) — franchise dropdown ata plain
+// native <select> nahi, booking-status sarkhाच ion-select
+// (interface="popover") ahе. Date range ata donhi native
+// <input type="date"> nahi — booking-status page cha Angular Material
+// mat-date-range-picker cha exact tach pattern (single trigger button +
+// hidden mat-form-field + calendar overlay) vaparला ahе, jenekarून
+// donhi pages var eकach calendar UI/behaviour disеl.
 // ---------------------------------------------------------------------------
 export type ReportTabKey = 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR';
 
 export interface ReportTestRow {
   name: string;
-  status: string;       // e.g. IN PROCESS, COMPLETE, PENDING, SNR
+  status: string;
   testCode?: string;
 }
 
@@ -37,13 +59,16 @@ export interface ReportBookingRow {
   title?: string;
   name: string;
   genderAge?: string;
-  barcodes: string[];       // one barcode per sample, e.g. ["ABC404089120 - EDTA", "ABC459730047 - CSF"]
-  doctorName?: string;      // "(SELF) / Dr. self" style client-code/doctor label
+  barcodes: string[];
+  doctorName?: string;
   sampleCount: number;
   tests: ReportTestRow[];
   bookingDate?: string;
-  createdBy?: number;       // id of the staff who booked this patient — used to scope staff view
-  bucket: ReportTabKey;     // which of the 5 tabs this booking belongs to
+  createdBy?: number;
+  reportId?: number;
+  remark?: string;
+  file?: string;            // reportUrl — S3 PDF link, null jopryant report generate hot nahi
+  bucket: ReportTabKey;      // ✅ client-side derived, backend cha reportStatus var bharosa nahi
 }
 
 @Component({
@@ -53,7 +78,9 @@ export interface ReportBookingRow {
     CommonModule,
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-    IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner
+    IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner,
+    IonSelect, IonSelectOption,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './download-reports.page.html',
@@ -62,11 +89,11 @@ export interface ReportBookingRow {
 export class DownloadReportsPage implements OnInit, OnDestroy {
 
   readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
-    { key: 'COMPLETE',            label: 'Complete',            badgeClass: 'badge-complete' },
-    { key: 'CLINICAL',            label: 'Clinical',            badgeClass: 'badge-clinical' },
-    { key: 'PARTIALLY_COMPLETE',  label: 'Partially Complete',  badgeClass: 'badge-partial' },
-    { key: 'PENDING',             label: 'Pending',             badgeClass: 'badge-pending' },
-    { key: 'SNR',                 label: 'SNR',                 badgeClass: 'badge-snr' },
+    { key: 'COMPLETE', label: 'Complete', badgeClass: 'badge-complete' },
+    { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
+    { key: 'PARTIALLY_COMPLETE', label: 'Partially Complete', badgeClass: 'badge-partial' },
+    { key: 'PENDING', label: 'Pending', badgeClass: 'badge-pending' },
+    { key: 'SNR', label: 'SNR', badgeClass: 'badge-snr' },
   ];
 
   activeTab: ReportTabKey = 'COMPLETE';
@@ -74,66 +101,242 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   toDate: string = this.todayIso();
   quickSearch = '';
   franchiseId: any = null;
+  franchises: any[] = [];
 
-  allRows: ReportBookingRow[] = [];
   isLoading = false;
+  isLoadingMore = false;
   isGenerating = false;
 
   selectedIds = new Set<string>();
 
-  // single patient currently rendered into the hidden PDF template
-  // (report is built one patient at a time so each gets its own page)
-  currentPdfPatient: ReportBookingRow | null = null;
+  // ✅ Sगळा data eकच array madhे (in-memory only, localStorage nahi).
+  // currentPage/hasMore booking-status page cha pattern.
+  private bookings: ReportBookingRow[] = [];
+  private currentPage = 0;
+  private readonly pageSize = 200;
+  hasMore = false;
 
-  @ViewChild('pdfTemplate') pdfTemplateRef!: ElementRef<HTMLDivElement>;
+  // ✅ Material date-range-picker cha state — booking-status page cha
+  // exact tach pattern. fromDate/toDate ('YYYY-MM-DD' strings) hेच
+  // loadData() vaparto, tyामुळे ha layer फक्त UI साठी convert-karto.
+  @ViewChild('rangePicker') rangePicker!: any;
+  rangeStart: Date | null = null;
+  rangeEnd: Date | null = null;
 
   constructor(
     private labApi: LabApiService,
     private authService: AuthService,
     public roleService: RoleService,
-    private toast: ToastService
+    private toast: ToastService,
+    private ngZone: NgZone,
+    private cdr: ChangeDetectorRef
   ) {
-    addIcons({ downloadOutline, documentTextOutline, checkmarkDoneOutline, refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline });
+    addIcons({
+      downloadOutline, documentTextOutline, checkmarkDoneOutline,
+      refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
+      businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
+    });
   }
 
   ngOnInit() {
+    this.loadFranchises();
     this.loadData();
   }
 
   ngOnDestroy() { }
 
-  // ================= DATA LOADING (real API only — no localStorage, no cache) =================
+  private formatDateForInput(d: Date): string {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  // booking-status page cha addOneDay logic — endDate exclusive kartो
+  // jenekarून "toDate" cha divास पण data yईल.
+  private addOneDay(dateStr: string): string {
+    if (!dateStr) return dateStr;
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return this.formatDateForInput(d);
+  }
+
+  // ================= FRANCHISE DROPDOWN DATA =================
+  private loadFranchises() {
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        this.ngZone.run(() => {
+          this.franchises = res?.content || res || [];
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => {
+        this.ngZone.run(() => {
+          this.franchises = [];
+        });
+      }
+    });
+  }
+
+  // ================= MATERIAL DATE-RANGE-PICKER =================
+  private toDateObj(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    return new Date(dateStr + 'T00:00:00');
+  }
+
+  private toDateStr(d: Date | null): string {
+    if (!d) return '';
+    return this.formatDateForInput(d);
+  }
+
+  openDateRangePicker() {
+    this.rangeStart = this.toDateObj(this.fromDate);
+    this.rangeEnd = this.toDateObj(this.toDate);
+    this.rangePicker?.open();
+  }
+
+  onRangeStartChange(event: any) {
+    this.rangeStart = event?.value || null;
+  }
+
+  onRangeEndChange(event: any) {
+    this.rangeEnd = event?.value || null;
+    // ✅ donhi dates select झाल्यावर, filters apply karून list reload.
+    if (this.rangeStart && this.rangeEnd) {
+      this.fromDate = this.toDateStr(this.rangeStart);
+      this.toDate = this.toDateStr(this.rangeEnd);
+      this.onDateRangeChange();
+    }
+  }
+
+  // ================= DATA LOADING (fresh call, no cache carried over) =================
   loadData() {
-    this.isLoading = true;
     this.selectedIds.clear();
+    this.bookings = [];
+    this.currentPage = 0;
+    this.hasMore = false;
+    this.fetchPage();
+  }
+
+  loadMore() {
+    if (!this.hasMore || this.isLoadingMore) return;
+    this.currentPage++;
+    this.fetchPage(true);
+  }
+
+  private fetchPage(isLoadMore: boolean = false) {
+    if (isLoadMore) this.isLoadingMore = true; else this.isLoading = true;
 
     const labId = this.authService.labId;
+    const endDateExclusive = this.addOneDay(this.toDate);
 
-    this.labApi.getBookingStatusNew(labId, 0, 200, this.fromDate, this.toDate, this.franchiseId)
-      .subscribe({
-        next: (res: any) => {
-          // ASSUMPTION: response is either { content: [...] } (Spring Pageable) or a raw array.
-          // Adjust the extraction below once the exact backend shape is confirmed.
-          const list: any[] = res?.content ?? res?.data ?? (Array.isArray(res) ? res : []);
+    this.labApi.getBookingStatusNew(
+      labId,
+      this.currentPage,
+      this.pageSize,
+      this.fromDate,
+      endDateExclusive,
+      this.franchiseId || undefined
+    ).subscribe({
+      next: (res: any) => {
+        this.ngZone.run(() => {
+          const list = res?.content ?? res ?? [];
+          const rawList: any[] = Array.isArray(list) ? list : [];
 
-          let rows = list.map((item: any) => this.mapToRow(item));
+          let rows = rawList.map((raw: any) => this.mapToRow(raw));
 
-          // Staff sees ONLY the patients they personally booked — never another staff's
-          // patients, and never the admin-only actions (billing, download, etc.).
           if (this.roleService.isStaff) {
             const currentUserId = this.authService.userId;
             rows = rows.filter(r => r.createdBy === currentUserId);
           }
 
-          this.allRows = rows;
+          this.bookings = isLoadMore ? [...this.bookings, ...rows] : rows;
+
+          const totalPages = res?.totalPages ?? 1;
+          this.hasMore = this.currentPage < totalPages - 1;
+
           this.isLoading = false;
-        },
-        error: (err) => {
-          console.error('Failed to load report status data', err);
+          this.isLoadingMore = false;
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        console.error('Failed to load bookings', err);
+        this.ngZone.run(() => {
           this.toast.error('Error', 'Data load houu shakla nahi, punha try kara');
           this.isLoading = false;
-        }
-      });
+          this.isLoadingMore = false;
+        });
+      }
+    });
+  }
+
+  // Raw booking object -> display row + bucket. Raw shape booking-status
+  // page cha mapBookingItem() sarkhाच ahे (bookingWithTestMappings,
+  // sampleAccessions, franchiseName, doctorName, reportUrl — spread
+  // varून raw madhून थेट).
+  private mapToRow(raw: any): ReportBookingRow {
+    const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
+
+    const tests: ReportTestRow[] = rawTestMappings.map((t: any) => ({
+      name: (t.testName || '').trim(),
+      status: t.reportStatus || 'pending',
+      testCode: t.testCode
+    }));
+
+    const seenBarcodes = new Set<string>();
+    const barcodes: string[] = [];
+    (raw.sampleAccessions || []).forEach((s: any) => {
+      const barcode = s.barCode || s.barcode;
+      if (!barcode || seenBarcodes.has(barcode)) return;
+      seenBarcodes.add(barcode);
+      const sampleType = s.sampleTypeData?.sample_type || s.sampleType;
+      barcodes.push(sampleType ? `${barcode} - ${sampleType}` : barcode);
+    });
+
+    const doctorName = raw.doctorName || raw.doctor?.doctor_name || 'self';
+    const franchiseName = raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
+
+    return {
+      bookingId: raw.bookingId,
+      patientId: raw.patientId,
+      title: raw.title,
+      name: raw.customerName || '-',
+      genderAge: raw.gender && raw.age ? `${raw.gender}/${raw.age}` : undefined,
+      barcodes,
+      doctorName: `(${franchiseName}) / Dr. ${doctorName}`,
+      sampleCount: barcodes.length || tests.length,
+      tests,
+      bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined,
+      createdBy: raw.createdBy,
+      reportId: rawTestMappings.find((t: any) => !!t.reportId)?.reportId,
+      remark: raw.remark,
+      file: raw.reportUrl || raw.pdfUrl || raw.file || raw.fileUrl,
+      bucket: this.deriveBucket(tests)
+    };
+  }
+
+  // ✅ booking-status page cha testStatusLabel()/overallReportStatus
+  // logic cha 5-bucket version. Sगळे precedence (complete > snr >
+  // partially-complete > pending) tyाच casing-insensitive pattern
+  // vaparतो jो booking-status page madhे already काम करतोय.
+  //
+  // ⚠️ ASSUMPTION — "CLINICAL" status backend कडून kuठल्या exact
+  // string madhे yeto he confirm nahi (booking-status page cha
+  // testStatusLabel() madhे to bucket kधीच disत nahi). Jर kधी
+  // CLINICAL tab रिकामाच राहिला तर backend cha raw t.reportStatus
+  // value console.log करून खरं string confirm कर, mग ha check
+  // update करू.
+  private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
+    if (tests.length === 0) return 'PENDING';
+
+    const statuses = tests.map(t => (t.status || '').toLowerCase());
+
+    if (statuses.every(s => s.includes('complete') || s.includes('ready'))) return 'COMPLETE';
+    if (statuses.some(s => s === 'snr')) return 'SNR';
+    if (statuses.some(s => s.includes('clinical'))) return 'CLINICAL';
+    if (statuses.some(s => s.includes('complete') || s.includes('ready'))) return 'PARTIALLY_COMPLETE';
+    return 'PENDING';
   }
 
   onDateRangeChange() {
@@ -145,75 +348,23 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.loadData();
   }
 
-  // Maps one raw booking-status API record into the row shape this page uses.
-  // ASSUMPTION: field names below (id/bookingId, patientName, tests[].testName,
-  // tests[].status, createdBy, barcode) follow the same contract as the existing
-  // Booking Status screen. Rename here if the real payload differs.
-  private mapToRow(item: any): ReportBookingRow {
-    const tests: ReportTestRow[] = (item.tests || item.testList || []).map((t: any) => ({
-      name: t.testName ?? t.name ?? '-',
-      status: (t.status ?? t.reportStatus ?? 'PENDING').toString().toUpperCase(),
-      testCode: t.testCode ?? t.code
-    }));
-
-    const samples = item.samples || item.sampleList || [];
-    const barcodes: string[] = samples.length
-      ? samples.map((s: any) => `${s.barcode} - ${s.sampleType ?? s.type ?? ''}`.trim())
-      : (item.barcode ? [item.barcode] : []);
-
-    return {
-      bookingId: item.bookingId ?? item.id,
-      patientId: item.patientId ?? item.patientCode,
-      title: item.title,
-      name: item.patientName ?? item.name ?? '-',
-      genderAge: item.gender && item.age ? `${item.gender}/${item.age}` : item.genderAge,
-      barcodes,
-      doctorName: item.doctorName ?? item.doctor?.name
-        ? `(${item.clientCode ?? 'SELF'}) / Dr. ${item.doctorName ?? item.doctor?.name}`
-        : '-',
-      sampleCount: samples.length || barcodes.length,
-      tests,
-      bookingDate: item.bookingDate ?? item.createdOn,
-      createdBy: item.createdBy ?? item.staffId ?? item.userId,
-      bucket: this.deriveBucket(item, tests)
-    };
-  }
-
-  // Completed-vs-total tests fraction shown as the "Reports" pill (e.g. "0/2").
   reportsFraction(item: ReportBookingRow): string {
     const total = item.tests.length;
-    const done = item.tests.filter(t => t.status === 'COMPLETE').length;
+    const done = item.tests.filter(t => (t.status || '').toLowerCase().includes('complete') || (t.status || '').toLowerCase().includes('ready')).length;
     return `${done}/${total}`;
   }
 
   reportsComplete(item: ReportBookingRow): boolean {
-    return item.tests.length > 0 && item.tests.every(t => t.status === 'COMPLETE');
-  }
-
-  // Buckets a booking into one of the 5 tabs, mirroring the Booking Status screen logic.
-  // Prefer an explicit bucket/reportStatus field from the API if present; otherwise
-  // derive it from the individual test statuses as a fallback.
-  private deriveBucket(item: any, tests: ReportTestRow[]): ReportTabKey {
-    const explicit = (item.bucket ?? item.overallStatus ?? '').toString().toUpperCase();
-    if (['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR'].includes(explicit)) {
-      return explicit as ReportTabKey;
-    }
-
-    if (tests.length === 0) return 'PENDING';
-    if (tests.every(t => t.status === 'SNR')) return 'SNR';
-    if (tests.every(t => t.status === 'COMPLETE')) return 'COMPLETE';
-    if (tests.some(t => t.status === 'COMPLETE') && tests.some(t => t.status !== 'COMPLETE')) return 'PARTIALLY_COMPLETE';
-    if (tests.some(t => t.status === 'CLINICAL')) return 'CLINICAL';
-    return 'PENDING';
+    return item.bucket === 'COMPLETE';
   }
 
   // ================= TAB / TABLE HELPERS =================
   get rowsForActiveTab(): ReportBookingRow[] {
-    const bucketRows = this.allRows.filter(r => r.bucket === this.activeTab);
+    const rows = this.bookings.filter(r => r.bucket === this.activeTab);
     const q = this.quickSearch.trim().toLowerCase();
-    if (!q) return bucketRows;
+    if (!q) return rows;
 
-    return bucketRows.filter(r =>
+    return rows.filter(r =>
       String(r.bookingId).toLowerCase().includes(q) ||
       (r.patientId || '').toLowerCase().includes(q) ||
       r.name.toLowerCase().includes(q) ||
@@ -222,14 +373,14 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   get totalBookings(): number {
-    return this.allRows.length;
+    return this.bookings.length;
   }
 
   get bucketCount() {
     const counts: Record<ReportTabKey, number> = {
       COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0
     };
-    this.allRows.forEach(r => counts[r.bucket]++);
+    this.bookings.forEach(r => counts[r.bucket]++);
     return counts;
   }
 
@@ -243,9 +394,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ================= ROLE GATES =================
-  // Download button + selection checkboxes are ONLY available to Lab Admin,
-  // and ONLY while looking at the Complete tab — a report can only be
-  // downloaded once every test on the booking is actually complete.
   get canShowDownloadControls(): boolean {
     return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
   }
@@ -280,12 +428,9 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return this.rowsForActiveTab.filter(r => this.selectedIds.has(String(r.bookingId)));
   }
 
-  // ================= DOWNLOAD (jsPDF + html2canvas) =================
-  // Builds one PDF where every selected patient gets their own page(s),
-  // rendered from the same hidden template used for the on-screen preview.
+  // ================= DOWNLOAD =================
   async downloadSelected() {
     if (!this.canShowDownloadControls) {
-      // Defensive guard — UI already hides this action for non-admins / non-complete tabs.
       this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
       return;
     }
@@ -298,76 +443,62 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
 
     this.isGenerating = true;
+    let successCount = 0;
 
     try {
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const pageWidth = 210;
-      const pageHeight = 297;
+      for (const row of selected) {
+        const bookingId = Number(row.bookingId);
+        let fileUrl = row.file;
 
-      for (let i = 0; i < selected.length; i++) {
-        this.currentPdfPatient = selected[i];
+        if (!fileUrl) {
+          try {
+            const createRes: any = await firstValueFrom(this.labApi.createReport({ bookingId }));
 
-        // let Angular finish rendering the template for this patient
-        await new Promise(resolve => setTimeout(resolve, 80));
+            if (createRes && createRes.success === false) {
+              this.toast.error('Error', `Booking ${bookingId}: ${createRes.message || 'report generate fail zala'}`);
+              continue;
+            }
 
-        const element = this.pdfTemplateRef.nativeElement;
+            const fresh: any = await firstValueFrom(this.labApi.getSingleBooking(bookingId));
+            fileUrl = fresh?.reportUrl || fresh?.pdfUrl || fresh?.reportPath || fresh?.file || fresh?.fileUrl;
 
-        const canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          backgroundColor: '#ffffff'
-        });
-
-        const imgData = canvas.toDataURL('image/png');
-        const imgWidth = pageWidth;
-        const imgHeight = (canvas.height * imgWidth) / canvas.width;
-
-        if (i > 0) pdf.addPage();
-
-        // handles the rare case where one patient's report itself
-        // overflows a single A4 page (many tests / long notes)
-        let heightLeft = imgHeight;
-        let position = 0;
-
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
-
-        while (heightLeft > 0) {
-          position = heightLeft - imgHeight;
-          pdf.addPage();
-          pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-          heightLeft -= pageHeight;
+            // ✅ in-memory row var pण navीn fileUrl update kर, jenekarून
+            // list madhе परत lगेच dिसेल (परत सगळा data reload nahi करावं
+            // lagत).
+            const idx = this.bookings.findIndex(b => String(b.bookingId) === String(bookingId));
+            if (idx !== -1 && fileUrl) this.bookings[idx].file = fileUrl;
+          } catch (innerErr) {
+            console.error('Report create/fetch fallback failed for booking', bookingId, innerErr);
+          }
         }
+
+        if (!fileUrl) {
+          console.warn('report file sapadla nahi booking', bookingId);
+          this.toast.error('Error', `Booking ${bookingId} cha report file sapadla nahi`);
+          continue;
+        }
+
+        window.open(fileUrl, '_blank');
+        successCount++;
       }
 
-      const fileName = selected.length === 1
-        ? `Report_${selected[0].bookingId}.pdf`
-        : `Reports_${new Date().getTime()}.pdf`;
-
-      pdf.save(fileName);
-
-      // Persist the fact that this booking's report was downloaded/generated —
-      // real API call, nothing kept in localStorage.
-      selected.forEach(row => {
-        this.labApi.updateReportRemark(Number(row.bookingId), {
-          url: `generated-locally-${fileName}`
-        }).subscribe({
-          error: (err) => console.warn('Could not persist report-url for booking', row.bookingId, err)
-        });
-      });
-
-      this.toast.success('Success', `${selected.length} report(s) downloaded`);
-      this.selectedIds.clear();
-    } catch (err) {
-      console.error('PDF generation failed', err);
-      this.toast.error('Error', 'Report download fail zhala, punha try kara');
+      if (successCount > 0) {
+        this.toast.success('Success', `${successCount} report(s) ready`);
+        this.selectedIds.clear();
+      }
     } finally {
       this.isGenerating = false;
-      this.currentPdfPatient = null;
     }
   }
 
   private todayIso(): string {
     return new Date().toISOString().slice(0, 10);
+  }
+  get hasMoreForActiveTab(): boolean {
+    return this.hasMore;
+  }
+
+  loadMoreActiveTab(): void {
+    this.loadMore();
   }
 }

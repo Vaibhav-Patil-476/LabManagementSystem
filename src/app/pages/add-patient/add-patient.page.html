@@ -105,48 +105,64 @@
         </div>
       </div>
 
-      <!-- ✅ REF DOC — autocomplete search box. Kahi select nasel tar
-            "self" (doctors API varun) default select hoto (see .ts loadDoctors()) -->
-      <div class="input-row">
-        <div class="input-group" style="flex: 0 0 80px;">
-          <label>Title</label>
-          <div class="input-wrap">
-            <ion-select [(ngModel)]="patient.doctorTitle" placeholder="Dr." interface="popover">
-              <ion-select-option value="dr">Dr.</ion-select-option>
-              <ion-select-option value="mr">Mr.</ion-select-option>
-              <ion-select-option value="mrs">Mrs.</ion-select-option>
-            </ion-select>
-          </div>
-        </div>
+<!-- ✅ REF DOC -->
+<div class="input-row">
 
-        <div class="input-group" style="flex: 1; position: relative;">
-          <label>REF DOC. <span class="required">*</span></label>
-          <div class="input-wrap">
-            <ion-input type="text" placeholder="Search Doctor Name" [(ngModel)]="doctorSearch"
-              (ionInput)="searchDoctorInput()"></ion-input>
-          </div>
+  <!-- Title -->
+  <div class="input-group" style="flex: 0 0 80px;">
+    <label>Title</label>
+    <div class="input-wrap">
+      <ion-select [(ngModel)]="patient.doctorTitle" placeholder="Dr." interface="popover">
+        <ion-select-option value="dr">Dr.</ion-select-option>
+        <ion-select-option value="mr">Mr.</ion-select-option>
+        <ion-select-option value="mrs">Mrs.</ion-select-option>
+      </ion-select>
+    </div>
+  </div>
 
-          <!-- ✅ doctor suggestion dropdown -->
-          <div class="test-suggestions overlay-dropdown" *ngIf="showDoctorSuggestions">
-            <div class="suggestion-item" *ngFor="let doc of filteredDoctors" (click)="selectDoctorFromSearch(doc)">
-              <span>{{ doc.doctor_name }}</span>
-            </div>
-            <div class="suggestion-item" *ngIf="filteredDoctors.length === 0">
-              No matching doctor — click + to add new
-            </div>
-          </div>
-        </div>
+  <!-- Doctor Search + Button -->
+  <div class="input-group doctor-group" style="flex:1; position:relative;">
 
-        <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddDoctor()">
-          <ion-icon name="add-outline"></ion-icon>
-        </ion-button>
+    <label>REF DOC. <span class="required">*</span></label>
+
+    <div class="doctor-input-row">
+
+      <div class="input-wrap">
+        <ion-input
+          type="text"
+          placeholder="Search Doctor Name"
+          [(ngModel)]="doctorSearch"
+          (ionInput)="searchDoctorInput()">
+        </ion-input>
       </div>
 
-      <!-- ==========================
-    ✅ CHANGED — STAFF cha "LAB/HOS" ata READ-ONLY ahe, tyacha swतःच्या
-    lab (labId/labName/labCode) shi fixed. Franchise sathi jashिच-tashi
-    (search+add) functionality tashीच rahते.
-=========================== -->
+      <ion-button
+        class="add-btn"
+        fill="solid"
+        (click)="openAddDoctor()">
+        <ion-icon name="add-outline"></ion-icon>
+      </ion-button>
+
+    </div>
+
+    <!-- Doctor Suggestions -->
+    <div class="test-suggestions overlay-dropdown" *ngIf="showDoctorSuggestions">
+      <div
+        class="suggestion-item"
+        *ngFor="let doc of filteredDoctors"
+        (click)="selectDoctorFromSearch(doc)">
+        {{ doc.doctor_name }}
+      </div>
+
+      <div class="suggestion-item" *ngIf="filteredDoctors.length === 0">
+        No matching doctor — click + to add new
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
       <div class="input-row" *ngIf="!isAdminRole">
         <div class="input-group" style="flex: 1; position: relative;">
           <label>LAB/HOS</label>
@@ -173,11 +189,6 @@
 
     </div>
 
-    <!-- ==========================
-          ✅ CHANGED — DRAWN ON पासून checkboxes/extra-fields पर्यंतचा
-          संपूर्ण block ata white "form-card" madhe wrap kela
-          (screenshot प्रमाणे), plain rows nahi.
-      =========================== -->
     <div class="form-card">
 
       <div class="input-row">
@@ -189,8 +200,6 @@
         </div>
       </div>
 
-      <!-- ✅ CUSTOM FRANCHISE — ADMIN ONLY. Staff sathi vegla LAB/HOS
-            field + Add Lab modal aहे (varti Patient Information madhe). -->
       <div class="input-row" *ngIf="isAdminRole">
         <div class="input-group" style="flex: 1;">
           <label>CUSTOM FRANCHISE</label>
@@ -283,10 +292,6 @@
 
       </div>
 
-      <!-- ==========================
-              ✅ CHANGED — Home Collection check kelyavar Date sobat
-              "Other Charges" field pan disेल (Image 2 प्रमाणे).
-          =========================== -->
       <div class="extra-field" *ngIf="patient.homeCollection">
         <div class="input-row">
           <div class="input-group" style="flex: 1;">
@@ -308,9 +313,6 @@
     </div>
 
 
-    <!-- ==========================
-          TEST SEARCH + TABLE (ROLE BASE)
-      =========================== -->
     <div class="form-card" style="margin-top: 12px;">
       <div class="form-card-title">Search Test To Add into Bill</div>
 
@@ -368,19 +370,12 @@
       </div>
     </div>
 
-    <!-- ==========================
-          DISCOUNT / PAYMENT SECTION — ADMIN ONLY
-      =========================== -->
     <div class="form-card" style="margin-top: 12px;" *ngIf="isAdminRole">
       <div class="form-card-title">Billing & Payment</div>
 
       <div class="input-row">
         <div class="input-group" style="flex: 1;">
           <label>Discount Type</label>
-          <!-- ==========================
-                ✅ FIXED — Image 3 cha tुटलेला ion-radio-group layout
-                kadhून clean segmented toggle buttons banवले.
-            =========================== -->
           <div class="discount-type-toggle">
             <button type="button" class="dtype-btn" [class.active]="billing.discountType === 'percent'"
               (click)="billing.discountType = 'percent'; calculateBilling()">
@@ -469,7 +464,6 @@
         <div class="input-group" style="flex: 1;">
           <label>Dis From</label>
           <div class="input-wrap">
-            <!-- ✅ CHANGED — compareWith added -->
             <ion-select placeholder="Select doctor" interface="popover" [(ngModel)]="billing.discountFromDoctor"
               [compareWith]="compareDoctors">
               <ion-select-option *ngFor="let doc of doctors" [value]="doc">
@@ -518,12 +512,6 @@
 
   </ion-content>
 
-  <!-- ==========================
-        ADD DOCTOR MODAL
-        ✅ REDESIGNED — Image 1 प्रमाणे. he ata "select" nahi तर actual
-        "create new doctor" form aहे jo API call करून backend var
-        navin doctor save करतो.
-    =========================== -->
   <ion-modal [isOpen]="showAddDoctor" cssClass="doctor-popup">
     <ng-template>
       <div class="modal-page">
@@ -536,10 +524,6 @@
 
         <div class="modal-body">
 
-          <!-- ==========================
-              ✅ ADMIN — FULL FORM (Type / Doctor Name / Mobile / Degree /
-              Percent Value / Percent Type)
-          =========================== -->
           <ng-container *ngIf="isAdminRole">
             <div class="input-row">
               <div class="input-group" style="flex:1;">
@@ -596,10 +580,6 @@
             </div>
           </ng-container>
 
-          <!-- ==========================
-              ✅ STAFF — SIMPLIFIED FORM (Image 2 प्रमाणे) — फक्त
-              Doctor Name / Percent Value / Percent Type
-          =========================== -->
           <ng-container *ngIf="!isAdminRole">
             <div class="input-group">
               <label>Doctor Name <span class="required">*</span></label>
@@ -637,11 +617,6 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ==========================
-        ✅ ADDED — STAFF sathi OLD STYLE "Add Lab" MODAL (Image 3
-        प्रमाणे) — Lab name / Lab Contact Number / Address + full-width
-        green Add button. LAB/HOS field cha "+" button he ughadto.
-    =========================== -->
   <ion-modal [isOpen]="showAddLabModal" cssClass="lab-popup" (didDismiss)="showAddLabModal = false">
     <ng-template>
       <div class="modal-page">
@@ -685,7 +660,6 @@
     </ng-template>
   </ion-modal>
 
-  <!-- INVOICE MODAL -->
   <ion-modal [isOpen]="showInvoice" (didDismiss)="showInvoice = false">
     <ng-template>
       <div class="invoice-page">

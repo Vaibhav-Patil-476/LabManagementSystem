@@ -1,5 +1,5 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnInit, OnDestroy } from "@angular/core";
+import { Component, OnInit, OnDestroy, ViewChild } from "@angular/core";
 import { Router } from "@angular/router";
 import { FormsModule } from '@angular/forms';
 import {
@@ -13,6 +13,9 @@ import {
   IonProgressBar,
   MenuController
 } from "@ionic/angular/standalone";
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { Subscription, interval, forkJoin, of, EMPTY, Observable } from 'rxjs';
 import { switchMap, map } from 'rxjs/operators';
 
@@ -53,6 +56,9 @@ import { RoleService } from '../../services/role';
     IonIcon,
     IonMenu,
     IonList,
+    MatDatepickerModule,
+    MatFormFieldModule,
+    MatInputModule,
     IonItem,
     IonLabel,
     IonMenuButton,
@@ -72,7 +78,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   dailyBookings: any[] = [];
 
   filterDate: string = '';
-
+@ViewChild('datePicker') datePicker!: any;
+  pickedDate: Date | null = null;
   loading = false;
 
   private loadInProgress = false;
@@ -377,7 +384,22 @@ export class DashboardPage implements OnInit, OnDestroy {
       return sum + (p.tests ? p.tests.length : 0);
     }, 0);
   }
+private toDateObj(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    return new Date(dateStr + 'T00:00:00');
+  }
 
+  openDatePicker() {
+    this.pickedDate = this.toDateObj(this.filterDate);
+    this.datePicker?.open();
+  }
+
+  onPickedDateChange(event: any) {
+    const d: Date | null = event?.value || null;
+    if (!d) return;
+    this.filterDate = this.toKey(d);
+    this.onDateChange();
+  }
   onDateChange() {
     this.loadDashboard();
   }

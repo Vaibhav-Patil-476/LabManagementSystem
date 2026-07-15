@@ -1,4 +1,4 @@
-import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -6,7 +6,11 @@ import {
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
   IonSelect, IonSelectOption, AlertController
 } from '@ionic/angular/standalone';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatFormFieldModule } from '@angular/material/form-field';
+import { MatInputModule } from '@angular/material/input';
 import { addIcons } from 'ionicons';
+
 import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
@@ -85,7 +89,8 @@ export interface BookingListItem {
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
     IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-    IonSelect, IonSelectOption
+    IonSelect, IonSelectOption,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './booking-status.page.html',
@@ -258,6 +263,27 @@ export class BookingStatusPage implements OnInit {
     this.loadCurrentUser();
   }
 
+  ionViewWillLeave() {
+    // ✅ UI-only safety net: make sure we never leave the page with
+    // scroll locked / a stray dropdown open if the user navigates
+    // away while it was showing.
+    this.closeActionMenu();
+  }
+
+  // ✅ FIX: if the device is rotated (or the browser is resized) while
+  // the fixed-position 3-dot action dropdown is open, its JS-computed
+  // top/left coordinates go stale relative to the new viewport and it
+  // can end up detached from its row or partially off-screen. Simplest
+  // safe fix: close it on resize/orientation change rather than trying
+  // to re-anchor it to a row that may have moved or re-rendered.
+  @HostListener('window:resize')
+  @HostListener('window:orientationchange')
+  onViewportChange() {
+    if (this.openActionRowId !== null) {
+      this.closeActionMenu();
+    }
+  }
+
   // ✅ role + currentUserId ata AuthService (real API) varun ghetले
   // jातात. Cache asel tar tithun, nahitar loadCurrentUser() cha fresh
   // API call kela jato. localStorage la kahihi read/write nahi.
@@ -303,6 +329,46 @@ export class BookingStatusPage implements OnInit {
     const d = new Date(dateStr + 'T00:00:00');
     d.setDate(d.getDate() + 1);
     return this.formatDateForInput(d);
+  }
+
+  // ✅ Material date-range-picker cha state. Material Date objects vaparto,
+  // tyामुळे existing fromDate/toDate ('YYYY-MM-DD' strings) shi convert
+  // karava lagतो — baki sagळा component (applyFilters/loadBookings) tyाच
+  // string format var chalto, tyामुळे to untouched thevla ahे.
+  @ViewChild('rangePicker') rangePicker!: any;
+
+  rangeStart: Date | null = null;
+  rangeEnd: Date | null = null;
+
+  private toDateObj(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    return new Date(dateStr + 'T00:00:00');
+  }
+
+  private toDateStr(d: Date | null): string {
+    if (!d) return '';
+    return this.formatDateForInput(d);
+  }
+
+  openDateRangePicker() {
+    this.rangeStart = this.toDateObj(this.fromDate);
+    this.rangeEnd = this.toDateObj(this.toDate);
+    this.rangePicker?.open();
+  }
+
+  onRangeStartChange(event: any) {
+    this.rangeStart = event?.value || null;
+  }
+
+  onRangeEndChange(event: any) {
+    this.rangeEnd = event?.value || null;
+    // ✅ donhi dates select झाल्यावर (start + end), filters apply
+    // karायचे ani list reload karायची.
+    if (this.rangeStart && this.rangeEnd) {
+      this.fromDate = this.toDateStr(this.rangeStart);
+      this.toDate = this.toDateStr(this.rangeEnd);
+      this.applyFilters();
+    }
   }
 
   private mapBookingItem(raw: any): BookingListItem {
@@ -587,11 +653,19 @@ export class BookingStatusPage implements OnInit {
     this.actionMenuPosition = { top, left };
     this.openActionRowId = item.bookingId;
     this.openActionItem = item;
+
+    // ✅ UI-only: the real scroll-lock now happens via [scrollY] bound
+    // on <ion-content> in the template (ion-content owns its own
+    // internal scroll container, so a CSS-only host class could never
+    // reliably stop it). This body class is kept only as a hook for any
+    // global/app-shell styles that may key off it elsewhere.
+    document.body.classList.add('action-menu-open');
   }
 
   closeActionMenu() {
     this.openActionRowId = null;
     this.openActionItem = null;
+    document.body.classList.remove('action-menu-open');
   }
 
   printBill(item: BookingListItem) {
@@ -717,7 +791,7 @@ export class BookingStatusPage implements OnInit {
   // ⚠️ ha ajunही 'updatePatient' endpoint la call karto — je confirm
   // झाले आहे ki paidAmount/dueAmount properly SAVE करत नाही (backend
   // cha billingTransactionMappingEntities veगळा ledger ahे). Diagnostic
-  // verification wadhu thevla ahे — backend team khare billing/payment
+  // verification wadhu thevla ahе — backend team khare billing/payment
   // endpoint dettील tyaच divशी to endpoint ithe plug kela ki pura kaam
   // hoईल.
   updateTestBooking() {
@@ -776,7 +850,7 @@ export class BookingStatusPage implements OnInit {
             this.ngZone.run(() => {
               this.isSavingTest = false;
               if (Number(freshRes.paidAmount) !== Number(this.paidAmount)) {
-                this.showToast('⚠️ Payment save nahi zala — backend endpoint update havा (console pahaa)', 'error');
+                this.showToast('⚠️ Payment save nahi zala — backend endpoint update havа (console pahaa)', 'error');
               } else {
                 this.showToast('Booking updated successfully', 'success');
               }
@@ -813,6 +887,15 @@ export class BookingStatusPage implements OnInit {
         data.doctorId = fresh.doctor?.doctorId || null;
         data.lab = fresh.franchise?.franchiseName || 'SELF';
         data.franchiseId = fresh.franchise?.franchiseId || null;
+
+        // ✅ FIXED — "doctorTitle" backend cडून kayam "dr" default yeत
+        // hota, tyामुळे HTML cha blank-option fix काहीच काम karत nahi
+        // hota (karan model madhe aधीच "dr" value hota). Aata donhi
+        // (title + doctorTitle) explicitly blank thevली aहेत — user
+        // manually select karepryant blank राहतील.
+        data.title = fresh.title || '';
+        data.doctorTitle = '';
+
         this.editPatientData = data;
         this.isPatientLoading = false;
       },
@@ -1028,4 +1111,6 @@ export class BookingStatusPage implements OnInit {
     this.isBillHistoryModalOpen = false;
     this.billHistoryBooking = null;
   }
+
+
 }

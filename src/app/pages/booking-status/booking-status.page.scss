@@ -1,942 +1,1492 @@
+// ==========================================================
+// PREMIUM ENTERPRISE DESIGN SYSTEM — Booking Status
+// Recolored to match Dashboard's teal identity (--brand: #087b76).
+// Token set is duplicated per-component (Angular ViewEncapsulation),
+// keep identical across dashboard / booking-status / add-patient
+// so the whole app reads as one product.
+// ==========================================================
 :host {
-    --primary: #6366f1;
-    --primary-dark: #4338ca;
-    --border-color: #dbe7ff;
-    --section-bg: #f8fbff;
-    --header-bg: #f4f4f4;
-    --text-dark: #333333;
-    --text-light: #666666;
-    --danger: #ff2020;
-    --input-border: #d9d9d9;
-    --brand-gradient: linear-gradient(135deg, #6366f1, #8b5cf6);
-    --brand-indigo: #6366f1;
-    --brand-gray: #94a3b8;
-    --brand-orange: #f59e0b;
-    --brand-pink: #ec4899;
-    --brand-green: #10b981;
-    --brand-red: #ef4444;
-  }
+  // ---- Brand core (same values as dashboard.page.scss) ----
+  --primary: #087b76;
+  --primary-dark: #075f5d;
+  --primary-light: #d9f0ee;
+  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
 
-  .booking-header {
-   --background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    --color: #ffffff;
+  // ---- Semantic status colors (reused from dashboard stat chips) ----
+  --success: #16866e;
+  --success-bg: #d8f2ed;
+  --warning: #bd7d19;
+  --warning-bg: #fff0d9;
+  --danger: #c05262;
+  --danger-bg: #ffebef;
+  --info: #2470b9;
+  --info-bg: #e1efff;
+  --teal: #087b76;
+  --pink: #bd526f;
+  --gray-accent: #8fa1a5;
 
-    ion-title {
-      color: #ffffff;
-      font-weight: 700;
-    }
-  }
+  // ---- Surfaces (kept for compatibility with app-wide vars) ----
+  --border-color: #e4eded;
+  --section-bg: #f5f9f9;
+  --header-bg: #f4f4f4;
+  --text-dark: #14222e;
+  --text-light: #6c7b86;
+  --input-border: #e2e8e8;
 
-  .booking-content {
-    --background: var(--app-bg);
-  }
+  --brand-indigo: #087b76;
+  --brand-gray: #8fa1a5;
+  --brand-orange: #bd7d19;
+  --brand-pink: #bd526f;
+  --brand-green: #16866e;
+  --brand-red: #c05262;
 
-  .form-card {
-    background: var(--card-bg);
-    border-radius: 16px;
-    margin: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 14px rgba(99, 102, 241, 0.08);
-  }
+  // ---- Elevation (teal-tinted, never flat black) ----
+  --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
+  --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
+  --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
+  --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
+  --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
 
-  .form-card-title {
+  // ---- Radius scale ----
+  --r-sm: 10px;
+  --r-md: 14px;
+  --r-lg: 20px;
+  --r-xl: 26px;
+  --r-pill: 999px;
+
+  // ---- single z-index scale so nothing fights for stacking order.
+  // Everything on this page (filters, table, custom dropdown, modals)
+  // references one of these instead of ad-hoc numbers.
+  --z-table: 1;
+  --z-filter: 3;
+  --z-date-popup: 5;
+  --z-search-dropdown: 20;
+  --z-dropdown-backdrop: 900;
+  --z-dropdown: 910;
+
+  // ✅ FIX: host-level safety net so nothing inside this page can ever
+  // force the whole app to scroll horizontally. Individual scrollable
+  // regions (the table) opt back into horizontal scroll explicitly via
+  // `overflow-x: auto` on `.table-wrapper` — this only blocks the
+  // *unintentional* page-level overflow.
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+// ==========================================================
+// HEADER
+// ==========================================================
+.booking-header {
+  --background: var(--brand-gradient);
+  --color: #ffffff;
+  // ✅ FIX: respect the iPhone notch / Android status bar so the title
+  // never sits under the system UI in landscape or on newer devices.
+  padding-top: env(safe-area-inset-top, 0);
+
+  ion-title {
+    color: #ffffff;
     font-weight: 700;
-    font-size: 15px;
-    color: #3730a3;
-    padding: 4px 6px 10px;
+    font-size: 17px;
+    letter-spacing: -0.2px;
   }
 
-  .summary-bar {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 10px;
-    padding: 6px;
-    margin-bottom: 10px;
+  ion-back-button {
+    --color: #ffffff;
   }
+}
 
-  .total-badge {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+.booking-content {
+  --background: var(--app-bg, #f4f8f8);
+  --padding-start: 0;
+  --padding-end: 0;
+  // ✅ FIX: belt-and-braces against horizontal scroll inside the
+  // scrollable ion-content shadow viewport itself.
+  --overflow-x: hidden;
+}
+
+// ==========================================================
+// SHELL CARD
+// ==========================================================
+.form-card {
+  background: var(--card-bg, #ffffff);
+  border-radius: var(--r-lg);
+  margin: 14px;
+  padding: 18px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(8, 123, 118, 0.06);
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+.form-card-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--primary-dark);
+  padding: 4px 6px 10px;
+}
+
+// ==========================================================
+// SUMMARY BAR
+// ==========================================================
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 2px 2px 14px;
+}
+
+.total-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--brand-gradient);
   color: #fff;
   font-weight: 700;
   font-size: 13px;
-  padding: 8px 16px;
-  border-radius: 20px;
+  padding: 9px 18px;
+  border-radius: var(--r-pill);
   white-space: nowrap;
-  box-shadow: 0 4px 10px rgba(99, 102, 241, 0.28);
+  box-shadow: var(--shadow-glow);
+
+  ion-icon {
+    font-size: 15px;
+  }
 }
 
-  .default-note {
-    color: #e0455f;
-    font-size: 12px;
-    font-weight: 600;
-  }
-
-  .filter-bar {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    padding: 6px;
-    margin-bottom: 10px;
-  }
-
-  .filter-field {
-    flex: 1 1 140px;
-    min-width: 130px;
-    display: flex;
-    align-items: center;
-    border: 1.5px solid var(--border-color);
-    border-radius: 10px;
-    background: #f8faff;
-    padding: 0 10px;
-    height: 42px;
-    transition: border-color 0.15s, background 0.15s;
-
-    select, input {
-      border: none;
-      background: transparent;
-      outline: none;
-      width: 100%;
-      height: 100%;
-      font-size: 13px;
-      color: var(--text-secondary);
-    }
-
-    ion-icon {
-      color: var(--brand-gray);
-      margin-right: 6px;
-      flex-shrink: 0;
-    }
-
-    &:focus-within {
-      border-color: var(--brand-indigo);
-      background: #f5f3ff;
-    }
-  }
-
-  .search-field input::placeholder {
-    color: var(--text-faint);
-  }
-
-  .date-field {
-    flex: 1 1 220px;
-    gap: 4px;
-
-    input[type="date"] {
-      flex: 1;
-      min-width: 0;
-    }
-
-    .date-sep {
-      color: var(--brand-gray);
-      flex-shrink: 0;
-    }
-  }
-
-  .refresh-btn {
-    --border-radius: 10px;
-    --color: #fff;
-    margin: 0;
-    height: 42px;
-    width: 46px;
-    flex-shrink: 0;
-    --box-shadow: 0 4px 10px rgba(99, 102, 241, 0.28);
-
-    &::part(native) {
-      background: var(--brand-gradient);
-      color: #fff;
-    }
-  }
-
-  .table-wrapper {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    background: var(--card-bg);
-    border: 1px solid #dbe7ff;
-    border-radius: 12px;
-  }
-
-.booking-table {
-  width: 100%;
-  min-width: 900px;
-  border-collapse: collapse;
+.default-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--pink);
+  background: var(--danger-bg);
   font-size: 12px;
-  background: var(--card-bg);
+  font-weight: 600;
+  padding: 7px 12px;
+  border-radius: var(--r-pill);
 
-  thead {
-    background: #f5f7fb;
-
-    th {
-      padding: 10px 8px;
-      text-align: center;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--text-secondary);
-      white-space: nowrap;
-      border-bottom: 1px solid #dbe7ff;
-    }
-  }
-
-  tbody {
-
-    tr {
-      transition: background .2s ease;
-
-      &:nth-child(even) {
-        background: #fcfdff;
-      }
-
-      &:hover {
-        background: #f8fbff;
-      }
-    }
-
-    td {
-      padding: 10px 8px;
-      text-align: center;
-      font-size: 12px;
-      color: var(--text-muted);
-      border-bottom: 1px solid #edf2f7;
-      white-space: nowrap;
-      vertical-align: middle;
-    }
+  ion-icon {
+    font-size: 14px;
   }
 }
 
-  .link-id, .link-name {
-    color: var(--brand-indigo);
-    font-weight: 600;
-    text-decoration: underline;
-  }
+// ==========================================================
+// FILTER BAR
+// ==========================================================
+.filter-bar {
+  position: relative;
+  z-index: var(--z-filter);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  padding: 0 2px 16px;
+}
 
-  .booking-time {
-    color: var(--brand-gray);
-  }
+.filter-field {
+  flex: 1 1 140px;
+  min-width: 130px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  padding: 0 12px;
+  height: 44px;
+  box-sizing: border-box;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 
-  .col-tests {
-    min-width: 220px;
-  }
-
-  .test-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 4px;
-    white-space: nowrap;
-  }
-
-  .test-name {
-    font-size: 12.5px;
-  }
-
-  .status-badge {
-    font-size: 10px;
-    font-weight: 700;
-    font-style: italic;
-    padding: 2px 8px;
-    border-radius: 4px;
-    color: #fff;
-    white-space: nowrap;
-  }
-
-  .badge-inprocess { background: var(--brand-orange); }
-  .badge-snr { background: var(--brand-pink); }
-  .badge-ready { background: var(--brand-green); }
-  .badge-pending { background: var(--brand-gray); }
-
-  .col-barcode {
-    min-width: 170px;
-  }
-
-  .barcode-line {
-    margin-bottom: 4px;
-    white-space: nowrap;
-
-    small {
-      color: var(--brand-gray);
-    }
-  }
-
-  .paid-due-cell {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    white-space: nowrap;
-  }
-
-  .paid-amt {
-    font-weight: 600;
-  }
-
-  .due-amt {
-    font-size: 11px;
-    color: var(--brand-red);
-
-    &.zero {
-      color: var(--brand-green);
-    }
-  }
-
-  .status {
-    font-size: 11px;
-    font-weight: 700;
-    padding: 3px 8px;
-    border-radius: 6px;
-    white-space: nowrap;
-
-    &.completed {
-      background: #e3f7e8;
-      color: var(--brand-green);
-    }
-
-    &.pending {
-      background: #fdeeea;
-      color: #e05a2b;
-    }
-  }
-
-  .empty-row {
-    text-align: center;
-    padding: 24px 0;
-    color: var(--brand-gray);
-  }
-
-  /* ==========================
-     ✅ FIXED — action-cell ata fakt buttons dhaarto (dropdown baher
-     gela ahे), tyamule position:relative overflow-clip cha problem
-     nahi rahat.
-  =========================== */
-  .action-cell {
-    white-space: nowrap;
-  }
-
-  .action-icon-btn {
-    --padding-start: 4px;
-    --padding-end: 4px;
-    margin: 0 2px;
-    height: 32px;
-    width: 32px;
-    --color: var(--text-muted);
-    --border-radius: 8px;
-
-    &:active {
-      --color: var(--brand-indigo);
-    }
-  }
-
-  /* ==========================
-     ✅ FIXED — 3-DOT ACTION MENU
-     Aata table cha overflow-x:auto wrapper cha BAHER (page root la)
-     render hoto ani "position: fixed" + JS-calculated top/left
-     vaparto — table cha andर asnare overflow:auto ancestors kadhीच
-     clip karत nahit. Transparent backdrop outside-click sathi.
-  =========================== */
-  .action-menu-backdrop {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
+  select,
+  input {
+    border: none;
     background: transparent;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dark);
   }
 
-  .action-dropdown.fixed-dropdown {
-    position: fixed;
-    z-index: 1000;
-    background: var(--card-bg);
-    border-radius: 12px;
-    box-shadow: 0 10px 30px rgba(30, 27, 75, 0.22);
-    min-width: 200px;
-    padding: 6px 0;
-    animation: dropdownIn 0.12s ease;
+  // Native <select> fallback (kept for any plain <select> that lands in
+  // a .filter-field in future) — text is clipped with an ellipsis
+  // instead of forcing the field to grow.
+  select {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
   }
 
-  @keyframes dropdownIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
+  ion-icon {
+    color: var(--gray-accent);
+    margin-right: 8px;
+    flex-shrink: 0;
+    font-size: 16px;
   }
 
-  .action-item {
+  &:focus-within {
+    border-color: var(--primary);
+    background: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
+  }
+}
+
+// ==========================================================
+// PREMIUM FILTER FIELDS — search / franchise / date all share the
+// same 58px height + icon-badge treatment (matches Download
+// Reports page) so the whole row reads as one consistent, premium
+// bar instead of the old compact/inconsistent 44px fields.
+// ==========================================================
+.search-field,
+.select-field,
+.date-field {
+  height: 58px;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.search-field {
+  .search-icon-badge {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 14px;
-    font-size: 13px;
-    color: var(--text-primary);
-    cursor: pointer;
-    white-space: nowrap;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-light);
+    flex-shrink: 0;
 
     ion-icon {
-      font-size: 16px;
-      color: var(--brand-indigo);
-    }
-
-    &:hover, &:active {
-      background: #f5f3ff;
-    }
-  }
-
-  .test-modal-wrapper {
-    background: var(--card-bg);
-    border-radius: 20px 20px 0 0;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .sheet-top {
-    background: var(--card-bg);
-    padding: 14px 18px;
-    border-bottom: 1px solid #ececec;
-  }
-
-  .modal-handle{
-      width:55px;
-      height:6px;
-      background:#cfcfcf;
-      border-radius:20px;
-      margin:8px auto 16px;
-  }
-
-  .sheet-top-row {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 10px;
-  }
-
-  .sheet-top-title {
-    min-width: 0;
-  }
-
-  .sheet-title-main{
-      color: var(--text-primary);
-      font-size:22px;
-      font-weight:700;
-  }
-
-  .sheet-title-sub{
-      color: var(--text-muted);
-  }
-
-  .close-modal-btn{
-
-      --background:#ff1f1f;
-      --color:#fff;
-
-      width:54px;
-      height:54px;
-
-      --border-radius:10px;
-
-      &::part(native){
-          background:#ff1f1f;
-          color:#fff;
-          border-radius:10px;
-          box-shadow:none;
-      }
-  }
-
-  .test-modal-body-pad {
-    padding: 14px 16px 20px;
-    overflow-y: auto;
-    max-height: calc(90vh - 90px);
-  }
-
-  .booking-info-header{
-
-      background: var(--card-bg);
-
-      border:2px solid #bfd4ff;
-
-      border-radius:22px;
-
-      padding:22px;
-
-      box-shadow:none;
-
-      margin-bottom:18px;
-  }
-
-  .info-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-top: 8px;
-  }
-
-  .info-col {
-    flex: 1 1 220px;
-  }
-
-  .info-row{
-
-      border:none;
-
-      padding:10px 0;
-
-      font-size:15px;
-
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      flex-wrap: wrap;
-  }
-  .info-label{
-      color: var(--text-muted);
-      font-weight:600;
-  }
-
-  .info-value{
-      color: var(--text-primary);
-      font-weight:700;
-      text-align: right;
-  }
-  .search-bar-row {
-    position: relative;
-
-    ion-searchbar{
-
-      --background: var(--card-bg);
-
-      --box-shadow:none;
-
-      border:1px solid #d9d9d9;
-
-      border-radius:12px;
-    }
-  }
-
-  .search-dropdown {
-    position: absolute;
-    z-index: 20;
-    background: var(--card-bg);
-    width: 100%;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    max-height: 220px;
-    overflow-y: auto;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
-  }
-
-  .search-dropdown-item {
-    display: flex;
-    justify-content: space-between;
-    padding: 8px 12px;
-    font-size: 13px;
-    cursor: pointer;
-
-    &:hover {
-      background: #f5f3ff;
-    }
-  }
-
-  .update-test-tab{
-
-      display:inline-block;
-
-      background: var(--card-bg);
-
-      border-radius:12px;
-
-      padding:12px 22px;
-
-      font-size:16px;
-
-      font-weight:700;
-
-      color:#3730a3;
-
-      box-shadow:0 3px 10px rgba(99,102,241,.12);
-      border: 1.5px solid #e8eaf6;
-      margin: 14px 0;
-  }
-
-  /* ==========================
-     ✅ FIXED — modal-body-grid ata 900px cha khaली column madhe
-     stack hoto (juna fixed flex layout mobile var tुटत hota — donhi
-     panels ekmekan var chepले jat hote).
-  =========================== */
-  .modal-body-grid {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-  }
-
-  .test-table-panel {
-    flex: 2 1 320px;
-    overflow-x: auto;
-    min-width: 0;
-  }
-
-  .test-line-table{
-
-      border:2px solid #bfd4ff;
-
-      border-radius:18px;
-
-      overflow:hidden;
-
-      background: var(--card-bg);
-
-      width: 100%;
-      border-collapse: collapse;
-
-      th, td {
-        padding: 10px 12px;
-        font-size: 13px;
-        text-align: left;
-        border-bottom: 1px solid #eef2ff;
-      }
-
-      th {
-        background: var(--app-bg);
-        color: #3730a3;
-        font-weight: 700;
-        font-size: 12px;
-        text-transform: uppercase;
-      }
-  }
-
-  .franchise-tag {
-    display: block;
-    font-size: 10px;
-    color: var(--brand-gray);
-  }
-
-  .delete-icon{
-
-      color: var(--text-muted);
-      cursor: pointer;
-      font-size:22px;
-
-      &:active { color: var(--brand-red); }
-  }
-
-  .empty-tests {
-    text-align: center;
-    color: var(--brand-gray);
-    padding: 12px 0;
-  }
-.summary-side-panel {
-  border: none;
-  background: transparent;
-  padding: 0;
-
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
-
-  min-width: 0;
-  flex: 1 1 260px;
-}
-  .summary-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .summary-field label{
-
-      font-size:14px;
-
-      color: var(--text-primary);
-
-      text-transform:none;
-
-      font-weight:700;
-  }
-  .summary-field input,
-  .summary-field select,
-  .summary-field textarea{
-
-      background:#f8faff;
-
-      border:1.5px solid #d9d9d9;
-
-      border-radius:10px;
-
-      height:46px;
-      padding: 0 12px;
-
-      box-shadow:none;
-      font-size: 13px;
-
-      &:focus {
-        outline: none;
-        border-color: var(--brand-indigo);
-        background: #f5f3ff;
-      }
-  }
-
-  .summary-field textarea {
-    height: auto;
-    padding: 10px 12px;
-  }
-
-  .summary-field input.zero {
-    color: var(--brand-green);
-    font-weight: 700;
-  }
-
-  .full-width {
-    grid-column: 1 / -1;
-  }
-
-  .save-changes-btn {
-  --background: linear-gradient(135deg, #6366f1, #8b5cf6);
-  --background-activated: linear-gradient(135deg, #4338ca, #7c3aed);
-  --color: #ffffff;
-  --border-radius: 10px;
-  --box-shadow: 0 4px 10px rgba(99, 102, 241, 0.25);
-  --border-width: 0;
-  --border-style: none;
-
-  height: 40px;
-  font-size: 13px;
-  font-weight: 600;
-  margin-top: 8px;
-  border: none;
-  outline: none;
-
-  &::part(native) {
-    background: linear-gradient(135deg, #6366f1, #8b5cf6);
-    color: #ffffff;
-    border: none;
-    outline: none;
-    box-shadow: none;
-    font-size: 13px;
-    font-weight: 600;
-  }
-
-  &[disabled]::part(native) {
-    background: #cbd5e1;
-    color: var(--text-muted);
-    box-shadow: none;
-  }
-}
-
-  .patient-form-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(140px, 1fr));
-    gap: 12px;
-    margin-bottom: 14px;
-  }
-
-  .inline-input-btn {
-    display: flex;
-    gap: 6px;
-    align-items: center;
-
-    input { flex: 1; min-width: 0; }
-    ion-button { margin: 0; flex-shrink: 0; }
-  }
-
-  .selected-file {
-    font-size: 12px;
-    color: var(--brand-gray);
-    margin-top: 4px;
-  }
-
-  .skeleton-block {
-    padding: 4px 2px 12px;
-  }
-
-  .skeleton-line {
-    height: 14px;
-    border-radius: 6px;
-    margin-bottom: 10px;
-    background: linear-gradient(90deg, #eef0fb 25%, #f7f7ff 37%, #eef0fb 63%);
-    background-size: 400% 100%;
-    animation: skeletonShine 1.2s ease-in-out infinite;
-  }
-
-  @keyframes skeletonShine {
-    0% { background-position: 100% 50%; }
-    100% { background-position: 0 50%; }
-  }
-
-  .modal-page {
-    background: var(--card-bg);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    border-radius: 20px 20px 0 0;
-    overflow: hidden;
-  }
-
-  .modal-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-
-    h2 {
-      font-size: 16px;
-      font-weight: 700;
-      color: #3730a3;
+      color: var(--primary);
+      font-size: 18px;
       margin: 0;
     }
   }
 
-  .modal-body {
-    padding: 14px 16px 20px;
-    overflow-y: auto;
-    flex: 1;
-  }
-
-  .input-group {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-
-    label {
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--brand-gray);
-      text-transform: uppercase;
-    }
-  }
-
-  .input-wrap {
-    border: 1.5px solid var(--border-color);
-    border-radius: 10px;
-    background: #f8faff;
-  }
-
-  .modal-save-btn {
-    --border-radius: 12px;
-    --box-shadow: 0 6px 16px rgba(99, 102, 241, 0.28);
-    --color: #fff;
-    font-weight: 700;
-
-    &::part(native) {
-      background: var(--brand-gradient);
-      color: #fff;
-      font-weight: 700;
-    }
-
-    &[disabled]::part(native) {
-      background: #cbd5e1;
-      color: var(--text-muted);
-    }
-  }
-
-  .note-textarea {
-    width: 100%;
-    border: 1.5px solid var(--border-color);
-    border-radius: 10px;
-    padding: 10px;
-    font-size: 13px;
-    background: #f8faff;
-
-    &:focus {
-      outline: none;
-      border-color: var(--brand-indigo);
-      background: #f5f3ff;
-    }
-  }
-
-  .history-block {
-    padding: 8px 0;
-    border-bottom: 1px dashed var(--border-color);
-  }
-
-  .history-test-name {
+  input {
+    font-size: 16px;
     font-weight: 600;
-    font-size: 13px;
+    color: var(--text-dark);
   }
 
-  .history-status {
-    font-size: 12px;
-    color: var(--brand-gray);
+  input::placeholder {
+    color: #9aabae;
+    font-weight: 500;
   }
+}
 
-  .barcode-info-grid {
+// ✅ FIX: the franchise field uses <ion-select>, a custom element — the
+// generic `.filter-field select { ... }` rule above only ever matches a
+// literal <select> tag and silently never applied here. It now has its
+// own explicit sizing + icon-badge so it matches Search/Date exactly.
+.select-field {
+  overflow: hidden;
+
+  .select-icon-badge {
     display: flex;
-    flex-wrap: wrap;
-    gap: 16px;
-    margin-bottom: 12px;
-  }
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-light);
+    flex-shrink: 0;
 
-  .barcode-info-col {
-    flex: 1 1 220px;
-  }
-
-  .barcode-test-table, .barcode-edit-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 12.5px;
-    margin-bottom: 14px;
-
-    th {
-      background: var(--app-bg);
-      color:#3730a3;
-      text-transform:none;
-      font-size:13px;
-      font-weight:700;
-    }
-
-    th, td {
-      padding: 8px;
-      border-bottom: 1px solid var(--border-color);
-      text-align: left;
+    ion-icon {
+      color: var(--primary);
+      font-size: 18px;
+      margin: 0;
     }
   }
 
-  .new-barcode-input {
+  ion-select {
+    flex: 1 1 auto;
     width: 100%;
-    border: 1.5px solid var(--border-color);
-    border-radius: 8px;
-    padding: 6px 8px;
-    font-size: 12.5px;
-    background: #f8faff;
+    height: 100%;
+    min-width: 0;
+    --padding-start: 0;
+    --padding-end: 4px;
+    --padding-top: 0;
+    --padding-bottom: 0;
+    --placeholder-color: #9aabae;
+    --placeholder-opacity: 1;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    box-sizing: border-box;
   }
 
-  .update-barcode-btn {
-    --border-radius: 8px;
-    --color: #fff;
+  // Truncate long franchise names inside the closed field with an
+  // ellipsis instead of letting them push the field wider than its
+  // flex parent.
+  ion-select::part(text),
+  ion-select::part(placeholder) {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100%;
+  }
+
+  ion-select::part(icon) {
+    color: var(--gray-accent);
+  }
+}
+
+// ✅ FIX: the franchise/doctor/lab pickers use interface="popover" (a
+// compact panel anchored to the field) instead of "action-sheet" (which
+// stacks every option as a full-height list and covers the entire
+// screen for anything beyond a handful of items). This caps the popover
+// itself to a sane card size with its own internal scroll, and gives it
+// the same rounded/brand-consistent look as the rest of the app instead
+// of Ionic's bare default.
+//
+// Note: ion-popover is rendered as an overlay outside this component's
+// own DOM subtree, so it can't be reached with normal scoped styles —
+// ::ng-deep is the supported/standard way to reach overlay-portaled
+// Ionic components from a component stylesheet.
+:host ::ng-deep ion-select-popover,
+:host ::ng-deep ion-popover {
+  --width: min(320px, 92vw);
+  --max-height: min(360px, 70vh);
+  --box-shadow: var(--shadow-lg);
+  --backdrop-opacity: 0.28;
+
+  &::part(content) {
+    border-radius: var(--r-md);
+  }
+
+  ion-list {
+    padding: 4px;
+  }
+
+  ion-item {
+    --min-height: 44px;
+    font-size: 13.5px;
+  }
+}
+
+.date-field {
+  flex: 1 1 260px;
+  cursor: pointer;
+  /* keep this above sibling cards so the calendar popup is never
+     clipped or drawn underneath the table below it */
+  position: relative;
+  z-index: var(--z-date-popup);
+  overflow: visible;
+  background: var(--card-bg, #fff);
+  border-width: 1.5px;
+
+  .date-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+      color: var(--primary);
+      font-size: 18px;
+      margin: 0;
+    }
+  }
+
+  .date-trigger-btn {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-dark);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.1px;
+  }
+
+  &:hover {
+    border-color: rgba(8, 123, 118, 0.4);
+    background: var(--primary-light);
+  }
+}
+
+.refresh-btn {
+  --border-radius: var(--r-sm);
+  --color: #fff;
+  margin: 0;
+  height: 58px;
+  width: 58px;
+  flex-shrink: 0;
+  --box-shadow: var(--shadow-glow);
+
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
+  }
+
+  &:active::part(native) {
+    transform: scale(0.94);
+  }
+}
+
+// ==========================================================
+// TABLE — real desktop-style table with horizontal scroll,
+// matching Report Download page's table exactly. The horizontal
+// scroll here is intentional and contained — it does not leak out
+// to the rest of the page.
+// ==========================================================
+.table-wrapper {
+  position: relative;
+  z-index: var(--z-table);
+  margin: 12px 0 0;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overscroll-behavior-x: contain;
+  -webkit-overflow-scrolling: touch;
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-md);
+  border: 1px solid rgba(8, 123, 118, 0.06);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.booking-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 720px; // narrow screens scroll horizontally instead of squeezing columns
+
+  th {
+    text-align: left;
     font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+    color: #3d4f52;
+    padding: 14px 16px;
+    border-bottom: 2px solid var(--section-bg);
+    white-space: nowrap;
+    background: var(--section-bg);
+  }
 
-    &::part(native) {
-      background: var(--brand-gradient);
-      color: #ffffff;
+  tbody tr {
+    background: var(--card-bg, #fff);
+    transition: background 0.12s ease;
+
+    &:hover {
+      background: var(--primary-light);
+    }
+  }
+
+  td {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: var(--text-dark);
+    border-bottom: 1px solid #edf3f3;
+    vertical-align: top;
+    text-align: left;
+    white-space: normal;
+
+    &.empty-row {
+      text-align: center;
+      padding: 40px 20px;
+    }
+  }
+}
+
+.id-link {
+  color: var(--primary);
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  border-bottom: 1.5px dashed rgba(8, 123, 118, 0.35);
+
+  &:hover {
+    border-bottom-style: solid;
+  }
+}
+
+.sub-text {
+  color: var(--gray-accent);
+  font-size: 11.5px;
+}
+
+.col-barcode small {
+  color: var(--gray-accent);
+  font-size: 11.5px;
+}
+
+.col-tests .test-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 0;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: #fff;
+  white-space: nowrap;
+
+  // ✅ FIX: these class names now match what `testStatusClass()` in the
+  // .ts actually returns (badge-pending / badge-inprocess / badge-snr /
+  // badge-ready). The previous names here (.status-pending,
+  // .status-completed/.status-complete, .status-in-process/.status-inprocess)
+  // never matched anything the template applies, so every badge fell back
+  // to just the base white text color with no background — which is why
+  // they were reading as invisible/white-on-white against the table.
+  &.badge-pending {
+    background: var(--warning);
+  }
+
+  &.badge-inprocess {
+    background: var(--info);
+  }
+
+  &.badge-snr {
+    background: var(--danger);
+  }
+
+  &.badge-ready {
+    background: var(--success);
+  }
+}
+
+.action-cell {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 2px;
+
+  .action-icon-btn {
+    margin: 0;
+    --padding-start: 6px;
+    --padding-end: 6px;
+    height: 32px;
+    width: 32px;
+
+    ion-icon {
+      font-size: 18px;
+      color: var(--primary);
     }
 
-    &[disabled]::part(native) {
-      background: #cbd5e1;
-      color: var(--text-muted);
+    &.dots ion-icon {
+      color: var(--gray-accent);
     }
   }
+}
 
-  ion-modal.sheet-modal {
-    --border-radius: 20px 20px 0 0;
-    --box-shadow: 0 -10px 26px rgba(30, 27, 75, 0.18);
-    --backdrop-opacity: 0.35 !important;
+@keyframes dropdownIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
   }
 
-  ion-modal.sheet-modal::part(content) {
-    border-radius: 20px 20px 0 0;
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
   }
 
-  .doctor-popup.sheet-modal::part(content),
-  .lab-popup.sheet-modal::part(content),
-  .history-popup.sheet-modal::part(content),
-  .barcode-popup.sheet-modal::part(content) {
-    max-width: 480px;
-    margin: 0 auto;
+  to {
+    opacity: 1;
+  }
+}
+
+// ==========================================================
+// 3-DOT ACTION MENU — positioned via JS-computed top/left (see
+// toggleActionMenu in the .ts), sits above the table but below any
+// ion-modal so it never gets visually trapped behind other elements.
+// ==========================================================
+.action-menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 34, 34, 0.32);
+  z-index: var(--z-dropdown-backdrop);
+  animation: fadeIn 0.15s ease;
+}
+
+.action-dropdown.fixed-dropdown {
+  position: fixed;
+  z-index: var(--z-dropdown);
+  background: var(--card-bg, #fff);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  min-width: 200px;
+  max-width: calc(100vw - 16px);
+  max-height: min(320px, calc(100vh - 32px));
+  overflow-y: auto;
+  padding: 6px;
+  box-sizing: border-box;
+  animation: dropdownIn 0.14s ease;
+}
+
+.action-item {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 11px 16px;
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 500;
+  color: #333f42;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.12s ease;
+
+  ion-icon {
+    font-size: 17px;
+    color: var(--primary);
+    flex-shrink: 0;
   }
 
-  .test-modal.sheet-modal::part(content) {
-    max-width: 760px;
-    margin: 0 auto;
+  &:hover,
+  &:active {
+    background: var(--primary-light);
+  }
+}
+
+// ==========================================================
+// MODALS — shared shell
+// ==========================================================
+.test-modal-wrapper {
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.sheet-top {
+  background: var(--card-bg, #fff);
+  padding: 10px 20px 16px;
+  border-bottom: 1px solid #edf3f3;
+}
+
+.modal-handle {
+  width: 44px;
+  height: 5px;
+  background: #d6e2e2;
+  border-radius: var(--r-pill);
+  margin: 6px auto 14px;
+}
+
+.sheet-top-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.sheet-top-title {
+  min-width: 0;
+}
+
+.sheet-title-main {
+  color: var(--text-dark);
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+}
+
+.sheet-title-sub {
+  color: var(--gray-accent);
+  font-size: 12.5px;
+  margin-top: 2px;
+}
+
+.close-modal-btn {
+  --background: var(--section-bg);
+  --color: #6b7d81;
+  width: 40px;
+  height: 40px;
+  --border-radius: var(--r-sm);
+
+  &::part(native) {
+    background: var(--section-bg);
+    color: #6b7d81;
+    border-radius: var(--r-sm);
+    box-shadow: none;
   }
 
-/* ==========================
-   ✅ ADDED — Edit Test / Edit Patient modal cha responsive fix.
-   900px chya khaली test-table + summary panel donhi FULL WIDTH
-   stack hotात (aधी flex-wrap असूनही khूप chinchoke disायचे),
-   ani patient-form-grid 1 column hoto.
-=========================== */
+  &:active::part(native) {
+    background: var(--danger-bg);
+    color: var(--danger);
+  }
+}
+
+// ✅ FIX: added `overscroll-behavior: contain` so a fully scrolled modal
+// body no longer bubbles rubber-band scroll up into the page behind it
+// on iOS, and safe-area padding is preserved for the home-indicator area.
+.test-modal-body-pad {
+  padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  max-height: calc(90vh - 90px);
+  -webkit-overflow-scrolling: touch;
+}
+
+.booking-info-header {
+  background: #f0f5f5;
+  border: 1px solid rgba(147, 196, 194, 0.12);
+  border-radius: 10px;
+  padding: 18px 20px;
+  margin-bottom: 18px;
+}
+
+.info-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin-top: 4px;
+}
+
+.info-col {
+  width: 100%;
+}
+
+.info-row {
+  display: grid;
+  grid-template-columns: 120px 1fr;
+  align-items: center;
+  column-gap: 10px;
+  padding: 12px 0;
+}
+
+.info-label {
+  color: var(--gray-accent);
+  font-weight: 600;
+}
+
+.info-value {
+  color: var(--text-dark);
+  font-weight: 700;
+  text-align: left;
+  justify-self: start;
+  margin-left: 0;
+  word-break: break-word;
+}
+
+.search-bar-row {
+  position: relative;
+
+  ion-searchbar {
+    --background: #f0f5f5;
+    --box-shadow: none;
+    --border-radius: 14px;
+
+    border-radius: 14px;
+    overflow: hidden;
+  }
+}
+
+.search-dropdown {
+  position: absolute;
+  z-index: var(--z-search-dropdown);
+  background: var(--card-bg, #fff);
+  width: 100%;
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-sm);
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  box-sizing: border-box;
+}
+
+.search-dropdown-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  cursor: pointer;
+
+  &:hover {
+    background: var(--primary-light);
+  }
+
+  .price {
+    font-weight: 700;
+    color: var(--primary);
+    flex-shrink: 0;
+  }
+}
+
+.update-test-tab {
+  display: inline-flex;
+  align-items: center;
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-sm);
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--border-color);
+  margin: 16px 0;
+}
+
+.modal-body-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.test-table-panel {
+  flex: 2 1 320px;
+  overflow-x: auto;
+  min-width: 0;
+}
+
+.test-line-table {
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  background: var(--card-bg, #fff);
+  width: 100%;
+  border-collapse: collapse;
+
+  th,
+  td {
+    padding: 11px 14px;
+    font-size: 13px;
+    text-align: left;
+    border-bottom: 1px solid #f0f5f5;
+  }
+
+  th {
+    background: var(--section-bg);
+    color: var(--primary-dark);
+    font-weight: 700;
+    font-size: 11px;
+    letter-spacing: 0.3px;
+    text-transform: uppercase;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.franchise-tag {
+  display: block;
+  font-size: 10px;
+  color: var(--gray-accent);
+  margin-top: 2px;
+}
+
+.delete-icon {
+  color: #9aabae;
+  cursor: pointer;
+  font-size: 20px;
+  transition: color 0.12s ease, transform 0.12s ease;
+
+  &:active {
+    color: var(--danger);
+    transform: scale(1.15);
+  }
+}
+
+.empty-tests {
+  text-align: center;
+  color: var(--gray-accent);
+  padding: 14px 0;
+  font-size: 13px;
+}
+
+.summary-side-panel {
+  border: 1.5px solid var(--border-color);
+  background: var(--section-bg);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+  flex: 1 1 260px;
+  box-sizing: border-box;
+  transition: opacity 0.15s ease;
+
+  &.locked {
+    opacity: 0.85;
+  }
+}
+
+.summary-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.summary-field label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #5d716f;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+}
+
+.summary-field input,
+.summary-field select,
+.summary-field textarea {
+  width: 100%;
+  height: 58px;
+  border: 2px solid #dbe6e6;
+  border-radius: 18px;
+  background: #f8fbfb;
+  padding: 0 18px;
+  font-size: 17px;
+  font-weight: 500;
+  color: #243737;
+  outline: none;
+  box-sizing: border-box;
+  transition: .25s;
+}
+
+.summary-field textarea {
+  min-height: 110px;
+  height: auto;
+  padding: 16px 18px;
+}
+
+.summary-field input::placeholder,
+.summary-field textarea::placeholder {
+  color: #95a7a6;
+}
+
+.summary-field input:focus,
+.summary-field select:focus,
+.summary-field textarea:focus {
+  border-color: #087b76;
+  background: white;
+  box-shadow: 0 0 0 4px rgba(8, 123, 118, .08);
+}
+
+.summary-field input.zero {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.summary-field input.locked-field {
+  color: var(--gray-accent);
+  background: #edf2f2;
+}
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.save-changes-btn {
+  --background: linear-gradient(135deg, #0b948d 0%, #087b76 100%);
+  --color: #ffffff;
+  --border-radius: var(--r-sm);
+  --box-shadow: var(--shadow-glow);
+  --border-width: 0;
+  --border-style: none;
+  height: 44px;
+  font-size: 13.5px;
+  font-weight: 700;
+  margin-top: 6px;
+
+  &::part(native) {
+    background: linear-gradient(135deg, #0b948d 0%, #087b76 100%);
+    color: #ffffff;
+    border: none;
+    box-shadow: none;
+    font-size: 13.5px;
+    font-weight: 700;
+  }
+
+  &[disabled]::part(native) {
+    background: #cfd8d8;
+    color: #97a5a5;
+    box-shadow: none;
+  }
+}
+
+.patient-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(140px, 1fr));
+  gap: 14px;
+  margin-bottom: 16px;
+}
+
+.inline-input-btn {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.inline-input-btn input {
+  flex: 1;
+  min-width: 0;
+}
+
+.inline-input-btn ion-button {
+  width: 58px;
+  height: 58px;
+  margin: 0;
+  flex-shrink: 0;
+  --border-radius: 18px;
+  --box-shadow: 0 8px 20px rgba(8, 123, 118, .25);
+}
+
+.inline-input-btn ion-button::part(native) {
+  background: linear-gradient(135deg, #0b948d 0%, #087b76 100%);
+  color: #fff;
+  border-radius: 18px;
+}
+
+.inline-input-btn ion-button:hover::part(native) {
+  background: linear-gradient(135deg, #0d9d96 0%, #066965 100%);
+}
+
+.inline-input-btn ion-button:active::part(native) {
+  transform: scale(.96);
+}
+
+.summary-field ion-button {
+  --border-radius: 18px;
+  height: 58px;
+}
+
+.selected-file {
+  font-size: 12px;
+  color: var(--gray-accent);
+  margin-top: 4px;
+}
+
+// ---- skeleton loaders ----
+.skeleton-block {
+  padding: 4px 2px 12px;
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--r-sm);
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #e9f3f2 25%, #f6fbfb 37%, #e9f3f2 63%);
+  background-size: 400% 100%;
+  animation: skeletonShine 1.2s ease-in-out infinite;
+}
+
+@keyframes skeletonShine {
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+// ==========================================================
+// SECONDARY MODAL SHELL (doctor / lab / note / history / barcode)
+// ==========================================================
+.modal-page {
+  background: var(--card-bg, #fff);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+  overflow: hidden;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 2px 14px;
+
+  h2 {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--primary-dark);
+    margin: 0;
+    letter-spacing: -0.2px;
+  }
+}
+
+.modal-body {
+  padding: 16px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex: 1;
+}
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+
+  label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--gray-accent);
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+  }
+}
+
+.input-wrap {
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+
+  // Same fix as `.select-field ion-select` above: give the doctor/lab
+  // picker's ion-select real height + padding so it doesn't collapse
+  // to its intrinsic (misaligned) size inside the bordered wrapper.
+  ion-select {
+    width: 100%;
+    min-height: 46px;
+    --padding-start: 14px;
+    --padding-end: 14px;
+    --placeholder-color: #9aabae;
+    --placeholder-opacity: 1;
+    font-size: 13.5px;
+    font-weight: 500;
+    color: var(--text-dark);
+  }
+}
+
+.modal-save-btn {
+  --border-radius: var(--r-sm);
+  --box-shadow: var(--shadow-glow);
+  --color: #fff;
+  font-weight: 700;
+  height: 46px;
+
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
+    font-weight: 700;
+  }
+
+  &[disabled]::part(native) {
+    background: #cfd8d8;
+    color: #97a5a5;
+  }
+}
+
+.note-textarea {
+  width: 100%;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  padding: 12px;
+  font-size: 13.5px;
+  background: var(--section-bg);
+  color: var(--text-dark);
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: var(--primary-light);
+  }
+}
+
+.history-block {
+  padding: 10px 0;
+  border-bottom: 1px dashed var(--border-color);
+}
+
+.history-test-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text-dark);
+}
+
+.history-status {
+  font-size: 12px;
+  color: var(--gray-accent);
+  margin-top: 2px;
+}
+
+.barcode-info-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-bottom: 14px;
+}
+
+.barcode-info-col {
+  flex: 1 1 220px;
+  min-width: 0;
+}
+
+.barcode-test-table,
+.barcode-edit-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+  margin-bottom: 16px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  overflow: hidden;
+
+  th {
+    background: var(--section-bg);
+    color: var(--primary-dark);
+    text-transform: none;
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+
+  th,
+  td {
+    padding: 10px;
+    border-bottom: 1px solid var(--border-color);
+    text-align: left;
+  }
+}
+
+.new-barcode-input {
+  width: 100%;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  padding: 8px 10px;
+  font-size: 12.5px;
+  background: var(--card-bg, #fff);
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: var(--primary);
+  }
+}
+
+.update-barcode-btn {
+  --border-radius: var(--r-sm);
+  --color: #fff;
+  font-size: 11px;
+
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #ffffff;
+  }
+
+  &[disabled]::part(native) {
+    background: #cfd8d8;
+    color: #97a5a5;
+  }
+}
+
+// ==========================================================
+// ION-MODAL sheet shell
+// ==========================================================
+ion-modal.sheet-modal {
+  --border-radius: var(--r-xl) var(--r-xl) 0 0;
+  --box-shadow: 0 -12px 32px rgba(7, 95, 93, 0.20);
+  --backdrop-opacity: 0.4 !important;
+}
+
+ion-modal.sheet-modal::part(content) {
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+.doctor-popup.sheet-modal::part(content),
+.lab-popup.sheet-modal::part(content),
+.history-popup.sheet-modal::part(content),
+.barcode-popup.sheet-modal::part(content) {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.test-modal.sheet-modal::part(content) {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+.empty-row {
+  text-align: center;
+  padding: 40px 20px;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 32px 16px;
+  color: #8a94a6;
+
+  ion-icon {
+    font-size: 52px;
+    color: #c3cad7;
+  }
+
+  span {
+    font-size: 15px;
+    font-weight: 600;
+    color: #6b7280;
+  }
+}
+
+/* ======================================================
+   PREMIUM INPUT UI (Same as Patient Information Screen)
+====================================================== */
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 16px;
+
+  label {
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .6px;
+    color: #5b6f6d;
+
+    .required {
+      color: #d64b5c;
+    }
+  }
+}
+
+// ✅ FIX: these selectors previously targeted the BARE tags `ion-input`,
+// `ion-select`, `ion-textarea` with no `.form-field` scoping at all. That
+// meant this rule (58px min-height, 18px border-radius, 2px border) was
+// silently overriding EVERY ion-select on this page — including the
+// franchise filter — no matter what more specific sizing was set on it
+// elsewhere in this file. That mismatched border/height is exactly the
+// "ghost pill" outline and the taller-than-its-siblings field reported.
+// `.form-field` isn't even used anywhere in this component's HTML, so
+// scoping this rule to it (as originally intended) removes the conflict
+// entirely instead of patching around it.
+.form-control,
+.form-field input,
+.form-field select,
+.form-field textarea,
+.form-field ion-input,
+.form-field ion-select,
+.form-field ion-textarea {
+  width: 100%;
+  min-height: 58px;
+  background: #f8fbfb;
+  border: 2px solid #dce7e6;
+  border-radius: 18px;
+  padding: 0 18px;
+  color: #233535;
+  font-size: 17px;
+  font-weight: 500;
+  box-shadow: none;
+  transition: .25s ease;
+  box-sizing: border-box;
+
+  --background: #f8fbfb;
+  --border-width: 0;
+  --highlight-color-focused: transparent;
+  --padding-start: 18px;
+  --padding-end: 18px;
+  --padding-top: 0;
+  --padding-bottom: 0;
+}
+
+.form-field textarea,
+.form-field ion-textarea {
+  min-height: 110px;
+  padding-top: 14px;
+}
+
+.form-control::placeholder,
+input::placeholder,
+textarea::placeholder {
+  color: #93a5a4;
+  font-weight: 400;
+}
+
+.form-control:focus,
+.form-field input:focus,
+.form-field select:focus,
+.form-field textarea:focus,
+.form-field ion-input.ion-focused,
+.form-field ion-select.ion-focused,
+.form-field ion-textarea.ion-focused {
+  background: #ffffff;
+  border-color: #087b76;
+  box-shadow: 0 0 0 4px rgba(8, 123, 118, .10);
+}
+
+.form-control:disabled,
+input:disabled,
+select:disabled,
+textarea:disabled {
+  background: #eef3f3;
+  color: #93a5a4;
+}
+
+select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2390A5A4' viewBox='0 0 16 16'%3E%3Cpath d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 18px center;
+  background-size: 15px;
+}
+
+.circle-add-btn {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  background: linear-gradient(180deg, #1d63ef, #0e56df);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 26px;
+  box-shadow: 0 8px 18px rgba(13, 84, 220, .30);
+  transition: .2s;
+
+  &:active {
+    transform: scale(.96);
+  }
+}
+
+.section-card {
+  background: #fff;
+  border-radius: 28px;
+  padding: 22px;
+  box-shadow: 0 8px 30px rgba(6, 70, 68, .08);
+  border: 1px solid #edf4f3;
+}
+
+.section-title {
+  font-size: 34px;
+  font-weight: 700;
+  color: #0d6966;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  border-bottom: 1px solid #e7eded;
+}
+
+// ==========================================================
+// TABLET — tighten the two-column grids a little before they
+// hit the phone breakpoint, so nothing feels cramped in between.
+// ==========================================================
 @media (max-width: 900px) {
-
   .modal-body-grid {
     flex-direction: column;
   }
@@ -944,36 +1494,58 @@
   .test-table-panel,
   .summary-side-panel {
     flex: 1 1 100%;
-    width: 100%;
-  }
-
-  .patient-form-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .test-modal-body-pad {
-    max-height: calc(94vh - 80px);
   }
 }
 
-@media (max-width: 480px) {
+// ==========================================================
+// MOBILE — table becomes horizontally scrollable inside its own
+// contained wrapper; filter bar becomes a single column so fields
+// never fight each other for width.
+//
+// ✅ FIX: this whole block used to be broken SCSS. Two things were
+// wrong and are now repaired:
+//   1) `rapper { margin: 10px 0 0; }` was a mangled leftover of
+//      `.table-wrapper { margin: 10px 0 0; }` — an invalid, orphaned
+//      selector.
+//   2) `.close-modal-btn { ... }.table-w` left a dangling selector
+//      fragment with no braces, which caused every rule after it
+//      (`.summary-field label`, the input/select/textarea sizing, and
+//      `.action-dropdown.fixed-dropdown`) to be silently compiled as
+//      nested *inside* `.table-w .summary-field label`, etc. — meaning
+//      none of those mobile overrides were ever actually reaching the
+//      real `.summary-field label`, `.summary-field input`, or
+//      `.action-dropdown` elements on the page. They are now correct,
+//      top-level rules again.
+// ==========================================================
+@media (max-width: 640px) {
+  .booking-content {
+    --padding-start: 0;
+    --padding-end: 0;
+  }
 
-  .booking-table {
-    font-size: 11px;
+  .form-card {
+    margin: 10px;
+    padding: 12px;
+    box-sizing: border-box;
+  }
 
-    thead th {
-      padding: 8px 6px;
-      font-size: 10px;
-    }
-
-    tbody td {
-      padding: 8px 6px;
-      font-size: 11px;
-    }
+  .summary-bar,
+  .filter-bar,
+  .form-card-title {
+    padding-left: 2px;
+    padding-right: 2px;
   }
 
   .table-wrapper {
-    border-radius: 10px;
+    margin: 10px 0 0;
+  }
+
+  .col-tests .test-line {
+    justify-content: flex-end;
+  }
+
+  .action-cell {
+    justify-content: flex-end;
   }
 
   .sheet-title-main {
@@ -981,8 +1553,8 @@
   }
 
   .close-modal-btn {
-    width: 44px;
-    height: 44px;
+    width: 38px;
+    height: 38px;
   }
 
   .summary-field label {
@@ -997,6 +1569,134 @@
   }
 
   .action-dropdown.fixed-dropdown {
-    min-width: 180px;
+    min-width: 190px;
   }
+}
+
+// Below 480px, stack every filter field full-width instead of letting
+// flex-wrap cram 130px-wide fields two-to-a-row — this was the main
+// cause of the crowded/uneven filter row on phones.
+@media (max-width: 480px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field,
+  .date-field {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .refresh-btn {
+    width: 100%;
+  }
+
+  .date-field {
+    flex-wrap: wrap;
+
+    input[type="date"] {
+      flex: 1 1 100px;
+    }
+  }
+}
+
+// Patient-edit grid drops to a single column on very narrow phones
+// (< 420px) so labels/inputs don't get squeezed.
+@media (max-width: 420px) {
+  .patient-form-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+// ==========================================================
+// LANDSCAPE — sheet modals can exceed the viewport height when the
+// phone is rotated; cap them to the visible height and let their own
+// body scroll instead of overflowing off-screen.
+// ==========================================================
+@media (max-height: 480px) and (orientation: landscape) {
+  .test-modal-body-pad {
+    max-height: calc(100vh - 70px);
+  }
+
+  .modal-body {
+    max-height: calc(100vh - 60px);
+  }
+}
+
+// ==========================================================
+// ✅ Material date-range-picker integration (top-level, global —
+// NOT nested inside any media query). Previously these rules got
+// accidentally merged inside the landscape media query above due to
+// a missing closing brace, so they only ever applied on very short
+// landscape screens — never in normal portrait use. That's why the
+// hidden mat-form-field was rendering as a visible plain-text line
+// under the date button, and the calendar overlay had no styling.
+// ==========================================================
+
+// mat-form-field cha real UI lapवायचं आहे — फक्त calendar-overlay
+// (jo document body varच render hoto) disला pahije. .date-field
+// (custom trigger button) click zाल्यावर openDateRangePicker() call
+// karून हा picker उघडतो.
+.hidden-range-field {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+// ✅ CDK overlay content is portaled to <body>, completely outside this
+// component's DOM tree — plain (unprefixed) ::ng-deep is required here
+// so the rule compiles as truly global CSS instead of scoped to :host.
+// Also gives the calendar an explicit white background + shadow, since
+// without a prebuilt Material theme imported, it has none by default
+// (this is what made it look transparent).
+::ng-deep .cdk-overlay-container {
+  z-index: 99999 !important;
+}
+
+::ng-deep .mat-datepicker-content {
+  z-index: 99999 !important;
+  background-color: #ffffff !important;
+  border-radius: 12px !important;
+  box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16)) !important;
+}
+
+::ng-deep .mat-calendar {
+  background-color: #ffffff !important;
+}
+
+// ✅ Selected start/end date + in-between range highlight ला brand
+// color देण्यासाठी — prebuilt Material theme import न केल्यामुळे
+// हे classes आधी present होत्या पण colorless hotya, म्हणून
+// highlight disतच नव्हता.
+::ng-deep .mat-calendar-body-selected {
+  background-color: var(--primary, #087b76) !important;
+  color: #ffffff !important;
+}
+
+::ng-deep .mat-calendar-body-in-range::before {
+  background: var(--primary-light, #d9f0ee) !important;
+}
+
+::ng-deep .mat-calendar-body-comparison-bridge-start::before,
+::ng-deep .mat-calendar-body-comparison-bridge-end::before,
+::ng-deep .mat-calendar-body-range-start::before,
+::ng-deep .mat-calendar-body-range-end::before {
+  background: var(--primary-light, #d9f0ee) !important;
+}
+
+::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+  border-color: var(--primary, #087b76) !important;
+}
+
+::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+  background-color: var(--primary-light, #d9f0ee) !important;
 }

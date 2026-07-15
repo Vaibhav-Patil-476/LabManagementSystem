@@ -1,12 +1,16 @@
 /*
- * App Global CSS
+ * App Global CSS — "Clinical Emerald" Premium Design System
  * ----------------------------------------------------------------------------
- * Put style rules here that you want to apply globally. These styles are for
- * the entire app and not just one component. Additionally, this file can be
- * used as an entry point to import other CSS/Sass files to be included in the
- * output CSS.
- * For more information on global stylesheets, visit the documentation:
- * https://ionicframework.com/docs/layout/global-stylesheets
+ * Redesign notes:
+ * - Every CSS custom property name already used across the app (--app-bg,
+ *   --card-bg, --text-primary, --brand-indigo, etc.) is PRESERVED so nothing
+ *   in the component SCSS/HTML breaks. Only values + a small set of new
+ *   tokens were added.
+ * - Palette: deep clinical teal/ink + warm brass accent on alabaster paper —
+ *   built to read as a paid diagnostics / banking-grade product, not a
+ *   generic admin panel.
+ * - Type: Plus Jakarta Sans (display) + Inter (body/UI) + JetBrains Mono
+ *   (ids, barcodes, booking numbers) for a precise, clinical data feel.
  */
 
 /* Core CSS required for Ionic components to work properly */
@@ -18,7 +22,7 @@
 @import "@ionic/angular/css/typography.css";
 @import "@ionic/angular/css/display.css";
 
-/* Optional CSS utils that can be commented out */
+/* Optional CSS utils */
 @import "@ionic/angular/css/padding.css";
 @import "@ionic/angular/css/float-elements.css";
 @import "@ionic/angular/css/text-alignment.css";
@@ -28,17 +32,165 @@
 /**
  * Ionic Dark Mode
  * -----------------------------------------------------
- * For more info, please see:
  * https://ionicframework.com/docs/theming/dark-mode
  */
-
 /* @import "@ionic/angular/css/palettes/dark.always.css"; */
 /* @import "@ionic/angular/css/palettes/dark.class.css"; */
 /* @import '@ionic/angular/css/palettes/dark.system.css'; */
+
+/* Premium type system */
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600&display=swap');
+
+/* =====================================================================
+   DESIGN TOKENS
+===================================================================== */
+:root {
+  /* ---- Brand ramp — deep clinical teal ---- */
+  --brand-950: #051612;
+  --brand-900: #0a2e27;
+  --brand-800: #0e3a33;
+  --brand-700: #146652;
+  --brand-600: #1b8570;
+  --brand-500: #22a386;
+  --brand-400: #4fbfa0;
+  --brand-300: #8ddbc3;
+  --brand-100: #e7f4ec;
+
+  /* ---- Brass accent — used sparingly, "premium" moments only ---- */
+  --gold-700: #8a6425;
+  --gold-600: #a9782e;
+  --gold-500: #c3924a;
+  --gold-300: #e7ce9c;
+  --gold-100: #f7ecd9;
+
+  /* ---- Status ---- */
+  --status-ok: #1f9e73;
+  --status-warn: #c98a2c;
+  --status-danger: #c4453a;
+  --status-info: #2e7fb8;
+
+  /* ---- Gradients ---- */
+  --brand-gradient: linear-gradient(135deg, #0e3a33 0%, #146652 45%, #1b8570 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #146652 0%, #22a386 100%);
+  --gold-gradient: linear-gradient(135deg, #8a6425 0%, #c3924a 55%, #e7ce9c 100%);
+  --ink-gradient: linear-gradient(160deg, #0a2e27 0%, #051612 100%);
+
+  /* ---- Radius scale (8px system) ---- */
+  --radius-xs: 8px;
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 22px;
+  --radius-xl: 28px;
+  --radius-pill: 999px;
+
+  /* ---- Elevation ---- */
+  --shadow-xs: 0 1px 2px rgba(10, 27, 23, 0.05);
+  --shadow-sm: 0 4px 12px rgba(10, 27, 23, 0.06);
+  --shadow-md: 0 10px 28px rgba(10, 27, 23, 0.09);
+  --shadow-lg: 0 22px 50px rgba(10, 27, 23, 0.14);
+  --shadow-brand: 0 14px 32px rgba(27, 133, 112, 0.26);
+  --shadow-gold: 0 10px 26px rgba(169, 120, 46, 0.26);
+
+  /* ---- Fonts ---- */
+  --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* =====================================================================
+     Existing app variables — REMAPPED to the new palette.
+     Names untouched so every component file keeps working as-is.
+  ===================================================================== */
+  --app-bg: #f4f6f3;
+  --card-bg: #ffffff;
+  --card-border: #e4eae6;
+  --card-shadow: rgba(10, 27, 23, 0.07);
+  --text-primary: #0c201c;
+  --text-secondary: #1e3833;
+  --text-muted: #5c7671;
+  --text-faint: #93a9a4;
+  --input-bg: #fbfcfb;
+  --input-border: #dce5e1;
+  --skeleton-base: #eaeeea;
+  --skeleton-shine: #f7f9f7;
+  --menu-bg: #0a2e27;
+  --divider: #e4eae6;
+  --mini-stat-bg: #f1f5f2;
+  --icon-bg: #eaf3ee;
+  --icon-border: #d7e6dd;
+  --icon-color: #146652;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --app-bg: #0a1512;
+    --card-bg: #0f1d19;
+    --card-border: #1c342c;
+    --card-shadow: rgba(0, 0, 0, 0.35);
+    --text-primary: #eef5f1;
+    --text-secondary: #cdded6;
+    --text-muted: #8ba69d;
+    --text-faint: #5f7a72;
+    --input-bg: #12211c;
+    --input-border: #223c33;
+    --skeleton-base: #16281f;
+    --skeleton-shine: #1c352b;
+    --menu-bg: #071310;
+    --divider: #1c342c;
+    --mini-stat-bg: #142822;
+    --icon-bg: #14281f;
+    --icon-border: #223c33;
+    --icon-color: #4fbfa0;
+  }
+}
+
+/* =====================================================================
+   BASE / TYPOGRAPHY
+===================================================================== */
+html,
+body {
+  font-family: var(--font-body);
+  background: var(--app-bg);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.1px;
+}
+
+h1, h2, h3, .greeting-name, .spotlight-count, .sheet-title-main {
+  font-family: var(--font-display);
+}
+
+/* Data / ids read like a lab printout, not a spreadsheet */
+.link-id, .link-name, .id-link, .booking-time, .patient-id,
+.new-barcode-input, .barcode-line, .test-modal-body-pad .info-value {
+  font-family: var(--font-mono);
+  letter-spacing: 0.2px;
+}
+
+/* Slim premium scrollbars */
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--brand-300);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover { background: var(--brand-500); }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* =====================================================================
+   IONIC COMPONENT OVERRIDES
+===================================================================== */
 ion-modal .invoice-page {
   padding: 20px;
-  background: rgb(255, 255, 255) !important;
+  background: var(--card-bg) !important;
   min-height: 100%;
+  font-family: var(--font-body);
 }
 
 ion-modal .invoice-header {
@@ -46,24 +198,59 @@ ion-modal .invoice-header {
 }
 
 ion-modal .invoice-header h2 {
-  color: #3730a3;
-}:root {
-  --app-bg: #f0f4ff;
-  --card-bg: #ffffff;
-  --card-border: #eef2ff;
-  --card-shadow: rgba(99, 102, 241, 0.06);
-  --text-primary: #0f172a;
-  --text-secondary: #1e293b;
-  --text-muted: #64748b;
-  --text-faint: #94a3b8;
-  --input-bg: #ffffff;
-  --input-border: #d8def0;
-  --skeleton-base: #e8e8e8;
-  --skeleton-shine: #d8d8d8;
-  --menu-bg: #fafaff;
-  --divider: #e2e8f0;
-  --mini-stat-bg: #f8f9ff;
-  --icon-bg: #f1f5f9;
-  --icon-border: #dbe4f0;
-  --icon-color: #6366f1;
+  color: var(--brand-800);
+  font-family: var(--font-display);
+}
+
+/* Popover — soft glass, no harsh backdrop */
+ion-popover {
+  --backdrop-opacity: 0;
+  --box-shadow: 0 18px 40px rgba(10, 27, 23, 0.18);
+  --width: auto;
+}
+ion-popover::part(content) {
+  border-radius: var(--radius-md);
+  border: 1px solid var(--card-border);
+}
+ion-popover::part(backdrop) {
+  background: transparent;
+}
+
+ion-select { --ripple-color: transparent; }
+ion-item ion-select { --ripple-color: transparent; }
+.ion-activatable { --ripple-color: transparent; }
+.input-wrap ion-select { --ripple-color: transparent; }
+.input-wrap ion-select::part(icon) { color: var(--text-faint); }
+
+/* Every ion-modal in the app inherits the premium sheet treatment */
+ion-modal {
+  --background: var(--card-bg);
+  --ion-background-color: var(--card-bg);
+  --backdrop-opacity: 0.45 !important;
+}
+ion-modal::part(content) {
+  background: var(--card-bg);
+  box-shadow: var(--shadow-lg);
+}
+
+/* Checkboxes / toggles pick up the brand teal everywhere by default */
+ion-checkbox {
+  --size: 19px;
+  --checkbox-background-checked: var(--brand-600);
+  --border-color-checked: var(--brand-600);
+  --border-radius: 6px;
+}// ✅ Material calendar overlay la white background + shadow deण्यासाठी
+// (theme import न karता, फक्त explicit override).
+.mat-datepicker-content {
+  background-color: #ffffff !important;
+  border-radius: 12px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+}
+
+.mat-calendar {
+  background-color: #ffffff !important;
+}
+
+.mat-calendar-body-cell-content {
+  color: #1a1a1a;
 }

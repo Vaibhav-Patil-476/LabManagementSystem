@@ -1,78 +1,145 @@
+// ==========================================================
+// NOTIFICATIONS — EMPTY STATE (illustration style)
+// Flat-illustration bell + person + notification badges, drawn
+// as inline SVG and recolored to the app's teal brand identity
+// (--primary: #087b76) instead of a generic stock illustration's
+// yellow/orange palette.
+// ==========================================================
+:host {
+  --primary: #087b76;
+  --primary-dark: #075f5d;
+  --primary-light: #d9f0ee;
+  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+
+  --gray-accent: #8fa1a5;
+
+  --shadow-glow: 0 10px 28px rgba(8, 123, 118, 0.24);
+
+  // ---- illustration palette (brand-derived, not generic stock colors) ----
+  --illus-blob: #d9f0ee;
+  --illus-path: #087b76;
+  --illus-badge: #bd526f;
+
+  --illus-bell: #0b948d;
+  --illus-bell-mid: #0d6966;
+  --illus-bell-dark: #075f5d;
+  --illus-bell-light: #6fc4bd;
+  --illus-bell-highlight: #eef8f7;
+
+  --illus-skin: #f2c9a8;
+  --illus-skin-dark: #e3b28c;
+  --illus-hair: #3d2b23;
+  --illus-shirt: #087d78;
+  --illus-shoe: #14222e;
+  --illus-phone: #14222e;
+}
+
+.notif-header {
+  --background: transparent;
+  --color: var(--text-primary, #14222e);
+
+  ion-title {
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.2px;
+  }
+
+  ion-back-button {
+    --color: var(--primary);
+  }
+}
+
 .notification-content {
-
-  --background: var(--app-bg);
-
+  --background: var(--app-bg, #f4f8f8);
 }
 
-.empty-container{
+.empty-container {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
 
-  height:100%;
-  display:flex;
-  flex-direction:column;
-  justify-content:center;
-  align-items:center;
-
-  padding:30px;
-  text-align:center;
-
+  padding: 24px 30px;
+  text-align: center;
 }
 
-.circle{
-
-  width:170px;
-  height:170px;
-
-  border-radius:50%;
-
-  background:#eef3ff;
-
-  display:flex;
-  justify-content:center;
-  align-items:center;
-
-  margin-bottom:35px;
-
-  box-shadow:0 10px 30px rgba(0,0,0,.08);
-
+// ==========================================================
+// ILLUSTRATION
+// ==========================================================
+.illustration-wrap {
+  width: 100%;
+  max-width: 320px;
+  margin-bottom: 18px;
+  filter: drop-shadow(0 14px 26px rgba(8, 123, 118, 0.14));
 }
 
-.circle ion-icon{
-
-  font-size:85px;
-
-  color:#5d7df7;
-
+.notif-illustration {
+  width: 100%;
+  height: auto;
+  display: block;
+  animation: illusFloat 3.6s ease-in-out infinite;
 }
 
-h2{
-
-  margin:0;
-  font-size:24px;
-  font-weight:700;
-  color: var(--text-primary);
-
+@keyframes illusFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6px); }
 }
 
-p{
-
-  margin-top:12px;
-  color: var(--text-muted);
-  line-height:24px;
-  font-size:15px;
-  max-width:280px;
-
+// ==========================================================
+// TEXT
+// ==========================================================
+h2 {
+  margin: 6px 0 0;
+  font-size: 21px;
+  font-weight: 800;
+  letter-spacing: -0.3px;
+  color: var(--text-primary, #14222e);
 }
 
-ion-button{
+p {
+  margin-top: 10px;
+  color: var(--gray-accent);
+  line-height: 22px;
+  font-size: 14.5px;
+  font-weight: 500;
+  max-width: 280px;
+}
 
-  margin-top:35px;
+// ==========================================================
+// BUTTON
+// ==========================================================
+.go-back-btn {
+  margin-top: 30px;
 
-  --border-radius:14px;
+  --border-radius: 999px;
+  --background: var(--brand-gradient);
+  --background-activated: linear-gradient(135deg, #06635f, #044c4a);
+  --background-hover: linear-gradient(135deg, #0a938c, #087b76);
+  --box-shadow: var(--shadow-glow);
+  --color: #ffffff;
 
-  --background:linear-gradient(160deg, #6366f1, #8b5cf6);
+  width: 240px;
+  height: 50px;
 
-  width:260px;
+  font-weight: 700;
+  font-size: 14.5px;
+  letter-spacing: 0.1px;
+  text-transform: none;
 
-  height:48px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
 
+  &:active {
+    transform: scale(0.97);
+  }
+}
+
+@media (max-width: 360px) {
+  .illustration-wrap {
+    max-width: 260px;
+  }
+
+  h2 {
+    font-size: 18px;
+  }
 }

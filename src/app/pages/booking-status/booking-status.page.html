@@ -7,51 +7,95 @@
   </ion-toolbar>
 </ion-header>
 
-<ion-content class="booking-content">
+<!-- ✅ FIX: scrollY is now bound to whether the custom action-dropdown
+     is open. ion-content manages its OWN internal scroll container in
+     shadow DOM, so `overflow:hidden` on the light-DOM host (the old
+     approach in the SCSS) never actually stopped it from scrolling
+     behind the dropdown/backdrop on a real device. Binding the
+     component's native `scrollY` input is the only way to really lock
+     it. Functionality/API is untouched — this is purely a scroll-lock
+     UI fix. -->
+<ion-content class="booking-content" [scrollY]="openActionRowId === null">
 
   <div class="form-card">
 
     <!-- ===================== TOP SUMMARY BAR ===================== -->
     <div class="summary-bar">
-      <div class="total-badge">Total Bookings: {{ totalBookingsCount }}</div>
-      <div class="default-note" *ngIf="isDefaultTodayRange">"Please refresh to see the latest data."</div>
+      <div class="total-badge">
+        <ion-icon name="calendar-clear-outline"></ion-icon>
+        <span>Total Bookings: {{ totalBookingsCount }}</span>
+      </div>
+      <div class="default-note" *ngIf="isDefaultTodayRange">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        "Please refresh to see the latest data."
+      </div>
     </div>
 
     <!-- ===================== FILTER BAR ===================== -->
-    <div class="filter-bar">
+  <div class="filter-bar">
       <div class="filter-field search-field">
-        <ion-icon name="search-outline"></ion-icon>
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
+        </span>
         <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch"
           (ngModelChange)="quickSearch = quickSearch">
       </div>
 
-      <div class="filter-field" *ngIf="filterFranchises.length > 0">
-        <select [(ngModel)]="selectedFranchiseId" (change)="applyFilters()">
-          <option [ngValue]="null">Select franchise</option>
-          <option *ngFor="let f of filterFranchises" [ngValue]="f.franchiseId">{{ f.franchiseName || f.name }}</option>
-        </select>
+
+      <div class="filter-field select-field" *ngIf="filterFranchises.length > 0">
+        <span class="select-icon-badge">
+          <ion-icon name="business-outline"></ion-icon>
+        </span>
+
+        <ion-select interface="popover" fill="clear" justify="start" placeholder="Select Franchise"
+          [(ngModel)]="selectedFranchiseId" (ionChange)="applyFilters()">
+
+          <ion-select-option [value]="null">
+            Select Franchise
+          </ion-select-option>
+
+          <ion-select-option *ngFor="let f of filterFranchises" [value]="f.franchiseId">
+            {{ f.franchiseName || f.name }}
+          </ion-select-option>
+
+        </ion-select>
       </div>
 
-      <div class="filter-field">
-        <select [(ngModel)]="selectedReportStatus" (change)="applyFilters()">
-          <option *ngFor="let opt of reportStatusOptions" [value]="opt.value">{{ opt.label }}</option>
-        </select>
+      <!-- ✅ Custom calendar (Angular Material date-range-picker).
+           Yeथे disणारं .date-field ha फक्त एक trigger button ahे —
+           actual calendar UI khali hidden mat-form-field cha
+           mat-date-range-picker cha overlay ahе, jo click zाल्यावर
+           openDateRangePicker() call karून ughadतो. Start ani End
+           donhi dates single calendar madhe select karता yeतात;
+           donhi select झाल्यावर fromDate/toDate आपोआप update होऊन
+           applyFilters() call hoतो (loadBookings cha 'YYYY-MM-DD'
+           string format untouched thevla ahे). -->
+      <div class="filter-field date-field" (click)="openDateRangePicker()">
+        <span class="date-icon-badge">
+          <ion-icon name="calendar-outline"></ion-icon>
+        </span>
+        <span class="date-trigger-btn">
+          {{ fromDate ? (fromDate | date:'MM/dd/yyyy') : 'From' }} – {{ toDate ? (toDate | date:'MM/dd/yyyy') : 'To' }}
+        </span>
       </div>
 
-      <div class="filter-field date-field">
-        <input type="date" [(ngModel)]="fromDate" (change)="applyFilters()">
-        <span class="date-sep">-</span>
-        <input type="date" [(ngModel)]="toDate" (change)="applyFilters()">
-      </div>
+      <mat-form-field class="hidden-range-field" appearance="fill">
+        <mat-date-range-input [rangePicker]="rangePicker">
+          <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeStartChange($event)" readonly>
+          <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeEndChange($event)" readonly>
+        </mat-date-range-input>
+        <mat-date-range-picker #rangePicker></mat-date-range-picker>
+      </mat-form-field>
 
       <ion-button class="refresh-btn" fill="solid" (click)="applyFilters()">
         <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
       </ion-button>
     </div>
-
     <!-- ===================== BOOKING TABLE ===================== -->
     <div class="table-wrapper">
-      <table class="booking-table">
+      <table class="report-table booking-table">
         <thead>
           <tr>
             <th>Booking ID / Patient Id</th>
@@ -60,25 +104,24 @@
             <th>Client Code/Doctor</th>
             <th>Samples</th>
             <th>Barcode</th>
-
             <th>Reports</th>
             <th>Action</th>
           </tr>
         </thead>
         <tbody>
           <tr *ngFor="let item of filteredBookings; trackBy: trackByBookingId">
-            <td class="col-id">
-              <span class="link-id">{{ item.bookingId }}</span><br>
-              <small>{{ item.patientId }}</small><br>
-              <small class="booking-time" *ngIf="item.bookingDate">{{ item.bookingDate }}</small>
+            <td class="col-id" data-label="Booking ID / Patient">
+              <a class="id-link">{{ item.bookingId }}</a><br />
+              <span class="sub-text">{{ item.patientId }}</span><br />
+              <span class="sub-text" *ngIf="item.bookingDate">{{ item.bookingDate }}</span>
             </td>
 
-            <td class="col-name">
-              <span class="link-name">{{ item.title | titlecase }} {{ item.customerName }}</span><br>
-              <small>({{ item.gender | titlecase }}/{{ item.age }})</small>
+            <td class="col-name" data-label="Name">
+              <a class="id-link">{{ item.title | titlecase }} {{ item.customerName }}</a><br />
+              <span class="sub-text">({{ item.gender | titlecase }}/{{ item.age }})</span>
             </td>
 
-            <td class="col-tests">
+            <td class="col-tests" data-label="Tests">
               <div class="test-line" *ngFor="let test of item.tests">
                 <span class="test-name">{{ test.testName }}</span>
                 <span class="status-badge" [ngClass]="testStatusClass(test.status)">{{ testStatusLabel(test.status)
@@ -87,27 +130,26 @@
               <div class="test-line" *ngIf="!item.tests?.length">-</div>
             </td>
 
-            <td class="col-client">
+            <td class="col-client" data-label="Client / Doctor">
               ({{ item.franchise?.franchiseName || 'SELF' }}) / Dr. {{ item.doctor?.doctor_name || 'self' }}
             </td>
 
-            <td class="col-samples">{{ getSamples(item) }}</td>
-
-            <td class="col-barcode">
-              <div class="barcode-line" *ngFor="let s of getSampleLines(item)">
-                {{ s.barcode }} <small *ngIf="s.sampleType">- {{ s.sampleType }}</small>
+            <td class="col-samples" data-label="Samples">{{ getSamples(item) }}</td>
+            <td class="col-barcode" data-label="Barcode">
+              <div class="cell-value">
+                <div class="barcode-line" *ngFor="let s of getSampleLines(item)">
+                  {{ s.barcode }} <small *ngIf="s.sampleType">- {{ s.sampleType }}</small>
+                </div>
+                <div class="barcode-line" *ngIf="!getSampleLines(item).length">-</div>
               </div>
-              <div class="barcode-line" *ngIf="!getSampleLines(item).length">-</div>
             </td>
 
-
-
-            <td>
+            <td class="col-reports" data-label="Reports">
               <span class="status" [ngClass]="item.reports?.length ? 'completed' : 'pending'">
                 {{ getReportProgress(item) }}
               </span>
             </td>
-            <td class="action-cell">
+            <td class="action-cell" data-label="Action">
               <ion-button class="action-icon-btn" size="small" fill="clear" (click)="editTest(item)" title="Edit Tests">
                 <ion-icon slot="icon-only" name="cash-outline"></ion-icon>
               </ion-button>
@@ -125,10 +167,21 @@
           </tr>
 
           <tr *ngIf="!isLoadingList && filteredBookings.length === 0">
-            <td colspan="9" class="empty-row">No Booking Found</td>
+            <td [attr.colspan]="8" class="empty-row">
+              <div class="empty-state">
+                <ion-icon name="document-text-outline"></ion-icon>
+                <span>No data available</span>
+              </div>
+            </td>
           </tr>
           <tr *ngIf="isLoadingList">
-            <td colspan="9" class="empty-row">Loading bookings...</td>
+            <td colspan="8" class="empty-row">
+              <div class="table-skeleton">
+                <div class="skeleton-line" style="width:70%"></div>
+                <div class="skeleton-line" style="width:90%"></div>
+                <div class="skeleton-line" style="width:55%"></div>
+              </div>
+            </td>
           </tr>
         </tbody>
       </table>
@@ -136,12 +189,13 @@
   </div>
 
   <!-- ==========================
-      ✅ FIXED — 3-DOT ACTION DROPDOWN
+      ✅ 3-DOT ACTION DROPDOWN
       Table cha overflow-x:auto wrapper cha BAHER, page cha root level la
       thevla ahe ani "position: fixed" + JS-calculated top/left vaparto,
       jenavढं ha kadhीच clip hoणार nahi (table scroll asel / last row
       asel tarीही disेल) — staff ani admin donhihi login sathi.
-  =========================== -->
+      Background scroll-lock now uses [scrollY] on ion-content above
+      instead of the CSS-only host trick (which didn't actually work). -->
   <div class="action-menu-backdrop" *ngIf="openActionRowId !== null" (click)="closeActionMenu()"></div>
 
   <div class="action-dropdown fixed-dropdown" *ngIf="openActionRowId !== null && openActionItem as menuItem"
@@ -193,22 +247,22 @@
             <div class="info-grid">
               <div class="info-col">
                 <div class="info-row">
-                  <span class="info-label">Patient Name</span>
+                  <span class="info-label">Patient Name :</span>
                   <span class="info-value">{{ selectedBooking?.customerName | uppercase }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Age / Gender</span>
+                  <span class="info-label">Age / Gender :</span>
                   <span class="info-value">{{ selectedBooking?.age }} {{ selectedBooking?.ageType }} / {{
                     selectedBooking?.gender | titlecase }}</span>
                 </div>
               </div>
               <div class="info-col">
                 <div class="info-row">
-                  <span class="info-label">Ref. Doc</span>
+                  <span class="info-label">Ref. Doc :</span>
                   <span class="info-value">{{ selectedBooking?.doctor?.doctor_name || 'SELF' }}</span>
                 </div>
                 <div class="info-row">
-                  <span class="info-label">Lab</span>
+                  <span class="info-label">Lab :</span>
                   <span class="info-value">{{ selectedBooking?.franchise?.franchiseName || 'SELF' }}</span>
                 </div>
               </div>
@@ -236,12 +290,6 @@
 
             <div class="update-test-tab">Update Test</div>
 
-            <!-- ==========================
-                ✅ CHANGED — "Amount" / "Discount" columns FAKTA
-                Lab Admin la (canViewAmount) disतात. Staff/Franchise
-                sathi ha table फक्त "Test Name" + "Action" (delete)
-                itकाच disतो — reference screenshot प्रमाणे.
-          =========================== -->
             <div class="modal-body-grid">
               <div class="test-table-panel">
                 <table class="test-line-table">
@@ -270,22 +318,6 @@
                 </table>
               </div>
 
-              <!-- ==========================
-                  ✅ CHANGED — Billing summary panel ata role-based:
-                  - ADMIN (canEditBilling) -> sagळे real amounts +
-                    Discount/Paid editable + Payment Method active.
-                  - STAFF / FRANCHISE -> sagळे amounts masked ("..."/".")
-                    ani Discount/Paid COMPLETELY LOCKED (disabled) —
-                    kahihi edit karta yet nahi.
-
-                  ✅ NEW FIX — "Payment Method" box ata FAKTA Admin la
-                  (*ngIf="isAdminRole") disेल. Aadhi ha field sagळ्यांना
-                  disायचा (फक्त disabled asायचा staff sathi), jyामुळे
-                  Staff cha panel madhe uगाच ek grey/useless dropdown
-                  disायचा. Aता Staff cha panel madhe ha box पूर्ण
-                  gayab rahil — फक्त "Save Changes" button dिसेल, jo
-                  test add/remove sathi vapरता yeईल.
-            =========================== -->
               <div class="summary-side-panel" [class.locked]="!canEditBilling">
 
                 <div class="summary-field" *ngIf="isAdminRole">
@@ -333,7 +365,6 @@
                   <input type="text" [value]="canViewAmount ? dueAmount : '.'" readonly [class.zero]="dueAmount === 0">
                 </div>
 
-                <!-- ✅ FIX: Payment Method ata FAKTA Admin la disेल -->
                 <div class="summary-field payment-method-field" *ngIf="isAdminRole">
                   <label>Payment Method</label>
                   <select [(ngModel)]="paymentMethod" [disabled]="!canEditBilling">
@@ -388,6 +419,7 @@
               <div class="summary-field">
                 <label>Title</label>
                 <select [(ngModel)]="editPatientData.title">
+                  <option value="" disabled selected hidden>Select</option>
                   <option value="mr">Mr</option>
                   <option value="mrs">Mrs</option>
                   <option value="ms">Ms</option>
@@ -419,6 +451,7 @@
               <div class="summary-field">
                 <label>Doctor Title</label>
                 <select [(ngModel)]="editPatientData.doctorTitle">
+                  <option value="" disabled selected hidden>Select</option>
                   <option value="dr">Dr</option>
                   <option value="prof">Prof</option>
                 </select>
@@ -432,7 +465,6 @@
                   </ion-button>
                 </div>
               </div>
-              <!-- Admin -->
               <div class="summary-field" *ngIf="isAdminRole">
                 <label>Lab</label>
 
@@ -445,7 +477,6 @@
                 </div>
               </div>
 
-              <!-- Staff / Franchise -->
               <div class="summary-field" *ngIf="!isAdminRole">
                 <label>Lab</label>
 
@@ -510,7 +541,6 @@
       </div>
     </ng-template>
   </ion-modal>
-
   <!-- ===================== LAB PICKER ===================== -->
   <ion-modal [isOpen]="showLabPicker" cssClass="lab-popup sheet-modal" (didDismiss)="showLabPicker=false"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1">

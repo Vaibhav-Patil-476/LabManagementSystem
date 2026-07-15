@@ -1,340 +1,347 @@
-<ion-menu contentId="main-content" side="start" menuId="main-menu">
+<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
   <ion-content class="menu-content">
-
-    <div class="profile-section">
-      <div class="avatar-circle">
-        <ion-icon name="person-outline" class="avatar-icon"></ion-icon>
+    <div class="menu-shell">
+      <div class="menu-brand">
+        <div class="brand-mark"><ion-icon name="flask-outline"></ion-icon></div>
+        <span>Lab workspace</span>
       </div>
 
-      <h3 class="profile-name">{{ user.name }}</h3>
-      <p class="profile-role">{{ user.email }}</p>
+      <div class="menu-profile">
+        <div class="profile-avatar"><ion-icon name="person-outline"></ion-icon></div>
+        <div>
+          <p class="menu-overline">Signed in as</p>
+          <h2>{{ user.name }}</h2>
+          <p>{{ user.email }}</p>
+        </div>
+      </div>
+
+      <ion-list lines="none" class="menu-list">
+        <ion-item button detail="false" (click)="goToProfile()">
+          <span class="menu-item-icon" slot="start"><ion-icon name="person-outline"></ion-icon></span>
+          <ion-label>My profile</ion-label>
+          <span slot="end" class="menu-arrow" aria-hidden="true">›</span>
+        </ion-item>
+
+        <ion-item button detail="false" class="logout-item" (click)="logout()">
+          <span class="menu-item-icon" slot="start"><ion-icon name="log-out-outline"></ion-icon></span>
+          <ion-label>Log out</ion-label>
+        </ion-item>
+      </ion-list>
+
+      <p class="menu-footer">Secure healthcare operations</p>
     </div>
-
-    <ion-list lines="none" class="menu-list">
-
-      <ion-item button (click)="goToProfile()">
-        <ion-icon name="person-outline" slot="start" color="primary"></ion-icon>
-        <ion-label>My Profile</ion-label>
-      </ion-item>
-
-      <ion-item button class="logout-item" (click)="logout()">
-        <ion-icon name="log-out-outline" slot="start" color="danger"></ion-icon>
-        <ion-label color="danger">Logout</ion-label>
-      </ion-item>
-
-    </ion-list>
-
   </ion-content>
 </ion-menu>
 
 <div class="ion-page" id="main-content">
-
-  <ion-content class="dashboard-content">
-
-    <div class="top-header">
-
-      <div class="greeting-left">
-
-        <div class="user-avatar">
-          <ion-icon name="person-outline"></ion-icon>
+  <ion-content class="dashboard-content" [fullscreen]="true">
+    <main class="dashboard-shell">
+      <header class="app-header">
+        <div class="header-intro">
+          <p class="eyebrow">Operations overview</p>
+          <h1>Good day, {{ user.name }} <span aria-hidden="true">👋</span></h1>
+          <p class="header-email">{{ user.email }}</p>
         </div>
 
-        <div class="greeting-text">
-          <h2 class="greeting-name">
-            Hi, {{ user.name }} 👋
-          </h2>
+        <div class="header-actions">
+          <button type="button" class="icon-button notification-button" aria-label="Open notifications"
+            (click)="goToNotifications()">
+            <ion-icon name="notifications-outline"></ion-icon>
+            <span class="notification-pulse"></span>
+          </button>
 
-          <p class="greeting-sub">
-            {{ user.email }}
-          </p>
+          <ion-menu-button menu="main-menu" class="menu-trigger" aria-label="Open account menu">
+            <span class="menu-trigger-avatar"><ion-icon name="person-outline"></ion-icon></span>
+          </ion-menu-button>
         </div>
+      </header>
 
-      </div>
-
-      <div class="header-right">
-
-        <div class="notif-btn" (click)="goToNotifications()">
-          <ion-icon name="notifications-outline"></ion-icon>
-          <span class="notif-dot"></span>
-        </div>
-
-        <ion-menu-button menu="main-menu" class="avatar-menu-btn">
-          <div class="avatar-btn">
-            <ion-icon name="person-outline"></ion-icon>
-          </div>
-        </ion-menu-button>
-
-      </div>
-
-    </div>
-
-    <div class="date-filter-bar">
-      <input type="date" class="date-input" [(ngModel)]="filterDate" (ngModelChange)="onDateChange()" />
-      <button *ngIf="filterDate !== todayKey" class="clear-btn" (click)="resetToToday()">
-        Today
-      </button>
-    </div>
-
-    <!-- ✅ Skeleton shimmer loader — jopryant data yeत nahi -->
-    <ng-container *ngIf="loading; else loadedContent">
-
-      <div class="stats-grid">
-        <div class="stat-card skeleton-card" *ngFor="let i of [1,2,3,4]">
-          <div class="skeleton-box skeleton-icon"></div>
-          <div class="stat-info">
-            <div class="skeleton-box skeleton-line-lg"></div>
-            <div class="skeleton-box skeleton-line-sm"></div>
-          </div>
-        </div>
-      </div>
-
-      <div class="today-spotlight skeleton-spotlight">
-        <div class="spotlight-left">
-          <div class="skeleton-box skeleton-line-sm" style="width:120px"></div>
-          <div class="skeleton-box skeleton-line-lg" style="width:80px; margin-top:8px"></div>
-        </div>
-        <div class="spotlight-right">
-          <div class="skeleton-box skeleton-line-sm" style="width:70px"></div>
-          <div class="skeleton-box skeleton-line-lg" style="width:90px; margin-top:8px"></div>
-        </div>
-      </div>
-
-      <div class="section-header">
-        <h3 class="section-title">Services</h3>
-        <span class="section-sub">Provide awesome services</span>
-      </div>
-
-      <div class="services-grid">
-
-        <div class="service-card" (click)="goToPage('add-patient')">
-          <div class="service-icon">
-            <ion-icon name="person-add-outline"></ion-icon>
-          </div>
-          <span class="service-name">Add Patient</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('booking-status')">
-          <div class="service-icon">
-            <ion-icon name="clipboard-outline"></ion-icon>
-          </div>
-          <span class="service-name">Booking Status</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('reports')">
-          <div class="service-icon">
-            <ion-icon name="download-outline"></ion-icon>
-          </div>
-          <span class="service-name">Download Reports</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('bookings')">
-          <div class="service-icon">
-            <ion-icon name="list-outline"></ion-icon>
-          </div>
-          <span class="service-name">Test List</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('samples')">
-          <div class="service-icon">
-            <ion-icon name="person-circle-outline"></ion-icon>
-          </div>
-          <span class="service-name">Profile List</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('outsource')">
-          <div class="service-icon">
-            <ion-icon name="time-outline"></ion-icon>
-          </div>
-          <span class="service-name">Client History</span>
-        </div>
-
-      </div>
-
-      <div class="section-header">
-        <h3 class="section-title">Daily Bookings</h3>
-        <span class="section-sub">Last 5 days, date wise</span>
-      </div>
-
-      <div class="daily-list">
-        <div class="day-card skeleton-card" *ngFor="let i of [1,2,3]">
-          <div class="skeleton-box skeleton-line-sm" style="width:100px"></div>
-          <div class="day-main" style="margin-top:12px">
-            <div class="skeleton-box skeleton-line-lg" style="width:60px"></div>
-            <div class="skeleton-box skeleton-line-lg" style="width:80px"></div>
-          </div>
-          <div class="day-stats-row" style="margin-top:12px">
-            <div class="skeleton-box skeleton-line-sm" style="width:40px" *ngFor="let j of [1,2,3,4]"></div>
-          </div>
-        </div>
-      </div>
-
-    </ng-container>
-
-    <ng-template #loadedContent>
-
-      <div class="stats-grid">
-
-        <div class="stat-card">
-          <div class="stat-icon">
-            <ion-icon name="people-outline"></ion-icon>
-          </div>
-          <div class="stat-info">
-            <h1>{{ totalPatients }}</h1>
-            <h3>Patients</h3>
+      <section class="filter-panel" aria-label="Dashboard date filter">
+        <div class="filter-copy">
+          <span class="filter-icon"><ion-icon name="calendar-outline"></ion-icon></span>
+          <div>
+            <p>Viewing activity for</p>
+            <strong>{{ filterDate === todayKey ? 'Today' : 'Selected date' }}</strong>
           </div>
         </div>
 
-        <div class="stat-card">
-          <div class="stat-icon">
-            <ion-icon name="beaker-outline"></ion-icon>
-          </div>
-          <div class="stat-info">
-            <h1>{{ totalSamples }}</h1>
-            <h3>Samples</h3>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">
-            <ion-icon name="document-text-outline"></ion-icon>
-          </div>
-          <div class="stat-info">
-            <h1>{{ totalReports }}</h1>
-            <h3>Reports</h3>
-          </div>
-        </div>
-
-        <div class="stat-card">
-          <div class="stat-icon">
+        <div class="filter-controls">
+          <button type="button" class="date-trigger" (click)="openDatePicker()" aria-label="Select dashboard date">
             <ion-icon name="calendar-outline"></ion-icon>
-          </div>
-          <div class="stat-info">
-            <h1>{{ totalBookings }}</h1>
-            <h3>Bookings</h3>
-          </div>
+            <span>{{ filterDate | date:'MM/dd/yyyy' }}</span>
+          </button>
+
+          <mat-form-field class="hidden-date-field" appearance="fill">
+            <input matInput [matDatepicker]="datePicker" [(ngModel)]="pickedDate" [ngModelOptions]="{standalone: true}"
+              (dateChange)="onPickedDateChange($event)" readonly>
+            <mat-datepicker #datePicker></mat-datepicker>
+          </mat-form-field>
+
+          <button type="button" *ngIf="filterDate !== todayKey" class="today-button" (click)="resetToToday()">
+            Today
+          </button>
         </div>
+      </section>
 
-      </div>
+      <ng-container *ngIf="loading; else loadedContent">
+        <section class="stats-grid" aria-label="Loading dashboard statistics">
+          <article class="metric-card skeleton-card" *ngFor="let i of [1,2,3,4]">
+            <span class="skeleton shimmer metric-icon-placeholder"></span>
+            <div>
+              <span class="skeleton shimmer line-lg"></span>
+              <span class="skeleton shimmer line-sm"></span>
+            </div>
+          </article>
+        </section>
 
-      <div class="today-spotlight">
-        <div class="spotlight-left">
-          <span class="spotlight-eyebrow">Today · {{ todayKeyLabel }}</span>
-          <div class="spotlight-count-row">
-            <h1 class="spotlight-count">{{ todayBookingsCount }}</h1>
-            <span class="spotlight-count-label">Bookings today</span>
+        <section class="focus-card skeleton-focus" aria-label="Loading today's overview">
+          <div>
+            <span class="skeleton shimmer line-sm"></span>
+            <span class="skeleton shimmer line-xl"></span>
           </div>
-        </div>
-        <div class="spotlight-right" *ngIf="canViewCollection">
-          <span class="spotlight-amount-label">Collected</span>
-          <span class="spotlight-amount">₹{{ todayAmount }}</span>
-        </div>
-      </div>
-
-      <div class="section-header">
-        <h3 class="section-title">Services</h3>
-        <span class="section-sub">Provide awesome services</span>
-      </div>
-
-      <div class="services-grid">
-
-        <div class="service-card" (click)="goToPage('add-patient')">
-          <div class="service-icon">
-            <ion-icon name="person-add-outline"></ion-icon>
+          <div>
+            <span class="skeleton shimmer line-sm"></span>
+            <span class="skeleton shimmer line-lg"></span>
           </div>
-          <span class="service-name">Add Patient</span>
-        </div>
+        </section>
 
-        <div class="service-card" (click)="goToPage('booking-status')">
-          <div class="service-icon">
-            <ion-icon name="clipboard-outline"></ion-icon>
-          </div>
-          <span class="service-name">Booking Status</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('reports')">
-          <div class="service-icon">
-            <ion-icon name="download-outline"></ion-icon>
-          </div>
-          <span class="service-name">Download Reports</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('bookings')">
-          <div class="service-icon">
-            <ion-icon name="list-outline"></ion-icon>
-          </div>
-          <span class="service-name">Test List</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('samples')">
-          <div class="service-icon">
-            <ion-icon name="person-circle-outline"></ion-icon>
-          </div>
-          <span class="service-name">Profile List</span>
-        </div>
-
-        <div class="service-card" (click)="goToPage('outsource')">
-          <div class="service-icon">
-            <ion-icon name="time-outline"></ion-icon>
-          </div>
-          <span class="service-name">Client History</span>
-        </div>
-
-      </div>
-
-      <div class="section-header">
-        <h3 class="section-title">Daily Bookings</h3>
-        <span class="section-sub">Last 5 days, date wise</span>
-      </div>
-
-      <div class="daily-list">
-
-        <div class="day-card" *ngFor="let item of dailyBookings" [class.is-today]="item.dateKey === todayKey">
-
-          <div class="day-card-head">
-            <span class="day-date">{{ item.date }}</span>
-            <span class="day-badge" *ngIf="item.dateKey === todayKey">Today</span>
+        <section class="content-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Shortcuts</p>
+              <h2>Services</h2>
+            </div>
           </div>
 
-          <div class="day-main">
-            <div class="day-main-block">
-              <h1>{{ item.bookings }}</h1>
+          <div class="services-grid">
+            <div class="service-card" (click)="goToPage('add-patient')">
+              <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
+              <span class="service-name">Add patient</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('booking-status')">
+              <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
+              <span class="service-name">Booking status</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('reports')">
+              <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
+              <span class="service-name">Download reports</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('bookings')">
+              <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
+              <span class="service-name">Test list</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('samples')">
+              <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
+              <span class="service-name">Profile list</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('outsource')">
+              <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
+              <span class="service-name">Client history</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Recent activity</p>
+              <h2>Daily bookings</h2>
+            </div>
+            <p class="section-note">Last 5 days</p>
+          </div>
+
+          <div class="daily-list">
+            <article class="booking-card skeleton-card" *ngFor="let i of [1,2,3]">
+              <span class="skeleton shimmer line-md"></span>
+              <div class="booking-skeleton-main">
+                <span class="skeleton shimmer line-lg"></span>
+                <span class="skeleton shimmer line-lg"></span>
+              </div>
+              <div class="booking-skeleton-stats">
+                <span class="skeleton shimmer"></span>
+                <span class="skeleton shimmer"></span>
+                <span class="skeleton shimmer"></span>
+                <span class="skeleton shimmer"></span>
+              </div>
+            </article>
+          </div>
+        </section>
+      </ng-container>
+
+      <ng-template #loadedContent>
+        <section class="stats-grid" aria-label="Selected date statistics">
+          <article class="metric-card">
+            <span class="metric-icon patients"><ion-icon name="people-outline"></ion-icon></span>
+            <div>
+              <strong>{{ totalPatients }}</strong>
+              <span>Patients</span>
+            </div>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-icon samples"><ion-icon name="beaker-outline"></ion-icon></span>
+            <div>
+              <strong>{{ totalSamples }}</strong>
+              <span>Samples</span>
+            </div>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-icon reports"><ion-icon name="document-text-outline"></ion-icon></span>
+            <div>
+              <strong>{{ totalReports }}</strong>
+              <span>Reports</span>
+            </div>
+          </article>
+
+          <article class="metric-card">
+            <span class="metric-icon bookings"><ion-icon name="calendar-outline"></ion-icon></span>
+            <div>
+              <strong>{{ totalBookings }}</strong>
               <span>Bookings</span>
             </div>
-            <div class="day-main-block" *ngIf="canViewCollection">
-              <h1>₹{{ item.amount }}</h1>
-              <span>Amount</span>
+          </article>
+        </section>
+
+        <section class="focus-card" aria-label="Today's booking highlight">
+          <div class="focus-primary">
+            <p>Today · {{ todayKeyLabel }}</p>
+            <div>
+              <strong>{{ todayBookingsCount }}</strong>
+              <span>Bookings today</span>
             </div>
           </div>
 
-          <div class="day-stats-row">
-            <div class="mini-stat">
-              <span class="mini-value">{{ item.samples }}</span>
-              <span class="mini-label">Samples</span>
-            </div>
-            <div class="mini-stat received">
-              <span class="mini-value">{{ item.received }}/{{ item.samples }}</span>
-              <span class="mini-label">Received</span>
-            </div>
-            <div class="mini-stat pending">
-              <span class="mini-value">{{ item.pending }}/{{ item.samples }}</span>
-              <span class="mini-label">Pending</span>
-            </div>
-            <div class="mini-stat rejected">
-              <span class="mini-value">{{ item.rejected }}/{{ item.samples }}</span>
-              <span class="mini-label">Rejected</span>
-            </div>
+          <div class="focus-divider" *ngIf="canViewCollection"></div>
+
+          <div class="focus-amount" *ngIf="canViewCollection">
+            <span>Collected today</span>
+            <strong>₹{{ todayAmount }}</strong>
           </div>
 
-        </div>
+          <span class="focus-orb orb-one"></span>
+          <span class="focus-orb orb-two"></span>
+        </section>
 
-        <div class="empty-state" *ngIf="dailyBookings.length === 0">
-          No bookings yet. New bookings will show up here, date wise.
-        </div>
+        <section class="content-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Shortcuts</p>
+              <h2>Services</h2>
+            </div>
+            <p class="section-note">Get things done</p>
+          </div>
 
-      </div>
+          <div class="services-grid">
+            <div class="service-card" (click)="goToPage('add-patient')">
+              <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
+              <span class="service-name">Add patient</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
 
-    </ng-template>
+            <div class="service-card" (click)="goToPage('booking-status')">
+              <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
+              <span class="service-name">Booking status</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
 
+            <div class="service-card" (click)="goToPage('reports')">
+              <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
+              <span class="service-name">Download reports</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('bookings')">
+              <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
+              <span class="service-name">Test list</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('samples')">
+              <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
+              <span class="service-name">Profile list</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+
+            <div class="service-card" (click)="goToPage('outsource')">
+              <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
+              <span class="service-name">Client history</span>
+              <span class="service-arrow" aria-hidden="true">›</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="content-section bookings-section">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Recent activity</p>
+              <h2>Daily bookings</h2>
+            </div>
+            <p class="section-note">Last 5 days</p>
+          </div>
+
+          <div class="daily-list">
+            <article class="booking-card" *ngFor="let item of dailyBookings"
+              [class.is-today]="item.dateKey === todayKey">
+              <div class="booking-card-head">
+                <div>
+                  <p>{{ item.date }}</p>
+                  <span *ngIf="item.dateKey === todayKey">Today</span>
+                </div>
+                <ion-icon name="calendar-outline"></ion-icon>
+              </div>
+
+              <div class="booking-overview">
+                <div>
+                  <strong>{{ item.bookings }}</strong>
+                  <span>Bookings</span>
+                </div>
+
+                <div *ngIf="canViewCollection">
+                  <strong>₹{{ item.amount }}</strong>
+                  <span>Amount</span>
+                </div>
+              </div>
+
+              <div class="booking-stat-grid">
+                <div>
+                  <strong>{{ item.samples }}</strong>
+                  <span>Samples</span>
+                </div>
+                <div class="received">
+                  <strong>{{ item.received }}/{{ item.samples }}</strong>
+                  <span>Received</span>
+                </div>
+                <div class="pending">
+                  <strong>{{ item.pending }}/{{ item.samples }}</strong>
+                  <span>Pending</span>
+                </div>
+                <div class="rejected">
+                  <strong>{{ item.rejected }}/{{ item.samples }}</strong>
+                  <span>Rejected</span>
+                </div>
+              </div>
+            </article>
+
+            <div class="empty-state" *ngIf="dailyBookings.length === 0">
+              <span><ion-icon name="calendar-outline"></ion-icon></span>
+              <h3>No bookings yet</h3>
+              <p>New bookings will show up here, date wise.</p>
+            </div>
+          </div>
+        </section>
+      </ng-template>
+    </main>
   </ion-content>
-
 </div>

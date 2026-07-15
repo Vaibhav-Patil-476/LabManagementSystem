@@ -11,61 +11,92 @@
 
   <!-- ===================== TOP BAR ===================== -->
   <div class="top-bar">
-    <span class="total-pill">Total Bookings: {{ totalBookings }}</span>
-    <span class="refresh-hint">"Please refresh to see the latest data."</span>
+    <span class="total-pill">
+      <ion-icon name="calendar-clear-outline"></ion-icon>
+      Total Bookings: {{ totalBookings }}
+    </span>
+    <span class="refresh-hint">
+      <ion-icon name="information-circle-outline"></ion-icon>
+      "Please refresh to see the latest data."
+    </span>
   </div>
 
-  <!-- ===================== FILTER BAR ===================== -->
+  <!-- ===================== FILTER BAR =====================
+       ✅ Booking Status page cha exact tach pattern — franchise ata
+       ion-select (interface="popover"), date range ata Material
+       date-range-picker (jुना native input[type=date] pair kadhla). -->
   <div class="filter-bar">
-    <div class="search-box">
-      <ion-icon name="search-outline"></ion-icon>
+<div class="filter-field search-field">
+      <span class="search-icon-badge">
+        <ion-icon name="search-outline"></ion-icon>
+      </span>
       <input
         type="text"
         placeholder="Quick search"
         [(ngModel)]="quickSearch" />
     </div>
 
-    <select
-      class="filter-select"
-      *ngIf="roleService.isLabAdmin"
-      [(ngModel)]="franchiseId"
-      (ngModelChange)="onFranchiseChange($event)">
-      <option [ngValue]="null">Select franchise</option>
-      <!-- TODO: bind *ngFor="let f of franchises" once franchise list API is wired here -->
-    </select>
-
-    <div class="date-range">
-      <input type="date" [(ngModel)]="fromDate" (ngModelChange)="onDateRangeChange()" />
-      <span>-</span>
-      <input type="date" [(ngModel)]="toDate" (ngModelChange)="onDateRangeChange()" />
+ <div class="filter-field select-field" *ngIf="roleService.isLabAdmin">
+      <span class="select-icon-badge">
+        <ion-icon name="business-outline"></ion-icon>
+      </span>
+      <ion-select interface="popover" fill="clear" justify="start" placeholder="Select Franchise"
+        [(ngModel)]="franchiseId" (ionChange)="onFranchiseChange($event.detail.value)">
+        <ion-select-option [value]="null">Select Franchise</ion-select-option>
+        <ion-select-option *ngFor="let f of franchises" [value]="f.franchiseId">
+          {{ f.franchiseName || f.name }}
+        </ion-select-option>
+      </ion-select>
     </div>
 
-    <button class="refresh-btn" (click)="loadData()" [disabled]="isLoading">
-      <ion-icon name="refresh-outline"></ion-icon>
-    </button>
+  <div class="filter-field date-field" (click)="openDateRangePicker()">
+      <span class="date-icon-badge">
+        <ion-icon name="calendar-outline"></ion-icon>
+      </span>
+      <span class="date-trigger-btn">
+        {{ fromDate ? (fromDate | date:'MM/dd/yyyy') : 'From' }} – {{ toDate ? (toDate | date:'MM/dd/yyyy') : 'To' }}
+      </span>
+    </div>
+
+    <mat-form-field class="hidden-range-field" appearance="fill">
+      <mat-date-range-input [rangePicker]="rangePicker">
+        <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+          (dateChange)="onRangeStartChange($event)" readonly>
+        <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+          (dateChange)="onRangeEndChange($event)" readonly>
+      </mat-date-range-input>
+      <mat-date-range-picker #rangePicker></mat-date-range-picker>
+    </mat-form-field>
+
+    <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
+      <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+    </ion-button>
+
   </div>
 
-  <!-- ===================== STATUS TABS ===================== -->
-  <div class="status-tabs">
-    <div
-      *ngFor="let tab of tabs"
-      class="status-tab"
-      [class.active]="activeTab === tab.key"
-      (click)="setTab(tab.key)">
-      <span class="tab-label">{{ tab.label }}</span>
-      <span class="tab-count" [ngClass]="tab.badgeClass">{{ bucketCount[tab.key] }}</span>
+<!-- ===================== STATUS TABS ===================== -->
+  <div class="status-tabs-wrapper">
+    <div class="status-tabs">
+      <div
+        *ngFor="let tab of tabs"
+        class="status-tab"
+        [class.active]="activeTab === tab.key"
+        (click)="setTab(tab.key)">
+        <span class="tab-dot" [ngClass]="tab.badgeClass"></span>
+        <span class="tab-label">{{ tab.label }}</span>
+        <span class="tab-count" [ngClass]="tab.badgeClass">{{ bucketCount[tab.key] }}</span>
+      </div>
     </div>
   </div>
-
-  <!-- Download is ONLY visible to Lab Admin, and ONLY on the Complete tab -->
+<!-- Download is ONLY visible to Lab Admin, and ONLY on the Complete tab -->
   <div class="download-row" *ngIf="canShowDownloadControls">
     <ion-button
       class="download-btn"
       [disabled]="selectedIds.size === 0 || isGenerating"
       (click)="downloadSelected()">
       <ion-icon slot="start" name="download-outline"></ion-icon>
-      {{ isGenerating ? 'Generating...' : 'Download Selected Reports' }}
-      <span class="selected-count" *ngIf="selectedIds.size > 0">({{ selectedIds.size }})</span>
+      <span class="btn-label">{{ isGenerating ? 'Generating...' : 'Download Selected' }}</span>
+      <span class="selected-count" *ngIf="selectedIds.size > 0">{{ selectedIds.size }}</span>
     </ion-button>
   </div>
 
@@ -93,7 +124,10 @@
       <tbody>
         <tr *ngIf="isLoading">
           <td [attr.colspan]="8" class="empty-row">
-            <ion-spinner name="dots"></ion-spinner> Loading...
+            <div class="loading-inline">
+              <ion-spinner name="dots"></ion-spinner>
+              <span>Loading...</span>
+            </div>
           </td>
         </tr>
 
@@ -105,32 +139,32 @@
             </ion-checkbox>
           </td>
 
-          <td class="id-col">
+          <td class="id-col" data-label="Booking ID / Patient">
             <a class="id-link">{{ item.bookingId }}</a><br />
             <span class="sub-text">{{ item.patientId }}</span><br />
             <span class="sub-text">{{ item.bookingDate | date:'M/d/yyyy, h:mm:ss a' }}</span>
           </td>
 
-          <td>
+          <td class="name-col" data-label="Name">
             <a class="id-link">{{ item.title | titlecase }} {{ item.name }}</a><br />
             <span class="sub-text" *ngIf="item.genderAge">({{ item.genderAge }})</span>
           </td>
 
-          <td>
+          <td class="tests-col" data-label="Tests">
             <div class="test-row" *ngFor="let t of item.tests">
               <span class="test-name">{{ t.name }}</span>
               <span class="status-pill" [ngClass]="'status-' + (t.status | lowercase)">{{ t.status }}</span>
             </div>
           </td>
 
-          <td *ngIf="roleService.isLabAdmin" class="center-col">{{ item.doctorName }}</td>
-          <td *ngIf="roleService.isLabAdmin" class="center-col">{{ item.sampleCount }}</td>
+          <td *ngIf="roleService.isLabAdmin" class="center-col" data-label="Doctor">{{ item.doctorName }}</td>
+          <td *ngIf="roleService.isLabAdmin" class="center-col" data-label="Samples">{{ item.sampleCount }}</td>
 
-          <td>
+          <td class="barcode-col" data-label="Barcode">
             <div *ngFor="let b of item.barcodes">{{ b }}</div>
           </td>
 
-          <td *ngIf="roleService.isLabAdmin" class="center-col">
+          <td *ngIf="roleService.isLabAdmin" class="center-col" data-label="Reports">
             <span class="reports-pill" [class.reports-complete]="reportsComplete(item)">
               {{ reportsFraction(item) }}
             </span>
@@ -138,37 +172,21 @@
         </tr>
 
         <tr *ngIf="!isLoading && rowsForActiveTab.length === 0">
-          <td [attr.colspan]="8" class="empty-row">No data available</td>
+          <td [attr.colspan]="8" class="empty-row">
+            <div class="empty-state">
+              <ion-icon name="document-text-outline"></ion-icon>
+              <span>No data available</span>
+            </div>
+          </td>
         </tr>
       </tbody>
     </table>
-  </div>
-
-  <!-- ===================== HIDDEN PRINT TEMPLATE (used for PDF generation, admin only) ===================== -->
-  <div class="pdf-template" #pdfTemplate *ngIf="roleService.canDownloadReports">
-    <div class="pdf-header">
-      <h2>Lab Report Summary</h2>
-      <p>Generated on: {{ (currentPdfPatient?.bookingDate) || (null) }}</p>
+    <div class="load-more-row" *ngIf="hasMoreForActiveTab">
+      <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreActiveTab()">
+        {{ isLoadingMore ? 'Loading...' : 'Load More' }}
+      </ion-button>
     </div>
-
-    <table class="pdf-table" *ngIf="currentPdfPatient as item">
-      <thead>
-        <tr>
-          <th>Booking ID / Patient ID</th>
-          <th>Patient Name</th>
-          <th>Barcode</th>
-          <th>Tests</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>{{ item.bookingId }}</td>
-          <td>{{ item.title | titlecase }} {{ item.name }}</td>
-          <td>{{ item.barcodes.join(', ') }}</td>
-          <td>{{ getTests(item) }}</td>
-        </tr>
-      </tbody>
-    </table>
   </div>
+
 
 </ion-content>

@@ -1,7 +1,7 @@
 import { ApplicationConfig } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { provideIonicAngular } from '@ionic/angular/standalone';
-
+import { provideNativeDateAdapter } from '@angular/material/core';
 import {
   provideHttpClient,
   withInterceptors
@@ -14,7 +14,7 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideIonicAngular(),
     provideRouter(routes),
-     provideHttpClient(withInterceptors([authInterceptor])
-    )
+    provideHttpClient(withInterceptors([authInterceptor])),
+    provideNativeDateAdapter()
   ]
 };

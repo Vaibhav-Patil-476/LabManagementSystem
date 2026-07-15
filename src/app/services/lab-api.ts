@@ -239,4 +239,28 @@ export class LabApiService {
   getCurrentLabId(): number {
     return this.getLabId();
   }
+
+getReportsByStatus(
+    labId: number,
+    reportStatus: string,
+    page: number = 0,
+    size: number = 50,
+    fromDate?: string,
+    toDate?: string,
+    franchiseId?: any
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('reportStatus', reportStatus)
+      .set('optimize', 'true')
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    if (fromDate) params = params.set('fromDate', fromDate);
+    if (toDate) params = params.set('toDate', toDate);
+    if (franchiseId !== undefined && franchiseId !== null) {
+      params = params.set('franchiseId', franchiseId.toString());
+    }
+
+    return this.http.get(`${this.BASE_URL}/api/v1/lab/report/all/${labId}`, { params });
+  }
 }
