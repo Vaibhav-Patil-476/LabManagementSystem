@@ -180,6 +180,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   billHistoryBooking: BookingListItem | null = null;
 
   openActionRowId: number | null = null;
+  generatingBillId: number | null = null;
   openActionItem: BookingListItem | null = null;
   actionMenuPosition = { top: 0, left: 0 };
 
@@ -662,11 +663,37 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     document.body.classList.remove('action-menu-open');
   }
 
-  printBill(item: BookingListItem) {
-    window.print();
-    this.showToast('Bill printing started', 'success');
-    this.closeActionMenu();
-  }
+printBill(item: BookingListItem) {
+  this.closeActionMenu();
+
+  if (this.generatingBillId === item.bookingId) return;
+  this.generatingBillId = item.bookingId;
+
+  const payload = this.labApi.buildBillPayload(item.bookingId);
+
+  this.labApi.printBill(payload).subscribe({
+    next: (res: any) => {
+      this.ngZone.run(() => {
+        this.generatingBillId = null;
+        if (res?.downloadUrl) {
+          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+          this.showToast('Bill ready', 'success');
+        } else {
+          this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
+        }
+        this.cdr.detectChanges();
+      });
+    },
+    error: (err) => {
+      console.log('PRINT BILL ERROR:', err);
+      this.ngZone.run(() => {
+        this.generatingBillId = null;
+        this.showToast('Bill generate karnyat error aali', 'error');
+        this.cdr.detectChanges();
+      });
+    }
+  });
+}
 
   editTest(item: BookingListItem) {
     this.closeActionMenu();

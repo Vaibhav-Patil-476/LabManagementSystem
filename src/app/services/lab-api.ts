@@ -10,7 +10,7 @@ import { AuthService } from './auth';
 export class LabApiService {
 
   private readonly BASE_URL = environment.BASE_URL;
-
+private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
   constructor(private http: HttpClient, private authService: AuthService) { }
 
   private getLabId(): number {
@@ -309,4 +309,31 @@ generatePdfReport(
   };
 
   return this.http.post('https://pdf.hypatholab.in/simple-pdf', payload);
-}}
+}
+
+
+printBill(payload: any): Observable<any> {
+  return this.http.post(this.billUrl, payload);
+}
+
+// ✅ report-pdf सारखाच payload shape वापरला (bookingApi/labSettingsApi/
+// token/domain/reportTestId/cancelTest) — कारण त्याच backend team ने
+// bill-pdf पण असाच contract expect केला असण्याची शक्यता आहे.
+buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmount: any = null): any {
+  const labId = this.getLabId();
+  const token = this.authService.getToken();
+  const domain = environment.domain;
+
+  return {
+    params: {
+      bookingApi: `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`,
+      labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
+      currentUserApi: `${environment.authUrl}/current-user`,   // ✅ हेच missing होतं — error exact हेच सांगत होता
+      billType: billType,
+      token,
+      customBillAmount,
+      domain
+    }
+  };
+}
+}

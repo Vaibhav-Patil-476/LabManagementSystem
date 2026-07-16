@@ -215,8 +215,11 @@
     <div class="action-item" *ngIf="canEditPatient" (click)="editPatient(menuItem)">
       <ion-icon name="person-outline"></ion-icon> Edit Patient
     </div>
-    <div class="action-item" (click)="printBill(menuItem)">
-      <ion-icon name="print-outline"></ion-icon> Print Bill
+    <div class="action-item" [class.item-loading]="generatingBillId === menuItem.bookingId"
+      (click)="generatingBillId === menuItem.bookingId ? null : printBill(menuItem)">
+      <ion-spinner name="crescent" *ngIf="generatingBillId === menuItem.bookingId"></ion-spinner>
+      <ion-icon name="print-outline" *ngIf="generatingBillId !== menuItem.bookingId"></ion-icon>
+      {{ generatingBillId === menuItem.bookingId ? 'Generating...' : 'Print Bill' }}
     </div>
     <div class="action-item" (click)="openNoteModal(menuItem)">
       <ion-icon name="document-text-outline"></ion-icon> Add note
