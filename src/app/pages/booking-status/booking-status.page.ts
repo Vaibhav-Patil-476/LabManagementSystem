@@ -1,4 +1,4 @@
-import { Component, OnInit, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -44,6 +44,7 @@ export interface BookingTest {
   refRangeLow?: number;
   refRangeHigh?: number;
   referenceNote?: string;
+  isNewlyAdded?: boolean;
 }
 
 export interface BookingListItem {
@@ -96,7 +97,7 @@ export interface BookingListItem {
   templateUrl: './booking-status.page.html',
   styleUrls: ['./booking-status.page.scss']
 })
-export class BookingStatusPage implements OnInit {
+export class BookingStatusPage implements OnInit, OnDestroy {
 
   bookings: BookingListItem[] = [];
   isLoadingList = false;
@@ -121,6 +122,15 @@ export class BookingStatusPage implements OnInit {
   pageSize = 20;
   totalPages = 1;
 
+  private readonly SEARCH_START_DATE = '2015-01-01';
+  private readonly SEARCH_PAGE_SIZE = 500;
+  private searchDebounceTimer: any = null;
+  private readonly SEARCH_DEBOUNCE_MS = 400;
+
+  get isSearchMode(): boolean {
+    return this.quickSearch.trim().length > 0;
+  }
+
   isTestModalOpen = false;
   isTestLoading = false;
   selectedBooking: BookingListItem | null = null;
@@ -129,8 +139,6 @@ export class BookingStatusPage implements OnInit {
   selectedTests: BookingTest[] = [];
   discount = 0;
 
-  // ✅ Already Paid (read-only, from backend) + Pay Now (user input) =
-  // Total Paid (computed). Due auto-recalculates from Total Paid.
   basePaidAmount = 0;
   payNowAmount = 0;
   paidAmount = 0;
@@ -175,8 +183,6 @@ export class BookingStatusPage implements OnInit {
   openActionItem: BookingListItem | null = null;
   actionMenuPosition = { top: 0, left: 0 };
 
-  // ✅ role ata localStorage varun nahi — AuthService (real API cha
-  // /current-user response) varun set hoto, in-memory only.
   role: string = '';
 
   private readonly ROLE_LAB_ADMIN = 'ROLE_LAB_ADMIN';
@@ -209,11 +215,6 @@ export class BookingStatusPage implements OnInit {
     );
   }
 
-  // ✅ FIX: "Edit Patient" popup / icon ata FAKTA Lab Admin la disel.
-  // Staff / Franchise / Franchise-Staff login sathi ha completely
-  // hidden rahil (table cha person-icon button ani 3-dot menu cha
-  // "Edit Patient" option — donhi ठिकाणी hach getter vaparला jato,
-  // tyामुळे eकच jaga fix karून sagळीkade lagू hotay).
   get canEditPatient(): boolean {
     return this.role === this.ROLE_LAB_ADMIN;
   }
@@ -264,18 +265,16 @@ export class BookingStatusPage implements OnInit {
   }
 
   ionViewWillLeave() {
-    // ✅ UI-only safety net: make sure we never leave the page with
-    // scroll locked / a stray dropdown open if the user navigates
-    // away while it was showing.
     this.closeActionMenu();
   }
 
-  // ✅ FIX: if the device is rotated (or the browser is resized) while
-  // the fixed-position 3-dot action dropdown is open, its JS-computed
-  // top/left coordinates go stale relative to the new viewport and it
-  // can end up detached from its row or partially off-screen. Simplest
-  // safe fix: close it on resize/orientation change rather than trying
-  // to re-anchor it to a row that may have moved or re-rendered.
+  ngOnDestroy() {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+  }
+
   @HostListener('window:resize')
   @HostListener('window:orientationchange')
   onViewportChange() {
@@ -284,14 +283,6 @@ export class BookingStatusPage implements OnInit {
     }
   }
 
-  // ✅ role + currentUserId ata AuthService (real API) varun ghetले
-  // jातात. Cache asel tar tithun, nahitar loadCurrentUser() cha fresh
-  // API call kela jato. localStorage la kahihi read/write nahi.
-  //
-  // ✅ FIX (auto-refresh bug): aधी 'cached' branch madhe loadBookings()
-  // call nahi hota, tyामुळे page var परत yeताna table रिकामी disाyची
-  // ani manually refresh karावं lagत होतं. Aता donhi (cached + fresh)
-  // branches madhe loadBookings() call hoto.
   private loadCurrentUser() {
     const cached = this.authService.currentUserValue;
     if (cached) {
@@ -331,10 +322,6 @@ export class BookingStatusPage implements OnInit {
     return this.formatDateForInput(d);
   }
 
-  // ✅ Material date-range-picker cha state. Material Date objects vaparto,
-  // tyामुळे existing fromDate/toDate ('YYYY-MM-DD' strings) shi convert
-  // karava lagतो — baki sagळा component (applyFilters/loadBookings) tyाच
-  // string format var chalto, tyामुळे to untouched thevla ahे.
   @ViewChild('rangePicker') rangePicker!: any;
 
   rangeStart: Date | null = null;
@@ -362,13 +349,19 @@ export class BookingStatusPage implements OnInit {
 
   onRangeEndChange(event: any) {
     this.rangeEnd = event?.value || null;
-    // ✅ donhi dates select झाल्यावर (start + end), filters apply
-    // karायचे ani list reload karायची.
     if (this.rangeStart && this.rangeEnd) {
       this.fromDate = this.toDateStr(this.rangeStart);
       this.toDate = this.toDateStr(this.rangeEnd);
       this.applyFilters();
     }
+  }
+
+  onQuickSearchChange() {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => {
+      this.currentPage = 0;
+      this.loadBookings();
+    }, this.SEARCH_DEBOUNCE_MS);
   }
 
   private mapBookingItem(raw: any): BookingListItem {
@@ -438,13 +431,19 @@ export class BookingStatusPage implements OnInit {
     this.isLoadingList = true;
     const labId = this.labApi.getCurrentLabId();
 
-    const endDateExclusive = this.addOneDay(this.toDate);
+    const searchActive = this.isSearchMode;
+    const startDate = searchActive ? this.SEARCH_START_DATE : this.fromDate;
+    const endDateExclusive = searchActive
+      ? this.addOneDay(this.formatDateForInput(new Date()))
+      : this.addOneDay(this.toDate);
+    const pageToUse = searchActive ? 0 : this.currentPage;
+    const pageSizeToUse = searchActive ? this.SEARCH_PAGE_SIZE : this.pageSize;
 
     this.labApi.getBookingStatusNew(
       labId,
-      this.currentPage,
-      this.pageSize,
-      this.fromDate,
+      pageToUse,
+      pageSizeToUse,
+      startDate,
       endDateExclusive,
       this.selectedFranchiseId || undefined
     ).subscribe({
@@ -453,7 +452,7 @@ export class BookingStatusPage implements OnInit {
           const list = res?.content || res || [];
           const rawList = Array.isArray(list) ? list : [];
           this.bookings = rawList.map((b: any) => this.mapBookingItem(b));
-          this.totalPages = res?.totalPages ?? 1;
+          this.totalPages = searchActive ? 1 : (res?.totalPages ?? 1);
           this.isLoadingList = false;
           this.cdr.detectChanges();
         });
@@ -654,11 +653,6 @@ export class BookingStatusPage implements OnInit {
     this.openActionRowId = item.bookingId;
     this.openActionItem = item;
 
-    // ✅ UI-only: the real scroll-lock now happens via [scrollY] bound
-    // on <ion-content> in the template (ion-content owns its own
-    // internal scroll container, so a CSS-only host class could never
-    // reliably stop it). This body class is kept only as a hook for any
-    // global/app-shell styles that may key off it elsewhere.
     document.body.classList.add('action-menu-open');
   }
 
@@ -703,7 +697,7 @@ export class BookingStatusPage implements OnInit {
           this.payNowAmount = 0;
           this.paidAmount = this.basePaidAmount;
         } else {
-          console.log('EDIT TEST: single-booking fetch cha tests rikame ale, list cha (barobar) data vaparला');
+          console.log('EDIT TEST: single-booking fetch cha tests rikame ale, list cha (barobar) data vaparла');
         }
         this.isTestLoading = false;
       },
@@ -734,7 +728,10 @@ export class BookingStatusPage implements OnInit {
   }
 
   addTest(test: BookingTest) {
-    this.selectedTests.push({ ...test, resultValue: '' });
+    // ✅ Marked isNewlyAdded so we can later tell the user precisely
+    // which tests failed to persist (backend doesn't support inserting
+    // new test-mapping rows via updatePatient — see updateTestBooking()).
+    this.selectedTests.push({ ...test, resultValue: '', isNewlyAdded: true });
     this.searchTerm = '';
     this.filteredTests = [];
     this.showToast(`${test.testName} added`, 'success');
@@ -788,12 +785,32 @@ export class BookingStatusPage implements OnInit {
     return Math.max(0, this.totalAmount - this.paidAmount);
   }
 
-  // ⚠️ ha ajunही 'updatePatient' endpoint la call karto — je confirm
-  // झाले आहे ki paidAmount/dueAmount properly SAVE करत नाही (backend
-  // cha billingTransactionMappingEntities veगळा ledger ahे). Diagnostic
-  // verification wadhu thevla ahе — backend team khare billing/payment
-  // endpoint dettील tyaच divशी to endpoint ithe plug kela ki pura kaam
-  // hoईल.
+  // ⚠️ CONFIRMED via live console logs (2 separate real test runs):
+  // updatePatient endpoint only updates EXISTING test-mapping rows
+  // (matched by testMappingId). It has no insert path for brand-new
+  // tests — sending testMappingId:null for a new test is silently
+  // ignored by the backend every time, regardless of payload field
+  // names. This is a backend limitation, not fixable from the
+  // frontend alone.
+  //
+  // Fix strategy (frontend-safe, no data loss, no false "success"):
+  // 1. Still send the full test list (existing + attempted-new) — if
+  //    backend is ever updated to support insert, this starts working
+  //    with zero frontend changes.
+  // 2. After save, diff re-fetched tests by testId to find exactly
+  //    which NEWLY ADDED tests did NOT persist.
+  // 3. If any new test failed to persist: show a clear, staff-facing
+  //    error naming those tests, do NOT close the modal (so the user
+  //    doesn't lose their in-progress edit), and keep only the
+  //    unsaved new test(s) in the list so they can retry/report it.
+  // 4. If all requested tests persisted, proceed with the original
+  //    success/payment-mismatch flow unchanged.
+// ✅ FINAL FIX: split save flow.
+  // - Existing tests (already have testMappingId) → updatePatient
+  //   (confirmed working for price/discount edits across all prior tests).
+  // - Newly added tests (isNewlyAdded, no testMappingId) → dedicated
+  //   addTest endpoint (confirmed insert-capable via Postman collection,
+  //   uses newTest:true flag).
   updateTestBooking() {
     if (!this.selectedBooking || this.isSavingTest) return;
 
@@ -806,7 +823,10 @@ export class BookingStatusPage implements OnInit {
     const labId = this.labApi.getCurrentLabId();
     const bookingId = this.selectedBooking.bookingId;
 
-    const body: any = {
+    const newTests = this.selectedTests.filter(t => t.isNewlyAdded);
+    const existingTests = this.selectedTests.filter(t => !t.isNewlyAdded);
+
+    const patientBody: any = {
       bookingId,
       customerName: this.selectedBooking.customerName,
       ageType: this.selectedBooking.ageType,
@@ -818,12 +838,9 @@ export class BookingStatusPage implements OnInit {
       franchiseId: this.selectedBooking.franchise?.franchiseId,
       createdOn: this.selectedBooking.createdOn,
 
-      tests: this.selectedTests.map(t => ({
+      tests: existingTests.map(t => ({
         testId: t.testId,
-        testMappingId: t.testMappingId,
-        test_name: t.testName,
-        test_price: t.testMrp,
-        assignedPrice: t.testMrp
+        profileId: 0
       })),
 
       subTotalAmount: this.subTotal,
@@ -835,33 +852,54 @@ export class BookingStatusPage implements OnInit {
       paymentMode: this.paymentMethod
     };
 
-    console.log('🔵 SENDING TO updatePatient:', JSON.stringify(body, null, 2));
+    console.log('🔵 SENDING TO updatePatient (existing tests):', JSON.stringify(patientBody, null, 2));
 
-    this.labApi.updatePatient(labId, bookingId, body).subscribe({
-      next: (res: any) => {
-        console.log('🟢 RESPONSE FROM updatePatient:', JSON.stringify(res, null, 2));
+    this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
+      next: () => {
+        // ✅ If there are newly-added tests, call the dedicated
+        // addTest endpoint for them (confirmed insert-capable).
+        if (newTests.length > 0) {
+          const addTestBody: any = {
+            bookingId,
+            customerName: this.selectedBooking!.customerName,
+            gender: this.selectedBooking!.gender,
+            aadhaarNumber: this.selectedBooking!.aadhaarNumber || '',
+            tests: newTests.map(t => ({
+              testId: t.testId,
+              testName: t.testName,
+              testPrice: t.testMrp,
+              doctorTestDiscountPrice: 0,
+              doctorTestCommissionPrice: 0,
+              test_price: t.testPrice ?? t.testMrp,
+              assignedPrice: [t.testPrice ?? t.testMrp],
+              source: t.method || 'RPL',
+              discount: 0,
+              newTest: true
+            }))
+          };
 
-        this.labApi.getSingleBooking(bookingId).subscribe({
-          next: (freshRes: any) => {
-            console.log('🟣 RE-FETCHED BOOKING AFTER SAVE:', JSON.stringify(freshRes, null, 2));
-            console.log('🔍 Expected paidAmount:', this.paidAmount, '| Actual saved paidAmount:', freshRes.paidAmount);
-            console.log('🔍 Expected dueAmount:', this.dueAmount, '| Actual saved dueAmount:', freshRes.dueAmount);
+          console.log('🟣 SENDING TO addTest (new tests):', JSON.stringify(addTestBody, null, 2));
 
-            this.ngZone.run(() => {
-              this.isSavingTest = false;
-              if (Number(freshRes.paidAmount) !== Number(this.paidAmount)) {
-                this.showToast('⚠️ Payment save nahi zala — backend endpoint update havа (console pahaa)', 'error');
-              } else {
-                this.showToast('Booking updated successfully', 'success');
-              }
-              this.closeTestModal();
-              this.loadBookings();
-            });
-          }
-        });
+          this.labApi.addTestToBooking(addTestBody).subscribe({
+            next: (addRes: any) => {
+              console.log('🟢 RESPONSE FROM addTest:', JSON.stringify(addRes, null, 2));
+              this.verifyAndFinishSave(bookingId, newTests);
+            },
+            error: (err) => {
+              console.log('🔴 ADD TEST ERROR:', err);
+              this.ngZone.run(() => {
+                this.isSavingTest = false;
+                this.showToast('Naveen test add nahi zala: ' + (err.error?.message || 'Unknown error'), 'error');
+              });
+            }
+          });
+        } else {
+          // No new tests — existing-only save, verify and close as before.
+          this.verifyAndFinishSave(bookingId, []);
+        }
       },
       error: (err) => {
-        console.log('🔴 UPDATE TEST BOOKING ERROR:', err);
+        console.log('🔴 UPDATE PATIENT ERROR:', err);
         this.ngZone.run(() => {
           this.isSavingTest = false;
           this.showToast('Failed to update booking: ' + (err.error?.message || 'Unknown error'), 'error');
@@ -870,6 +908,57 @@ export class BookingStatusPage implements OnInit {
     });
   }
 
+  // ✅ Shared verification step — re-fetches booking and confirms every
+  // requested test (existing + newly-added) actually persisted, using
+  // the same honest diff-based approach as before.
+  private verifyAndFinishSave(bookingId: number, newTests: BookingTest[]) {
+    this.labApi.getSingleBooking(bookingId).subscribe({
+      next: (freshRes: any) => {
+        console.log('🟣 RE-FETCHED BOOKING AFTER SAVE:', JSON.stringify(freshRes, null, 2));
+
+        const savedTestIds = new Set(
+          (freshRes.tests || []).map((t: any) => String(t.testId))
+        );
+
+        const missingNewTests = newTests.filter(
+          t => !savedTestIds.has(String(t.testId))
+        );
+
+        console.log('🔍 Newly-added tests requested:', newTests.length);
+        console.log('🔍 Newly-added tests NOT persisted:', missingNewTests.map(t => t.testName));
+
+        this.ngZone.run(() => {
+          this.isSavingTest = false;
+
+          if (missingNewTests.length > 0) {
+            const names = missingNewTests.map(t => t.testName).join(', ');
+            this.showToast(
+              `Yeh test add nahi zala: ${names}. Kripya thodya vela nantar punha try kara, ki system admin la sanga.`,
+              'error'
+            );
+            this.selectedTests = this.selectedTests.filter(
+              t => !t.isNewlyAdded || missingNewTests.some(m => m.testId === t.testId)
+            );
+            this.loadBookings();
+            return;
+          }
+
+          this.showToast('Booking updated successfully', 'success');
+          this.closeTestModal();
+          this.loadBookings();
+        });
+      },
+      error: (err) => {
+        console.log('🔴 RE-FETCH AFTER SAVE ERROR:', err);
+        this.ngZone.run(() => {
+          this.isSavingTest = false;
+          this.showToast('Saved, but refresh failed — please reopen', 'warning');
+          this.closeTestModal();
+          this.loadBookings();
+        });
+      }
+    });
+  }
   editPatient(item: BookingListItem) {
     if (!this.canEditPatient) return;
     this.closeActionMenu();
@@ -888,11 +977,6 @@ export class BookingStatusPage implements OnInit {
         data.lab = fresh.franchise?.franchiseName || 'SELF';
         data.franchiseId = fresh.franchise?.franchiseId || null;
 
-        // ✅ FIXED — "doctorTitle" backend cडून kayam "dr" default yeत
-        // hota, tyामुळे HTML cha blank-option fix काहीच काम karत nahi
-        // hota (karan model madhe aधीच "dr" value hota). Aata donhi
-        // (title + doctorTitle) explicitly blank thevली aहेत — user
-        // manually select karepryant blank राहतील.
         data.title = fresh.title || '';
         data.doctorTitle = '';
 

@@ -240,7 +240,7 @@ export class LabApiService {
     return this.getLabId();
   }
 
-getReportsByStatus(
+  getReportsByStatus(
     labId: number,
     reportStatus: string,
     page: number = 0,
@@ -263,4 +263,50 @@ getReportsByStatus(
 
     return this.http.get(`${this.BASE_URL}/api/v1/lab/report/all/${labId}`, { params });
   }
-}
+  // ✅ CONFIRMED via Postman collection: dedicated insert-capable
+  // endpoint for adding a NEW test to an existing booking. Unlike
+  // updatePatient (update-only, confirmed via live testing), this
+  // endpoint accepts newTest:true and actually creates a new
+  // test-mapping row.
+  addTestToBooking(body: any): Observable<any> {
+    return this.http.post(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/addTest`,
+      body
+    );
+  }
+
+generatePdfReport(
+  bookingIds: number[],
+  options?: {
+    single?: boolean;
+    letterHead?: boolean;
+    fLetterHead?: boolean;
+    waterMark?: boolean;
+  }
+): Observable<any> {
+  const labId = this.getLabId();
+  const token = this.authService.getToken(); // तुझ्या AuthService प्रमाणे adjust कर
+  const domain = environment.domain;
+
+  const bookingApi = `${this.BASE_URL}/api/v1/lab/booking/patient/get-bookings/${labId}?bookingIds=${bookingIds.join(',')}`;
+  const labSettingsApi = `${this.BASE_URL}/api/v1/lab/settings/${labId}`;
+
+  const payload = {
+    templateName: 'template1',
+    params: {
+      letterHead: options?.letterHead ?? true,
+      domain,
+      fLetterHead: options?.fLetterHead ?? false,
+      waterMark: options?.waterMark ?? false,
+      single: options?.single ?? (bookingIds.length === 1),
+      bookings: bookingIds,
+      bookingApi,
+      labSettingsApi,
+      token,
+      reportTestId: 'null',   // ✅ हे मिसिंग होतं — company code मध्ये हे नेहमी पाठवलं जातं
+      cancelTest: '0'          // ✅ हेही मिसिंग होतं
+    }
+  };
+
+  return this.http.post('https://pdf.hypatholab.in/simple-pdf', payload);
+}}

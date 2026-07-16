@@ -42,8 +42,23 @@ import { ToastService } from '../../services/toast';
 // (interface="popover") ahе. Date range ata donhi native
 // <input type="date"> nahi — booking-status page cha Angular Material
 // mat-date-range-picker cha exact tach pattern (single trigger button +
-// hidden mat-form-field + calendar overlay) vaparला ahе, jenekarून
+// hidden mat-form-field + calendar overlay) vaparला ahे, jenekarून
 // donhi pages var eकach calendar UI/behaviour disеl.
+//
+// ✅ SEARCH-OVERRIDES-DATE FIX (this pass) — ADI problem: quickSearch
+// FAKTA already-loaded `bookings` array var client-side filter karat
+// hota, ani to array fromDate/toDate (default = AAJ) cha range madheच
+// backend kadun yeत hota. Tyामुळे booking ID/name search kितीही barobar
+// asली tarी, booking tya date-range cha baher aslyas result rikama
+// disaycha (जरी booking exist karत असला तरी) — ha search cha bug nव्हता,
+// FILTER-SCOPE cha bug hota.
+//
+// FIX: real industry apps (Swiggy/Zomato order-search, Gmail search)
+// prмाणे — quickSearch madhe kahi type kela ki (debounced), date-filter
+// TEMPORARILY BYPASS hoto ani wide-range fetch (SEARCH_START_DATE →
+// tomorrow, moठा page-size) trigger hoto. Search box rikama kelyavar
+// normal date-filtered view परत yeतो. Ha behaviour isSearchMode getter
+// varून drive hoto — franchise-change sudhha search-aware ahे.
 // ---------------------------------------------------------------------------
 export type ReportTabKey = 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR';
 
@@ -112,9 +127,25 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   // ✅ Sगळा data eकच array madhे (in-memory only, localStorage nahi).
   // currentPage/hasMore booking-status page cha pattern.
   private bookings: ReportBookingRow[] = [];
+  private searchDataset: ReportBookingRow[] = [];
+private filteredDataset: ReportBookingRow[] = [];
+private hasSearchLoaded = false;
+private autoTabSwitched = false;
   private currentPage = 0;
   private readonly pageSize = 200;
   hasMore = false;
+
+  // ✅ Search-mode cha wide-range fetch sathi — booking kितीही जुनी asли
+  // tarी search la disावी mhanून far mागe cha lower-bound date. Upper
+  // bound nehmi "tomorrow" (aajchi booking sudhha yaवी).
+  private readonly SEARCH_START_DATE = '2015-01-01';
+  private readonly SEARCH_PAGE_SIZE = 500;
+  private searchDebounceTimer: any = null;
+  private readonly SEARCH_DEBOUNCE_MS = 400;
+
+  get isSearchMode(): boolean {
+    return this.quickSearch.trim().length > 0;
+  }
 
   // ✅ Material date-range-picker cha state — booking-status page cha
   // exact tach pattern. fromDate/toDate ('YYYY-MM-DD' strings) hेच
@@ -137,13 +168,53 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
     });
   }
+private autoSwitchTab() {
 
+  if (this.autoTabSwitched)
+    return;
+
+  const order: ReportTabKey[] = [
+    'COMPLETE',
+    'CLINICAL',
+    'PARTIALLY_COMPLETE',
+    'PENDING',
+    'SNR'
+  ];
+
+  const counts: Record<ReportTabKey, number> = {
+    COMPLETE: 0,
+    CLINICAL: 0,
+    PARTIALLY_COMPLETE: 0,
+    PENDING: 0,
+    SNR: 0
+  };
+
+  this.filteredDataset.forEach(r => counts[r.bucket]++);
+
+  if (counts[this.activeTab] === 0) {
+
+    const tab = order.find(x => counts[x] > 0);
+
+    if (tab) {
+      this.activeTab = tab;
+    }
+
+  }
+
+  this.autoTabSwitched = true;
+
+}
   ngOnInit() {
     this.loadFranchises();
     this.loadData();
   }
 
-  ngOnDestroy() { }
+  ngOnDestroy() {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+      this.searchDebounceTimer = null;
+    }
+  }
 
   private formatDateForInput(d: Date): string {
     const yyyy = d.getFullYear();
@@ -209,14 +280,121 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
   }
 
-  // ================= DATA LOADING (fresh call, no cache carried over) =================
-  loadData() {
-    this.selectedIds.clear();
-    this.bookings = [];
-    this.currentPage = 0;
-    this.hasMore = false;
-    this.fetchPage();
+  // ================= QUICK SEARCH (date-filter override) =================
+  // ✅ Ha wach fix cha core ahe. Search box madhe type kela ki, debounce
+  // nantar isSearchMode true asel tar wide-range fetch (runSearch()),
+  // nahitar normal date-filtered loadData() call hoto.
+  onQuickSearchChange() {
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
+    this.searchDebounceTimer = setTimeout(() => {
+      if (this.isSearchMode) {
+        this.runSearch();
+      } else {
+
+  this.quickSearch = '';
+
+  this.filteredDataset = [];
+
+  this.searchDataset = [];
+
+  this.hasSearchLoaded = false;
+
+  this.autoTabSwitched = false;
+
+  this.selectedIds.clear();
+
+  this.loadData();
+
+}
+    }, this.SEARCH_DEBOUNCE_MS);
   }
+
+  // ✅ Search active astana date-filter cha ऐवजी wide range (2015 →
+  // tomorrow) backend la pathvतो, jenekarून booking kितीही जुनी/नवीन
+  // asली tarी ID/name/barcode search la sapadel. Page-size mोठा (500)
+  // eकच batch madhे — load-more disable rahto search-mode madhе.
+private runSearch(): void {
+
+  this.autoTabSwitched = false;
+
+  // First search -> API
+  if (!this.hasSearchLoaded) {
+
+    this.isLoading = true;
+
+    const labId = this.authService.labId;
+    const searchEndDate = this.addOneDay(this.todayIso());
+
+    this.labApi.getBookingStatusNew(
+      labId,
+      0,
+      this.SEARCH_PAGE_SIZE,
+      this.SEARCH_START_DATE,
+      searchEndDate,
+      this.franchiseId || undefined
+    ).subscribe({
+
+      next: (res: any) => {
+
+        this.ngZone.run(() => {
+
+          let rows: ReportBookingRow[] = (res?.content ?? res ?? [])
+            .map((r: any): ReportBookingRow => this.mapToRow(r));
+
+          if (this.roleService.isStaff) {
+            rows = rows.filter((r: ReportBookingRow) =>
+              r.createdBy === this.authService.userId
+            );
+          }
+
+          this.searchDataset = rows;
+          this.hasSearchLoaded = true;
+
+          this.applySearchFilter();
+
+          this.isLoading = false;
+
+        });
+
+      },
+
+      error: () => {
+        this.isLoading = false;
+      }
+
+    });
+
+    return;
+  }
+
+  // Next search -> local only
+  this.applySearchFilter();
+}
+
+  // ================= DATA LOADING (fresh call, no cache carried over) =================
+loadData() {
+
+  this.hasSearchLoaded = false;
+
+  this.searchDataset = [];
+
+  this.filteredDataset = [];
+
+  this.autoTabSwitched = false;
+
+  this.selectedIds.clear();
+
+  this.bookings = [];
+
+  this.currentPage = 0;
+
+  this.hasMore = false;
+
+  this.activeTab = 'COMPLETE';
+
+  this.fetchPage();
+
+}
 
   loadMore() {
     if (!this.hasMore || this.isLoadingMore) return;
@@ -340,12 +518,20 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   onDateRangeChange() {
+    // ✅ Search active astana date-filter la kahihi effect nahi — search
+    // already wide-range var chalto. Ha guard confusing double-fetch
+    // टाळतो.
+    if (this.isSearchMode) return;
     this.loadData();
   }
 
   onFranchiseChange(id: any) {
     this.franchiseId = id;
-    this.loadData();
+    if (this.isSearchMode) {
+      this.runSearch();
+    } else {
+      this.loadData();
+    }
   }
 
   reportsFraction(item: ReportBookingRow): string {
@@ -358,45 +544,65 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return item.bucket === 'COMPLETE';
   }
 
-  // ================= TAB / TABLE HELPERS =================
-  get rowsForActiveTab(): ReportBookingRow[] {
-    const rows = this.bookings.filter(r => r.bucket === this.activeTab);
-    const q = this.quickSearch.trim().toLowerCase();
-    if (!q) return rows;
+get rowsForActiveTab(): ReportBookingRow[] {
 
-    return rows.filter(r =>
-      String(r.bookingId).toLowerCase().includes(q) ||
-      (r.patientId || '').toLowerCase().includes(q) ||
-      r.name.toLowerCase().includes(q) ||
-      r.barcodes.some(b => b.toLowerCase().includes(q))
-    );
+  const source = this.isSearchMode
+      ? this.filteredDataset
+      : this.bookings;
+
+  return source.filter(r => r.bucket === this.activeTab);
+
+}
+
+get totalBookings(): number {
+
+  return this.isSearchMode
+      ? this.filteredDataset.length
+      : this.bookings.length;
+
+}
+
+get bucketCount() {
+
+  const counts: Record<ReportTabKey, number> = {
+    COMPLETE: 0,
+    CLINICAL: 0,
+    PARTIALLY_COMPLETE: 0,
+    PENDING: 0,
+    SNR: 0
+  };
+
+  const source = this.isSearchMode
+    ? this.filteredDataset
+    : this.bookings;
+
+  for (const row of source) {
+    counts[row.bucket]++;
   }
 
-  get totalBookings(): number {
-    return this.bookings.length;
-  }
+  return counts;
+}
+setTab(tab: ReportTabKey) {
 
-  get bucketCount() {
-    const counts: Record<ReportTabKey, number> = {
-      COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0
-    };
-    this.bookings.forEach(r => counts[r.bucket]++);
-    return counts;
-  }
+  this.activeTab = tab;
 
-  setTab(tab: ReportTabKey) {
-    this.activeTab = tab;
-    this.selectedIds.clear();
-  }
+  this.autoTabSwitched = true;
+
+  this.selectedIds.clear();
+
+}
 
   getTests(item: ReportBookingRow): string {
     return item.tests.map(t => t.name).join(', ') || '-';
   }
 
   // ================= ROLE GATES =================
-  get canShowDownloadControls(): boolean {
-    return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
-  }
+get canShowDownloadControls(): boolean {
+
+  return this.roleService.canDownloadReports &&
+         this.activeTab === 'COMPLETE';
+
+}
 
   // ================= SELECTION (admin + Complete tab only) =================
   isSelected(item: ReportBookingRow): boolean {
@@ -429,67 +635,44 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ================= DOWNLOAD =================
-  async downloadSelected() {
-    if (!this.canShowDownloadControls) {
-      this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
-      return;
-    }
-
-    const selected = this.selectedReports;
-
-    if (selected.length === 0) {
-      this.toast.warning('Warning', 'Kripya kimman ek report select kara');
-      return;
-    }
-
-    this.isGenerating = true;
-    let successCount = 0;
-
-    try {
-      for (const row of selected) {
-        const bookingId = Number(row.bookingId);
-        let fileUrl = row.file;
-
-        if (!fileUrl) {
-          try {
-            const createRes: any = await firstValueFrom(this.labApi.createReport({ bookingId }));
-
-            if (createRes && createRes.success === false) {
-              this.toast.error('Error', `Booking ${bookingId}: ${createRes.message || 'report generate fail zala'}`);
-              continue;
-            }
-
-            const fresh: any = await firstValueFrom(this.labApi.getSingleBooking(bookingId));
-            fileUrl = fresh?.reportUrl || fresh?.pdfUrl || fresh?.reportPath || fresh?.file || fresh?.fileUrl;
-
-            // ✅ in-memory row var pण navीn fileUrl update kर, jenekarून
-            // list madhе परत lगेच dिसेल (परत सगळा data reload nahi करावं
-            // lagत).
-            const idx = this.bookings.findIndex(b => String(b.bookingId) === String(bookingId));
-            if (idx !== -1 && fileUrl) this.bookings[idx].file = fileUrl;
-          } catch (innerErr) {
-            console.error('Report create/fetch fallback failed for booking', bookingId, innerErr);
-          }
-        }
-
-        if (!fileUrl) {
-          console.warn('report file sapadla nahi booking', bookingId);
-          this.toast.error('Error', `Booking ${bookingId} cha report file sapadla nahi`);
-          continue;
-        }
-
-        window.open(fileUrl, '_blank');
-        successCount++;
-      }
-
-      if (successCount > 0) {
-        this.toast.success('Success', `${successCount} report(s) ready`);
-        this.selectedIds.clear();
-      }
-    } finally {
-      this.isGenerating = false;
-    }
+async downloadSelected() {
+  if (!this.canShowDownloadControls) {
+    this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
+    return;
   }
+
+  const selected = this.selectedReports;
+
+  if (selected.length === 0) {
+    this.toast.warning('Warning', 'Kripya kimman ek report select kara');
+    return;
+  }
+
+  this.isGenerating = true;
+
+  try {
+    const bookingIds = selected.map(r => Number(r.bookingId));
+
+    const res: any = await firstValueFrom(
+      this.labApi.generatePdfReport(bookingIds, {
+        single: bookingIds.length === 1
+      })
+    );
+
+    if (res?.success && res?.downloadUrl) {
+      window.open(res.downloadUrl, '_blank');
+      this.toast.success('Success', `${bookingIds.length} report(s) ready`);
+      this.selectedIds.clear();
+    } else {
+      this.toast.error('Error', res?.message || 'PDF generate karta aala nahi');
+    }
+  } catch (err) {
+    console.error('PDF generation failed', err);
+    this.toast.error('Error', 'PDF generate karnyat error aali, punha try kara');
+  } finally {
+    this.isGenerating = false;
+  }
+}
 
   private todayIso(): string {
     return new Date().toISOString().slice(0, 10);
@@ -501,4 +684,46 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   loadMoreActiveTab(): void {
     this.loadMore();
   }
+
+private applySearchFilter(): void {
+
+  const q = this.quickSearch.trim().toLowerCase();
+
+  // Search cleared
+  if (!q) {
+    this.filteredDataset = [];
+    this.autoTabSwitched = false;
+    this.selectedIds.clear();
+    return;
+  }
+
+  const numeric = /^\d+$/.test(q);
+
+  this.filteredDataset = this.searchDataset.filter(r => {
+
+    if (numeric) {
+      return (
+        String(r.bookingId) === q ||
+        String(r.patientId ?? '') === q
+      );
+    }
+
+    return (
+      r.name.toLowerCase().includes(q) ||
+      String(r.bookingId).includes(q) ||
+      String(r.patientId ?? '').includes(q) ||
+      r.tests.some(t =>
+        t.name.toLowerCase().includes(q)
+      ) ||
+      r.barcodes.some(b =>
+        b.toLowerCase().includes(q)
+      )
+    );
+
+  });
+
+  this.selectedIds.clear();
+
+  this.autoSwitchTab();
+}
 }

@@ -25,20 +25,27 @@
         <ion-icon name="calendar-clear-outline"></ion-icon>
         <span>Total Bookings: {{ totalBookingsCount }}</span>
       </div>
-      <div class="default-note" *ngIf="isDefaultTodayRange">
+      <div class="default-note" *ngIf="isDefaultTodayRange && !isSearchMode">
         <ion-icon name="information-circle-outline"></ion-icon>
         "Please refresh to see the latest data."
+      </div>
+      <!-- ✅ Search active astana date-filter ignore hoto he user la spashta
+           disave mhanun ha hint — booking kितीही जुनी asли tarी
+           ID/name/doctor search la sapadel (date range cha barobar he
+           independent). -->
+      <div class="default-note search-mode-note" *ngIf="isSearchMode">
+        <ion-icon name="search-outline"></ion-icon>
+        Searching all dates for "{{ quickSearch }}" (date filter ignored)
       </div>
     </div>
 
     <!-- ===================== FILTER BAR ===================== -->
-  <div class="filter-bar">
+    <div class="filter-bar">
       <div class="filter-field search-field">
         <span class="search-icon-badge">
           <ion-icon name="search-outline"></ion-icon>
         </span>
-        <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch"
-          (ngModelChange)="quickSearch = quickSearch">
+        <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch" (ngModelChange)="onQuickSearchChange()">
       </div>
 
 
@@ -69,7 +76,9 @@
            donhi dates single calendar madhe select karता yeतात;
            donhi select झाल्यावर fromDate/toDate आपोआप update होऊन
            applyFilters() call hoतो (loadBookings cha 'YYYY-MM-DD'
-           string format untouched thevla ahे). -->
+           string format untouched thevla ahे). Note: quickSearch
+           active असताना ha date-range loadBookings() madhे ignore
+           hoto (isSearchMode cha wide-range vaparला jato). -->
       <div class="filter-field date-field" (click)="openDateRangePicker()">
         <span class="date-icon-badge">
           <ion-icon name="calendar-outline"></ion-icon>
@@ -306,6 +315,10 @@
                       <td class="test-name-cell">
                         {{ test.testName }}
                         <span class="franchise-tag" *ngIf="test.method">Method: {{ test.method }}</span>
+                        <span *ngIf="test.isNewlyAdded"
+                          style="display:inline-block;margin-left:6px;padding:1px 6px;border-radius:4px;background:#fdecea;color:#c0392b;font-size:11px;font-weight:600;">
+                          Not saved yet
+                        </span>
                       </td>
                       <td *ngIf="canViewAmount">{{ test.testMrp }}</td>
                       <td *ngIf="canViewAmount">{{ test.discount || 0 }}</td>

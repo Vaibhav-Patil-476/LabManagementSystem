@@ -15,9 +15,17 @@
       <ion-icon name="calendar-clear-outline"></ion-icon>
       Total Bookings: {{ totalBookings }}
     </span>
-    <span class="refresh-hint">
+    <!-- ✅ Search-mode active nasel tenvhach normal date-refresh hint -->
+    <span class="refresh-hint" *ngIf="!isSearchMode">
       <ion-icon name="information-circle-outline"></ion-icon>
       "Please refresh to see the latest data."
+    </span>
+    <!-- ✅ Search active astana date-filter ignore hoto he user la spashta disave
+         mhanun ha hint — booking kितीही जुनी asли tarी ID/name/barcode search la
+         sapadel (date range cha barobar he independent). -->
+    <span class="refresh-hint search-mode-hint" *ngIf="isSearchMode">
+      <ion-icon name="search-outline"></ion-icon>
+      Searching all dates for "{{ quickSearch }}" (date filter ignored)
     </span>
   </div>
 
@@ -33,7 +41,8 @@
       <input
         type="text"
         placeholder="Quick search"
-        [(ngModel)]="quickSearch" />
+        [(ngModel)]="quickSearch"
+        (ngModelChange)="onQuickSearchChange()" />
     </div>
 
  <div class="filter-field select-field" *ngIf="roleService.isLabAdmin">
@@ -75,7 +84,7 @@
   </div>
 
 <!-- ===================== STATUS TABS ===================== -->
-  <div class="status-tabs-wrapper">
+  <div class="status-tabs-wrapper" *ngIf="!isSearchMode">
     <div class="status-tabs">
       <div
         *ngFor="let tab of tabs"
@@ -88,6 +97,7 @@
       </div>
     </div>
   </div>
+  
 <!-- Download is ONLY visible to Lab Admin, and ONLY on the Complete tab -->
   <div class="download-row" *ngIf="canShowDownloadControls">
     <ion-button
