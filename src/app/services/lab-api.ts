@@ -316,9 +316,6 @@ printBill(payload: any): Observable<any> {
   return this.http.post(this.billUrl, payload);
 }
 
-// ✅ report-pdf सारखाच payload shape वापरला (bookingApi/labSettingsApi/
-// token/domain/reportTestId/cancelTest) — कारण त्याच backend team ने
-// bill-pdf पण असाच contract expect केला असण्याची शक्यता आहे.
 buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmount: any = null): any {
   const labId = this.getLabId();
   const token = this.authService.getToken();
@@ -328,7 +325,7 @@ buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmou
     params: {
       bookingApi: `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`,
       labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
-      currentUserApi: `${environment.authUrl}/current-user`,   // ✅ हेच missing होतं — error exact हेच सांगत होता
+      currentUserApi: `${this.BASE_URL}/auth/current-user`,   // ✅ AuthService वरून confirm केलेला exact URL
       billType: billType,
       token,
       customBillAmount,
@@ -336,4 +333,11 @@ buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmou
     }
   };
 }
+// ✅ CONFIRMED Edit Barcode API — array payload accept karto
+  updateBarcode(bookingId: number, payload: any[]): Observable<any> {
+    return this.http.put(
+      `${this.BASE_URL}/api/v1/sampleaccession/updateBarcode/${bookingId}`,
+      payload
+    );
+  }
 }

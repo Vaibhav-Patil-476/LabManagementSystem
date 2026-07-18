@@ -194,6 +194,11 @@
           </tr>
         </tbody>
       </table>
+      <div class="load-more-row" *ngIf="hasMore && !isSearchMode">
+        <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreBookings()">
+          {{ isLoadingMore ? 'Loading...' : 'Load More' }}
+        </ion-button>
+      </div>
     </div>
   </div>
 
@@ -527,6 +532,66 @@
     </ng-template>
   </ion-modal>
 
+  <!-- ===================== ➕ PATIENT HISTORY MODAL (premium layout) ===================== -->
+  <ion-modal [isOpen]="isHistoryModalOpen" cssClass="history-popup sheet-modal" (didDismiss)="closeHistoryModal()"
+    [breakpoints]="[0, 1]" [initialBreakpoint]="1">
+    <ng-template>
+      <div class="modal-page">
+        <div class="sheet-top">
+          <div class="modal-handle"></div>
+          <div class="modal-header">
+            <h2>Patient History</h2>
+            <ion-button fill="clear" class="close-modal-btn" (click)="closeHistoryModal()"><ion-icon
+                name="close-outline"></ion-icon></ion-button>
+          </div>
+        </div>
+        <div class="modal-body">
+          <div *ngIf="isLoadingHistory" class="skeleton-block">
+            <div class="skeleton-line" style="width:55%"></div>
+            <div class="skeleton-line" style="width:80%"></div>
+            <div class="skeleton-line" style="width:65%"></div>
+          </div>
+
+          <ng-container *ngIf="!isLoadingHistory && historyBooking">
+            <div class="premium-summary-card">
+              <div class="premium-summary-item">
+                <span class="ps-label">Patient</span>
+                <span class="ps-value">{{ historyBooking.customerName }}</span>
+              </div>
+              <div class="premium-summary-item">
+                <span class="ps-label">Booking ID</span>
+                <span class="ps-value">#{{ historyBooking.bookingId }}</span>
+              </div>
+              <div class="premium-summary-item full-span">
+                <span class="ps-label">Booking Date</span>
+                <span class="ps-value">{{ historyBooking.createdOn | date:'medium' }}</span>
+              </div>
+            </div>
+
+            <div class="premium-section-title">Tests</div>
+            <div class="history-card" *ngFor="let test of historyBooking.tests">
+              <div class="hc-name">{{ test.testName }}</div>
+              <div class="hc-sub">Sample: {{ test.sample || '-' }}</div>
+            </div>
+            <div class="empty-tests" *ngIf="!historyBooking.tests?.length">No tests found</div>
+
+            <div class="premium-section-title">Reports</div>
+            <div class="history-card" *ngFor="let rep of historyBooking.reports">
+              <div class="hc-name">Report #{{ rep.reportId }}</div>
+              <div class="hc-sub">
+                <span class="status"
+                  [ngClass]="rep.reportStatus?.toLowerCase()?.includes('complete') ? 'completed' : 'pending'">
+                  {{ rep.reportStatus }}
+                </span>
+              </div>
+            </div>
+            <div class="empty-tests" *ngIf="!historyBooking.reports?.length">No reports found</div>
+          </ng-container>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
   <!-- ===================== DOCTOR PICKER ===================== -->
   <ion-modal [isOpen]="showDoctorPicker" cssClass="doctor-popup sheet-modal" (didDismiss)="showDoctorPicker=false"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1">
@@ -593,11 +658,17 @@
   <ion-modal [isOpen]="isNoteModalOpen" cssClass="doctor-popup sheet-modal" (didDismiss)="closeNoteModal()"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1">
     <ng-template>
+      <ion-button fill="solid" shape="round" class="close-modal-btn" (click)="closeNoteModal()">
+
+        <ion-icon slot="icon-only" name="close" aria-hidden="true">
+        </ion-icon>
+
+      </ion-button>
       <div class="modal-page">
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="modal-header">
-            <h2>Add Note — #{{ noteBooking?.bookingId }}</h2>
+            <h2>Add Note <span class="header-booking-tag">#{{ noteBooking?.bookingId }}</span></h2>
             <ion-button fill="clear" class="close-modal-btn" (click)="closeNoteModal()"><ion-icon
                 name="close-outline"></ion-icon></ion-button>
           </div>
@@ -617,47 +688,8 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== ➕ PATIENT HISTORY MODAL ===================== -->
-  <ion-modal [isOpen]="isHistoryModalOpen" cssClass="history-popup sheet-modal" (didDismiss)="closeHistoryModal()"
-    [breakpoints]="[0, 1]" [initialBreakpoint]="1">
-    <ng-template>
-      <div class="modal-page">
-        <div class="sheet-top">
-          <div class="modal-handle"></div>
-          <div class="modal-header">
-            <h2>Patient History — #{{ historyBooking?.bookingId }}</h2>
-            <ion-button fill="clear" class="close-modal-btn" (click)="closeHistoryModal()"><ion-icon
-                name="close-outline"></ion-icon></ion-button>
-          </div>
-        </div>
-        <div class="modal-body">
-          <div *ngIf="isLoadingHistory" class="skeleton-block">
-            <div class="skeleton-line" style="width:55%"></div>
-            <div class="skeleton-line" style="width:80%"></div>
-            <div class="skeleton-line" style="width:65%"></div>
-          </div>
-          <ng-container *ngIf="!isLoadingHistory && historyBooking">
-            <div class="info-row"><span class="info-label">Patient</span><span class="info-value">{{
-                historyBooking.customerName }}</span></div>
-            <div class="info-row"><span class="info-label">Booking Date</span><span class="info-value">{{
-                historyBooking.createdOn | date:'medium' }}</span></div>
-            <hr>
-            <div class="history-block" *ngFor="let test of historyBooking.tests">
-              <div class="history-test-name">{{ test.testName }}</div>
-              <div class="history-status">Sample: {{ test.sample || '-' }}</div>
-            </div>
-            <hr>
-            <div class="history-block" *ngFor="let rep of historyBooking.reports">
-              <div class="history-test-name">Report #{{ rep.reportId }}</div>
-              <div class="history-status">Status: {{ rep.reportStatus }}</div>
-            </div>
-          </ng-container>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
 
-  <!-- ===================== ➕ EDIT BARCODE MODAL (screenshot layout) ===================== -->
+  <!-- ===================== ➕ EDIT BARCODE MODAL (premium layout) ===================== -->
   <ion-modal [isOpen]="isBarcodeModalOpen" cssClass="barcode-popup sheet-modal" (didDismiss)="closeBarcodeModal()"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1">
     <ng-template>
@@ -665,84 +697,118 @@
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="modal-header">
-            <h2>Barcode update</h2>
+            <h2>Barcode Update</h2>
             <ion-button fill="clear" class="close-modal-btn" (click)="closeBarcodeModal()">
               <ion-icon name="close-outline"></ion-icon>
             </ion-button>
           </div>
         </div>
 
-        <div class="modal-body" *ngIf="barcodeBooking">
+        <div class="modal-body barcode-modal-body" *ngIf="barcodeBooking">
 
-          <div class="barcode-info-grid">
-            <div class="barcode-info-col">
-              <div class="info-row"><span class="info-label">Patient Name</span><span class="info-value">{{
-                  barcodeBooking.customerName }}</span></div>
-              <div class="info-row"><span class="info-label">Ref.Doc</span><span class="info-value">{{
-                  barcodeBooking.doctor?.doctor_name || 'self' }}</span></div>
-              <div class="info-row"><span class="info-label">Collection Center</span><span class="info-value">{{
-                  barcodeBooking.franchise?.franchiseName || 'SELF' }}</span></div>
-              <div class="info-row"><span class="info-label">Bill Created By</span><span class="info-value">{{
-                  barcodeBooking.createdBy }}</span></div>
+          <div class="premium-summary-card">
+            <div class="premium-summary-item">
+              <span class="ps-label">Patient Name</span>
+              <span class="ps-value">{{ barcodeBooking.customerName }}</span>
             </div>
-            <div class="barcode-info-col">
-              <div class="info-row"><span class="info-label">Patient ID</span><span class="info-value">{{
-                  barcodeBooking.patientId }}</span></div>
-              <div class="info-row"><span class="info-label">Bill Date</span><span class="info-value">{{
-                  barcodeBooking.createdOn | date:'medium' }}</span></div>
+            <div class="premium-summary-item">
+              <span class="ps-label">Ref. Doc</span>
+              <span class="ps-value">{{ barcodeBooking.doctor?.doctor_name || 'self' }}</span>
+            </div>
+            <div class="premium-summary-item">
+              <span class="ps-label">Collection Center</span>
+              <span class="ps-value">{{ barcodeBooking.franchise?.franchiseName || 'SELF' }}</span>
+            </div>
+            <div class="premium-summary-item">
+              <span class="ps-label">Patient ID</span>
+              <span class="ps-value">{{ barcodeBooking.patientId }}</span>
+            </div>
+            <div class="premium-summary-item">
+              <span class="ps-label">Bill Date</span>
+              <span class="ps-value">{{ barcodeBooking.createdOn | date:'medium' }}</span>
+            </div>
+            <div class="premium-summary-item">
+              <span class="ps-label">Bill Created By</span>
+              <span class="ps-value">{{ barcodeBooking.createdBy }}</span>
             </div>
           </div>
 
-          <table class="barcode-test-table">
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Test Name</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let t of barcodeBooking.tests; let i = index">
-                <td>{{ i + 1 }}</td>
-                <td>{{ t.testName }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="premium-section-title">Tests in this Booking</div>
+          <div class="premium-chip-row">
+            <span class="premium-chip" *ngFor="let t of barcodeBooking.tests">{{ t.testName }}</span>
+            <span class="premium-chip empty" *ngIf="!barcodeBooking.tests?.length">No tests found</span>
+          </div>
 
-          <table class="barcode-edit-table">
-            <thead>
-              <tr>
-                <th>Sample Type</th>
-                <th>Old Barcode</th>
-                <th>New Barcode</th>
-                <th>Status</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr *ngFor="let row of barcodeRows">
-                <td>{{ row.sampleType }}</td>
-                <td>{{ row.oldBarcode }}</td>
-                <td><input type="text" [(ngModel)]="row.newBarcode" class="new-barcode-input"></td>
-                <td><span class="status pending">{{ row.status }}</span></td>
-                <td>
-                  <ion-button size="small" fill="solid" class="update-barcode-btn" [disabled]="row.saving"
-                    (click)="updateBarcodeRow(row)">
-                    {{ row.saving ? 'Saving...' : 'Update Barcode' }}
-                  </ion-button>
-                </td>
-              </tr>
-              <tr *ngIf="barcodeRows.length === 0">
-                <td colspan="5" class="empty-tests">No samples found</td>
-              </tr>
-            </tbody>
-          </table>
+          <div class="premium-section-title">Update Sample Barcodes</div>
+
+          <div class="barcode-row-card" *ngFor="let row of barcodeRows">
+            <div class="brc-top">
+              <span class="brc-sample-badge">{{ row.sampleType }}</span>
+              <span class="status brc-status" [ngClass]="row.status === 'RECEIVED' ? 'completed' : 'pending'">
+                {{ row.status }}
+              </span>
+            </div>
+
+            <div class="brc-fields">
+              <div class="brc-field">
+                <label>Old Barcode</label>
+                <input type="text" [value]="row.oldBarcode" readonly class="brc-input readonly">
+              </div>
+              <div class="brc-field">
+                <label>New Barcode</label>
+                <input type="text" [(ngModel)]="row.newBarcode" class="brc-input" placeholder="Enter new barcode">
+              </div>
+              <div class="brc-field">
+                <label>Receive Date &amp; Time</label>
+                <div class="brc-input brc-datetime-trigger" (click)="openDateTimePicker(row)">
+                  <ion-icon name="calendar-outline"></ion-icon>
+                  <span>{{ row.receiveDate ? (row.receiveDate | date:'MMM d, y, h:mm a') : 'Select date & time'
+                    }}</span>
+                </div>
+              </div>
+            </div>
+
+            <ion-button expand="block" fill="solid" class="update-barcode-btn" [disabled]="row.saving"
+              (click)="updateBarcodeRow(row)">
+              <ion-icon slot="start" name="qr-code-outline" *ngIf="!row.saving"></ion-icon>
+              <ion-spinner name="crescent" slot="start" *ngIf="row.saving"></ion-spinner>
+              {{ row.saving ? 'Saving...' : 'Update Barcode' }}
+            </ion-button>
+          </div>
+
+          <div *ngIf="barcodeRows.length === 0" class="empty-tests">No samples found</div>
 
         </div>
       </div>
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== ➕ BILL HISTORY MODAL ===================== -->
+<!-- ✅ In-app date-time picker — small centered popup (NOT a
+       full-screen bottom sheet). Removing breakpoints/initialBreakpoint
+       switches ion-modal from sheet-mode to its default centered-card
+       mode; sizing is capped via .compact-popup CSS below. -->
+  <ion-modal [isOpen]="activeDateTimeRow !== null" cssClass="datetime-popup compact-popup"
+    (didDismiss)="closeDateTimePicker()">
+    <ng-template>
+      <div class="compact-popup-page">
+        <div class="compact-popup-header">
+          <h2>Receive Date &amp; Time</h2>
+          <ion-button fill="clear" class="close-modal-btn" (click)="closeDateTimePicker()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+        <div class="compact-popup-body">
+          <ion-datetime presentation="date-time" [(ngModel)]="tempDateTimeValue" [preferWheel]="false"
+            class="premium-datetime"></ion-datetime>
+        </div>
+        <div class="compact-popup-footer">
+          <ion-button fill="clear" class="cancel-btn" (click)="closeDateTimePicker()">Cancel</ion-button>
+          <ion-button fill="clear" class="ok-btn" (click)="confirmDateTime()">OK</ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+  <!-- ===================== ➕ BILL HISTORY MODAL (premium layout) ===================== -->
   <ion-modal [isOpen]="isBillHistoryModalOpen" cssClass="history-popup sheet-modal"
     (didDismiss)="closeBillHistoryModal()" [breakpoints]="[0, 1]" [initialBreakpoint]="1">
     <ng-template>
@@ -750,20 +816,36 @@
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="modal-header">
-            <h2>Bill History — #{{ billHistoryBooking?.bookingId }}</h2>
+            <h2>Bill History</h2>
             <ion-button fill="clear" class="close-modal-btn" (click)="closeBillHistoryModal()"><ion-icon
                 name="close-outline"></ion-icon></ion-button>
           </div>
         </div>
         <div class="modal-body">
-          <div class="history-block" *ngFor="let tx of billHistoryBooking?.transactions">
-            <div class="history-test-name">Total: ₹{{ tx.totalAmount }} | Paid: ₹{{ tx.totalPaidAmount }}</div>
-            <div class="history-status">Due: ₹{{ tx.totalDueAmount }} | Mode: {{ tx.paymentMode || '-' }}</div>
+          <div class="premium-section-title">Booking #{{ billHistoryBooking?.bookingId }}</div>
+
+          <div class="bill-tx-card" *ngFor="let tx of billHistoryBooking?.transactions">
+            <div class="btx-row">
+              <span class="ps-label">Total</span>
+              <span class="ps-value">₹{{ tx.totalAmount }}</span>
+            </div>
+            <div class="btx-row">
+              <span class="ps-label">Paid</span>
+              <span class="ps-value btx-paid">₹{{ tx.totalPaidAmount }}</span>
+            </div>
+            <div class="btx-row">
+              <span class="ps-label">Due</span>
+              <span class="ps-value" [class.btx-due]="tx.totalDueAmount > 0">₹{{ tx.totalDueAmount }}</span>
+            </div>
+            <div class="btx-row">
+              <span class="ps-label">Mode</span>
+              <span class="ps-value">{{ tx.paymentMode || '-' }}</span>
+            </div>
           </div>
+
           <div *ngIf="!billHistoryBooking?.transactions?.length" class="empty-tests">No transactions found</div>
         </div>
       </div>
     </ng-template>
   </ion-modal>
-
 </ion-content>

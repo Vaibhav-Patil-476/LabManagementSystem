@@ -1218,89 +1218,302 @@
   }
 }
 
-.history-block {
-  padding: 10px 0;
-  border-bottom: 1px dashed var(--border-color);
+// ==========================================================
+// PREMIUM SHARED CARD LANGUAGE — Barcode / History / Bill History
+// ==========================================================
+.premium-summary-card {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px 20px;
+  background: var(--section-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: 16px 18px;
+  margin-bottom: 20px;
 }
 
-.history-test-name {
+.premium-summary-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+
+  &.full-span {
+    grid-column: 1 / -1;
+  }
+}
+
+.ps-label {
+  font-size: 10.5px;
   font-weight: 700;
-  font-size: 13.5px;
-  color: var(--text-dark);
-}
-
-.history-status {
-  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
   color: var(--gray-accent);
-  margin-top: 2px;
 }
 
-.barcode-info-grid {
+.ps-value {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.premium-section-title {
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--primary-dark);
+  margin: 4px 0 10px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid var(--border-color);
+}
+
+.premium-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 8px;
+  margin-bottom: 22px;
+}
+
+.premium-chip {
+  display: inline-flex;
+  align-items: center;
+  background: var(--primary-light);
+  color: var(--primary-dark);
+  font-size: 12px;
+  font-weight: 700;
+  padding: 7px 14px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+
+  &.empty {
+    background: var(--section-bg);
+    color: var(--gray-accent);
+  }
+}
+
+.header-booking-tag {
+  color: var(--gray-accent);
+  font-weight: 600;
+  font-size: 13px;
+}
+
+// ---- Barcode row cards ----
+.barcode-row-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: 16px;
+  margin-bottom: 16px;
+  box-shadow: var(--shadow-xs);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-sm);
+    border-color: rgba(8, 123, 118, 0.25);
+  }
+}
+
+.brc-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   margin-bottom: 14px;
 }
 
-.barcode-info-col {
-  flex: 1 1 220px;
+.brc-sample-badge {
+  display: inline-flex;
+  align-items: center;
+  background: var(--brand-gradient);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  padding: 6px 14px;
+  border-radius: var(--r-pill);
+  box-shadow: var(--shadow-glow);
+}
+
+.brc-status {
+  padding: 4px 12px;
+  border-radius: var(--r-pill);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+
+  &.pending {
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  &.completed {
+    background: var(--success-bg);
+    color: var(--success);
+  }
+}
+
+.brc-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.brc-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   min-width: 0;
-}
 
-.barcode-test-table,
-.barcode-edit-table {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 12.5px;
-  margin-bottom: 16px;
-  border: 1px solid var(--border-color);
-  border-radius: var(--r-md);
-  overflow: hidden;
-
-  th {
-    background: var(--section-bg);
-    color: var(--primary-dark);
-    text-transform: none;
-    font-size: 12.5px;
+  label {
+    font-size: 10.5px;
     font-weight: 700;
-  }
-
-  th,
-  td {
-    padding: 10px;
-    border-bottom: 1px solid var(--border-color);
-    text-align: left;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+    color: var(--gray-accent);
   }
 }
 
-.new-barcode-input {
+.brc-field:last-child {
+  grid-column: 1 / -1;
+}
+
+.brc-input {
   width: 100%;
+  height: 44px;
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-sm);
-  padding: 8px 10px;
-  font-size: 12.5px;
-  background: var(--card-bg, #fff);
+  background: var(--section-bg);
+  padding: 0 12px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-dark);
   box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  min-width: 0;
 
   &:focus {
-    outline: none;
     border-color: var(--primary);
+    background: #fff;
+    box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
   }
+
+  &.readonly {
+    color: var(--gray-accent);
+    background: #edf2f2;
+  }
+}
+
+input[type="datetime-local"].brc-input {
+  padding-right: 8px;
+  font-size: 12.5px;
 }
 
 .update-barcode-btn {
   --border-radius: var(--r-sm);
+  --box-shadow: var(--shadow-glow);
   --color: #fff;
-  font-size: 11px;
+  height: 42px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
 
   &::part(native) {
     background: var(--brand-gradient);
-    color: #ffffff;
+    color: #fff;
+    font-weight: 700;
   }
 
   &[disabled]::part(native) {
     background: #cfd8d8;
     color: #97a5a5;
+    box-shadow: none;
+  }
+
+  ion-spinner {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+// ---- Patient History cards ----
+.history-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-md);
+  padding: 13px 16px;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hc-name {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--text-dark);
+}
+
+.hc-sub {
+  font-size: 12px;
+  color: var(--gray-accent);
+  flex-shrink: 0;
+}
+
+// ---- Bill History transaction cards ----
+.bill-tx-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  box-shadow: var(--shadow-xs);
+}
+
+.btx-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.btx-paid {
+  color: var(--success);
+}
+
+.btx-due {
+  color: var(--danger);
+}
+
+// ---- Mobile: cards collapse to single column ----
+@media (max-width: 480px) {
+  .premium-summary-card {
+    grid-template-columns: 1fr;
+  }
+
+  .brc-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .brc-field:last-child {
+    grid-column: 1;
+  }
+
+  .bill-tx-card {
+    grid-template-columns: 1fr;
+  }
+
+  .history-card {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 
@@ -1711,4 +1924,264 @@ select {
 
 ::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
   background-color: var(--primary-light, #d9f0ee) !important;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 99999;
+
+  --background: #ef4444;
+  --color: #fff;
+  --border-radius: 12px;
+
+  width: 42px;
+  height: 42px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.close-modal-btn ion-icon {
+  font-size: 24px !important;
+  color: #fff !important;
+  display: block !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: 16px;
+
+  ion-button {
+    --border-radius: var(--r-pill);
+    --border-color: var(--primary);
+    --color: var(--primary);
+    font-weight: 700;
+    height: 42px;
+
+    &::part(native) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    &[disabled]::part(native) {
+      opacity: 0.6;
+    }
+  }
+}
+
+// ==========================================================
+// ✅ COMPACT DATE-TIME POPUP — small centered dialog, hugs its
+// content height (not full-screen). Ionic forces near-full-height
+// sizing on mobile viewports by default; !important + explicit
+// height:auto on the shadow "content" part is required to win that
+// internal specificity battle.
+// ==========================================================
+// ==========================================================
+// ✅ COMPACT DATE-TIME POPUP — premium centered dialog, hugs its
+// content height (not full-screen). Ionic forces near-full-height
+// sizing on mobile viewports by default; !important + explicit
+// height:auto on the shadow "content" part is required to win that
+// internal specificity battle.
+// ==========================================================
+ion-modal.compact-popup {
+  --width: min(340px, 90vw) !important;
+  --height: fit-content !important;
+  --max-height: 80vh !important;
+  --border-radius: var(--r-lg) !important;
+  --box-shadow: 0 20px 50px rgba(7, 95, 93, 0.28) !important;
+  --backdrop-opacity: 0.5 !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+ion-modal.compact-popup::part(content) {
+  height: fit-content !important;
+  max-height: 80vh !important;
+  border-radius: var(--r-lg) !important;
+  overflow: hidden !important;
+  position: static !important;
+}
+
+.compact-popup-page {
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-lg);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  max-height: 80vh;
+}
+
+.compact-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 18px;
+  background: var(--brand-gradient);
+  flex-shrink: 0;
+
+  h2 {
+    font-size: 15px;
+    font-weight: 800;
+    color: #ffffff;
+    margin: 0;
+    letter-spacing: -0.1px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+
+    &::before {
+      content: '';
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: #ffffff;
+      opacity: 0.7;
+    }
+  }
+
+  .close-modal-btn {
+    position: static;
+    width: 30px;
+    height: 30px;
+    --background: rgba(255, 255, 255, 0.18);
+    --color: #ffffff;
+
+    &::part(native) {
+      background: rgba(255, 255, 255, 0.18);
+      color: #ffffff;
+    }
+
+    ion-icon {
+      font-size: 17px !important;
+      color: #ffffff !important;
+    }
+
+    &:active::part(native) {
+      background: rgba(255, 255, 255, 0.3);
+    }
+  }
+}
+
+.compact-popup-body {
+  padding: 12px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 1;
+  background: var(--section-bg);
+}
+
+.compact-popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 12px 14px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+  background: var(--card-bg, #fff);
+
+  ion-button {
+    --border-radius: var(--r-pill);
+    height: 38px;
+    font-weight: 700;
+    font-size: 13px;
+    margin: 0;
+    min-width: 78px;
+  }
+
+  .cancel-btn {
+    --color: var(--gray-accent);
+    --background: transparent;
+  }
+
+  .ok-btn {
+    --color: #ffffff;
+    --background: var(--brand-gradient);
+    --box-shadow: var(--shadow-glow);
+  }
+}
+
+// ion-datetime cha default intrinsic size (~330px height) fixed asto —
+// he explicit width dilyane calendar grid card cha bounds baher
+// jaat nahi ani popup card cha size tight rahto.
+.premium-datetime {
+  width: 100%;
+  max-width: 300px;
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+
+  --background: var(--card-bg, #fff);
+  --title-color: var(--primary-dark);
+}
+
+::ng-deep .premium-datetime {
+  .calendar-day.calendar-day-active {
+    background: var(--primary) !important;
+    color: #fff !important;
+    font-weight: 700 !important;
+  }
+
+  .calendar-day:not(.calendar-day-active):hover {
+    background: var(--primary-light) !important;
+  }
+
+}
+
+.compact-popup-body {
+  padding: 8px;
+  overflow-y: auto;
+  display: flex;
+  justify-content: center;
+  flex-shrink: 1;
+}
+
+.compact-popup-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+  padding: 8px 12px 12px;
+  border-top: 1px solid var(--border-color);
+  flex-shrink: 0;
+
+  ion-button {
+    --border-radius: var(--r-sm);
+    height: 38px;
+    font-weight: 700;
+    font-size: 13.5px;
+    margin: 0;
+  }
+
+  .cancel-btn {
+    --color: var(--gray-accent);
+  }
+
+  .ok-btn {
+    --color: var(--primary);
+  }
+}
+
+// ion-datetime cha default intrinsic size (~330px height) fixed asto —
+// he explicit width dilyane calendar grid card cha bounds baher
+// jaat nahi ani popup card cha size tight rahto.
+.premium-datetime {
+  width: 100%;
+  max-width: 300px;
+  border-radius: var(--r-md);
+
+  --background: var(--card-bg, #fff);
+  --title-color: var(--primary-dark);
+}
+
+::ng-deep .premium-datetime {
+  .calendar-day.calendar-day-active {
+    background: var(--primary) !important;
+    color: #fff !important;
+  }
 }

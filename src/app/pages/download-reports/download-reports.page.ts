@@ -128,12 +128,13 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   // currentPage/hasMore booking-status page cha pattern.
   private bookings: ReportBookingRow[] = [];
   private searchDataset: ReportBookingRow[] = [];
-private filteredDataset: ReportBookingRow[] = [];
-private hasSearchLoaded = false;
-private autoTabSwitched = false;
+  private filteredDataset: ReportBookingRow[] = [];
+  private hasSearchLoaded = false;
+  private autoTabSwitched = false;
   private currentPage = 0;
   private readonly pageSize = 200;
   hasMore = false;
+  totalBookingsFromServer: number = 0;
 
   // ✅ Search-mode cha wide-range fetch sathi — booking kितीही जुनी asли
   // tarी search la disावी mhanून far mागe cha lower-bound date. Upper
@@ -168,42 +169,42 @@ private autoTabSwitched = false;
       businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
     });
   }
-private autoSwitchTab() {
+  private autoSwitchTab() {
 
-  if (this.autoTabSwitched)
-    return;
+    if (this.autoTabSwitched)
+      return;
 
-  const order: ReportTabKey[] = [
-    'COMPLETE',
-    'CLINICAL',
-    'PARTIALLY_COMPLETE',
-    'PENDING',
-    'SNR'
-  ];
+    const order: ReportTabKey[] = [
+      'COMPLETE',
+      'CLINICAL',
+      'PARTIALLY_COMPLETE',
+      'PENDING',
+      'SNR'
+    ];
 
-  const counts: Record<ReportTabKey, number> = {
-    COMPLETE: 0,
-    CLINICAL: 0,
-    PARTIALLY_COMPLETE: 0,
-    PENDING: 0,
-    SNR: 0
-  };
+    const counts: Record<ReportTabKey, number> = {
+      COMPLETE: 0,
+      CLINICAL: 0,
+      PARTIALLY_COMPLETE: 0,
+      PENDING: 0,
+      SNR: 0
+    };
 
-  this.filteredDataset.forEach(r => counts[r.bucket]++);
+    this.filteredDataset.forEach(r => counts[r.bucket]++);
 
-  if (counts[this.activeTab] === 0) {
+    if (counts[this.activeTab] === 0) {
 
-    const tab = order.find(x => counts[x] > 0);
+      const tab = order.find(x => counts[x] > 0);
 
-    if (tab) {
-      this.activeTab = tab;
+      if (tab) {
+        this.activeTab = tab;
+      }
+
     }
 
+    this.autoTabSwitched = true;
+
   }
-
-  this.autoTabSwitched = true;
-
-}
   ngOnInit() {
     this.loadFranchises();
     this.loadData();
@@ -291,21 +292,21 @@ private autoSwitchTab() {
         this.runSearch();
       } else {
 
-  this.quickSearch = '';
+        this.quickSearch = '';
 
-  this.filteredDataset = [];
+        this.filteredDataset = [];
 
-  this.searchDataset = [];
+        this.searchDataset = [];
 
-  this.hasSearchLoaded = false;
+        this.hasSearchLoaded = false;
 
-  this.autoTabSwitched = false;
+        this.autoTabSwitched = false;
 
-  this.selectedIds.clear();
+        this.selectedIds.clear();
 
-  this.loadData();
+        this.loadData();
 
-}
+      }
     }, this.SEARCH_DEBOUNCE_MS);
   }
 
@@ -313,88 +314,88 @@ private autoSwitchTab() {
   // tomorrow) backend la pathvतो, jenekarून booking kितीही जुनी/नवीन
   // asली tarी ID/name/barcode search la sapadel. Page-size mोठा (500)
   // eकच batch madhे — load-more disable rahto search-mode madhе.
-private runSearch(): void {
+  private runSearch(): void {
 
-  this.autoTabSwitched = false;
+    this.autoTabSwitched = false;
 
-  // First search -> API
-  if (!this.hasSearchLoaded) {
+    // First search -> API
+    if (!this.hasSearchLoaded) {
 
-    this.isLoading = true;
+      this.isLoading = true;
 
-    const labId = this.authService.labId;
-    const searchEndDate = this.addOneDay(this.todayIso());
+      const labId = this.authService.labId;
+      const searchEndDate = this.addOneDay(this.todayIso());
 
-    this.labApi.getBookingStatusNew(
-      labId,
-      0,
-      this.SEARCH_PAGE_SIZE,
-      this.SEARCH_START_DATE,
-      searchEndDate,
-      this.franchiseId || undefined
-    ).subscribe({
+      this.labApi.getBookingStatusNew(
+        labId,
+        0,
+        this.SEARCH_PAGE_SIZE,
+        this.SEARCH_START_DATE,
+        searchEndDate,
+        this.franchiseId || undefined
+      ).subscribe({
 
-      next: (res: any) => {
+        next: (res: any) => {
 
-        this.ngZone.run(() => {
+          this.ngZone.run(() => {
 
-          let rows: ReportBookingRow[] = (res?.content ?? res ?? [])
-            .map((r: any): ReportBookingRow => this.mapToRow(r));
+            let rows: ReportBookingRow[] = (res?.content ?? res ?? [])
+              .map((r: any): ReportBookingRow => this.mapToRow(r));
 
-          if (this.roleService.isStaff) {
-            rows = rows.filter((r: ReportBookingRow) =>
-              r.createdBy === this.authService.userId
-            );
-          }
+            if (this.roleService.isStaff) {
+              rows = rows.filter((r: ReportBookingRow) =>
+                r.createdBy === this.authService.userId
+              );
+            }
 
-          this.searchDataset = rows;
-          this.hasSearchLoaded = true;
+            this.searchDataset = rows;
+            this.hasSearchLoaded = true;
 
-          this.applySearchFilter();
+            this.applySearchFilter();
 
+            this.isLoading = false;
+
+          });
+
+        },
+
+        error: () => {
           this.isLoading = false;
+        }
 
-        });
+      });
 
-      },
+      return;
+    }
 
-      error: () => {
-        this.isLoading = false;
-      }
-
-    });
-
-    return;
+    // Next search -> local only
+    this.applySearchFilter();
   }
 
-  // Next search -> local only
-  this.applySearchFilter();
-}
-
   // ================= DATA LOADING (fresh call, no cache carried over) =================
-loadData() {
+  loadData() {
 
-  this.hasSearchLoaded = false;
+    this.hasSearchLoaded = false;
 
-  this.searchDataset = [];
+    this.searchDataset = [];
 
-  this.filteredDataset = [];
+    this.filteredDataset = [];
 
-  this.autoTabSwitched = false;
+    this.autoTabSwitched = false;
 
-  this.selectedIds.clear();
+    this.selectedIds.clear();
 
-  this.bookings = [];
+    this.bookings = [];
 
-  this.currentPage = 0;
+    this.currentPage = 0;
 
-  this.hasMore = false;
+    this.hasMore = false;
 
-  this.activeTab = 'COMPLETE';
+    this.activeTab = 'COMPLETE';
 
-  this.fetchPage();
+    this.fetchPage();
 
-}
+  }
 
   loadMore() {
     if (!this.hasMore || this.isLoadingMore) return;
@@ -427,12 +428,17 @@ loadData() {
             const currentUserId = this.authService.userId;
             rows = rows.filter(r => r.createdBy === currentUserId);
           }
+        this.bookings = isLoadMore ? [...this.bookings, ...rows] : rows;
 
-          this.bookings = isLoadMore ? [...this.bookings, ...rows] : rows;
+          // ✅ backend cha totalPages field reliable nahi (kधी undefined,
+          // kधी chukicha) — mhanun "mangitlela pageSize tevdhach data
+          // aala ka" ha signal vaparला, totalPages var avlambun nahi.
+          this.hasMore = rawList.length === this.pageSize;
 
-          const totalPages = res?.totalPages ?? 1;
-          this.hasMore = this.currentPage < totalPages - 1;
-
+          // ✅ server cha khara total (totalElements) capture kela —
+          // "Total Bookings" ha loaded rows peksha vegla, actual total
+          // dakhavel.
+          this.totalBookingsFromServer = res?.totalElements ?? res?.totalCount ?? this.bookings.length;
           this.isLoading = false;
           this.isLoadingMore = false;
           this.cdr.detectChanges();
@@ -544,65 +550,65 @@ loadData() {
     return item.bucket === 'COMPLETE';
   }
 
-get rowsForActiveTab(): ReportBookingRow[] {
+  get rowsForActiveTab(): ReportBookingRow[] {
 
-  const source = this.isSearchMode
+    const source = this.isSearchMode
       ? this.filteredDataset
       : this.bookings;
 
-  return source.filter(r => r.bucket === this.activeTab);
+    return source.filter(r => r.bucket === this.activeTab);
 
-}
+  }
 
 get totalBookings(): number {
 
-  return this.isSearchMode
+    return this.isSearchMode
       ? this.filteredDataset.length
-      : this.bookings.length;
+      : this.totalBookingsFromServer;
 
-}
-
-get bucketCount() {
-
-  const counts: Record<ReportTabKey, number> = {
-    COMPLETE: 0,
-    CLINICAL: 0,
-    PARTIALLY_COMPLETE: 0,
-    PENDING: 0,
-    SNR: 0
-  };
-
-  const source = this.isSearchMode
-    ? this.filteredDataset
-    : this.bookings;
-
-  for (const row of source) {
-    counts[row.bucket]++;
   }
 
-  return counts;
-}
-setTab(tab: ReportTabKey) {
+  get bucketCount() {
 
-  this.activeTab = tab;
+    const counts: Record<ReportTabKey, number> = {
+      COMPLETE: 0,
+      CLINICAL: 0,
+      PARTIALLY_COMPLETE: 0,
+      PENDING: 0,
+      SNR: 0
+    };
 
-  this.autoTabSwitched = true;
+    const source = this.isSearchMode
+      ? this.filteredDataset
+      : this.bookings;
 
-  this.selectedIds.clear();
+    for (const row of source) {
+      counts[row.bucket]++;
+    }
 
-}
+    return counts;
+  }
+  setTab(tab: ReportTabKey) {
+
+    this.activeTab = tab;
+
+    this.autoTabSwitched = true;
+
+    this.selectedIds.clear();
+
+  }
 
   getTests(item: ReportBookingRow): string {
     return item.tests.map(t => t.name).join(', ') || '-';
   }
 
   // ================= ROLE GATES =================
-get canShowDownloadControls(): boolean {
+  get canShowDownloadControls(): boolean {
 
-  return this.roleService.canDownloadReports &&
-         this.activeTab === 'COMPLETE';
+    return this.roleService.canDownloadReports &&
+      this.activeTab === 'COMPLETE';
 
-}
+  }
 
   // ================= SELECTION (admin + Complete tab only) =================
   isSelected(item: ReportBookingRow): boolean {
@@ -635,44 +641,44 @@ get canShowDownloadControls(): boolean {
   }
 
   // ================= DOWNLOAD =================
-async downloadSelected() {
-  if (!this.canShowDownloadControls) {
-    this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
-    return;
-  }
-
-  const selected = this.selectedReports;
-
-  if (selected.length === 0) {
-    this.toast.warning('Warning', 'Kripya kimman ek report select kara');
-    return;
-  }
-
-  this.isGenerating = true;
-
-  try {
-    const bookingIds = selected.map(r => Number(r.bookingId));
-
-    const res: any = await firstValueFrom(
-      this.labApi.generatePdfReport(bookingIds, {
-        single: bookingIds.length === 1
-      })
-    );
-
-    if (res?.success && res?.downloadUrl) {
-      window.open(res.downloadUrl, '_blank');
-      this.toast.success('Success', `${bookingIds.length} report(s) ready`);
-      this.selectedIds.clear();
-    } else {
-      this.toast.error('Error', res?.message || 'PDF generate karta aala nahi');
+  async downloadSelected() {
+    if (!this.canShowDownloadControls) {
+      this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
+      return;
     }
-  } catch (err) {
-    console.error('PDF generation failed', err);
-    this.toast.error('Error', 'PDF generate karnyat error aali, punha try kara');
-  } finally {
-    this.isGenerating = false;
+
+    const selected = this.selectedReports;
+
+    if (selected.length === 0) {
+      this.toast.warning('Warning', 'Kripya kimman ek report select kara');
+      return;
+    }
+
+    this.isGenerating = true;
+
+    try {
+      const bookingIds = selected.map(r => Number(r.bookingId));
+
+      const res: any = await firstValueFrom(
+        this.labApi.generatePdfReport(bookingIds, {
+          single: bookingIds.length === 1
+        })
+      );
+
+      if (res?.success && res?.downloadUrl) {
+        window.open(res.downloadUrl, '_blank');
+        this.toast.success('Success', `${bookingIds.length} report(s) ready`);
+        this.selectedIds.clear();
+      } else {
+        this.toast.error('Error', res?.message || 'PDF generate karta aala nahi');
+      }
+    } catch (err) {
+      console.error('PDF generation failed', err);
+      this.toast.error('Error', 'PDF generate karnyat error aali, punha try kara');
+    } finally {
+      this.isGenerating = false;
+    }
   }
-}
 
   private todayIso(): string {
     return new Date().toISOString().slice(0, 10);
@@ -685,45 +691,45 @@ async downloadSelected() {
     this.loadMore();
   }
 
-private applySearchFilter(): void {
+  private applySearchFilter(): void {
 
-  const q = this.quickSearch.trim().toLowerCase();
+    const q = this.quickSearch.trim().toLowerCase();
 
-  // Search cleared
-  if (!q) {
-    this.filteredDataset = [];
-    this.autoTabSwitched = false;
-    this.selectedIds.clear();
-    return;
-  }
-
-  const numeric = /^\d+$/.test(q);
-
-  this.filteredDataset = this.searchDataset.filter(r => {
-
-    if (numeric) {
-      return (
-        String(r.bookingId) === q ||
-        String(r.patientId ?? '') === q
-      );
+    // Search cleared
+    if (!q) {
+      this.filteredDataset = [];
+      this.autoTabSwitched = false;
+      this.selectedIds.clear();
+      return;
     }
 
-    return (
-      r.name.toLowerCase().includes(q) ||
-      String(r.bookingId).includes(q) ||
-      String(r.patientId ?? '').includes(q) ||
-      r.tests.some(t =>
-        t.name.toLowerCase().includes(q)
-      ) ||
-      r.barcodes.some(b =>
-        b.toLowerCase().includes(q)
-      )
-    );
+    const numeric = /^\d+$/.test(q);
 
-  });
+    this.filteredDataset = this.searchDataset.filter(r => {
 
-  this.selectedIds.clear();
+      if (numeric) {
+        return (
+          String(r.bookingId) === q ||
+          String(r.patientId ?? '') === q
+        );
+      }
 
-  this.autoSwitchTab();
-}
+      return (
+        r.name.toLowerCase().includes(q) ||
+        String(r.bookingId).includes(q) ||
+        String(r.patientId ?? '').includes(q) ||
+        r.tests.some(t =>
+          t.name.toLowerCase().includes(q)
+        ) ||
+        r.barcodes.some(b =>
+          b.toLowerCase().includes(q)
+        )
+      );
+
+    });
+
+    this.selectedIds.clear();
+
+    this.autoSwitchTab();
+  }
 }

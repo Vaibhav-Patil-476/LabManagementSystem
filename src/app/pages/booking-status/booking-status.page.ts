@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-  IonSelect, IonSelectOption, AlertController
+  IonSelect, IonSelectOption, IonDatetime, AlertController
 } from '@ionic/angular/standalone';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -26,9 +26,9 @@ export interface BookingSample {
   sampleAccessionId?: number;
   barcode: string;
   sampleType?: string;
+  sampleTypeId?: number;
   status?: string;
 }
-
 export interface BookingTest {
   testId: number;
   testMappingId?: number;
@@ -90,7 +90,7 @@ export interface BookingListItem {
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
     IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-    IonSelect, IonSelectOption,
+    IonSelect, IonSelectOption, IonDatetime,
     MatDatepickerModule, MatFormFieldModule, MatInputModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -101,7 +101,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   bookings: BookingListItem[] = [];
   isLoadingList = false;
-
+  isLoadingMore = false;
+  hasMore = false;
+  totalBookingsFromServer: number = 0;
   quickSearch = '';
   selectedFranchiseId: any = null;
   selectedReportStatus: string = 'all';
@@ -169,12 +171,17 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   isBarcodeModalOpen = false;
   barcodeBooking: BookingListItem | null = null;
   barcodeRows: {
+    accessionId?: number;
+    sampleTypeId?: number;
     sampleType: string;
     oldBarcode: string;
     newBarcode: string;
+    receiveDate: string;
     status: string;
     saving: boolean;
   }[] = [];
+  activeDateTimeRow: any = null;
+  tempDateTimeValue: string = '';
 
   isBillHistoryModalOpen = false;
   billHistoryBooking: BookingListItem | null = null;
@@ -391,6 +398,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       samples.push({
         barcode,
         sampleType: s.sampleTypeData?.sample_type || s.sampleType,
+        sampleTypeId: s.sampleTypeData?.sample_type_id ?? s.sampleTypeId,
         status: s.status
       });
     });
@@ -428,8 +436,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     };
   }
 
-  loadBookings() {
-    this.isLoadingList = true;
+  loadBookings(isLoadMore: boolean = false) {
+    if (isLoadMore) this.isLoadingMore = true; else this.isLoadingList = true;
     const labId = this.labApi.getCurrentLabId();
 
     const searchActive = this.isSearchMode;
@@ -452,9 +460,22 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           const list = res?.content || res || [];
           const rawList = Array.isArray(list) ? list : [];
-          this.bookings = rawList.map((b: any) => this.mapBookingItem(b));
-          this.totalPages = searchActive ? 1 : (res?.totalPages ?? 1);
+          const mapped = rawList.map((b: any) => this.mapBookingItem(b));
+
+          this.bookings = (isLoadMore && !searchActive) ? [...this.bookings, ...mapped] : mapped;
+          this.hasMore = !searchActive && rawList.length === pageSizeToUse;
+
+          // ✅ backend cha real total (totalElements) capture kela — ha
+          // currently loaded rows peksha vegla ahe, ani date range change
+          // zhalyavar ha survat / refresh honar (search-mode madhe list
+          // cha lenght vaparला, karan tya wide-range madhe already sagla
+          // data ekach call madhe yeto).
+          this.totalBookingsFromServer = searchActive
+            ? mapped.length
+            : (res?.totalElements ?? res?.totalCount ?? rawList.length);
+
           this.isLoadingList = false;
+          this.isLoadingMore = false;
           this.cdr.detectChanges();
         });
       },
@@ -462,12 +483,17 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         console.log('BOOKINGS LIST ERROR:', err);
         this.ngZone.run(() => {
           this.isLoadingList = false;
+          this.isLoadingMore = false;
           this.showToast('Bookings load karayla fail zala', 'error');
         });
       }
     });
   }
-
+  loadMoreBookings() {
+    if (!this.hasMore || this.isLoadingMore || this.isSearchMode) return;
+    this.currentPage++;
+    this.loadBookings(true);
+  }
   refreshBookings() {
     this.loadBookings();
   }
@@ -538,11 +564,16 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
     return list;
   }
-
   get totalBookingsCount(): number {
-    return this.filteredBookings.length;
+    // ✅ Quick search / report-status filter active असताना
+    // client-side filtered count हाच अचूक असतो (server la ते filters
+    // माहीत नाहीत). Plain date-range view madhe server cha khara total
+    // dakhavला — jenekarून "Total Bookings: 20" disतāna backend madhe
+    // khara 200 asel tar user la kळेल load-more karायची गरज ahे.
+    const q = this.quickSearch?.trim();
+    const hasClientFilter = !!q || (this.selectedReportStatus && this.selectedReportStatus !== 'all');
+    return hasClientFilter ? this.filteredBookings.length : this.totalBookingsFromServer;
   }
-
   get isDefaultTodayRange(): boolean {
     const today = this.formatDateForInput(new Date());
     return this.fromDate === today && this.toDate === today;
@@ -663,37 +694,37 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     document.body.classList.remove('action-menu-open');
   }
 
-printBill(item: BookingListItem) {
-  this.closeActionMenu();
+  printBill(item: BookingListItem) {
+    this.closeActionMenu();
 
-  if (this.generatingBillId === item.bookingId) return;
-  this.generatingBillId = item.bookingId;
+    if (this.generatingBillId === item.bookingId) return;
+    this.generatingBillId = item.bookingId;
 
-  const payload = this.labApi.buildBillPayload(item.bookingId);
+    const payload = this.labApi.buildBillPayload(item.bookingId);
 
-  this.labApi.printBill(payload).subscribe({
-    next: (res: any) => {
-      this.ngZone.run(() => {
-        this.generatingBillId = null;
-        if (res?.downloadUrl) {
-          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-          this.showToast('Bill ready', 'success');
-        } else {
-          this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
-        }
-        this.cdr.detectChanges();
-      });
-    },
-    error: (err) => {
-      console.log('PRINT BILL ERROR:', err);
-      this.ngZone.run(() => {
-        this.generatingBillId = null;
-        this.showToast('Bill generate karnyat error aali', 'error');
-        this.cdr.detectChanges();
-      });
-    }
-  });
-}
+    this.labApi.printBill(payload).subscribe({
+      next: (res: any) => {
+        this.ngZone.run(() => {
+          this.generatingBillId = null;
+          if (res?.downloadUrl) {
+            window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+            this.showToast('Bill ready', 'success');
+          } else {
+            this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
+          }
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => {
+        console.log('PRINT BILL ERROR:', err);
+        this.ngZone.run(() => {
+          this.generatingBillId = null;
+          this.showToast('Bill generate karnyat error aali', 'error');
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
 
   editTest(item: BookingListItem) {
     this.closeActionMenu();
@@ -832,7 +863,7 @@ printBill(item: BookingListItem) {
   //    unsaved new test(s) in the list so they can retry/report it.
   // 4. If all requested tests persisted, proceed with the original
   //    success/payment-mismatch flow unchanged.
-// ✅ FINAL FIX: split save flow.
+  // ✅ FINAL FIX: split save flow.
   // - Existing tests (already have testMappingId) → updatePatient
   //   (confirmed working for price/discount edits across all prior tests).
   // - Newly added tests (isNewlyAdded, no testMappingId) → dedicated
@@ -1134,31 +1165,52 @@ printBill(item: BookingListItem) {
     this.noteBooking = null;
     this.noteText = '';
   }
-
   saveNote() {
     if (!this.noteBooking || !this.noteText.trim()) {
       this.showToast('Kripya note lihi', 'warning');
       return;
     }
     this.isSavingNote = true;
-    const body = {
-      bookingId: this.noteBooking.bookingId,
-      remark: this.noteText.trim(),
-      createdBy: this.currentUserId
-    };
-    this.labApi.createReportRemark(body).subscribe({
-      next: () => this.ngZone.run(() => {
-        this.isSavingNote = false;
-        this.showToast('Note added successfully', 'success');
-        this.closeNoteModal();
-      }),
-      error: (err) => {
-        console.log('ADD NOTE ERROR:', err);
-        this.ngZone.run(() => {
+    const labId = this.labApi.getCurrentLabId();
+    const bookingId = this.noteBooking.bookingId;
+
+    // ✅ updatePatient ला full patient data लागतो — फक्त remark पाठवला
+    // तर backend 400 देतो. म्हणून आधी fresh booking आणून, तेच सगळे
+    // fields परत पाठवतोय, फक्त remark/bookingComment जोडून.
+    this.fetchSingleBooking(bookingId, (fresh) => {
+      const body: any = {
+        bookingId,
+        customerName: fresh.customerName,
+        ageType: fresh.ageType,
+        age: fresh.age,
+        gender: fresh.gender,
+        mobileNumber: fresh.mobileNumber,
+        aadhaarNumber: fresh.aadhaarNumber,
+        doctorid: fresh.doctor?.doctorId,
+        franchiseId: fresh.franchise?.franchiseId,
+        createdOn: fresh.createdOn,
+        remark: this.noteText.trim(),
+        bookingComment: this.noteText.trim()
+      };
+
+      this.labApi.updatePatient(labId, bookingId, body).subscribe({
+        next: () => this.ngZone.run(() => {
           this.isSavingNote = false;
-          this.showToast('Note save fail zala', 'error');
-        });
-      }
+          this.showToast('Note added successfully', 'success');
+          this.closeNoteModal();
+          this.loadBookings();
+        }),
+        error: (err) => {
+          console.log('ADD NOTE ERROR:', err);
+          this.ngZone.run(() => {
+            this.isSavingNote = false;
+            this.showToast('Note save fail zala', 'error');
+          });
+        }
+      });
+    }, () => {
+      this.isSavingNote = false;
+      this.showToast('Booking detail load fail zala', 'error');
     });
   }
 
@@ -1176,20 +1228,25 @@ printBill(item: BookingListItem) {
     this.isHistoryModalOpen = false;
     this.historyBooking = null;
   }
-
   openBarcodeModal(item: BookingListItem) {
     this.closeActionMenu();
-    this.fetchSingleBooking(item.bookingId, (fresh) => {
-      this.barcodeBooking = fresh;
-      this.barcodeRows = (fresh.samples || []).map(s => ({
-        sampleType: s.sampleType || '-',
-        oldBarcode: s.barcode,
-        newBarcode: s.barcode,
-        status: s.status || 'PENDING',
-        saving: false
-      }));
-      this.isBarcodeModalOpen = true;
-    });
+    // ✅ FIX: fetchSingleBooking() cha underlying GET single-booking API
+    // 'bookingWithTestMappings' / 'sampleAccessions' data return karat
+    // nahi (list-load cha getBookingStatusNew API hech data barobar
+    // deto). Mhanun re-fetch na karta, list-madhla already-mapped item
+    // (jyat samples/tests barobar bharlele astat) directly vaparla.
+    this.barcodeBooking = item;
+    this.barcodeRows = (item.samples || []).map((s: any) => ({
+      accessionId: s.accessionId || s.sampleAccessionId,
+      sampleTypeId: s.sampleTypeId,
+      sampleType: s.sampleType || '-',
+      oldBarcode: s.barcode,
+      newBarcode: s.barcode,
+      receiveDate: '',
+      status: s.status || 'PENDING',
+      saving: false
+    }));
+    this.isBarcodeModalOpen = true;
   }
 
   closeBarcodeModal() {
@@ -1197,19 +1254,82 @@ printBill(item: BookingListItem) {
     this.barcodeBooking = null;
     this.barcodeRows = [];
   }
+  openDateTimePicker(row: { receiveDate: string }) {
+    this.activeDateTimeRow = row;
+    this.tempDateTimeValue = row.receiveDate
+      ? (row.receiveDate.length === 16 ? row.receiveDate + ':00' : row.receiveDate)
+      : new Date().toISOString().slice(0, 19);
+  }
 
-  updateBarcodeRow(row: { newBarcode: string; oldBarcode: string; saving: boolean }) {
+  closeDateTimePicker() {
+    this.activeDateTimeRow = null;
+    this.tempDateTimeValue = '';
+  }
+
+  confirmDateTime() {
+    if (this.activeDateTimeRow && this.tempDateTimeValue) {
+      // ✅ API la 'YYYY-MM-DDTHH:mm' format havay — ion-datetime cha
+      // value seconds/timezone sobat yeto, tyamule pahile 16 characters
+      // (date + hh:mm) kaapun tevdhach thevla.
+      this.activeDateTimeRow.receiveDate = this.tempDateTimeValue.slice(0, 16);
+    }
+    this.closeDateTimePicker();
+  }
+
+  updateBarcodeRow(row: {
+    sampleTypeId?: number;
+    newBarcode: string;
+    oldBarcode: string;
+    receiveDate: string;
+    status: string;
+    saving: boolean;
+  }) {
     if (!row.newBarcode?.trim()) {
       this.showToast('Barcode rikama thevu naka', 'warning');
       return;
     }
-    row.saving = true;
-    setTimeout(() => {
-      row.saving = false;
-      this.showToast('Barcode update API ajun connect nahi kela — endpoint dile ki save honar', 'warning');
-    }, 400);
-  }
+    if (!this.barcodeBooking) return;
 
+    row.saving = true;
+    const bookingId = this.barcodeBooking.bookingId;
+
+    const payload = [
+      {
+        oldBarcode: row.oldBarcode,
+        updatedBarcode: row.newBarcode.trim(),
+        receiveDate: row.receiveDate || '',
+        sampleTypeId: row.sampleTypeId,
+        bookingId: bookingId
+      }
+    ];
+
+    console.log('🟣 SENDING TO updateBarcode:', JSON.stringify(payload, null, 2));
+
+    this.labApi.updateBarcode(bookingId, payload).subscribe({
+      next: (res: any) => {
+        console.log('🟢 UPDATE BARCODE RESPONSE:', JSON.stringify(res, null, 2));
+        this.ngZone.run(() => {
+          row.saving = false;
+          row.oldBarcode = row.newBarcode;
+          row.status = 'RECEIVED';
+          this.showToast('Barcode updated successfully', 'success');
+          this.cdr.detectChanges();
+
+          // ✅ Flow cha last step — booking details refresh
+          this.fetchSingleBooking(bookingId, () => {
+            this.loadBookings();
+          });
+        });
+      },
+      error: (err) => {
+        console.log('🔴 UPDATE BARCODE ERROR:', err);
+        this.ngZone.run(() => {
+          row.saving = false;
+          this.showToast('Barcode update fail zala: ' + (err.error?.message || 'Unknown error'), 'error');
+        });
+      }
+    });
+  }
   openBillHistoryModal(item: BookingListItem) {
     this.closeActionMenu();
     this.fetchSingleBooking(item.bookingId, (fresh) => {
