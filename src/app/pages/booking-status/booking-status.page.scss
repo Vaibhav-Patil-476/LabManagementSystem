@@ -460,49 +460,6 @@
   box-sizing: border-box;
 }
 
-.booking-table {
-  width: 100%;
-  border-collapse: collapse;
-  min-width: 720px; // narrow screens scroll horizontally instead of squeezing columns
-
-  th {
-    text-align: left;
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    color: #3d4f52;
-    padding: 14px 16px;
-    border-bottom: 2px solid var(--section-bg);
-    white-space: nowrap;
-    background: var(--section-bg);
-  }
-
-  tbody tr {
-    background: var(--card-bg, #fff);
-    transition: background 0.12s ease;
-
-    &:hover {
-      background: var(--primary-light);
-    }
-  }
-
-  td {
-    padding: 14px 16px;
-    font-size: 13px;
-    color: var(--text-dark);
-    border-bottom: 1px solid #edf3f3;
-    vertical-align: top;
-    text-align: left;
-    white-space: normal;
-
-    &.empty-row {
-      text-align: center;
-      padding: 40px 20px;
-    }
-  }
-}
-
 .id-link {
   color: var(--primary);
   font-weight: 700;
@@ -520,18 +477,6 @@
   font-size: 11.5px;
 }
 
-.col-barcode small {
-  color: var(--gray-accent);
-  font-size: 11.5px;
-}
-
-.col-tests .test-line {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 3px 0;
-}
 
 .status-badge {
   display: inline-block;
@@ -566,31 +511,6 @@
     background: var(--success);
   }
 }
-
-.action-cell {
-  display: flex;
-  justify-content: flex-start;
-  align-items: center;
-  gap: 2px;
-
-  .action-icon-btn {
-    margin: 0;
-    --padding-start: 6px;
-    --padding-end: 6px;
-    height: 32px;
-    width: 32px;
-
-    ion-icon {
-      font-size: 18px;
-      color: var(--primary);
-    }
-
-    &.dots ion-icon {
-      color: var(--gray-accent);
-    }
-  }
-}
-
 @keyframes dropdownIn {
   from {
     opacity: 0;
@@ -1761,9 +1681,6 @@ select {
     padding-right: 2px;
   }
 
-  .table-wrapper {
-    margin: 10px 0 0;
-  }
 
   .col-tests .test-line {
     justify-content: flex-end;
@@ -2178,10 +2095,202 @@ ion-modal.compact-popup::part(content) {
   --background: var(--card-bg, #fff);
   --title-color: var(--primary-dark);
 }
-
 ::ng-deep .premium-datetime {
   .calendar-day.calendar-day-active {
     background: var(--primary) !important;
     color: #fff !important;
   }
+}
+
+// ==========================================================
+// ✅ BOOKING CARD LIST — replaces the horizontally-scrollable table.
+// No swipe/scroll needed — everything fits the phone width, tap a
+// card to expand test/barcode details.
+// ==========================================================
+.booking-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.booking-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+
+  &.expanded {
+    border-color: rgba(8, 123, 118, 0.3);
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.bcard-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+
+  &:active {
+    background: var(--primary-light);
+  }
+}
+
+.bcard-header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.bcard-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  .id-link {
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 14px;
+  }
+
+  .bcard-date {
+    color: var(--gray-accent);
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+.bcard-name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bcard-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcard-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.expand-chevron {
+  color: var(--gray-accent);
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.booking-card.expanded .expand-chevron {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.bcard-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 0 16px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bcard-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.bcs-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--gray-accent);
+}
+
+.bcs-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcard-details {
+  padding: 14px 16px;
+  background: var(--section-bg);
+  animation: fadeIn 0.15s ease;
+}
+
+.bcard-test-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  margin-bottom: 12px;
+
+  th {
+    background: var(--card-bg, #fff);
+    color: var(--gray-accent);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  td {
+    padding: 8px 10px;
+    font-size: 12.5px;
+    color: var(--text-dark);
+    border-bottom: 1px solid #f0f5f5;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.bcard-barcode-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+
+  .barcode-line {
+    font-size: 12px;
+    color: var(--text-dark);
+  }
+
+  small {
+    color: var(--gray-accent);
+  }
+}
+
+.bcard-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 2px;
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+}ion-content.menu-open {
+  --overflow: hidden;
 }

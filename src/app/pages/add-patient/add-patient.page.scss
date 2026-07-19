@@ -67,35 +67,34 @@
    LAST PATIENT BAR
 ===================== */
 .last-patient-bar {
-  background: var(--card-bg);
-  padding: 10px 16px;
-  border-bottom: 1px solid var(--line-soft);
-  font-size: 13px;
-  color: var(--text-secondary);
+  background: var(--brand-gradient); // or var(--brand)
+  padding: 12px 16px;
+  border-bottom: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;
 
   .last-patient-info {
     display: flex;
     align-items: center;
     flex-wrap: wrap;
+    color: #fff;
+    flex: 1;
   }
 
   .last-label {
+    color: rgba(255, 255, 255, .85);
     font-weight: 600;
-    color: var(--text-muted);
     margin-right: 6px;
   }
 
   .last-name {
+    color: #fff;
     font-weight: 700;
-    color: var(--brand);
   }
 }
-
 /* ==========================
    Admin-only "self/UHID" box
 =========================== */

@@ -624,78 +624,6 @@
   }
 }
 
-// =========================
-// Table
-// =========================
-.table-wrapper {
-  overflow-x: auto;
-  margin: 16px;
-  background: var(--card-bg, #fff);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-md);
-  border: 1px solid rgba(8, 123, 118, 0.06);
-  box-sizing: border-box;
-}
-
-.report-table {
-  width: 100%;
-  border-collapse: collapse;
-
-  th {
-    text-align: left;
-    font-size: 0.75rem;
-    font-weight: 700;
-    letter-spacing: 0.3px;
-    text-transform: uppercase;
-    color: #3d4f52;
-    padding: 14px 16px;
-    border-bottom: 2px solid var(--section-bg);
-    white-space: nowrap;
-    background: var(--section-bg);
-  }
-
-  td {
-    padding: 14px 16px;
-    font-size: 0.88rem;
-    color: var(--text-dark, #14222e);
-    border-bottom: 1px solid #edf3f3;
-    vertical-align: top;
-  }
-
-  .id-link {
-    color: var(--primary);
-    font-weight: 700;
-    text-decoration: none;
-    cursor: pointer;
-    border-bottom: 1.5px dashed rgba(8, 123, 118, 0.35);
-
-    &:hover {
-      border-bottom-style: solid;
-    }
-  }
-
-  .sub-text {
-    color: var(--gray-accent);
-    font-size: 0.78rem;
-  }
-
-  .checkbox-col {
-    width: 40px;
-  }
-
-  .center-col {
-    text-align: center;
-  }
-
-  .row-selected {
-    background: var(--primary-light);
-  }
-
-  .empty-row {
-    text-align: center;
-    padding: 0;
-  }
-}
 
 .empty-state {
   display: flex;
@@ -792,49 +720,192 @@
   }
 }
 
-// =========================
-// Hidden PDF template (rendered off-screen by TS for report generation)
-// =========================
-.pdf-template {
-  position: fixed;
-  top: -9999px;
-  left: -9999px;
-  width: 210mm;
+  // ==========================================================
+// ✅ BOOKING CARD LIST — same pattern as Booking Status page.
+// ==========================================================
+.booking-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 16px;
+}
+
+.booking-card {
   background: var(--card-bg, #fff);
-  padding: 24px;
-  box-sizing: border-box;
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
 
-  .pdf-header {
-    text-align: center;
-    margin-bottom: 20px;
-
-    h2 {
-      color: var(--primary-dark);
-      margin: 0 0 4px;
-    }
-
-    p {
-      color: var(--gray-accent);
-      font-size: 0.85rem;
-      margin: 0;
-    }
+  &.expanded {
+    border-color: rgba(8, 123, 118, 0.3);
+    box-shadow: var(--shadow-sm);
   }
 
-  .pdf-table {
-    width: 100%;
-    border-collapse: collapse;
+  &.row-selected {
+    background: var(--primary-light);
+  }
+}
 
-    th,
-    td {
-      border: 1px solid var(--border-color);
-      padding: 8px 10px;
-      font-size: 0.85rem;
-      text-align: left;
-    }
+.bcard-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
 
-    th {
-      background: var(--primary-light);
-      color: var(--primary-dark);
-    }
+  &:active {
+    background: var(--primary-light);
+  }
+}
+
+.bcard-checkbox {
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+.bcard-header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.bcard-id-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+
+  .id-link {
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 14px;
+  }
+
+  .bcard-date {
+    color: var(--gray-accent);
+    font-size: 11px;
+    font-weight: 500;
+  }
+}
+
+.bcard-name-row {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.bcard-name {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-dark, #14222e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcard-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.expand-chevron {
+  color: var(--gray-accent);
+  font-size: 18px;
+  transition: transform 0.2s ease;
+}
+
+.booking-card.expanded .expand-chevron {
+  transform: rotate(180deg);
+  color: var(--primary);
+}
+
+.bcard-stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 0 16px 14px;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.bcard-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.bcs-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--gray-accent);
+}
+
+.bcs-value {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--text-dark, #14222e);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.bcard-details {
+  padding: 14px 16px;
+  background: var(--section-bg);
+}
+
+.bcard-test-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--card-bg, #fff);
+  border-radius: var(--r-sm);
+  overflow: hidden;
+  border: 1px solid var(--border-color);
+  margin-bottom: 12px;
+
+  th {
+    background: var(--card-bg, #fff);
+    color: var(--gray-accent);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  td {
+    padding: 8px 10px;
+    font-size: 12.5px;
+    color: var(--text-dark, #14222e);
+    border-bottom: 1px solid #f0f5f5;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+}
+
+.empty-tests {
+  text-align: center;
+  color: var(--gray-accent);
+  padding: 10px 0;
+  font-size: 12.5px;
+}
+
+.bcard-barcode-block {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  .barcode-line {
+    font-size: 12px;
+    color: var(--text-dark, #14222e);
   }
 }

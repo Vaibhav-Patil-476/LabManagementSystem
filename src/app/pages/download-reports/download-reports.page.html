@@ -110,93 +110,92 @@
     </ion-button>
   </div>
 
-  <!-- ===================== TABLE ===================== -->
-  <div class="table-wrapper">
-    <table class="report-table">
-      <thead>
-        <tr>
-          <th class="checkbox-col" *ngIf="canShowDownloadControls">
-            <ion-checkbox
-              [checked]="allSelected"
-              [disabled]="rowsForActiveTab.length === 0"
-              (ionChange)="toggleSelectAll($event.detail.checked)">
-            </ion-checkbox>
-          </th>
-          <th>Booking ID / Patient Id</th>
-          <th>Name</th>
-          <th>Tests</th>
-          <th *ngIf="roleService.isLabAdmin">Client Code/Doctor</th>
-          <th *ngIf="roleService.isLabAdmin">Samples</th>
-          <th>Barcode</th>
-          <th *ngIf="roleService.isLabAdmin">Reports</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr *ngIf="isLoading">
-          <td [attr.colspan]="8" class="empty-row">
-            <div class="loading-inline">
-              <ion-spinner name="dots"></ion-spinner>
-              <span>Loading...</span>
-            </div>
-          </td>
-        </tr>
+<!-- ===================== BOOKING CARD LIST (no horizontal swipe) ===================== -->
+  <div class="booking-card-list">
 
-        <tr *ngFor="let item of rowsForActiveTab" [class.row-selected]="isSelected(item)">
-          <td class="checkbox-col" *ngIf="canShowDownloadControls">
-            <ion-checkbox
-              [checked]="isSelected(item)"
-              (ionChange)="toggleSelect(item, $event.detail.checked)">
-            </ion-checkbox>
-          </td>
+    <div class="booking-card" *ngFor="let item of rowsForActiveTab" [class.expanded]="expandedId === item.bookingId"
+      [class.row-selected]="isSelected(item)">
 
-          <td class="id-col" data-label="Booking ID / Patient">
-            <a class="id-link">{{ item.bookingId }}</a><br />
-            <span class="sub-text">{{ item.patientId }}</span><br />
-            <span class="sub-text">{{ item.bookingDate | date:'M/d/yyyy, h:mm:ss a' }}</span>
-          </td>
+      <!-- ===== Card header — always visible, tap to expand ===== -->
+      <div class="bcard-header" (click)="toggleExpand(item)">
+        <ion-checkbox *ngIf="canShowDownloadControls" class="bcard-checkbox" [checked]="isSelected(item)"
+          (click)="$event.stopPropagation()" (ionChange)="toggleSelect(item, $event.detail.checked)">
+        </ion-checkbox>
 
-          <td class="name-col" data-label="Name">
-            <a class="id-link">{{ item.title | titlecase }} {{ item.name }}</a><br />
-            <span class="sub-text" *ngIf="item.genderAge">({{ item.genderAge }})</span>
-          </td>
+        <div class="bcard-header-left">
+          <div class="bcard-id-row">
+            <a class="id-link">#{{ item.bookingId }}</a>
+            <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
+          </div>
+          <div class="bcard-name-row">
+            <span class="bcard-name">{{ item.title | titlecase }} {{ item.name }}</span>
+            <span class="sub-text" *ngIf="item.genderAge">({{ item.genderAge }}) · {{ item.patientId }}</span>
+          </div>
+        </div>
+        <div class="bcard-header-right">
+          <span class="reports-pill" *ngIf="roleService.isLabAdmin" [class.reports-complete]="reportsComplete(item)">
+            {{ reportsFraction(item) }}
+          </span>
+          <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
+        </div>
+      </div>
 
-          <td class="tests-col" data-label="Tests">
-            <div class="test-row" *ngFor="let t of item.tests">
-              <span class="test-name">{{ t.name }}</span>
-              <span class="status-pill" [ngClass]="'status-' + (t.status | lowercase)">{{ t.status }}</span>
-            </div>
-          </td>
+      <!-- ===== Quick stat strip — always visible ===== -->
+      <div class="bcard-stats" *ngIf="roleService.isLabAdmin">
+        <div class="bcard-stat">
+          <span class="bcs-label">Client/Doctor</span>
+          <span class="bcs-value">{{ item.doctorName }}</span>
+        </div>
+        <div class="bcard-stat">
+          <span class="bcs-label">Samples</span>
+          <span class="bcs-value">{{ item.sampleCount }}</span>
+        </div>
+      </div>
 
-          <td *ngIf="roleService.isLabAdmin" class="center-col" data-label="Doctor">{{ item.doctorName }}</td>
-          <td *ngIf="roleService.isLabAdmin" class="center-col" data-label="Samples">{{ item.sampleCount }}</td>
+      <!-- ===== Expanded details — tests + barcode ===== -->
+      <div class="bcard-details" *ngIf="expandedId === item.bookingId">
 
-          <td class="barcode-col" data-label="Barcode">
-            <div *ngFor="let b of item.barcodes">{{ b }}</div>
-          </td>
+        <table class="bcard-test-table">
+          <thead>
+            <tr>
+              <th>Test Name</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let t of item.tests">
+              <td>{{ t.name }}</td>
+              <td><span class="status-pill" [ngClass]="'status-' + (t.status | lowercase)">{{ t.status }}</span></td>
+            </tr>
+            <tr *ngIf="!item.tests?.length">
+              <td colspan="2" class="empty-tests">No tests</td>
+            </tr>
+          </tbody>
+        </table>
 
-          <td *ngIf="roleService.isLabAdmin" class="center-col" data-label="Reports">
-            <span class="reports-pill" [class.reports-complete]="reportsComplete(item)">
-              {{ reportsFraction(item) }}
-            </span>
-          </td>
-        </tr>
+        <div class="bcard-barcode-block">
+          <span class="bcs-label">Barcode</span>
+          <div class="barcode-line" *ngFor="let b of item.barcodes">{{ b }}</div>
+          <div class="barcode-line" *ngIf="!item.barcodes?.length">-</div>
+        </div>
+      </div>
+    </div>
 
-        <tr *ngIf="!isLoading && rowsForActiveTab.length === 0">
-          <td [attr.colspan]="8" class="empty-row">
-            <div class="empty-state">
-              <ion-icon name="document-text-outline"></ion-icon>
-              <span>No data available</span>
-            </div>
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div class="loading-inline" *ngIf="isLoading">
+      <ion-spinner name="dots"></ion-spinner>
+      <span>Loading...</span>
+    </div>
+
+    <div class="empty-state" *ngIf="!isLoading && rowsForActiveTab.length === 0">
+      <ion-icon name="document-text-outline"></ion-icon>
+      <span>No data available</span>
+    </div>
+
     <div class="load-more-row" *ngIf="hasMoreForActiveTab">
       <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreActiveTab()">
         {{ isLoadingMore ? 'Loading...' : 'Load More' }}
       </ion-button>
     </div>
   </div>
-
 
 </ion-content>

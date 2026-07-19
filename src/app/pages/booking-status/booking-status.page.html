@@ -15,7 +15,7 @@
      component's native `scrollY` input is the only way to really lock
      it. Functionality/API is untouched — this is purely a scroll-lock
      UI fix. -->
-<ion-content class="booking-content" [scrollY]="openActionRowId === null">
+<ion-content class="booking-content" [class.menu-open]="openActionRowId !== null">
 
   <div class="form-card">
 
@@ -102,98 +102,108 @@
         <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
       </ion-button>
     </div>
-    <!-- ===================== BOOKING TABLE ===================== -->
-    <div class="table-wrapper">
-      <table class="report-table booking-table">
-        <thead>
-          <tr>
-            <th>Booking ID / Patient Id</th>
-            <th>Name</th>
-            <th>Tests</th>
-            <th>Client Code/Doctor</th>
-            <th>Samples</th>
-            <th>Barcode</th>
-            <th>Reports</th>
-            <th>Action</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr *ngFor="let item of filteredBookings; trackBy: trackByBookingId">
-            <td class="col-id" data-label="Booking ID / Patient">
-              <a class="id-link">{{ item.bookingId }}</a><br />
-              <span class="sub-text">{{ item.patientId }}</span><br />
-              <span class="sub-text" *ngIf="item.bookingDate">{{ item.bookingDate }}</span>
-            </td>
+    <!-- ===================== BOOKING CARD LIST (no horizontal swipe) ===================== -->
+    <div class="booking-card-list">
 
-            <td class="col-name" data-label="Name">
-              <a class="id-link">{{ item.title | titlecase }} {{ item.customerName }}</a><br />
-              <span class="sub-text">({{ item.gender | titlecase }}/{{ item.age }})</span>
-            </td>
+      <div class="booking-card" *ngFor="let item of filteredBookings; trackBy: trackByBookingId"
+        [class.expanded]="expandedBookingId === item.bookingId">
 
-            <td class="col-tests" data-label="Tests">
-              <div class="test-line" *ngFor="let test of item.tests">
-                <span class="test-name">{{ test.testName }}</span>
-                <span class="status-badge" [ngClass]="testStatusClass(test.status)">{{ testStatusLabel(test.status)
-                  }}</span>
-              </div>
-              <div class="test-line" *ngIf="!item.tests?.length">-</div>
-            </td>
+        <!-- ===== Card header — always visible, tap to expand ===== -->
+        <div class="bcard-header" (click)="toggleExpand(item)">
+          <div class="bcard-header-left">
+            <div class="bcard-id-row">
+              <a class="id-link">#{{ item.bookingId }}</a>
+              <span class="bcard-date">{{ item.bookingDate }}</span>
+            </div>
+            <div class="bcard-name-row">
+              <span class="bcard-name">{{ item.title | titlecase }} {{ item.customerName }}</span>
+              <span class="sub-text">({{ item.gender | titlecase }}/{{ item.age }}) · {{ item.patientId }}</span>
+            </div>
+          </div>
+          <div class="bcard-header-right">
+            <span class="status" [ngClass]="item.reports?.length ? 'completed' : 'pending'">
+              {{ getReportProgress(item) }}
+            </span>
+            <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
+          </div>
+        </div>
 
-            <td class="col-client" data-label="Client / Doctor">
-              ({{ item.franchise?.franchiseName || 'SELF' }}) / Dr. {{ item.doctor?.doctor_name || 'self' }}
-            </td>
+        <!-- ===== Quick stat strip — always visible ===== -->
+        <div class="bcard-stats">
+          <div class="bcard-stat">
+            <span class="bcs-label">Client/Doctor</span>
+            <span class="bcs-value">({{ item.franchise?.franchiseName || 'SELF' }}) Dr. {{ item.doctor?.doctor_name ||
+              'self' }}</span>
+          </div>
+          <div class="bcard-stat">
+            <span class="bcs-label">Samples</span>
+            <span class="bcs-value">{{ getSamples(item) }}</span>
+          </div>
+        </div>
 
-            <td class="col-samples" data-label="Samples">{{ getSamples(item) }}</td>
-            <td class="col-barcode" data-label="Barcode">
-              <div class="cell-value">
-                <div class="barcode-line" *ngFor="let s of getSampleLines(item)">
-                  {{ s.barcode }} <small *ngIf="s.sampleType">- {{ s.sampleType }}</small>
-                </div>
-                <div class="barcode-line" *ngIf="!getSampleLines(item).length">-</div>
-              </div>
-            </td>
+        <!-- ===== Expanded details — tests table + barcode + actions ===== -->
+        <div class="bcard-details" *ngIf="expandedBookingId === item.bookingId">
 
-            <td class="col-reports" data-label="Reports">
-              <span class="status" [ngClass]="item.reports?.length ? 'completed' : 'pending'">
-                {{ getReportProgress(item) }}
-              </span>
-            </td>
-            <td class="action-cell" data-label="Action">
-              <ion-button class="action-icon-btn" size="small" fill="clear" (click)="editTest(item)" title="Edit Tests">
-                <ion-icon slot="icon-only" name="cash-outline"></ion-icon>
-              </ion-button>
+          <table class="bcard-test-table">
+            <thead>
+              <tr>
+                <th>Test Name</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let test of item.tests">
+                <td>{{ test.testName }}</td>
+                <td>
+                  <span class="status-badge" [ngClass]="testStatusClass(test.status)">{{ testStatusLabel(test.status)
+                    }}</span>
+                </td>
+              </tr>
+              <tr *ngIf="!item.tests?.length">
+                <td colspan="2" class="empty-tests">No tests</td>
+              </tr>
+            </tbody>
+          </table>
 
-              <ion-button class="action-icon-btn" size="small" fill="clear" *ngIf="canEditPatient"
-                (click)="editPatient(item)" title="Edit Patient">
-                <ion-icon slot="icon-only" name="person-outline"></ion-icon>
-              </ion-button>
+          <div class="bcard-barcode-block">
+            <span class="bcs-label">Barcode</span>
+            <!-- नंतर -->
+            <div class="barcode-line" *ngFor="let s of item.samples; trackBy: trackByBarcode">
+              {{ s.barcode }} <small *ngIf="s.sampleType">- {{ s.sampleType }}</small>
+            </div>
+            <div class="barcode-line" *ngIf="!item.samples?.length">-</div>
+          </div>
 
-              <ion-button class="action-icon-btn dots" size="small" fill="clear"
-                (click)="toggleActionMenu(item, $event)" title="More actions">
-                <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
-              </ion-button>
-            </td>
-          </tr>
+          <div class="bcard-actions">
+            <ion-button class="action-icon-btn" size="small" fill="clear"
+              (click)="editTest(item); $event.stopPropagation()" title="Edit Tests">
+              <ion-icon slot="icon-only" name="cash-outline"></ion-icon>
+            </ion-button>
 
-          <tr *ngIf="!isLoadingList && filteredBookings.length === 0">
-            <td [attr.colspan]="8" class="empty-row">
-              <div class="empty-state">
-                <ion-icon name="document-text-outline"></ion-icon>
-                <span>No data available</span>
-              </div>
-            </td>
-          </tr>
-          <tr *ngIf="isLoadingList">
-            <td colspan="8" class="empty-row">
-              <div class="table-skeleton">
-                <div class="skeleton-line" style="width:70%"></div>
-                <div class="skeleton-line" style="width:90%"></div>
-                <div class="skeleton-line" style="width:55%"></div>
-              </div>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+            <ion-button class="action-icon-btn" size="small" fill="clear" *ngIf="canEditPatient"
+              (click)="editPatient(item); $event.stopPropagation()" title="Edit Patient">
+              <ion-icon slot="icon-only" name="person-outline"></ion-icon>
+            </ion-button>
+
+            <ion-button class="action-icon-btn dots" size="small" fill="clear" (click)="toggleActionMenu(item, $event)"
+              title="More actions">
+              <ion-icon slot="icon-only" name="ellipsis-vertical-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoadingList && filteredBookings.length === 0">
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>No data available</span>
+      </div>
+
+      <div class="table-skeleton" *ngIf="isLoadingList">
+        <div class="skeleton-line" style="width:70%"></div>
+        <div class="skeleton-line" style="width:90%"></div>
+        <div class="skeleton-line" style="width:55%"></div>
+      </div>
+
       <div class="load-more-row" *ngIf="hasMore && !isSearchMode">
         <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreBookings()">
           {{ isLoadingMore ? 'Loading...' : 'Load More' }}
@@ -783,12 +793,12 @@
     </ng-template>
   </ion-modal>
 
-<!-- ✅ In-app date-time picker — small centered popup (NOT a
+  <!-- ✅ In-app date-time picker — small centered popup (NOT a
        full-screen bottom sheet). Removing breakpoints/initialBreakpoint
        switches ion-modal from sheet-mode to its default centered-card
        mode; sizing is capped via .compact-popup CSS below. -->
-  <ion-modal [isOpen]="activeDateTimeRow !== null" cssClass="datetime-popup compact-popup"
-    (didDismiss)="closeDateTimePicker()">
+  <ion-modal [isOpen]="activeDateTimeRow !== null" cssClass="datetime-popup compact-popup" [keepContentsMounted]="false"
+    [canDismiss]="true" (didDismiss)="closeDateTimePicker()">
     <ng-template>
       <div class="compact-popup-page">
         <div class="compact-popup-header">
@@ -798,7 +808,7 @@
           </ion-button>
         </div>
         <div class="compact-popup-body">
-          <ion-datetime presentation="date-time" [(ngModel)]="tempDateTimeValue" [preferWheel]="false"
+          <ion-datetime presentation="date-time" [(ngModel)]="tempDateTimeValue" [preferWheel]="true"
             class="premium-datetime"></ion-datetime>
         </div>
         <div class="compact-popup-footer">

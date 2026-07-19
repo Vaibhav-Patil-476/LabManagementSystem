@@ -313,24 +313,38 @@
                   <span>Amount</span>
                 </div>
               </div>
+              <app-stacked-bar [received]="item.received" [pending]="item.pending" [outSourced]="item.outSourced"
+                [rejected]="item.rejected" [total]="item.samples">
+              </app-stacked-bar>
+
 
               <div class="booking-stat-grid">
+
                 <div>
                   <strong>{{ item.samples }}</strong>
                   <span>Samples</span>
                 </div>
+
                 <div class="received">
                   <strong>{{ item.received }}/{{ item.samples }}</strong>
                   <span>Received</span>
                 </div>
+
                 <div class="pending">
                   <strong>{{ item.pending }}/{{ item.samples }}</strong>
                   <span>Pending</span>
                 </div>
+
+                <div class="outsourced">
+                  <strong>{{ item.outSourced }}/{{ item.samples }}</strong>
+                  <span>OutSourced</span>
+                </div>
+
                 <div class="rejected">
                   <strong>{{ item.rejected }}/{{ item.samples }}</strong>
                   <span>Rejected</span>
                 </div>
+
               </div>
             </article>
 

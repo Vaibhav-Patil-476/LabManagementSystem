@@ -576,7 +576,92 @@ ion-content.menu-content {
   padding: 15px 0;
   border-bottom: 1px solid var(--line);
 }
+// ==========================================================
+// ✅ PROGRESS BAR — Received/Pending/Rejected split, matches the
+// screenshot reference. Sits between the bookings/amount row and
+// the stat grid.
+// ==========================================================
+.booking-progress-bar {
+  display: flex;
+  height: 26px;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-top: 14px;
+  background: #eef2f2;
+}
 
+.booking-progress-bar span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  transition: width 0.3s ease;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.bp-received {
+  background: #16866e;
+}
+
+.bp-pending {
+  background: #bd7d19;
+}
+
+.bp-rejected {
+  background: #c05262;
+}
+
+.booking-progress-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-top: 10px;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-received {
+  background: #16866e;
+}
+
+.dot-pending {
+  background: #bd7d19;
+}.dot.outsourced{
+  background:#2563eb;
+}.stats{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:12px;
+    margin-top:14px;
+}
+
+.stat{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+.dot-rejected {
+  background: #c05262;
+}
 .booking-overview strong,
 .booking-overview span,
 .booking-stat-grid strong,
@@ -596,9 +681,11 @@ ion-content.menu-content {
 }
 
 .booking-stat-grid {
-  justify-content: space-between;
-  gap: 6px;
-  padding-top: 13px;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 12px;
+  padding-top: 14px;
+  align-items: start;
 }
 
 .booking-stat-grid>div {
@@ -627,8 +714,49 @@ ion-content.menu-content {
 
 .booking-stat-grid .rejected strong {
   color: #c05262;
+}.booking-stat-grid .outsourced strong{
+    color:#2563eb;
+}
+.booking-progress-legend{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    flex-wrap:wrap;
+    gap:10px;
+    margin:14px 0 10px;
 }
 
+.legend-item{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:600;
+    color:#66737f;
+}
+
+.dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    flex-shrink:0;
+}
+
+.dot-received{
+    background:#16a34a;
+}
+
+.dot-pending{
+    background:#f59e0b;
+}
+
+.dot-outsourced{
+    background:#2563eb;
+}
+
+.dot-rejected{
+    background:#ef4444;
+}
 .empty-state {
   padding: 34px 20px;
   border: 1px dashed #cbd9dc;
@@ -878,12 +1006,16 @@ ion-content.menu-content {
   margin: auto 2px 0;
   color: #9aa9ae;
   font-size: 11px;
-}
-@media (max-width: 640px) {
+}@media (max-width: 640px) {
 
   .booking-content {
     --padding-start: 0;
     --padding-end: 0;
+  }
+
+  .dashboard-shell {
+    padding: max(18px, env(safe-area-inset-top)) 14px
+      calc(95px + env(safe-area-inset-bottom));
   }
 
   .form-card {
@@ -957,35 +1089,123 @@ ion-content.menu-content {
     width: 38px;
     height: 38px;
   }
-}// ==========================================================
-// Material single-date-picker overlay — same brand styling as
-// the range-picker used on Booking Status / Download Reports,
-// so the calendar UI looks identical everywhere in the app.
-// ==========================================================
+
+  /* ---------------- Dashboard Booking Card ---------------- */
+
+  .booking-card {
+    padding: 14px;
+  }
+
+  .booking-overview {
+    gap: 24px;
+  }
+
+  .booking-overview strong {
+    font-size: 20px;
+  }
+
+  .booking-progress-legend {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px 12px;
+    margin-top: 12px;
+  }
+
+  .legend-item {
+    font-size: 12px;
+    gap: 6px;
+    white-space: nowrap;
+  }
+
+  .dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  .booking-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    padding-top: 14px;
+    text-align: center;
+  }
+
+  .booking-stat-grid > div {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 0;
+  }
+
+  .booking-stat-grid strong {
+    font-size: 13px;
+    line-height: 1.2;
+    white-space: nowrap;
+  }
+
+  .booking-stat-grid span {
+    font-size: 10px;
+    line-height: 1.25;
+    word-break: break-word;
+  }
+
+  .booking-stat-grid .received strong {
+    color: #16866e;
+  }
+
+  .booking-stat-grid .pending strong {
+    color: #bd7d19;
+  }
+
+  .booking-stat-grid .outsourced strong {
+    color: #2563eb;
+  }
+
+  .booking-stat-grid .rejected strong {
+    color: #c05262;
+  }
+
+  .booking-progress-bar,
+  app-stacked-bar {
+    margin-top: 12px;
+  }
+
+  app-stacked-bar {
+    display: block;
+    height: 24px;
+  }
+}
+
+/* ==========================================================
+   Material single-date-picker overlay
+========================================================== */
+
 ::ng-deep .cdk-overlay-container {
   z-index: 99999 !important;
 }
 
 ::ng-deep .mat-datepicker-content {
   z-index: 99999 !important;
-  background-color: #ffffff !important;
+  background: #fff !important;
   border-radius: 12px !important;
-  box-shadow: 0 14px 38px rgba(7, 95, 93, 0.16) !important;
+  box-shadow: 0 14px 38px rgba(7, 95, 93, .16) !important;
 }
 
 ::ng-deep .mat-calendar {
-  background-color: #ffffff !important;
+  background: #fff !important;
 }
 
 ::ng-deep .mat-calendar-body-selected {
-  background-color: var(--brand, #087b76) !important;
-  color: #ffffff !important;
+  background: var(--brand, #087b76) !important;
+  color: #fff !important;
 }
 
 ::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
   border-color: var(--brand, #087b76) !important;
 }
 
-::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
-  background-color: #d9f0ee !important;
+::ng-deep
+.mat-calendar-body-cell:hover
+.mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+  background: #d9f0ee !important;
 }

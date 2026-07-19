@@ -22,44 +22,6 @@ import { AuthService } from '../../services/auth';
 import { RoleService } from '../../services/role';
 import { ToastService } from '../../services/toast';
 
-// ---------------------------------------------------------------------------
-// ✅ REWRITE — booking-status page cha (proven, reliable) pattern vaparला:
-// backend cha /report/all/{labId}?reportStatus=X param आधीच confirm झालं
-// आहे ki तो काम करत नाहीये (COMPLETE tab madhе PENDING bookings yayचे,
-// sगळ्या tabs madhे same data). Booking-status page ha problem आधीच
-// टाळतो कारण tो कधीच backend status-filter var bharosा थेवत nahi —
-// फक्त date+franchise backend कडून घेतो, status pratyek booking sathी
-// tyacha tests cha statuses varून CLIENT-SIDE स्वतः काढतो.
-//
-// Ha page ata तेच exact karto: eकच call (getBookingStatusNew — booking
-// status page वापरतो तोच fast/reliable endpoint), ani sगळे 5 buckets
-// (COMPLETE/CLINICAL/PARTIALLY_COMPLETE/PENDING/SNR) client-side derive
-// hotात. No localStorage kुठेही — फक्त in-memory (`bookings` array),
-// component destroy झाल्यावर nिघून जातो.
-//
-// ✅ FILTER-BAR REWRITE (this pass) — franchise dropdown ata plain
-// native <select> nahi, booking-status sarkhाच ion-select
-// (interface="popover") ahе. Date range ata donhi native
-// <input type="date"> nahi — booking-status page cha Angular Material
-// mat-date-range-picker cha exact tach pattern (single trigger button +
-// hidden mat-form-field + calendar overlay) vaparला ahे, jenekarून
-// donhi pages var eकach calendar UI/behaviour disеl.
-//
-// ✅ SEARCH-OVERRIDES-DATE FIX (this pass) — ADI problem: quickSearch
-// FAKTA already-loaded `bookings` array var client-side filter karat
-// hota, ani to array fromDate/toDate (default = AAJ) cha range madheच
-// backend kadun yeत hota. Tyामुळे booking ID/name search kितीही barobar
-// asली tarी, booking tya date-range cha baher aslyas result rikama
-// disaycha (जरी booking exist karत असला तरी) — ha search cha bug nव्हता,
-// FILTER-SCOPE cha bug hota.
-//
-// FIX: real industry apps (Swiggy/Zomato order-search, Gmail search)
-// prмाणे — quickSearch madhe kahi type kela ki (debounced), date-filter
-// TEMPORARILY BYPASS hoto ani wide-range fetch (SEARCH_START_DATE →
-// tomorrow, moठा page-size) trigger hoto. Search box rikama kelyavar
-// normal date-filtered view परत yeतो. Ha behaviour isSearchMode getter
-// varून drive hoto — franchise-change sudhha search-aware ahे.
-// ---------------------------------------------------------------------------
 export type ReportTabKey = 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR';
 
 export interface ReportTestRow {
@@ -82,8 +44,8 @@ export interface ReportBookingRow {
   createdBy?: number;
   reportId?: number;
   remark?: string;
-  file?: string;            // reportUrl — S3 PDF link, null jopryant report generate hot nahi
-  bucket: ReportTabKey;      // ✅ client-side derived, backend cha reportStatus var bharosa nahi
+  file?: string;
+  bucket: ReportTabKey;
 }
 
 @Component({
@@ -121,11 +83,12 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   isLoading = false;
   isLoadingMore = false;
   isGenerating = false;
+  hasMore = false;
+  totalBookingsFromServer = 0;
+  expandedId: number | string | null = null;
 
   selectedIds = new Set<string>();
 
-  // ✅ Sगळा data eकच array madhे (in-memory only, localStorage nahi).
-  // currentPage/hasMore booking-status page cha pattern.
   private bookings: ReportBookingRow[] = [];
   private searchDataset: ReportBookingRow[] = [];
   private filteredDataset: ReportBookingRow[] = [];
@@ -133,27 +96,19 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   private autoTabSwitched = false;
   private currentPage = 0;
   private readonly pageSize = 200;
-  hasMore = false;
-  totalBookingsFromServer: number = 0;
 
-  // ✅ Search-mode cha wide-range fetch sathi — booking kितीही जुनी asли
-  // tarी search la disावी mhanून far mागe cha lower-bound date. Upper
-  // bound nehmi "tomorrow" (aajchi booking sudhha yaवी).
   private readonly SEARCH_START_DATE = '2015-01-01';
   private readonly SEARCH_PAGE_SIZE = 500;
   private searchDebounceTimer: any = null;
   private readonly SEARCH_DEBOUNCE_MS = 400;
 
-  get isSearchMode(): boolean {
-    return this.quickSearch.trim().length > 0;
-  }
-
-  // ✅ Material date-range-picker cha state — booking-status page cha
-  // exact tach pattern. fromDate/toDate ('YYYY-MM-DD' strings) hेच
-  // loadData() vaparto, tyामुळे ha layer फक्त UI साठी convert-karto.
   @ViewChild('rangePicker') rangePicker!: any;
   rangeStart: Date | null = null;
   rangeEnd: Date | null = null;
+
+  get isSearchMode(): boolean {
+    return this.quickSearch.trim().length > 0;
+  }
 
   constructor(
     private labApi: LabApiService,
@@ -169,42 +124,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
     });
   }
-  private autoSwitchTab() {
 
-    if (this.autoTabSwitched)
-      return;
-
-    const order: ReportTabKey[] = [
-      'COMPLETE',
-      'CLINICAL',
-      'PARTIALLY_COMPLETE',
-      'PENDING',
-      'SNR'
-    ];
-
-    const counts: Record<ReportTabKey, number> = {
-      COMPLETE: 0,
-      CLINICAL: 0,
-      PARTIALLY_COMPLETE: 0,
-      PENDING: 0,
-      SNR: 0
-    };
-
-    this.filteredDataset.forEach(r => counts[r.bucket]++);
-
-    if (counts[this.activeTab] === 0) {
-
-      const tab = order.find(x => counts[x] > 0);
-
-      if (tab) {
-        this.activeTab = tab;
-      }
-
-    }
-
-    this.autoTabSwitched = true;
-
-  }
+  // ---------- lifecycle ----------
   ngOnInit() {
     this.loadFranchises();
     this.loadData();
@@ -217,6 +138,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
   }
 
+  // ---------- date helpers ----------
   private formatDateForInput(d: Date): string {
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
@@ -224,8 +146,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return `${yyyy}-${mm}-${dd}`;
   }
 
-  // booking-status page cha addOneDay logic — endDate exclusive kartो
-  // jenekarून "toDate" cha divास पण data yईल.
   private addOneDay(dateStr: string): string {
     if (!dateStr) return dateStr;
     const d = new Date(dateStr + 'T00:00:00');
@@ -233,24 +153,28 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return this.formatDateForInput(d);
   }
 
-  // ================= FRANCHISE DROPDOWN DATA =================
+  private todayIso(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  // ---------- franchise dropdown ----------
   private loadFranchises() {
     this.labApi.getFranchises().subscribe({
-      next: (res: any) => {
-        this.ngZone.run(() => {
-          this.franchises = res?.content || res || [];
-          this.cdr.detectChanges();
-        });
-      },
-      error: () => {
-        this.ngZone.run(() => {
-          this.franchises = [];
-        });
-      }
+      next: (res: any) => this.ngZone.run(() => {
+        this.franchises = res?.content || res || [];
+        this.cdr.detectChanges();
+      }),
+      error: () => this.ngZone.run(() => { this.franchises = []; })
     });
   }
 
-  // ================= MATERIAL DATE-RANGE-PICKER =================
+  onFranchiseChange(id: any) {
+    this.franchiseId = id;
+    if (this.isSearchMode) this.runSearch();
+    else this.loadData();
+  }
+
+  // ---------- date range picker ----------
   private toDateObj(dateStr: string): Date | null {
     if (!dateStr) return null;
     return new Date(dateStr + 'T00:00:00');
@@ -273,7 +197,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
   onRangeEndChange(event: any) {
     this.rangeEnd = event?.value || null;
-    // ✅ donhi dates select झाल्यावर, filters apply karून list reload.
     if (this.rangeStart && this.rangeEnd) {
       this.fromDate = this.toDateStr(this.rangeStart);
       this.toDate = this.toDateStr(this.rangeEnd);
@@ -281,126 +204,129 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
   }
 
-  // ================= QUICK SEARCH (date-filter override) =================
-  // ✅ Ha wach fix cha core ahe. Search box madhe type kela ki, debounce
-  // nantar isSearchMode true asel tar wide-range fetch (runSearch()),
-  // nahitar normal date-filtered loadData() call hoto.
+  onDateRangeChange() {
+    if (this.isSearchMode) return;
+    this.loadData();
+  }
+
+  // ---------- quick search ----------
   onQuickSearchChange() {
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => {
       if (this.isSearchMode) {
         this.runSearch();
       } else {
-
         this.quickSearch = '';
-
         this.filteredDataset = [];
-
         this.searchDataset = [];
-
         this.hasSearchLoaded = false;
-
         this.autoTabSwitched = false;
-
         this.selectedIds.clear();
-
         this.loadData();
-
       }
     }, this.SEARCH_DEBOUNCE_MS);
   }
 
-  // ✅ Search active astana date-filter cha ऐवजी wide range (2015 →
-  // tomorrow) backend la pathvतो, jenekarून booking kितीही जुनी/नवीन
-  // asली tarी ID/name/barcode search la sapadel. Page-size mोठा (500)
-  // eकच batch madhे — load-more disable rahto search-mode madhе.
   private runSearch(): void {
-
     this.autoTabSwitched = false;
 
-    // First search -> API
     if (!this.hasSearchLoaded) {
-
       this.isLoading = true;
-
       const labId = this.authService.labId;
       const searchEndDate = this.addOneDay(this.todayIso());
 
       this.labApi.getBookingStatusNew(
-        labId,
-        0,
-        this.SEARCH_PAGE_SIZE,
-        this.SEARCH_START_DATE,
-        searchEndDate,
-        this.franchiseId || undefined
+        labId, 0, this.SEARCH_PAGE_SIZE, this.SEARCH_START_DATE, searchEndDate, this.franchiseId || undefined
       ).subscribe({
+        next: (res: any) => this.ngZone.run(() => {
+          let rows: ReportBookingRow[] = (res?.content ?? res ?? []).map((r: any) => this.mapToRow(r));
 
-        next: (res: any) => {
+          if (this.roleService.isStaff) {
+            rows = rows.filter(r => r.createdBy === this.authService.userId);
+          }
 
-          this.ngZone.run(() => {
-
-            let rows: ReportBookingRow[] = (res?.content ?? res ?? [])
-              .map((r: any): ReportBookingRow => this.mapToRow(r));
-
-            if (this.roleService.isStaff) {
-              rows = rows.filter((r: ReportBookingRow) =>
-                r.createdBy === this.authService.userId
-              );
-            }
-
-            this.searchDataset = rows;
-            this.hasSearchLoaded = true;
-
-            this.applySearchFilter();
-
-            this.isLoading = false;
-
-          });
-
-        },
-
-        error: () => {
+          this.searchDataset = rows;
+          this.hasSearchLoaded = true;
+          this.applySearchFilter();
           this.isLoading = false;
-        }
-
+        }),
+        error: () => { this.isLoading = false; }
       });
-
       return;
     }
 
-    // Next search -> local only
     this.applySearchFilter();
   }
 
-  // ================= DATA LOADING (fresh call, no cache carried over) =================
-  loadData() {
+  private applySearchFilter(): void {
+    const q = this.quickSearch.trim().toLowerCase();
 
-    this.hasSearchLoaded = false;
+    if (!q) {
+      this.filteredDataset = [];
+      this.autoTabSwitched = false;
+      this.selectedIds.clear();
+      return;
+    }
 
-    this.searchDataset = [];
+    const numeric = /^\d+$/.test(q);
 
-    this.filteredDataset = [];
-
-    this.autoTabSwitched = false;
+    this.filteredDataset = this.searchDataset.filter(r => {
+      if (numeric) {
+        return String(r.bookingId) === q || String(r.patientId ?? '') === q;
+      }
+      return (
+        r.name.toLowerCase().includes(q) ||
+        String(r.bookingId).includes(q) ||
+        String(r.patientId ?? '').includes(q) ||
+        r.tests.some(t => t.name.toLowerCase().includes(q)) ||
+        r.barcodes.some(b => b.toLowerCase().includes(q))
+      );
+    });
 
     this.selectedIds.clear();
+    this.autoSwitchTab();
+  }
 
+  private autoSwitchTab() {
+    if (this.autoTabSwitched) return;
+
+    const order: ReportTabKey[] = ['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR'];
+    const counts: Record<ReportTabKey, number> = {
+      COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0
+    };
+
+    this.filteredDataset.forEach(r => counts[r.bucket]++);
+
+    if (counts[this.activeTab] === 0) {
+      const tab = order.find(x => counts[x] > 0);
+      if (tab) this.activeTab = tab;
+    }
+
+    this.autoTabSwitched = true;
+  }
+
+  // ---------- data loading ----------
+  loadData() {
+    this.hasSearchLoaded = false;
+    this.searchDataset = [];
+    this.filteredDataset = [];
+    this.autoTabSwitched = false;
+    this.selectedIds.clear();
     this.bookings = [];
-
     this.currentPage = 0;
-
     this.hasMore = false;
-
     this.activeTab = 'COMPLETE';
-
     this.fetchPage();
-
   }
 
   loadMore() {
     if (!this.hasMore || this.isLoadingMore) return;
     this.currentPage++;
     this.fetchPage(true);
+  }
+
+  loadMoreActiveTab(): void {
+    this.loadMore();
   }
 
   private fetchPage(isLoadMore: boolean = false) {
@@ -410,40 +336,24 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     const endDateExclusive = this.addOneDay(this.toDate);
 
     this.labApi.getBookingStatusNew(
-      labId,
-      this.currentPage,
-      this.pageSize,
-      this.fromDate,
-      endDateExclusive,
-      this.franchiseId || undefined
+      labId, this.currentPage, this.pageSize, this.fromDate, endDateExclusive, this.franchiseId || undefined
     ).subscribe({
-      next: (res: any) => {
-        this.ngZone.run(() => {
-          const list = res?.content ?? res ?? [];
-          const rawList: any[] = Array.isArray(list) ? list : [];
+      next: (res: any) => this.ngZone.run(() => {
+        const rawList: any[] = Array.isArray(res?.content ?? res) ? (res?.content ?? res) : [];
+        let rows = rawList.map((raw: any) => this.mapToRow(raw));
 
-          let rows = rawList.map((raw: any) => this.mapToRow(raw));
+        if (this.roleService.isStaff) {
+          const currentUserId = this.authService.userId;
+          rows = rows.filter(r => r.createdBy === currentUserId);
+        }
 
-          if (this.roleService.isStaff) {
-            const currentUserId = this.authService.userId;
-            rows = rows.filter(r => r.createdBy === currentUserId);
-          }
         this.bookings = isLoadMore ? [...this.bookings, ...rows] : rows;
-
-          // ✅ backend cha totalPages field reliable nahi (kधी undefined,
-          // kधी chukicha) — mhanun "mangitlela pageSize tevdhach data
-          // aala ka" ha signal vaparला, totalPages var avlambun nahi.
-          this.hasMore = rawList.length === this.pageSize;
-
-          // ✅ server cha khara total (totalElements) capture kela —
-          // "Total Bookings" ha loaded rows peksha vegla, actual total
-          // dakhavel.
-          this.totalBookingsFromServer = res?.totalElements ?? res?.totalCount ?? this.bookings.length;
-          this.isLoading = false;
-          this.isLoadingMore = false;
-          this.cdr.detectChanges();
-        });
-      },
+        this.hasMore = rawList.length === this.pageSize;
+        this.totalBookingsFromServer = res?.totalElements ?? res?.totalCount ?? this.bookings.length;
+        this.isLoading = false;
+        this.isLoadingMore = false;
+        this.cdr.detectChanges();
+      }),
       error: (err) => {
         console.error('Failed to load bookings', err);
         this.ngZone.run(() => {
@@ -455,10 +365,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     });
   }
 
-  // Raw booking object -> display row + bucket. Raw shape booking-status
-  // page cha mapBookingItem() sarkhाच ahे (bookingWithTestMappings,
-  // sampleAccessions, franchiseName, doctorName, reportUrl — spread
-  // varून raw madhून थेट).
+  // ---------- mapping ----------
   private mapToRow(raw: any): ReportBookingRow {
     const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
 
@@ -500,17 +407,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     };
   }
 
-  // ✅ booking-status page cha testStatusLabel()/overallReportStatus
-  // logic cha 5-bucket version. Sगळे precedence (complete > snr >
-  // partially-complete > pending) tyाच casing-insensitive pattern
-  // vaparतो jो booking-status page madhे already काम करतोय.
-  //
-  // ⚠️ ASSUMPTION — "CLINICAL" status backend कडून kuठल्या exact
-  // string madhे yeto he confirm nahi (booking-status page cha
-  // testStatusLabel() madhे to bucket kधीच disत nahi). Jर kधी
-  // CLINICAL tab रिकामाच राहिला तर backend cha raw t.reportStatus
-  // value console.log करून खरं string confirm कर, mग ha check
-  // update करू.
   private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
     if (tests.length === 0) return 'PENDING';
 
@@ -523,26 +419,44 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return 'PENDING';
   }
 
-  onDateRangeChange() {
-    // ✅ Search active astana date-filter la kahihi effect nahi — search
-    // already wide-range var chalto. Ha guard confusing double-fetch
-    // टाळतो.
-    if (this.isSearchMode) return;
-    this.loadData();
+  // ---------- tabs / rows ----------
+  setTab(tab: ReportTabKey) {
+    this.activeTab = tab;
+    this.autoTabSwitched = true;
+    this.selectedIds.clear();
   }
 
-  onFranchiseChange(id: any) {
-    this.franchiseId = id;
-    if (this.isSearchMode) {
-      this.runSearch();
-    } else {
-      this.loadData();
-    }
+  toggleExpand(item: ReportBookingRow) {
+    this.expandedId = this.expandedId === item.bookingId ? null : item.bookingId;
+  }
+
+  get rowsForActiveTab(): ReportBookingRow[] {
+    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+    return source.filter(r => r.bucket === this.activeTab);
+  }
+
+  get totalBookings(): number {
+    return this.isSearchMode ? this.filteredDataset.length : this.totalBookingsFromServer;
+  }
+
+  get bucketCount() {
+    const counts: Record<ReportTabKey, number> = {
+      COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0
+    };
+    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+    for (const row of source) counts[row.bucket]++;
+    return counts;
+  }
+
+  get hasMoreForActiveTab(): boolean {
+    return this.hasMore;
   }
 
   reportsFraction(item: ReportBookingRow): string {
     const total = item.tests.length;
-    const done = item.tests.filter(t => (t.status || '').toLowerCase().includes('complete') || (t.status || '').toLowerCase().includes('ready')).length;
+    const done = item.tests.filter(t =>
+      (t.status || '').toLowerCase().includes('complete') || (t.status || '').toLowerCase().includes('ready')
+    ).length;
     return `${done}/${total}`;
   }
 
@@ -550,67 +464,12 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return item.bucket === 'COMPLETE';
   }
 
-  get rowsForActiveTab(): ReportBookingRow[] {
-
-    const source = this.isSearchMode
-      ? this.filteredDataset
-      : this.bookings;
-
-    return source.filter(r => r.bucket === this.activeTab);
-
-  }
-
-get totalBookings(): number {
-
-    return this.isSearchMode
-      ? this.filteredDataset.length
-      : this.totalBookingsFromServer;
-
-  }
-
-  get bucketCount() {
-
-    const counts: Record<ReportTabKey, number> = {
-      COMPLETE: 0,
-      CLINICAL: 0,
-      PARTIALLY_COMPLETE: 0,
-      PENDING: 0,
-      SNR: 0
-    };
-
-    const source = this.isSearchMode
-      ? this.filteredDataset
-      : this.bookings;
-
-    for (const row of source) {
-      counts[row.bucket]++;
-    }
-
-    return counts;
-  }
-  setTab(tab: ReportTabKey) {
-
-    this.activeTab = tab;
-
-    this.autoTabSwitched = true;
-
-    this.selectedIds.clear();
-
-  }
-
-  getTests(item: ReportBookingRow): string {
-    return item.tests.map(t => t.name).join(', ') || '-';
-  }
-
-  // ================= ROLE GATES =================
+  // ---------- role gates ----------
   get canShowDownloadControls(): boolean {
-
-    return this.roleService.canDownloadReports &&
-      this.activeTab === 'COMPLETE';
-
+    return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
   }
 
-  // ================= SELECTION (admin + Complete tab only) =================
+  // ---------- selection ----------
   isSelected(item: ReportBookingRow): boolean {
     return this.selectedIds.has(String(item.bookingId));
   }
@@ -622,25 +481,11 @@ get totalBookings(): number {
     else this.selectedIds.delete(id);
   }
 
-  get allSelected(): boolean {
-    const rows = this.rowsForActiveTab;
-    return rows.length > 0 && this.selectedIds.size === rows.length;
-  }
-
-  toggleSelectAll(checked: boolean) {
-    if (!this.canShowDownloadControls) return;
-    if (checked) {
-      this.rowsForActiveTab.forEach(r => this.selectedIds.add(String(r.bookingId)));
-    } else {
-      this.selectedIds.clear();
-    }
-  }
-
   get selectedReports(): ReportBookingRow[] {
     return this.rowsForActiveTab.filter(r => this.selectedIds.has(String(r.bookingId)));
   }
 
-  // ================= DOWNLOAD =================
+  // ---------- download ----------
   async downloadSelected() {
     if (!this.canShowDownloadControls) {
       this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
@@ -648,7 +493,6 @@ get totalBookings(): number {
     }
 
     const selected = this.selectedReports;
-
     if (selected.length === 0) {
       this.toast.warning('Warning', 'Kripya kimman ek report select kara');
       return;
@@ -658,11 +502,8 @@ get totalBookings(): number {
 
     try {
       const bookingIds = selected.map(r => Number(r.bookingId));
-
       const res: any = await firstValueFrom(
-        this.labApi.generatePdfReport(bookingIds, {
-          single: bookingIds.length === 1
-        })
+        this.labApi.generatePdfReport(bookingIds, { single: bookingIds.length === 1 })
       );
 
       if (res?.success && res?.downloadUrl) {
@@ -678,58 +519,5 @@ get totalBookings(): number {
     } finally {
       this.isGenerating = false;
     }
-  }
-
-  private todayIso(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
-  get hasMoreForActiveTab(): boolean {
-    return this.hasMore;
-  }
-
-  loadMoreActiveTab(): void {
-    this.loadMore();
-  }
-
-  private applySearchFilter(): void {
-
-    const q = this.quickSearch.trim().toLowerCase();
-
-    // Search cleared
-    if (!q) {
-      this.filteredDataset = [];
-      this.autoTabSwitched = false;
-      this.selectedIds.clear();
-      return;
-    }
-
-    const numeric = /^\d+$/.test(q);
-
-    this.filteredDataset = this.searchDataset.filter(r => {
-
-      if (numeric) {
-        return (
-          String(r.bookingId) === q ||
-          String(r.patientId ?? '') === q
-        );
-      }
-
-      return (
-        r.name.toLowerCase().includes(q) ||
-        String(r.bookingId).includes(q) ||
-        String(r.patientId ?? '').includes(q) ||
-        r.tests.some(t =>
-          t.name.toLowerCase().includes(q)
-        ) ||
-        r.barcodes.some(b =>
-          b.toLowerCase().includes(q)
-        )
-      );
-
-    });
-
-    this.selectedIds.clear();
-
-    this.autoSwitchTab();
   }
 }
