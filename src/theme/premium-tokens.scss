@@ -1,0 +1,200 @@
+// ==========================================================
+// PREMIUM ENTERPRISE DESIGN TOKENS — GLOBAL SCOPE
+// ==========================================================
+// WHY THIS FILE EXISTS (read before editing):
+// ion-modal, when presented declaratively (<ion-modal [isOpen]="...">),
+// is re-parented by Ionic into an overlay container directly under
+// <ion-app> when it opens (needed for correct stacking/animation).
+// That means the modal's rendered content is NO LONGER a DOM
+// descendant of <app-booking-status> (or any page component) while
+// it is open.
+//
+// CSS custom properties (--primary, --shadow-md, --r-lg, etc.) only
+// cascade through DOM ancestry. If they are declared on a component's
+// `:host` selector, any element moved outside that host's subtree
+// (exactly what happens to modal content) can no longer see them —
+// the class names still match (Angular's encapsulation attribute is
+// unaffected by DOM position), but every `var(--x)` inside those
+// rules resolves to nothing, so colors/shadows/radius/spacing all
+// silently disappear.
+//
+// FIX: declare every token ONCE here, on `:root` (i.e. <html>), which
+// is the one ancestor every element in the document always shares,
+// no matter where Ionic moves it. Import this file ONE time in your
+// global.scss (see instructions below the block). Do NOT also
+// re-declare these on a component's `:host` — that would just
+// shadow/duplicate them for no benefit.
+// ==========================================================
+
+:root {
+  // ---- Brand core ----
+  --primary: #087b76;
+  --primary-dark: #075f5d;
+  --primary-darker: #054a48;
+  --primary-light: #d9f0ee;
+  --primary-lighter: #eef8f7;
+  --brand-gradient: linear-gradient(135deg, #0a9d96 0%, #075f5d 100%);
+  --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f5fbfb 100%);
+
+  // ---- Semantic status colors ----
+  --success: #17886f;
+  --success-bg: #dbf3ed;
+  --warning: #b9791a;
+  --warning-bg: #fdefd8;
+  --danger: #c14c5f;
+  --danger-bg: #fdecef;
+  --info: #2568ae;
+  --info-bg: #e4eefb;
+  --teal: #087b76;
+  --pink: #bd526f;
+  --gray-accent: #8798a0;
+
+  // ---- Surfaces ----
+  --border-color: #e6eeee;
+  --border-color-strong: #d6e4e3;
+  --section-bg: #f6faf9;
+  --card-bg: #ffffff;
+  --card-bg-alt: #fbfdfd;
+  --header-bg: #f4f4f4;
+  --text-dark: #10201f;
+  --text-mid: #445655;
+  --text-light: #6c7b86;
+  --input-border: #dde8e7;
+
+  --brand-indigo: #087b76;
+  --brand-gray: #8fa1a5;
+  --brand-orange: #b9791a;
+  --brand-pink: #bd526f;
+  --brand-green: #17886f;
+  --brand-red: #c14c5f;
+
+  // ---- Elevation ----
+  --shadow-xs: 0 1px 2px rgba(6, 58, 56, 0.05);
+  --shadow-sm: 0 3px 10px rgba(6, 58, 56, 0.06), 0 1px 2px rgba(6, 58, 56, 0.05);
+  --shadow-md: 0 10px 26px rgba(6, 58, 56, 0.10), 0 2px 6px rgba(6, 58, 56, 0.05);
+  --shadow-lg: 0 20px 48px rgba(6, 58, 56, 0.16), 0 4px 10px rgba(6, 58, 56, 0.06);
+  --shadow-glow: 0 10px 24px rgba(8, 123, 118, 0.30);
+  --shadow-inset: inset 0 1px 2px rgba(6, 58, 56, 0.04);
+
+  // ---- Radius scale ----
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 22px;
+  --r-xl: 28px;
+  --r-pill: 999px;
+
+  // ---- Spacing scale (4px base) ----
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-7: 32px;
+
+  // ---- z-index scale ----
+  --z-table: 1;
+  --z-filter: 3;
+  --z-date-popup: 5;
+  --z-search-dropdown: 20;
+  --z-dropdown-backdrop: 900;
+  --z-dropdown: 910;
+
+  // App background (used by ion-content --background bindings)
+  --app-bg: #f2f7f7;
+}
+
+// ==========================================================
+// Ionic modal chrome that lives in ITS OWN shadow DOM (the sheet
+// surface itself, the backdrop dimmer) cannot be reached by normal
+// selectors OR by ::ng-deep from a component stylesheet once the
+// modal is portaled out. `::part()` is shadow-piercing by spec and
+// works regardless of where the element ends up in the document, so
+// it belongs here, globally, keyed off the `cssClass` each modal
+// already carries (sheet-modal / compact-popup / etc.) — this keeps
+// one definition instead of duplicating per-component.
+// ==========================================================
+ion-modal.sheet-modal {
+  --border-radius: var(--r-xl) var(--r-xl) 0 0;
+  --box-shadow: 0 -16px 40px rgba(6, 58, 56, 0.22);
+  --backdrop-opacity: 0.42 !important;
+}
+
+ion-modal.sheet-modal::part(content) {
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
+}
+
+ion-modal.doctor-popup.sheet-modal::part(content),
+ion-modal.lab-popup.sheet-modal::part(content),
+ion-modal.history-popup.sheet-modal::part(content),
+ion-modal.barcode-popup.sheet-modal::part(content) {
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+ion-modal.test-modal.sheet-modal::part(content) {
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+ion-modal.compact-popup {
+  --width: min(340px, 90vw) !important;
+  --height: fit-content !important;
+  --max-height: 80vh !important;
+  --border-radius: var(--r-lg) !important;
+  --box-shadow: 0 24px 56px rgba(6, 58, 56, 0.28) !important;
+  --backdrop-opacity: 0.5 !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+ion-modal.compact-popup::part(content) {
+  height: fit-content !important;
+  max-height: 80vh !important;
+  border-radius: var(--r-lg) !important;
+  overflow: hidden !important;
+  position: static !important;
+}
+
+// CDK overlay (Material date-range-picker) is *always* appended to
+// <body>, fully outside Angular component boundaries — this must
+// stay global too, it was never reachable from component SCSS.
+.cdk-overlay-container {
+  z-index: 99999 !important;
+}
+
+.mat-datepicker-content {
+  z-index: 99999 !important;
+  background-color: #ffffff !important;
+  border-radius: var(--r-md) !important;
+  box-shadow: var(--shadow-lg) !important;
+}
+
+.mat-calendar {
+  background-color: #ffffff !important;
+}
+
+.mat-calendar-body-selected {
+  background-color: var(--primary) !important;
+  color: #ffffff !important;
+}
+
+.mat-calendar-body-in-range::before {
+  background: var(--primary-light) !important;
+}
+
+.mat-calendar-body-comparison-bridge-start::before,
+.mat-calendar-body-comparison-bridge-end::before,
+.mat-calendar-body-range-start::before,
+.mat-calendar-body-range-end::before {
+  background: var(--primary-light) !important;
+}
+
+.mat-calendar-body-today:not(.mat-calendar-body-selected) {
+  border-color: var(--primary) !important;
+}
+
+.mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+  background-color: var(--primary-light) !important;
+}

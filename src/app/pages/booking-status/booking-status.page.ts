@@ -343,37 +343,53 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   private mapBookingItem(raw: any): BookingListItem {
     if (!raw) return raw;
 
-    const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
+    const rawTestMappings = (
+      raw.bookingWithTestMappings || raw.testMappings || raw.tests || []
+    ).filter((t: any) => !!t.testName);
 
-    const tests: BookingTest[] = rawTestMappings.map((t: any) => ({
-      testId: t.testId,
-      testMappingId: t.bookingWithTestMappingId,
-      testName: (t.testName || '').trim(),
-      testPrice: t.testPrice,
-      testMrp: t.testMrp,
-      method: t.testCode,
-      status: t.reportStatus || 'pending',
-      reportId: t.reportId,
-      resultValue: ''
-    }));
+    // ✅ आधी reports/statusByTestId तयार करा
+    const reportsRaw = raw.reports || [];
+    const reports = reportsRaw
+      .filter((r: any) => !!r.reportId)
+      .map((r: any) => ({ reportId: r.reportId, reportStatus: r.reportStatus || 'PENDING' }));
 
+    const statusByTestId = new Map<number, string>();
+    reportsRaw.forEach((r: any) => {
+      if (r.testId != null) statusByTestId.set(r.testId, r.reportStatus || 'PENDING');
+    });
+    const tests: BookingTest[] = rawTestMappings.map((t: any) => {
+      const mappingId = t.testMappingId ?? t.bookingWithTestMappingId;
+      if (!mappingId) {
+        console.log('MISSING testMappingId for test:', t.testName, t);
+      }
+      return {
+        testId: t.testId,
+        testMappingId: mappingId,
+        testName: (t.testName || '').trim(),
+        testPrice: t.testPrice,
+        testMrp: t.testMrp,
+        method: t.testCode,
+        status: statusByTestId.get(t.testId) || t.reportStatus || 'pending',
+        reportId: statusByTestId.has(t.testId) ? undefined : t.reportId,
+        sample: t.sample || t.sampleTypeName || t.sampleType || t.sampleTypeData?.sample_type || '',
+        resultValue: ''
+      };
+    });
     const seenBarcodes = new Set<string>();
     const samples: BookingSample[] = [];
-    (raw.sampleAccessions || []).forEach((s: any) => {
+    (raw.sampleAccessions || raw.samples || []).forEach((s: any) => {
       const barcode = s.barCode || s.barcode;
       if (!barcode || seenBarcodes.has(barcode)) return;
       seenBarcodes.add(barcode);
       samples.push({
         barcode,
-        sampleType: s.sampleTypeData?.sample_type || s.sampleType,
+        sampleType: s.sampleTypeData?.sample_type || s.sampleType || s.sampleTypeName,
         sampleTypeId: s.sampleTypeData?.sample_type_id ?? s.sampleTypeId,
         status: s.status
       });
     });
 
-    const reports = rawTestMappings
-      .filter((t: any) => !!t.reportId)
-      .map((t: any) => ({ reportId: t.reportId, reportStatus: t.reportStatus || 'PENDING' }));
+
 
     let overallReportStatus = 'pending';
     if (tests.length > 0) {
@@ -476,6 +492,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   private fetchSingleBooking(bookingId: number, cb: (b: BookingListItem) => void, onError?: () => void) {
     this.labApi.getSingleBooking(bookingId).subscribe({
       next: (res: any) => this.ngZone.run(() => {
+
+        console.log('RAW REPORTS ARRAY:', res?.reports);
+        console.log('RAW TESTS ARRAY:', res?.tests);
         cb(this.mapBookingItem(res));
         this.cdr.detectChanges();
       }),
@@ -653,22 +672,51 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   async removeTest(test: BookingTest) {
     const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
       header: 'Delete Test',
       message: `Are you sure you want to delete "${test.testName}"?`,
       buttons: [
-        { text: 'No', role: 'cancel' },
+        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
         {
           text: 'Yes, Delete',
+          cssClass: 'alert-btn-danger',
           handler: () => {
-            this.selectedTests = this.selectedTests.filter(t => t.testName !== test.testName);
-            this.showToast(`${test.testName} removed`, 'warning');
+            if (test.isNewlyAdded) {
+              this.selectedTests = this.selectedTests.filter(t => t !== test);
+              this.showToast(`${test.testName} removed`, 'warning');
+              return;
+            }
+
+            if (!test.testMappingId) {
+              this.showToast('Test ID missing', 'error');
+              return;
+            }
+
+            const labId = this.labApi.getCurrentLabId();
+            const bookingId = this.selectedBooking!.bookingId;
+
+            this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
+              next: () => this.ngZone.run(() => {
+                this.selectedTests = this.selectedTests.filter(t => t !== test);
+                this.showToast(`${test.testName} deleted from patient`, 'success');
+                this.fetchSingleBooking(bookingId, (fresh) => {
+                  this.selectedBooking = fresh;
+                  this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
+                  this.loadBookings();
+                  this.cdr.detectChanges();
+                });
+              }),
+              error: (err) => this.ngZone.run(() => {
+                console.log('DELETE TEST ERROR:', err);
+                this.showToast('' + (err.error?.message || 'Unknown error'), 'error');
+              })
+            });
           }
         }
       ]
     });
     await alert.present();
   }
-
   onDiscountChange() {
     if (!this.canEditBilling) { this.discount = 0; return; }
     if (this.discount < 0) this.discount = 0;
@@ -724,6 +772,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
           const addTestBody: any = {
             bookingId,
             customerName: this.selectedBooking!.customerName,
+            age: this.selectedBooking!.age,
+            ageType: this.selectedBooking!.ageType,
             gender: this.selectedBooking!.gender,
             aadhaarNumber: this.selectedBooking!.aadhaarNumber || '',
             tests: newTests.map(t => ({

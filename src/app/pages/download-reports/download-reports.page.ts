@@ -13,7 +13,7 @@ import { addIcons } from 'ionicons';
 import {
   downloadOutline, documentTextOutline, checkmarkDoneOutline,
   refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
-  businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
+  businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline, qrCodeOutline
 } from 'ionicons/icons';
 import { firstValueFrom } from 'rxjs';
 
@@ -121,7 +121,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     addIcons({
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
       refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
-      businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline
+      businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline,
+      qrCodeOutline
     });
   }
 

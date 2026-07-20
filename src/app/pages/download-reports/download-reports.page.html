@@ -34,18 +34,14 @@
        ion-select (interface="popover"), date range ata Material
        date-range-picker (jुना native input[type=date] pair kadhla). -->
   <div class="filter-bar">
-<div class="filter-field search-field">
+    <div class="filter-field search-field">
       <span class="search-icon-badge">
         <ion-icon name="search-outline"></ion-icon>
       </span>
-      <input
-        type="text"
-        placeholder="Quick search"
-        [(ngModel)]="quickSearch"
-        (ngModelChange)="onQuickSearchChange()" />
+      <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch" (ngModelChange)="onQuickSearchChange()" />
     </div>
 
- <div class="filter-field select-field" *ngIf="roleService.isLabAdmin">
+    <div class="filter-field select-field" *ngIf="roleService.isLabAdmin">
       <span class="select-icon-badge">
         <ion-icon name="business-outline"></ion-icon>
       </span>
@@ -58,7 +54,7 @@
       </ion-select>
     </div>
 
-  <div class="filter-field date-field" (click)="openDateRangePicker()">
+    <div class="filter-field date-field" (click)="openDateRangePicker()">
       <span class="date-icon-badge">
         <ion-icon name="calendar-outline"></ion-icon>
       </span>
@@ -83,34 +79,27 @@
 
   </div>
 
-<!-- ===================== STATUS TABS ===================== -->
+  <!-- ===================== STATUS TABS ===================== -->
   <div class="status-tabs-wrapper" *ngIf="!isSearchMode">
     <div class="status-tabs">
-      <div
-        *ngFor="let tab of tabs"
-        class="status-tab"
-        [class.active]="activeTab === tab.key"
-        (click)="setTab(tab.key)">
+      <div *ngFor="let tab of tabs" class="status-tab" [class.active]="activeTab === tab.key" (click)="setTab(tab.key)">
         <span class="tab-dot" [ngClass]="tab.badgeClass"></span>
         <span class="tab-label">{{ tab.label }}</span>
         <span class="tab-count" [ngClass]="tab.badgeClass">{{ bucketCount[tab.key] }}</span>
       </div>
     </div>
   </div>
-  
-<!-- Download is ONLY visible to Lab Admin, and ONLY on the Complete tab -->
+
+  <!-- Download is ONLY visible to Lab Admin, and ONLY on the Complete tab -->
   <div class="download-row" *ngIf="canShowDownloadControls">
-    <ion-button
-      class="download-btn"
-      [disabled]="selectedIds.size === 0 || isGenerating"
-      (click)="downloadSelected()">
+    <ion-button class="download-btn" [disabled]="selectedIds.size === 0 || isGenerating" (click)="downloadSelected()">
       <ion-icon slot="start" name="download-outline"></ion-icon>
       <span class="btn-label">{{ isGenerating ? 'Generating...' : 'Download Selected' }}</span>
       <span class="selected-count" *ngIf="selectedIds.size > 0">{{ selectedIds.size }}</span>
     </ion-button>
   </div>
 
-<!-- ===================== BOOKING CARD LIST (no horizontal swipe) ===================== -->
+  <!-- ===================== BOOKING CARD LIST (no horizontal swipe) ===================== -->
   <div class="booking-card-list">
 
     <div class="booking-card" *ngFor="let item of rowsForActiveTab" [class.expanded]="expandedId === item.bookingId"
@@ -175,8 +164,11 @@
 
         <div class="bcard-barcode-block">
           <span class="bcs-label">Barcode</span>
-          <div class="barcode-line" *ngFor="let b of item.barcodes">{{ b }}</div>
-          <div class="barcode-line" *ngIf="!item.barcodes?.length">-</div>
+          <div class="barcode-line" *ngFor="let b of item.barcodes">
+            <ion-icon name="qr-code-outline"></ion-icon>
+            <span>{{ b }}</span>
+          </div>
+          <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
         </div>
       </div>
     </div>

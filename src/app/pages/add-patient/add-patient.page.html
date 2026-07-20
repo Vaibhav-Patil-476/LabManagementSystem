@@ -105,63 +105,54 @@
         </div>
       </div>
 
-<!-- ✅ REF DOC -->
-<div class="input-row">
+      <!-- ✅ REF DOC -->
+      <div class="input-row">
 
-  <!-- Title -->
-  <div class="input-group" style="flex: 0 0 80px;">
-    <label>Title</label>
-    <div class="input-wrap">
-      <ion-select [(ngModel)]="patient.doctorTitle" placeholder="Dr." interface="popover">
-        <ion-select-option value="dr">Dr.</ion-select-option>
-        <ion-select-option value="mr">Mr.</ion-select-option>
-        <ion-select-option value="mrs">Mrs.</ion-select-option>
-      </ion-select>
-    </div>
-  </div>
+        <!-- Title -->
+        <div class="input-group" style="flex: 0 0 80px;">
+          <label>Title</label>
+          <div class="input-wrap">
+            <ion-select [(ngModel)]="patient.doctorTitle" placeholder="Dr." interface="popover">
+              <ion-select-option value="dr">Dr.</ion-select-option>
+              <ion-select-option value="mr">Mr.</ion-select-option>
+              <ion-select-option value="mrs">Mrs.</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
 
-  <!-- Doctor Search + Button -->
-  <div class="input-group doctor-group" style="flex:1; position:relative;">
+        <!-- Doctor Search + Button -->
+        <div class="input-group doctor-group" style="flex:1; position:relative;">
 
-    <label>REF DOC. <span class="required">*</span></label>
+          <label>REF DOC. <span class="required">*</span></label>
 
-    <div class="doctor-input-row">
+          <div class="doctor-input-row">
 
-      <div class="input-wrap">
-        <ion-input
-          type="text"
-          placeholder="Search Doctor Name"
-          [(ngModel)]="doctorSearch"
-          (ionInput)="searchDoctorInput()">
-        </ion-input>
+            <div class="input-wrap">
+              <ion-input type="text" placeholder="Search Doctor Name" [(ngModel)]="doctorSearch"
+                (ionInput)="searchDoctorInput()">
+              </ion-input>
+            </div>
+
+            <ion-button class="add-btn" fill="solid" (click)="openAddDoctor()">
+              <ion-icon name="add-outline"></ion-icon>
+            </ion-button>
+
+          </div>
+
+          <!-- Doctor Suggestions -->
+          <div class="test-suggestions overlay-dropdown" *ngIf="showDoctorSuggestions">
+            <div class="suggestion-item" *ngFor="let doc of filteredDoctors" (click)="selectDoctorFromSearch(doc)">
+              {{ doc.doctor_name }}
+            </div>
+
+            <div class="suggestion-item" *ngIf="filteredDoctors.length === 0">
+              No matching doctor — click + to add new
+            </div>
+          </div>
+
+        </div>
+
       </div>
-
-      <ion-button
-        class="add-btn"
-        fill="solid"
-        (click)="openAddDoctor()">
-        <ion-icon name="add-outline"></ion-icon>
-      </ion-button>
-
-    </div>
-
-    <!-- Doctor Suggestions -->
-    <div class="test-suggestions overlay-dropdown" *ngIf="showDoctorSuggestions">
-      <div
-        class="suggestion-item"
-        *ngFor="let doc of filteredDoctors"
-        (click)="selectDoctorFromSearch(doc)">
-        {{ doc.doctor_name }}
-      </div>
-
-      <div class="suggestion-item" *ngIf="filteredDoctors.length === 0">
-        No matching doctor — click + to add new
-      </div>
-    </div>
-
-  </div>
-
-</div>
 
       <div class="input-row" *ngIf="!isAdminRole">
         <div class="input-group" style="flex: 1; position: relative;">
@@ -172,7 +163,7 @@
             </ion-input>
           </div>
 
-          <div class="test-suggestions overlay-dropdown" *ngIf="showStaffLabDropdown && !isStaffRole">
+          <div class="test-suggestions overlay-dropdown" *ngIf="showStaffLabDropdown && !isStaffSideUI">
             <div class="suggestion-item" *ngFor="let lab of filteredStaffLabs" (click)="selectStaffLabFromPicker(lab)">
               <span>{{ lab.franchiseName || lab.name }}</span>
             </div>
@@ -182,7 +173,7 @@
           </div>
         </div>
 
-        <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddLabModal()" *ngIf="!isStaffRole">
+        <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddLabModal()" *ngIf="!isStaffSideUI">
           <ion-icon name="add-outline"></ion-icon>
         </ion-button>
       </div>
@@ -475,7 +466,8 @@
       </div>
     </div>
 
-    <div class="sample-card" [class.disabled]="selectedSampleTests.length === 0">
+    <div class="sample-card" [class.disabled]="selectedSampleTests.length === 0"
+      *ngIf="!isStaffSideUI || selectedTests.length > 0">
       <div class="sample-header">
         <div>Barcode</div>
         <div>#</div>
@@ -501,7 +493,7 @@
     </div>
 
     <div class="action-buttons">
-      <ion-button expand="block" class="save-btn" (click)="savePatient()">
+      <ion-button expand="block" class="save-btn" (click)="savePatient()" *ngIf="!isStaffSideUI || staffBarcodesFilled">
         <ion-icon name="save-outline" slot="start"></ion-icon>
         Save Booking
       </ion-button>

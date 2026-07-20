@@ -22,6 +22,7 @@ private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
       `${this.BASE_URL}/api/v1/lab/booking/patient/last-booking/${this.getLabId()}`
     );
   }
+  
 
   getTests(): Observable<any[]> {
     return this.http.get<any[]>(
@@ -104,6 +105,12 @@ private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
       { params }
     );
   }
+  
+  deleteTestFromBooking(labId: number, bookingId: number, testMappingId: number): Observable<any> {
+  return this.http.delete(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/deleteTest/${labId}/${bookingId}/${testMappingId}`
+  );
+}
 
   // FAST endpoint — company app pramane server-side date + franchise
   // filtering karto, tyamule payload halka ani jalad yeto.

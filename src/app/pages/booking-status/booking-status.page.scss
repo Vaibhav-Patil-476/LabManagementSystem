@@ -1,80 +1,36 @@
 // ==========================================================
-// PREMIUM ENTERPRISE DESIGN SYSTEM — Booking Status
-// Recolored to match Dashboard's teal identity (--brand: #087b76).
-// Token set is duplicated per-component (Angular ViewEncapsulation),
-// keep identical across dashboard / booking-status / add-patient
-// so the whole app reads as one product.
+// PREMIUM ENTERPRISE DESIGN SYSTEM — Booking Status (component scope)
+// ==========================================================
+// ✅ FIX (root cause + resolution):
+// All design tokens (--primary, --shadow-*, --r-*, --sp-*) used to
+// live on `:host` here. `ion-modal` presented declaratively is
+// re-parented by Ionic to a container directly under <ion-app> while
+// open, so its content stops being a DOM descendant of this
+// component's host. CSS custom properties only cascade through DOM
+// ancestry, so every var(--x) inside the modal silently resolved to
+// nothing — classes still matched (Angular's encapsulation attribute
+// travels with the node), but colors/shadows/radius/spacing vanished.
+//
+// Tokens now live once, globally, on `:root` in
+// `src/theme/premium-tokens.scss` (imported one time into
+// global.scss) — see that file. This stylesheet only contains
+// component-scoped structural/layout rules that consume those tokens
+// via var(); it does not redeclare them, to avoid duplication.
+// Ionic modal-shell rules that target the modal's own shadow parts
+// (`ion-modal.sheet-modal`, `::part(content)`, `.compact-popup`, and
+// the CDK/Material overlay globals) have also moved to
+// premium-tokens.scss, since those elements are portaled out of this
+// component's DOM subtree too and a component-scoped rule can never
+// reliably reach them once open.
 // ==========================================================
 :host {
-  // ---- Brand core (same values as dashboard.page.scss) ----
-  --primary: #087b76;
-  --primary-dark: #075f5d;
-  --primary-light: #d9f0ee;
-  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
-  --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
-
-  // ---- Semantic status colors (reused from dashboard stat chips) ----
-  --success: #16866e;
-  --success-bg: #d8f2ed;
-  --warning: #bd7d19;
-  --warning-bg: #fff0d9;
-  --danger: #c05262;
-  --danger-bg: #ffebef;
-  --info: #2470b9;
-  --info-bg: #e1efff;
-  --teal: #087b76;
-  --pink: #bd526f;
-  --gray-accent: #8fa1a5;
-
-  // ---- Surfaces (kept for compatibility with app-wide vars) ----
-  --border-color: #e4eded;
-  --section-bg: #f5f9f9;
-  --header-bg: #f4f4f4;
-  --text-dark: #14222e;
-  --text-light: #6c7b86;
-  --input-border: #e2e8e8;
-
-  --brand-indigo: #087b76;
-  --brand-gray: #8fa1a5;
-  --brand-orange: #bd7d19;
-  --brand-pink: #bd526f;
-  --brand-green: #16866e;
-  --brand-red: #c05262;
-
-  // ---- Elevation (teal-tinted, never flat black) ----
-  --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
-  --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
-  --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
-  --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
-  --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
-
-  // ---- Radius scale ----
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 26px;
-  --r-pill: 999px;
-
-  // ---- single z-index scale so nothing fights for stacking order.
-  // Everything on this page (filters, table, custom dropdown, modals)
-  // references one of these instead of ad-hoc numbers.
-  --z-table: 1;
-  --z-filter: 3;
-  --z-date-popup: 5;
-  --z-search-dropdown: 20;
-  --z-dropdown-backdrop: 900;
-  --z-dropdown: 910;
-
-  // ✅ FIX: host-level safety net so nothing inside this page can ever
-  // force the whole app to scroll horizontally. Individual scrollable
-  // regions (the table) opt back into horizontal scroll explicitly via
-  // `overflow-x: auto` on `.table-wrapper` — this only blocks the
-  // *unintentional* page-level overflow.
   display: block;
   width: 100%;
   max-width: 100%;
   overflow-x: hidden;
   box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 // ==========================================================
@@ -83,9 +39,8 @@
 .booking-header {
   --background: var(--brand-gradient);
   --color: #ffffff;
-  // ✅ FIX: respect the iPhone notch / Android status bar so the title
-  // never sits under the system UI in landscape or on newer devices.
   padding-top: env(safe-area-inset-top, 0);
+  box-shadow: 0 2px 14px rgba(6, 58, 56, 0.18);
 
   ion-title {
     color: #ffffff;
@@ -100,11 +55,9 @@
 }
 
 .booking-content {
-  --background: var(--app-bg, #f4f8f8);
+  --background: var(--app-bg, #f2f7f7);
   --padding-start: 0;
   --padding-end: 0;
-  // ✅ FIX: belt-and-braces against horizontal scroll inside the
-  // scrollable ion-content shadow viewport itself.
   --overflow-x: hidden;
 }
 
@@ -114,19 +67,12 @@
 .form-card {
   background: var(--card-bg, #ffffff);
   border-radius: var(--r-lg);
-  margin: 14px;
-  padding: 18px;
+  margin: var(--sp-4);
+  padding: var(--sp-5);
   box-shadow: var(--shadow-md);
   border: 1px solid rgba(8, 123, 118, 0.06);
   box-sizing: border-box;
   max-width: 100%;
-}
-
-.form-card-title {
-  font-weight: 700;
-  font-size: 15px;
-  color: var(--primary-dark);
-  padding: 4px 6px 10px;
 }
 
 // ==========================================================
@@ -136,22 +82,23 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
-  padding: 2px 2px 14px;
+  gap: var(--sp-3);
+  padding: 2px 2px var(--sp-5);
 }
 
 .total-badge {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--sp-2);
   background: var(--brand-gradient);
   color: #fff;
   font-weight: 700;
   font-size: 13px;
-  padding: 9px 18px;
+  padding: 10px 20px;
   border-radius: var(--r-pill);
   white-space: nowrap;
   box-shadow: var(--shadow-glow);
+  letter-spacing: 0.1px;
 
   ion-icon {
     font-size: 15px;
@@ -161,17 +108,24 @@
 .default-note {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--sp-2);
   color: var(--pink);
   background: var(--danger-bg);
   font-size: 12px;
   font-weight: 600;
-  padding: 7px 12px;
+  padding: 8px 14px;
   border-radius: var(--r-pill);
+  border: 1px solid rgba(193, 76, 95, 0.12);
 
   ion-icon {
     font-size: 14px;
   }
+}
+
+.search-mode-note {
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  border-color: rgba(8, 123, 118, 0.14);
 }
 
 // ==========================================================
@@ -183,23 +137,24 @@
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  gap: 10px;
-  padding: 0 2px 16px;
+  gap: var(--sp-3);
+  padding: 0 2px var(--sp-5);
 }
 
 .filter-field {
-  flex: 1 1 140px;
-  min-width: 130px;
+  flex: 1 1 220px;
+  min-width: 160px;
   max-width: 100%;
   display: flex;
   align-items: center;
+  gap: var(--sp-3);
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-sm);
   background: var(--section-bg);
-  padding: 0 12px;
-  height: 44px;
+  padding: 0 var(--sp-4);
+  height: 56px;
   box-sizing: border-box;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
 
   select,
   input {
@@ -209,14 +164,11 @@
     width: 100%;
     min-width: 0;
     height: 100%;
-    font-size: 13px;
-    font-weight: 500;
+    font-size: 15px;
+    font-weight: 600;
     color: var(--text-dark);
   }
 
-  // Native <select> fallback (kept for any plain <select> that lands in
-  // a .filter-field in future) — text is clipped with an ellipsis
-  // instead of forcing the field to grow.
   select {
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -224,87 +176,39 @@
     cursor: pointer;
   }
 
-  ion-icon {
-    color: var(--gray-accent);
-    margin-right: 8px;
-    flex-shrink: 0;
-    font-size: 16px;
-  }
-
   &:focus-within {
     border-color: var(--primary);
-    background: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
   }
 }
 
-// ==========================================================
-// PREMIUM FILTER FIELDS — search / franchise / date all share the
-// same 58px height + icon-badge treatment (matches Download
-// Reports page) so the whole row reads as one consistent, premium
-// bar instead of the old compact/inconsistent 44px fields.
-// ==========================================================
-.search-field,
-.select-field,
-.date-field {
-  height: 58px;
-  padding: 0 16px;
-  gap: 12px;
-}
+.search-icon-badge,
+.select-icon-badge,
+.date-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--primary-light);
+  flex-shrink: 0;
 
-.search-field {
-  .search-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary-light);
-    flex-shrink: 0;
-
-    ion-icon {
-      color: var(--primary);
-      font-size: 18px;
-      margin: 0;
-    }
-  }
-
-  input {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-dark);
-  }
-
-  input::placeholder {
-    color: #9aabae;
-    font-weight: 500;
+  ion-icon {
+    color: var(--primary);
+    font-size: 18px;
+    margin: 0;
   }
 }
 
-// ✅ FIX: the franchise field uses <ion-select>, a custom element — the
-// generic `.filter-field select { ... }` rule above only ever matches a
-// literal <select> tag and silently never applied here. It now has its
-// own explicit sizing + icon-badge so it matches Search/Date exactly.
+.search-field input::placeholder {
+  color: #9aabae;
+  font-weight: 500;
+}
+
 .select-field {
   overflow: hidden;
-
-  .select-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary-light);
-    flex-shrink: 0;
-
-    ion-icon {
-      color: var(--primary);
-      font-size: 18px;
-      margin: 0;
-    }
-  }
 
   ion-select {
     flex: 1 1 auto;
@@ -317,7 +221,7 @@
     --padding-bottom: 0;
     --placeholder-color: #9aabae;
     --placeholder-opacity: 1;
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-dark);
     display: flex;
@@ -325,9 +229,6 @@
     box-sizing: border-box;
   }
 
-  // Truncate long franchise names inside the closed field with an
-  // ellipsis instead of letting them push the field wider than its
-  // flex parent.
   ion-select::part(text),
   ion-select::part(placeholder) {
     overflow: hidden;
@@ -341,18 +242,6 @@
   }
 }
 
-// ✅ FIX: the franchise/doctor/lab pickers use interface="popover" (a
-// compact panel anchored to the field) instead of "action-sheet" (which
-// stacks every option as a full-height list and covers the entire
-// screen for anything beyond a handful of items). This caps the popover
-// itself to a sane card size with its own internal scroll, and gives it
-// the same rounded/brand-consistent look as the rest of the app instead
-// of Ionic's bare default.
-//
-// Note: ion-popover is rendered as an overlay outside this component's
-// own DOM subtree, so it can't be reached with normal scoped styles —
-// ::ng-deep is the supported/standard way to reach overlay-portaled
-// Ionic components from a component stylesheet.
 :host ::ng-deep ion-select-popover,
 :host ::ng-deep ion-popover {
   --width: min(320px, 92vw);
@@ -369,7 +258,7 @@
   }
 
   ion-item {
-    --min-height: 44px;
+    --min-height: 46px;
     font-size: 13.5px;
   }
 }
@@ -377,33 +266,14 @@
 .date-field {
   flex: 1 1 260px;
   cursor: pointer;
-  /* keep this above sibling cards so the calendar popup is never
-     clipped or drawn underneath the table below it */
   position: relative;
   z-index: var(--z-date-popup);
   overflow: visible;
   background: var(--card-bg, #fff);
   border-width: 1.5px;
 
-  .date-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary-light);
-    flex-shrink: 0;
-
-    ion-icon {
-      color: var(--primary);
-      font-size: 18px;
-      margin: 0;
-    }
-  }
-
   .date-trigger-btn {
-    font-size: 16px;
+    font-size: 15px;
     font-weight: 600;
     color: var(--text-dark);
     white-space: nowrap;
@@ -414,7 +284,7 @@
 
   &:hover {
     border-color: rgba(8, 123, 118, 0.4);
-    background: var(--primary-light);
+    background: var(--primary-lighter);
   }
 }
 
@@ -422,8 +292,8 @@
   --border-radius: var(--r-sm);
   --color: #fff;
   margin: 0;
-  height: 58px;
-  width: 58px;
+  height: 56px;
+  width: 56px;
   flex-shrink: 0;
   --box-shadow: var(--shadow-glow);
 
@@ -438,63 +308,52 @@
 }
 
 // ==========================================================
-// TABLE — real desktop-style table with horizontal scroll,
-// matching Report Download page's table exactly. The horizontal
-// scroll here is intentional and contained — it does not leak out
-// to the rest of the page.
+// STATUS BADGES (table / card)
 // ==========================================================
-.table-wrapper {
-  position: relative;
-  z-index: var(--z-table);
-  margin: 12px 0 0;
-  width: 100%;
-  max-width: 100%;
-  overflow-x: auto;
-  overflow-y: hidden;
-  overscroll-behavior-x: contain;
-  -webkit-overflow-scrolling: touch;
-  background: var(--card-bg, #fff);
-  border-radius: var(--r-md);
-  border: 1px solid rgba(8, 123, 118, 0.06);
-  box-shadow: var(--shadow-sm);
-  box-sizing: border-box;
-}
-
-.id-link {
-  color: var(--primary);
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 12px;
+  border-radius: var(--r-pill);
+  font-size: 11px;
   font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-  border-bottom: 1.5px dashed rgba(8, 123, 118, 0.35);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
 
-  &:hover {
-    border-bottom-style: solid;
+  &::before {
+    content: '';
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  &.pending {
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  &.completed {
+    background: var(--success-bg);
+    color: var(--success);
   }
 }
 
-.sub-text {
-  color: var(--gray-accent);
-  font-size: 11.5px;
-}
-
-
 .status-badge {
   display: inline-block;
-  padding: 3px 10px;
+  padding: 4px 11px;
   border-radius: var(--r-pill);
   font-size: 10.5px;
   font-weight: 700;
   text-transform: uppercase;
+  letter-spacing: 0.2px;
   color: #fff;
   white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12);
 
-  // ✅ FIX: these class names now match what `testStatusClass()` in the
-  // .ts actually returns (badge-pending / badge-inprocess / badge-snr /
-  // badge-ready). The previous names here (.status-pending,
-  // .status-completed/.status-complete, .status-in-process/.status-inprocess)
-  // never matched anything the template applies, so every badge fell back
-  // to just the base white text color with no background — which is why
-  // they were reading as invisible/white-on-white against the table.
   &.badge-pending {
     background: var(--warning);
   }
@@ -511,6 +370,7 @@
     background: var(--success);
   }
 }
+
 @keyframes dropdownIn {
   from {
     opacity: 0;
@@ -524,24 +384,23 @@
 }
 
 @keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
 
-  to {
-    opacity: 1;
-  }
+@keyframes slideUpIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 // ==========================================================
-// 3-DOT ACTION MENU — positioned via JS-computed top/left (see
-// toggleActionMenu in the .ts), sits above the table but below any
-// ion-modal so it never gets visually trapped behind other elements.
+// 3-DOT ACTION MENU
 // ==========================================================
 .action-menu-backdrop {
   position: fixed;
   inset: 0;
-  background: rgba(15, 34, 34, 0.32);
+  background: rgba(9, 26, 25, 0.38);
+  backdrop-filter: blur(1px);
   z-index: var(--z-dropdown-backdrop);
   animation: fadeIn 0.15s ease;
 }
@@ -553,85 +412,122 @@
   border: 1px solid var(--border-color);
   border-radius: var(--r-md);
   box-shadow: var(--shadow-lg);
-  min-width: 200px;
+  min-width: 216px;
   max-width: calc(100vw - 16px);
-  max-height: min(320px, calc(100vh - 32px));
+  max-height: min(360px, calc(100vh - 32px));
   overflow-y: auto;
-  padding: 6px;
+  padding: 8px;
   box-sizing: border-box;
-  animation: dropdownIn 0.14s ease;
+  animation: dropdownIn 0.16s cubic-bezier(.2, .9, .3, 1.2);
 }
 
 .action-item {
   display: flex;
   align-items: center;
-  gap: 11px;
-  padding: 11px 16px;
-  border-radius: var(--r-sm);
-  font-size: 13px;
-  font-weight: 500;
-  color: #333f42;
+  gap: var(--sp-3);
+  padding: 10px 12px;
+  border-radius: var(--r-xs);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-dark);
   cursor: pointer;
   white-space: nowrap;
-  transition: background 0.12s ease;
+  transition: background 0.12s ease, transform 0.08s ease;
 
-  ion-icon {
-    font-size: 17px;
-    color: var(--primary);
-    flex-shrink: 0;
+  &:hover {
+    background: var(--primary-lighter);
   }
 
-  &:hover,
   &:active {
     background: var(--primary-light);
+    transform: scale(0.99);
   }
+}
+
+.action-icon-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: var(--primary-light);
+  flex-shrink: 0;
+
+  ion-icon {
+    font-size: 16px;
+    color: var(--primary);
+  }
+
+  ion-spinner {
+    width: 16px;
+    height: 16px;
+    color: var(--primary);
+  }
+}
+
+.action-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 6px 8px;
 }
 
 .action-item.item-loading {
   opacity: 0.6;
   cursor: not-allowed;
   pointer-events: none;
-
-  ion-spinner {
-    width: 17px;
-    height: 17px;
-    color: var(--primary);
-  }
 }
 
 // ==========================================================
-// MODALS — shared shell
+// MODAL CONTENT — light-DOM structure rendered from our own
+// <ng-template>. These classes still match correctly even after
+// Ionic re-parents the modal (Angular's encapsulation attribute
+// travels with the node); they just needed tokens to be global,
+// which is now fixed upstream in premium-tokens.scss.
 // ==========================================================
 .test-modal-wrapper {
   background: var(--card-bg, #fff);
   border-radius: var(--r-xl) var(--r-xl) 0 0;
   overflow: hidden;
   position: relative;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .sheet-top {
   background: var(--card-bg, #fff);
-  padding: 10px 20px 16px;
-  border-bottom: 1px solid #edf3f3;
+  padding: 10px var(--sp-5) var(--sp-4);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
 }
 
 .modal-handle {
-  width: 44px;
+  width: 40px;
   height: 5px;
-  background: #d6e2e2;
+  background: #dbe6e5;
   border-radius: var(--r-pill);
-  margin: 6px auto 14px;
+  margin: 4px auto 14px;
 }
 
 .sheet-top-row {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 10px;
+  gap: var(--sp-3);
 }
 
 .sheet-top-title {
   min-width: 0;
+}
+
+.sheet-title-eyebrow {
+  color: var(--primary);
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 2px;
 }
 
 .sheet-title-main {
@@ -648,87 +544,134 @@
 }
 
 .close-modal-btn {
-  --background: var(--section-bg);
-  --color: #6b7d81;
-  width: 40px;
-  height: 40px;
-  --border-radius: var(--r-sm);
+  appearance: none;
+  border: none;
+  background: var(--section-bg);
+  color: var(--text-mid);
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.12s ease, color 0.12s ease, transform 0.08s ease;
 
-  &::part(native) {
-    background: var(--section-bg);
-    color: #6b7d81;
-    border-radius: var(--r-sm);
-    box-shadow: none;
+  ion-icon {
+    font-size: 19px;
   }
 
-  &:active::part(native) {
+  &:hover {
     background: var(--danger-bg);
     color: var(--danger);
   }
+
+  &:active {
+    transform: scale(0.92);
+  }
 }
 
-// ✅ FIX: added `overscroll-behavior: contain` so a fully scrolled modal
-// body no longer bubbles rubber-band scroll up into the page behind it
-// on iOS, and safe-area padding is preserved for the home-indicator area.
-.test-modal-body-pad {
-  padding: 16px 18px calc(24px + env(safe-area-inset-bottom, 0px));
+.test-modal-scroll {
+  flex: 1;
   overflow-y: auto;
   overscroll-behavior: contain;
-  max-height: calc(90vh - 90px);
   -webkit-overflow-scrolling: touch;
 }
 
+.test-modal-body-pad {
+  padding: var(--sp-5) var(--sp-5) var(--sp-6);
+}
+
+.sheet-footer {
+  flex-shrink: 0;
+  padding: var(--sp-3) var(--sp-5) calc(var(--sp-4) + env(safe-area-inset-bottom, 0px));
+  background: var(--card-bg, #fff);
+  border-top: 1px solid var(--border-color);
+  box-shadow: 0 -8px 20px rgba(6, 58, 56, 0.06);
+}
+
 .booking-info-header {
-  background: #f0f5f5;
-  border: 1px solid rgba(147, 196, 194, 0.12);
-  border-radius: 10px;
-  padding: 18px 20px;
-  margin-bottom: 18px;
+  background: var(--section-bg);
+  border: 1px solid var(--border-color);
+  border-radius: var(--r-md);
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-5);
 }
 
 .info-grid {
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 4px;
 }
 
-.info-col {
-  width: 100%;
-}
+.info-col { width: 100%; }
 
 .info-row {
   display: grid;
-  grid-template-columns: 120px 1fr;
+  grid-template-columns: 110px 1fr;
   align-items: center;
-  column-gap: 10px;
-  padding: 12px 0;
+  column-gap: var(--sp-3);
+  padding: 9px 0;
+
+  & + .info-row {
+    border-top: 1px dashed var(--border-color);
+  }
 }
 
 .info-label {
   color: var(--gray-accent);
-  font-weight: 600;
+  font-weight: 700;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
 }
 
 .info-value {
   color: var(--text-dark);
   font-weight: 700;
+  font-size: 13.5px;
   text-align: left;
   justify-self: start;
-  margin-left: 0;
   word-break: break-word;
+}
+
+.section-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--sp-3);
+}
+
+.section-label-title {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--primary-dark);
+  letter-spacing: -0.1px;
+}
+
+.section-label-count {
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 4px 10px;
+  border-radius: var(--r-pill);
 }
 
 .search-bar-row {
   position: relative;
+  margin-bottom: var(--sp-5);
 
   ion-searchbar {
-    --background: #f0f5f5;
+    --background: var(--section-bg);
     --box-shadow: none;
-    --border-radius: 14px;
-
-    border-radius: 14px;
+    --border-radius: var(--r-md);
+    --placeholder-color: #93a5a4;
+    --color: var(--text-dark);
+    border-radius: var(--r-md);
     overflow: hidden;
+    padding: 0;
   }
 }
 
@@ -743,45 +686,31 @@
   overflow-y: auto;
   box-shadow: var(--shadow-lg);
   box-sizing: border-box;
+  margin-top: 6px;
 }
 
 .search-dropdown-item {
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  padding: 10px 14px;
+  padding: 11px 14px;
   font-size: 13px;
+  font-weight: 600;
   cursor: pointer;
 
-  &:hover {
-    background: var(--primary-light);
-  }
+  &:hover { background: var(--primary-lighter); }
 
   .price {
-    font-weight: 700;
+    font-weight: 800;
     color: var(--primary);
     flex-shrink: 0;
   }
 }
 
-.update-test-tab {
-  display: inline-flex;
-  align-items: center;
-  background: var(--card-bg, #fff);
-  border-radius: var(--r-sm);
-  padding: 10px 20px;
-  font-size: 14px;
-  font-weight: 700;
-  color: var(--primary-dark);
-  box-shadow: var(--shadow-sm);
-  border: 1.5px solid var(--border-color);
-  margin: 16px 0;
-}
-
 .modal-body-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: var(--sp-4);
 }
 
 .test-table-panel {
@@ -792,89 +721,109 @@
 
 .test-line-table {
   border: 1.5px solid var(--border-color);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md);
   overflow: hidden;
   background: var(--card-bg, #fff);
   width: 100%;
   border-collapse: collapse;
 
-  th,
-  td {
-    padding: 11px 14px;
+  th, td {
+    padding: 12px 14px;
     font-size: 13px;
     text-align: left;
-    border-bottom: 1px solid #f0f5f5;
+    border-bottom: 1px solid var(--border-color);
   }
 
   th {
     background: var(--section-bg);
     color: var(--primary-dark);
-    font-weight: 700;
-    font-size: 11px;
-    letter-spacing: 0.3px;
+    font-weight: 800;
+    font-size: 10.5px;
+    letter-spacing: 0.4px;
     text-transform: uppercase;
   }
 
-  tr:last-child td {
-    border-bottom: none;
-  }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--primary-lighter); }
 }
 
 .franchise-tag {
   display: block;
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--gray-accent);
-  margin-top: 2px;
+  margin-top: 3px;
+  font-weight: 600;
+}
+
+.new-tag {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 2px 8px;
+  border-radius: var(--r-pill);
+  background: var(--danger-bg);
+  color: var(--danger);
+  font-size: 10.5px;
+  font-weight: 700;
 }
 
 .delete-icon {
-  color: #9aabae;
+  color: #b7c4c3;
   cursor: pointer;
-  font-size: 20px;
+  font-size: 19px;
   transition: color 0.12s ease, transform 0.12s ease;
 
-  &:active {
+  &:hover {
     color: var(--danger);
-    transform: scale(1.15);
+    transform: scale(1.12);
   }
 }
 
 .empty-tests {
   text-align: center;
   color: var(--gray-accent);
-  padding: 14px 0;
+  padding: var(--sp-5) 0;
   font-size: 13px;
+  font-weight: 500;
 }
 
 .summary-side-panel {
   border: 1.5px solid var(--border-color);
   background: var(--section-bg);
   border-radius: var(--r-lg);
-  padding: 16px;
+  padding: var(--sp-4);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--sp-3);
   min-width: 0;
   flex: 1 1 260px;
   box-sizing: border-box;
   transition: opacity 0.15s ease;
 
-  &.locked {
-    opacity: 0.85;
-  }
+  &.locked { opacity: 0.85; }
+}
+
+.summary-panel-title {
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary-dark);
+  padding-bottom: var(--sp-2);
+  border-bottom: 1.5px solid var(--border-color);
+  margin-bottom: 2px;
 }
 
 .summary-field {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .summary-field label {
-  font-size: 13px;
+  font-size: 11.5px;
   font-weight: 700;
-  color: #5d716f;
-  letter-spacing: .6px;
+  color: var(--text-mid);
+  letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 
@@ -882,154 +831,191 @@
 .summary-field select,
 .summary-field textarea {
   width: 100%;
-  height: 58px;
-  border: 2px solid #dbe6e6;
-  border-radius: 18px;
-  background: #f8fbfb;
-  padding: 0 18px;
-  font-size: 17px;
-  font-weight: 500;
-  color: #243737;
+  height: 48px;
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--r-sm);
+  background: #fdfefe;
+  padding: 0 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-dark);
   outline: none;
   box-sizing: border-box;
-  transition: .25s;
+  transition: 0.18s ease;
 }
 
 .summary-field textarea {
-  min-height: 110px;
+  min-height: 90px;
   height: auto;
-  padding: 16px 18px;
+  padding: 12px 14px;
+  font-weight: 500;
+  line-height: 1.5;
 }
 
 .summary-field input::placeholder,
-.summary-field textarea::placeholder {
-  color: #95a7a6;
-}
+.summary-field textarea::placeholder { color: #9aabae; }
 
 .summary-field input:focus,
 .summary-field select:focus,
 .summary-field textarea:focus {
-  border-color: #087b76;
-  background: white;
-  box-shadow: 0 0 0 4px rgba(8, 123, 118, .08);
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
 }
 
 .summary-field input.zero {
   color: var(--success);
-  font-weight: 700;
+  font-weight: 800;
 }
 
 .summary-field input.locked-field {
   color: var(--gray-accent);
-  background: #edf2f2;
-}
-
-.full-width {
-  grid-column: 1 / -1;
+  background: #eef2f2;
 }
 
 .save-changes-btn {
-  --background: linear-gradient(135deg, #0b948d 0%, #087b76 100%);
+  --background: var(--brand-gradient);
   --color: #ffffff;
   --border-radius: var(--r-sm);
   --box-shadow: var(--shadow-glow);
   --border-width: 0;
   --border-style: none;
-  height: 44px;
-  font-size: 13.5px;
-  font-weight: 700;
-  margin-top: 6px;
+  height: 50px;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.1px;
+  margin: 0;
 
   &::part(native) {
-    background: linear-gradient(135deg, #0b948d 0%, #087b76 100%);
+    background: var(--brand-gradient);
     color: #ffffff;
     border: none;
     box-shadow: none;
-    font-size: 13.5px;
-    font-weight: 700;
+    font-size: 14.5px;
+    font-weight: 800;
   }
 
   &[disabled]::part(native) {
-    background: #cfd8d8;
+    background: #d5dede;
     color: #97a5a5;
     box-shadow: none;
   }
 }
 
+// ==========================================================
+// EDIT PATIENT — sectioned form
+// ==========================================================
+.form-section {
+  background: var(--card-bg-alt);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4) var(--sp-4) var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+
+.form-section-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--primary-dark);
+  margin-bottom: var(--sp-4);
+
+  ion-icon {
+    font-size: 16px;
+    color: var(--primary);
+  }
+}
+
 .patient-form-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(140px, 1fr));
-  gap: 14px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--sp-3);
 }
+
+.summary-field.span-1 { grid-column: span 1; }
+.summary-field.span-2 { grid-column: span 2; }
+.summary-field.span-3 { grid-column: span 3; }
 
 .inline-input-btn {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--sp-2);
 }
 
-.inline-input-btn input {
-  flex: 1;
-  min-width: 0;
-}
+.inline-input-btn input { flex: 1; min-width: 0; }
 
 .inline-input-btn ion-button {
-  width: 58px;
-  height: 58px;
+  width: 48px;
+  height: 48px;
   margin: 0;
   flex-shrink: 0;
-  --border-radius: 18px;
-  --box-shadow: 0 8px 20px rgba(8, 123, 118, .25);
+  --border-radius: var(--r-sm);
+  --box-shadow: 0 6px 16px rgba(8, 123, 118, .22);
 }
 
 .inline-input-btn ion-button::part(native) {
-  background: linear-gradient(135deg, #0b948d 0%, #087b76 100%);
+  background: var(--brand-gradient);
   color: #fff;
-  border-radius: 18px;
+  border-radius: var(--r-sm);
 }
 
-.inline-input-btn ion-button:hover::part(native) {
-  background: linear-gradient(135deg, #0d9d96 0%, #066965 100%);
-}
+.inline-input-btn ion-button:active::part(native) { transform: scale(.96); }
 
-.inline-input-btn ion-button:active::part(native) {
-  transform: scale(.96);
-}
+.attach-btn {
+  width: 100%;
+  height: 48px;
+  border: 1.5px dashed var(--border-color-strong);
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  color: var(--text-mid);
+  font-size: 13.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: 0.15s ease;
 
-.summary-field ion-button {
-  --border-radius: 18px;
-  height: 58px;
+  ion-icon { font-size: 17px; color: var(--primary); }
+
+  &:hover {
+    border-color: var(--primary);
+    background: var(--primary-lighter);
+  }
 }
 
 .selected-file {
+  display: flex;
+  align-items: center;
+  gap: 6px;
   font-size: 12px;
-  color: var(--gray-accent);
-  margin-top: 4px;
+  font-weight: 600;
+  color: var(--success);
+  margin-top: 6px;
+
+  ion-icon { font-size: 15px; }
 }
 
 // ---- skeleton loaders ----
-.skeleton-block {
-  padding: 4px 2px 12px;
-}
+.skeleton-block { padding: 4px 2px 12px; }
 
 .skeleton-line {
   height: 14px;
   border-radius: var(--r-sm);
   margin-bottom: 10px;
-  background: linear-gradient(90deg, #e9f3f2 25%, #f6fbfb 37%, #e9f3f2 63%);
+  background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
   background-size: 400% 100%;
   animation: skeletonShine 1.2s ease-in-out infinite;
 }
 
 @keyframes skeletonShine {
-  0% {
-    background-position: 100% 50%;
-  }
-
-  100% {
-    background-position: 0 50%;
-  }
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
 }
 
 // ==========================================================
@@ -1048,8 +1034,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 10px;
-  padding: 4px 2px 14px;
+  gap: var(--sp-3);
+  padding: 2px 2px var(--sp-4);
 
   h2 {
     font-size: 16px;
@@ -1061,7 +1047,7 @@
 }
 
 .modal-body {
-  padding: 16px 18px calc(22px + env(safe-area-inset-bottom, 0px));
+  padding: var(--sp-4) var(--sp-5) calc(var(--sp-5) + env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
   overscroll-behavior: contain;
   flex: 1;
@@ -1086,18 +1072,15 @@
   border-radius: var(--r-sm);
   background: var(--section-bg);
 
-  // Same fix as `.select-field ion-select` above: give the doctor/lab
-  // picker's ion-select real height + padding so it doesn't collapse
-  // to its intrinsic (misaligned) size inside the bordered wrapper.
   ion-select {
     width: 100%;
-    min-height: 46px;
+    min-height: 48px;
     --padding-start: 14px;
     --padding-end: 14px;
     --placeholder-color: #9aabae;
     --placeholder-opacity: 1;
     font-size: 13.5px;
-    font-weight: 500;
+    font-weight: 600;
     color: var(--text-dark);
   }
 }
@@ -1106,17 +1089,18 @@
   --border-radius: var(--r-sm);
   --box-shadow: var(--shadow-glow);
   --color: #fff;
-  font-weight: 700;
-  height: 46px;
+  font-weight: 800;
+  height: 48px;
+  margin-top: var(--sp-2);
 
   &::part(native) {
     background: var(--brand-gradient);
     color: #fff;
-    font-weight: 700;
+    font-weight: 800;
   }
 
   &[disabled]::part(native) {
-    background: #cfd8d8;
+    background: #d5dede;
     color: #97a5a5;
   }
 }
@@ -1125,8 +1109,10 @@
   width: 100%;
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-sm);
-  padding: 12px;
+  padding: 14px;
   font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.5;
   background: var(--section-bg);
   color: var(--text-dark);
   box-sizing: border-box;
@@ -1134,7 +1120,8 @@
   &:focus {
     outline: none;
     border-color: var(--primary);
-    background: var(--primary-light);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
   }
 }
 
@@ -1144,12 +1131,12 @@
 .premium-summary-card {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
-  gap: 14px 20px;
+  gap: var(--sp-4) var(--sp-5);
   background: var(--section-bg);
   border: 1px solid var(--border-color);
   border-radius: var(--r-lg);
-  padding: 16px 18px;
-  margin-bottom: 20px;
+  padding: var(--sp-4) var(--sp-5);
+  margin-bottom: var(--sp-5);
 }
 
 .premium-summary-item {
@@ -1158,9 +1145,7 @@
   gap: 4px;
   min-width: 0;
 
-  &.full-span {
-    grid-column: 1 / -1;
-  }
+  &.full-span { grid-column: 1 / -1; }
 }
 
 .ps-label {
@@ -1186,16 +1171,16 @@
   text-transform: uppercase;
   letter-spacing: 0.4px;
   color: var(--primary-dark);
-  margin: 4px 0 10px;
-  padding-bottom: 8px;
+  margin: var(--sp-1) 0 var(--sp-3);
+  padding-bottom: var(--sp-2);
   border-bottom: 1.5px solid var(--border-color);
 }
 
 .premium-chip-row {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 22px;
+  gap: var(--sp-2);
+  margin-bottom: var(--sp-6);
 }
 
 .premium-chip {
@@ -1209,10 +1194,7 @@
   border-radius: var(--r-pill);
   white-space: nowrap;
 
-  &.empty {
-    background: var(--section-bg);
-    color: var(--gray-accent);
-  }
+  &.empty { background: var(--section-bg); color: var(--gray-accent); }
 }
 
 .header-booking-tag {
@@ -1226,8 +1208,8 @@
   background: var(--card-bg, #fff);
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-lg);
-  padding: 16px;
-  margin-bottom: 16px;
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
   box-shadow: var(--shadow-xs);
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 
@@ -1241,7 +1223,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 14px;
+  margin-bottom: var(--sp-4);
 }
 
 .brc-sample-badge {
@@ -1264,23 +1246,13 @@
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.3px;
-
-  &.pending {
-    background: var(--warning-bg);
-    color: var(--warning);
-  }
-
-  &.completed {
-    background: var(--success-bg);
-    color: var(--success);
-  }
 }
 
 .brc-fields {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 12px 14px;
-  margin-bottom: 14px;
+  gap: var(--sp-3) var(--sp-3);
+  margin-bottom: var(--sp-4);
 }
 
 .brc-field {
@@ -1298,9 +1270,7 @@
   }
 }
 
-.brc-field:last-child {
-  grid-column: 1 / -1;
-}
+.brc-field:last-child { grid-column: 1 / -1; }
 
 .brc-input {
   width: 100%;
@@ -1314,8 +1284,13 @@
   color: var(--text-dark);
   box-sizing: border-box;
   outline: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   min-width: 0;
+
+  ion-icon { color: var(--primary); font-size: 16px; flex-shrink: 0; }
 
   &:focus {
     border-color: var(--primary);
@@ -1323,42 +1298,33 @@
     box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
   }
 
-  &.readonly {
-    color: var(--gray-accent);
-    background: #edf2f2;
-  }
+  &.readonly { color: var(--gray-accent); background: #eef2f2; }
 }
 
-input[type="datetime-local"].brc-input {
-  padding-right: 8px;
-  font-size: 12.5px;
-}
+.brc-datetime-trigger { cursor: pointer; }
 
 .update-barcode-btn {
   --border-radius: var(--r-sm);
   --box-shadow: var(--shadow-glow);
   --color: #fff;
-  height: 42px;
+  height: 44px;
   font-size: 13px;
-  font-weight: 700;
+  font-weight: 800;
   margin: 0;
 
   &::part(native) {
     background: var(--brand-gradient);
     color: #fff;
-    font-weight: 700;
+    font-weight: 800;
   }
 
   &[disabled]::part(native) {
-    background: #cfd8d8;
+    background: #d5dede;
     color: #97a5a5;
     box-shadow: none;
   }
 
-  ion-spinner {
-    width: 16px;
-    height: 16px;
-  }
+  ion-spinner { width: 16px; height: 16px; }
 }
 
 // ---- Patient History cards ----
@@ -1372,100 +1338,40 @@ input[type="datetime-local"].brc-input {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
+  transition: border-color 0.15s ease;
+
+  &:hover { border-color: rgba(8, 123, 118, 0.22); }
 }
 
-.hc-name {
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text-dark);
-}
-
-.hc-sub {
-  font-size: 12px;
-  color: var(--gray-accent);
-  flex-shrink: 0;
-}
+.hc-name { font-size: 13.5px; font-weight: 700; color: var(--text-dark); }
+.hc-sub { font-size: 12px; color: var(--gray-accent); flex-shrink: 0; }
 
 // ---- Bill History transaction cards ----
 .bill-tx-card {
   background: var(--card-bg, #fff);
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-lg);
-  padding: 14px 16px;
-  margin-bottom: 14px;
+  padding: var(--sp-4);
+  margin-bottom: var(--sp-4);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px 16px;
+  gap: 10px var(--sp-4);
   box-shadow: var(--shadow-xs);
 }
 
-.btx-row {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.btx-paid {
-  color: var(--success);
-}
-
-.btx-due {
-  color: var(--danger);
-}
+.btx-row { display: flex; flex-direction: column; gap: 3px; }
+.btx-paid { color: var(--success); }
+.btx-due { color: var(--danger); }
 
 // ---- Mobile: cards collapse to single column ----
 @media (max-width: 480px) {
-  .premium-summary-card {
-    grid-template-columns: 1fr;
-  }
-
-  .brc-fields {
-    grid-template-columns: 1fr;
-  }
-
-  .brc-field:last-child {
-    grid-column: 1;
-  }
-
-  .bill-tx-card {
-    grid-template-columns: 1fr;
-  }
-
-  .history-card {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-}
-
-// ==========================================================
-// ION-MODAL sheet shell
-// ==========================================================
-ion-modal.sheet-modal {
-  --border-radius: var(--r-xl) var(--r-xl) 0 0;
-  --box-shadow: 0 -12px 32px rgba(7, 95, 93, 0.20);
-  --backdrop-opacity: 0.4 !important;
-}
-
-ion-modal.sheet-modal::part(content) {
-  border-radius: var(--r-xl) var(--r-xl) 0 0;
-}
-
-.doctor-popup.sheet-modal::part(content),
-.lab-popup.sheet-modal::part(content),
-.history-popup.sheet-modal::part(content),
-.barcode-popup.sheet-modal::part(content) {
-  max-width: 480px;
-  margin: 0 auto;
-}
-
-.test-modal.sheet-modal::part(content) {
-  max-width: 760px;
-  margin: 0 auto;
-}
-
-.empty-row {
-  text-align: center;
-  padding: 40px 20px;
+  .premium-summary-card { grid-template-columns: 1fr; }
+  .brc-fields { grid-template-columns: 1fr; }
+  .brc-field:last-child { grid-column: 1; }
+  .bill-tx-card { grid-template-columns: 1fr; }
+  .history-card { flex-direction: column; align-items: flex-start; }
+  .patient-form-grid { grid-template-columns: 1fr 1fr; }
+  .summary-field.span-2, .summary-field.span-3 { grid-column: span 2; }
 }
 
 .empty-state {
@@ -1473,313 +1379,55 @@ ion-modal.sheet-modal::part(content) {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 12px;
-  padding: 32px 16px;
-  color: #8a94a6;
+  gap: var(--sp-2);
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--text-light);
 
   ion-icon {
-    font-size: 52px;
-    color: #c3cad7;
+    font-size: 48px;
+    color: #c3d3d2;
   }
 
   span {
     font-size: 15px;
-    font-weight: 600;
-    color: #6b7280;
-  }
-}
-
-/* ======================================================
-   PREMIUM INPUT UI (Same as Patient Information Screen)
-====================================================== */
-
-.form-field {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 16px;
-
-  label {
-    font-size: 13px;
     font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: .6px;
-    color: #5b6f6d;
+    color: var(--text-mid);
+  }
 
-    .required {
-      color: #d64b5c;
-    }
+  .empty-sub {
+    font-size: 12.5px;
+    color: var(--gray-accent);
+    margin: 0;
   }
 }
 
-// ✅ FIX: these selectors previously targeted the BARE tags `ion-input`,
-// `ion-select`, `ion-textarea` with no `.form-field` scoping at all. That
-// meant this rule (58px min-height, 18px border-radius, 2px border) was
-// silently overriding EVERY ion-select on this page — including the
-// franchise filter — no matter what more specific sizing was set on it
-// elsewhere in this file. That mismatched border/height is exactly the
-// "ghost pill" outline and the taller-than-its-siblings field reported.
-// `.form-field` isn't even used anywhere in this component's HTML, so
-// scoping this rule to it (as originally intended) removes the conflict
-// entirely instead of patching around it.
-.form-control,
-.form-field input,
-.form-field select,
-.form-field textarea,
-.form-field ion-input,
-.form-field ion-select,
-.form-field ion-textarea {
-  width: 100%;
-  min-height: 58px;
-  background: #f8fbfb;
-  border: 2px solid #dce7e6;
-  border-radius: 18px;
-  padding: 0 18px;
-  color: #233535;
-  font-size: 17px;
-  font-weight: 500;
-  box-shadow: none;
-  transition: .25s ease;
-  box-sizing: border-box;
-
-  --background: #f8fbfb;
-  --border-width: 0;
-  --highlight-color-focused: transparent;
-  --padding-start: 18px;
-  --padding-end: 18px;
-  --padding-top: 0;
-  --padding-bottom: 0;
-}
-
-.form-field textarea,
-.form-field ion-textarea {
-  min-height: 110px;
-  padding-top: 14px;
-}
-
-.form-control::placeholder,
-input::placeholder,
-textarea::placeholder {
-  color: #93a5a4;
-  font-weight: 400;
-}
-
-.form-control:focus,
-.form-field input:focus,
-.form-field select:focus,
-.form-field textarea:focus,
-.form-field ion-input.ion-focused,
-.form-field ion-select.ion-focused,
-.form-field ion-textarea.ion-focused {
-  background: #ffffff;
-  border-color: #087b76;
-  box-shadow: 0 0 0 4px rgba(8, 123, 118, .10);
-}
-
-.form-control:disabled,
-input:disabled,
-select:disabled,
-textarea:disabled {
-  background: #eef3f3;
-  color: #93a5a4;
-}
-
-select {
-  appearance: none;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' fill='%2390A5A4' viewBox='0 0 16 16'%3E%3Cpath d='M2 5l6 6 6-6'/%3E%3C/svg%3E");
-  background-repeat: no-repeat;
-  background-position: right 18px center;
-  background-size: 15px;
-}
-
-.circle-add-btn {
-  width: 58px;
-  height: 58px;
-  border-radius: 18px;
-  background: linear-gradient(180deg, #1d63ef, #0e56df);
+.load-more-row {
   display: flex;
-  align-items: center;
   justify-content: center;
-  color: white;
-  font-size: 26px;
-  box-shadow: 0 8px 18px rgba(13, 84, 220, .30);
-  transition: .2s;
+  padding: var(--sp-4);
 
-  &:active {
-    transform: scale(.96);
-  }
-}
+  ion-button {
+    --border-radius: var(--r-pill);
+    --border-color: var(--primary);
+    --color: var(--primary);
+    font-weight: 700;
+    height: 44px;
+    min-width: 160px;
 
-.section-card {
-  background: #fff;
-  border-radius: 28px;
-  padding: 22px;
-  box-shadow: 0 8px 30px rgba(6, 70, 68, .08);
-  border: 1px solid #edf4f3;
-}
-
-.section-title {
-  font-size: 34px;
-  font-weight: 700;
-  color: #0d6966;
-  padding-bottom: 16px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #e7eded;
-}
-
-// ==========================================================
-// TABLET — tighten the two-column grids a little before they
-// hit the phone breakpoint, so nothing feels cramped in between.
-// ==========================================================
-@media (max-width: 900px) {
-  .modal-body-grid {
-    flex-direction: column;
-  }
-
-  .test-table-panel,
-  .summary-side-panel {
-    flex: 1 1 100%;
-  }
-}
-
-// ==========================================================
-// MOBILE — table becomes horizontally scrollable inside its own
-// contained wrapper; filter bar becomes a single column so fields
-// never fight each other for width.
-//
-// ✅ FIX: this whole block used to be broken SCSS. Two things were
-// wrong and are now repaired:
-//   1) `rapper { margin: 10px 0 0; }` was a mangled leftover of
-//      `.table-wrapper { margin: 10px 0 0; }` — an invalid, orphaned
-//      selector.
-//   2) `.close-modal-btn { ... }.table-w` left a dangling selector
-//      fragment with no braces, which caused every rule after it
-//      (`.summary-field label`, the input/select/textarea sizing, and
-//      `.action-dropdown.fixed-dropdown`) to be silently compiled as
-//      nested *inside* `.table-w .summary-field label`, etc. — meaning
-//      none of those mobile overrides were ever actually reaching the
-//      real `.summary-field label`, `.summary-field input`, or
-//      `.action-dropdown` elements on the page. They are now correct,
-//      top-level rules again.
-// ==========================================================
-@media (max-width: 640px) {
-  .booking-content {
-    --padding-start: 0;
-    --padding-end: 0;
-  }
-
-  .form-card {
-    margin: 10px;
-    padding: 12px;
-    box-sizing: border-box;
-  }
-
-  .summary-bar,
-  .filter-bar,
-  .form-card-title {
-    padding-left: 2px;
-    padding-right: 2px;
-  }
-
-
-  .col-tests .test-line {
-    justify-content: flex-end;
-  }
-
-  .action-cell {
-    justify-content: flex-end;
-  }
-
-  .sheet-title-main {
-    font-size: 18px;
-  }
-
-  .close-modal-btn {
-    width: 38px;
-    height: 38px;
-  }
-
-  .summary-field label {
-    font-size: 12px;
-  }
-
-  .summary-field input,
-  .summary-field select,
-  .summary-field textarea {
-    height: 42px;
-    font-size: 13px;
-  }
-
-  .action-dropdown.fixed-dropdown {
-    min-width: 190px;
-  }
-}
-
-// Below 480px, stack every filter field full-width instead of letting
-// flex-wrap cram 130px-wide fields two-to-a-row — this was the main
-// cause of the crowded/uneven filter row on phones.
-@media (max-width: 480px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-field,
-  .date-field {
-    width: 100%;
-    flex: 1 1 100%;
-  }
-
-  .refresh-btn {
-    width: 100%;
-  }
-
-  .date-field {
-    flex-wrap: wrap;
-
-    input[type="date"] {
-      flex: 1 1 100px;
+    &::part(native) {
+      border-color: var(--primary);
+      color: var(--primary);
     }
-  }
-}
 
-// Patient-edit grid drops to a single column on very narrow phones
-// (< 420px) so labels/inputs don't get squeezed.
-@media (max-width: 420px) {
-  .patient-form-grid {
-    grid-template-columns: 1fr;
+    &[disabled]::part(native) { opacity: 0.6; }
   }
 }
 
 // ==========================================================
-// LANDSCAPE — sheet modals can exceed the viewport height when the
-// phone is rotated; cap them to the visible height and let their own
-// body scroll instead of overflowing off-screen.
+// Material date-range-picker TRIGGER (this piece stays here — it's
+// a normal light-DOM field on the main page, not inside any modal,
+// so it never leaves this component's DOM subtree).
 // ==========================================================
-@media (max-height: 480px) and (orientation: landscape) {
-  .test-modal-body-pad {
-    max-height: calc(100vh - 70px);
-  }
-
-  .modal-body {
-    max-height: calc(100vh - 60px);
-  }
-}
-
-// ==========================================================
-// ✅ Material date-range-picker integration (top-level, global —
-// NOT nested inside any media query). Previously these rules got
-// accidentally merged inside the landscape media query above due to
-// a missing closing brace, so they only ever applied on very short
-// landscape screens — never in normal portrait use. That's why the
-// hidden mat-form-field was rendering as a visible plain-text line
-// under the date button, and the calendar overlay had no styling.
-// ==========================================================
-
-// mat-form-field cha real UI lapवायचं आहे — फक्त calendar-overlay
-// (jo document body varच render hoto) disला pahije. .date-field
-// (custom trigger button) click zाल्यावर openDateRangePicker() call
-// karून हा picker उघडतो.
 .hidden-range-field {
   position: absolute !important;
   width: 1px !important;
@@ -1794,136 +1442,11 @@ select {
   pointer-events: none !important;
 }
 
-// ✅ CDK overlay content is portaled to <body>, completely outside this
-// component's DOM tree — plain (unprefixed) ::ng-deep is required here
-// so the rule compiles as truly global CSS instead of scoped to :host.
-// Also gives the calendar an explicit white background + shadow, since
-// without a prebuilt Material theme imported, it has none by default
-// (this is what made it look transparent).
-::ng-deep .cdk-overlay-container {
-  z-index: 99999 !important;
-}
-
-::ng-deep .mat-datepicker-content {
-  z-index: 99999 !important;
-  background-color: #ffffff !important;
-  border-radius: 12px !important;
-  box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16)) !important;
-}
-
-::ng-deep .mat-calendar {
-  background-color: #ffffff !important;
-}
-
-// ✅ Selected start/end date + in-between range highlight ला brand
-// color देण्यासाठी — prebuilt Material theme import न केल्यामुळे
-// हे classes आधी present होत्या पण colorless hotya, म्हणून
-// highlight disतच नव्हता.
-::ng-deep .mat-calendar-body-selected {
-  background-color: var(--primary, #087b76) !important;
-  color: #ffffff !important;
-}
-
-::ng-deep .mat-calendar-body-in-range::before {
-  background: var(--primary-light, #d9f0ee) !important;
-}
-
-::ng-deep .mat-calendar-body-comparison-bridge-start::before,
-::ng-deep .mat-calendar-body-comparison-bridge-end::before,
-::ng-deep .mat-calendar-body-range-start::before,
-::ng-deep .mat-calendar-body-range-end::before {
-  background: var(--primary-light, #d9f0ee) !important;
-}
-
-::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
-  border-color: var(--primary, #087b76) !important;
-}
-
-::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
-  background-color: var(--primary-light, #d9f0ee) !important;
-}
-
-.close-modal-btn {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 99999;
-
-  --background: #ef4444;
-  --color: #fff;
-  --border-radius: 12px;
-
-  width: 42px;
-  height: 42px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.close-modal-btn ion-icon {
-  font-size: 24px !important;
-  color: #fff !important;
-  display: block !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-.load-more-row {
-  display: flex;
-  justify-content: center;
-  padding: 16px;
-
-  ion-button {
-    --border-radius: var(--r-pill);
-    --border-color: var(--primary);
-    --color: var(--primary);
-    font-weight: 700;
-    height: 42px;
-
-    &::part(native) {
-      border-color: var(--primary);
-      color: var(--primary);
-    }
-
-    &[disabled]::part(native) {
-      opacity: 0.6;
-    }
-  }
-}
-
 // ==========================================================
-// ✅ COMPACT DATE-TIME POPUP — small centered dialog, hugs its
-// content height (not full-screen). Ionic forces near-full-height
-// sizing on mobile viewports by default; !important + explicit
-// height:auto on the shadow "content" part is required to win that
-// internal specificity battle.
+// COMPACT DATE-TIME POPUP — inner light-DOM content only.
+// (The `ion-modal.compact-popup` shell/::part rules now live in
+// premium-tokens.scss since that shell is also portaled.)
 // ==========================================================
-// ==========================================================
-// ✅ COMPACT DATE-TIME POPUP — premium centered dialog, hugs its
-// content height (not full-screen). Ionic forces near-full-height
-// sizing on mobile viewports by default; !important + explicit
-// height:auto on the shadow "content" part is required to win that
-// internal specificity battle.
-// ==========================================================
-ion-modal.compact-popup {
-  --width: min(340px, 90vw) !important;
-  --height: fit-content !important;
-  --max-height: 80vh !important;
-  --border-radius: var(--r-lg) !important;
-  --box-shadow: 0 20px 50px rgba(7, 95, 93, 0.28) !important;
-  --backdrop-opacity: 0.5 !important;
-  align-items: center !important;
-  justify-content: center !important;
-}
-
-ion-modal.compact-popup::part(content) {
-  height: fit-content !important;
-  max-height: 80vh !important;
-  border-radius: var(--r-lg) !important;
-  overflow: hidden !important;
-  position: static !important;
-}
-
 .compact-popup-page {
   background: var(--card-bg, #fff);
   border-radius: var(--r-lg);
@@ -1937,7 +1460,7 @@ ion-modal.compact-popup::part(content) {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 18px;
+  padding: var(--sp-4) var(--sp-5);
   background: var(--brand-gradient);
   flex-shrink: 0;
 
@@ -1947,46 +1470,22 @@ ion-modal.compact-popup::part(content) {
     color: #ffffff;
     margin: 0;
     letter-spacing: -0.1px;
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    &::before {
-      content: '';
-      display: inline-block;
-      width: 6px;
-      height: 6px;
-      border-radius: 50%;
-      background: #ffffff;
-      opacity: 0.7;
-    }
   }
 
   .close-modal-btn {
-    position: static;
     width: 30px;
     height: 30px;
-    --background: rgba(255, 255, 255, 0.18);
-    --color: #ffffff;
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
 
-    &::part(native) {
-      background: rgba(255, 255, 255, 0.18);
-      color: #ffffff;
-    }
+    &:hover { background: rgba(255, 255, 255, 0.3); color: #fff; }
 
-    ion-icon {
-      font-size: 17px !important;
-      color: #ffffff !important;
-    }
-
-    &:active::part(native) {
-      background: rgba(255, 255, 255, 0.3);
-    }
+    ion-icon { font-size: 16px; }
   }
 }
 
 .compact-popup-body {
-  padding: 12px;
+  padding: var(--sp-4);
   overflow-y: auto;
   display: flex;
   justify-content: center;
@@ -1997,25 +1496,22 @@ ion-modal.compact-popup::part(content) {
 .compact-popup-footer {
   display: flex;
   justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 14px;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-4);
   border-top: 1px solid var(--border-color);
   flex-shrink: 0;
   background: var(--card-bg, #fff);
 
   ion-button {
     --border-radius: var(--r-pill);
-    height: 38px;
+    height: 40px;
     font-weight: 700;
     font-size: 13px;
     margin: 0;
-    min-width: 78px;
+    min-width: 80px;
   }
 
-  .cancel-btn {
-    --color: var(--gray-accent);
-    --background: transparent;
-  }
+  .cancel-btn { --color: var(--gray-accent); --background: transparent; }
 
   .ok-btn {
     --color: #ffffff;
@@ -2024,21 +1520,17 @@ ion-modal.compact-popup::part(content) {
   }
 }
 
-// ion-datetime cha default intrinsic size (~330px height) fixed asto —
-// he explicit width dilyane calendar grid card cha bounds baher
-// jaat nahi ani popup card cha size tight rahto.
 .premium-datetime {
   width: 100%;
   max-width: 300px;
   border-radius: var(--r-md);
   box-shadow: var(--shadow-sm);
   border: 1px solid var(--border-color);
-
   --background: var(--card-bg, #fff);
   --title-color: var(--primary-dark);
 }
 
-::ng-deep .premium-datetime {
+:host ::ng-deep .premium-datetime {
   .calendar-day.calendar-day-active {
     background: var(--primary) !important;
     color: #fff !important;
@@ -2048,70 +1540,16 @@ ion-modal.compact-popup::part(content) {
   .calendar-day:not(.calendar-day-active):hover {
     background: var(--primary-light) !important;
   }
-
-}
-
-.compact-popup-body {
-  padding: 8px;
-  overflow-y: auto;
-  display: flex;
-  justify-content: center;
-  flex-shrink: 1;
-}
-
-.compact-popup-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 4px;
-  padding: 8px 12px 12px;
-  border-top: 1px solid var(--border-color);
-  flex-shrink: 0;
-
-  ion-button {
-    --border-radius: var(--r-sm);
-    height: 38px;
-    font-weight: 700;
-    font-size: 13.5px;
-    margin: 0;
-  }
-
-  .cancel-btn {
-    --color: var(--gray-accent);
-  }
-
-  .ok-btn {
-    --color: var(--primary);
-  }
-}
-
-// ion-datetime cha default intrinsic size (~330px height) fixed asto —
-// he explicit width dilyane calendar grid card cha bounds baher
-// jaat nahi ani popup card cha size tight rahto.
-.premium-datetime {
-  width: 100%;
-  max-width: 300px;
-  border-radius: var(--r-md);
-
-  --background: var(--card-bg, #fff);
-  --title-color: var(--primary-dark);
-}
-::ng-deep .premium-datetime {
-  .calendar-day.calendar-day-active {
-    background: var(--primary) !important;
-    color: #fff !important;
-  }
 }
 
 // ==========================================================
-// ✅ BOOKING CARD LIST — replaces the horizontally-scrollable table.
-// No swipe/scroll needed — everything fits the phone width, tap a
-// card to expand test/barcode details.
+// BOOKING CARD LIST
 // ==========================================================
 .booking-card-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin-top: 12px;
+  gap: var(--sp-3);
+  margin-top: var(--sp-3);
 }
 
 .booking-card {
@@ -2120,31 +1558,44 @@ ion-modal.compact-popup::part(content) {
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
-  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
 
   &.expanded {
-    border-color: rgba(8, 123, 118, 0.3);
-    box-shadow: var(--shadow-sm);
+    border-color: rgba(8, 123, 118, 0.32);
+    box-shadow: var(--shadow-md);
   }
 }
 
 .bcard-header {
   display: flex;
   align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
   cursor: pointer;
+  transition: background 0.12s ease;
 
-  &:active {
-    background: var(--primary-light);
-  }
+  &:active { background: var(--primary-lighter); }
 }
 
-.bcard-header-left {
-  min-width: 0;
-  flex: 1;
+.bcard-avatar {
+  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  background: var(--brand-gradient);
+
+  &[data-tone="1"] { background: linear-gradient(135deg, #2568ae, #1c4f85); }
+  &[data-tone="2"] { background: linear-gradient(135deg, #b9791a, #93610f); }
+  &[data-tone="3"] { background: linear-gradient(135deg, #bd526f, #96405a); }
 }
+
+.bcard-header-left { min-width: 0; flex: 1; }
 
 .bcard-id-row {
   display: flex;
@@ -2161,7 +1612,7 @@ ion-modal.compact-popup::part(content) {
   .bcard-date {
     color: var(--gray-accent);
     font-size: 11px;
-    font-weight: 500;
+    font-weight: 600;
   }
 }
 
@@ -2182,7 +1633,8 @@ ion-modal.compact-popup::part(content) {
 
 .bcard-header-right {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   gap: 8px;
   flex-shrink: 0;
 }
@@ -2197,12 +1649,11 @@ ion-modal.compact-popup::part(content) {
   transform: rotate(180deg);
   color: var(--primary);
 }
-
 .bcard-stats {
   display: flex;
   flex-wrap: wrap;
-  gap: 14px;
-  padding: 0 16px 14px;
+  gap: var(--sp-4);
+  padding: 0 var(--sp-4) var(--sp-4);
   border-bottom: 1px solid var(--border-color);
 }
 
@@ -2232,9 +1683,20 @@ ion-modal.compact-popup::part(content) {
 }
 
 .bcard-details {
-  padding: 14px 16px;
+  padding: var(--sp-4);
   background: var(--section-bg);
-  animation: fadeIn 0.15s ease;
+  animation: slideUpIn 0.18s ease;
+}
+
+.bcard-section-label {
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--gray-accent);
+  margin-bottom: 8px;
+
+  &:not(:first-child) { margin-top: var(--sp-4); }
 }
 
 .bcard-test-table {
@@ -2244,10 +1706,10 @@ ion-modal.compact-popup::part(content) {
   border-radius: var(--r-sm);
   overflow: hidden;
   border: 1px solid var(--border-color);
-  margin-bottom: 12px;
+  margin-bottom: var(--sp-2);
 
   th {
-    background: var(--card-bg, #fff);
+    background: var(--card-bg-alt);
     color: var(--gray-accent);
     font-size: 10px;
     font-weight: 700;
@@ -2258,39 +1720,211 @@ ion-modal.compact-popup::part(content) {
   }
 
   td {
-    padding: 8px 10px;
+    padding: 9px 10px;
     font-size: 12.5px;
+    font-weight: 500;
     color: var(--text-dark);
-    border-bottom: 1px solid #f0f5f5;
+    border-bottom: 1px solid var(--border-color);
   }
 
-  tr:last-child td {
-    border-bottom: none;
-  }
+  tr:last-child td { border-bottom: none; }
 }
 
 .bcard-barcode-block {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  margin-bottom: 12px;
+  gap: 6px;
+  margin-bottom: var(--sp-2);
 
   .barcode-line {
-    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
     color: var(--text-dark);
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--border-color);
+    border-radius: var(--r-xs);
+    padding: 8px 10px;
+
+    ion-icon { color: var(--primary); font-size: 15px; flex-shrink: 0; }
+
+    &.empty {
+      color: var(--gray-accent);
+      justify-content: center;
+      font-weight: 500;
+    }
   }
 
   small {
     color: var(--gray-accent);
+    font-weight: 600;
+    margin-left: auto;
   }
 }
 
 .bcard-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 2px;
+  gap: 4px;
   border-top: 1px solid var(--border-color);
-  padding-top: 10px;
-}ion-content.menu-open {
-  --overflow: hidden;
+  padding-top: var(--sp-3);
+}
+
+.action-icon-btn {
+  --border-radius: var(--r-xs);
+  --color: var(--primary);
+  --background: var(--card-bg, #fff);
+  --background-hover: var(--primary-lighter);
+  margin: 0;
+  height: 38px;
+  width: 38px;
+
+  &::part(native) {
+    background: var(--card-bg, #fff);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-xs);
+  }
+
+  &:active::part(native) { background: var(--primary-lighter); }
+}
+
+// ---- skeleton cards for loading state ----
+.table-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.skeleton-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+}
+
+ion-content.menu-open { --overflow: hidden; }
+
+// ✅ Mobile overflow safety
+.test-modal-wrapper,
+.modal-page {
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+.test-modal-body-pad,
+.modal-body,
+.patient-form-grid {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-x: hidden;
+}
+
+.summary-field {
+  width: 100%;
+  box-sizing: border-box;
+
+  select, input, textarea {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+}
+
+// ==========================================================
+// TABLET
+// ==========================================================
+@media (max-width: 900px) {
+  .modal-body-grid { flex-direction: column; }
+  .test-table-panel, .summary-side-panel { flex: 1 1 100%; }
+}
+
+// ==========================================================
+// MOBILE
+// ==========================================================
+@media (max-width: 640px) {
+  .booking-content { --padding-start: 0; --padding-end: 0; }
+
+  .form-card {
+    margin: var(--sp-3);
+    padding: var(--sp-3);
+    box-sizing: border-box;
+  }
+
+  .summary-bar,
+  .filter-bar {
+    padding-left: 2px;
+    padding-right: 2px;
+  }
+
+  .sheet-title-main { font-size: 18px; }
+
+  .close-modal-btn { width: 34px; height: 34px; }
+
+  .action-dropdown.fixed-dropdown { min-width: 200px; }
+
+}
+
+@media (max-width: 480px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field, .date-field { width: 100%; flex: 1 1 100%; }
+
+  .refresh-btn { width: 100%; }
+
+  .patient-form-grid { grid-template-columns: 1fr 1fr; }
+  .summary-field.span-1 { grid-column: span 1; }
+  .summary-field.span-2, .summary-field.span-3 { grid-column: 1 / -1; }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .test-modal-body-pad { padding-bottom: var(--sp-4); }
+  .modal-body { max-height: calc(100vh - 60px); }
+}// ✅ ion-select ला summary-field input सारखा compact + premium दिसवण्यासाठी
+.premium-select {
+  width: 100%;
+  height: 48px;
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--r-sm);
+  background: #fdfefe;
+  --padding-start: 14px;
+  --padding-end: 14px;
+  --placeholder-color: #9aabae;
+  --placeholder-opacity: 1;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+
+  &::part(icon) {
+    color: var(--gray-accent);
+    opacity: 1;
+  }
+}
+
+:host ::ng-deep ion-popover.select-popover {
+  --width: min(260px, 90vw);
+  --max-height: min(320px, 60vh);
+  --box-shadow: var(--shadow-lg);
+
+  &::part(content) {
+    border-radius: var(--r-md);
+  }
+
+  ion-list {
+    padding: 4px;
+  }
+
+  ion-item {
+    --min-height: 46px;
+    font-size: 13.5px;
+    --background-hover: var(--primary-lighter, #eef8f7);
+  }
 }

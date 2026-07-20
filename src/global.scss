@@ -15,7 +15,7 @@
 
 /* Core CSS required for Ionic components to work properly */
 @import "@ionic/angular/css/core.css";
-
+@import "./theme/premium-tokens.scss";
 /* Basic CSS for apps built with Ionic */
 @import "@ionic/angular/css/normalize.css";
 @import "@ionic/angular/css/structure.css";
@@ -253,4 +253,57 @@ ion-checkbox {
 
 .mat-calendar-body-cell-content {
   color: #1a1a1a;
+}// ==========================================================
+// PREMIUM ALERT (Delete Test / other confirm dialogs)
+// ==========================================================
+ion-alert.premium-alert {
+  --backdrop-opacity: 0.5;
+
+  .alert-wrapper {
+    border-radius: var(--radius-lg, 22px);
+    box-shadow: var(--shadow-lg, 0 22px 50px rgba(10, 27, 23, 0.14));
+  }
+
+  .alert-head {
+    padding-top: 22px;
+    padding-bottom: 4px;
+  }
+
+  .alert-title {
+    font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--text-primary, #0c201c);
+  }
+
+  .alert-message {
+    font-size: 14px;
+    color: var(--text-muted, #5c7671);
+    padding-top: 6px;
+    line-height: 1.5;
+  }
+
+  .alert-button-group {
+    padding: 10px 16px 16px;
+    gap: 8px;
+  }
+
+  button.alert-button {
+    border-radius: var(--radius-sm, 12px);
+    font-weight: 700;
+    font-size: 13.5px;
+    margin: 0;
+    height: 42px;
+    text-transform: none;
+  }
+
+  .alert-btn-cancel {
+    color: var(--text-muted, #5c7671);
+    background: var(--section-bg, #f6faf9);
+  }
+
+  .alert-btn-danger {
+    color: #ffffff !important;
+    background: var(--status-danger, #c14c5f);
+  }
 }

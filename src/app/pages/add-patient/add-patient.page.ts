@@ -117,7 +117,15 @@ export class AddPatientComponent {
   get isAdminRole(): boolean { return this.roleService.isLabSideUI; }
   get isFranchiseRole(): boolean { return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF; }
   get isStaffRole(): boolean { return this.role === this.ROLE_STAFF; }
+  get isStaffSideUI(): boolean {
+    return !this.isAdminRole; // ROLE_LAB_ADMIN सोडून बाकी सगळे (STAFF/FRANCHISE/FRANCHISE_STAFF) staff-side
+  }
 
+  get staffBarcodesFilled(): boolean {
+    if (!this.isStaffSideUI) return true;
+    if (this.selectedSampleTests.length === 0) return false;
+    return this.selectedSampleTests.every(s => (s.barcode || '').trim().length > 0);
+  }
   constructor(
     private router: Router,
     private ngZone: NgZone,
