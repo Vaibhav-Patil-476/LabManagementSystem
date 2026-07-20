@@ -95,6 +95,7 @@
     font-weight: 700;
   }
 }
+
 /* ==========================
    Admin-only "self/UHID" box
 =========================== */
@@ -285,7 +286,9 @@
   cursor: pointer;
   background: var(--brand-soft);
 
-  ion-icon { font-size: 20px; }
+  ion-icon {
+    font-size: 20px;
+  }
 }
 
 /* =====================
@@ -312,8 +315,14 @@
     border-bottom: 1px solid #f1f5f5;
     cursor: pointer;
 
-    &:last-child { border-bottom: none; }
-    &:active { background: var(--brand-soft); color: var(--brand); }
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:active {
+      background: var(--brand-soft);
+      color: var(--brand);
+    }
 
     .sug-price {
       font-weight: 700;
@@ -365,7 +374,9 @@
   gap: 4px;
   background: var(--card-bg);
 
-  &:active { background: #f8fbfb; }
+  &:active {
+    background: #f8fbfb;
+  }
 
   div {
     white-space: nowrap;
@@ -454,7 +465,7 @@
 
 .sample-header {
   display: grid;
-  grid-template-columns: 1fr 36px 100px 1fr;
+  grid-template-columns: 160px 30px 100px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
@@ -468,13 +479,22 @@
 
 .sample-row {
   display: grid;
-  grid-template-columns: 1fr 36px 100px 1fr;
+  grid-template-columns: 160px 30px 100px minmax(0, 1fr);
   align-items: center;
   gap: 10px;
   padding: 10px 12px;
   border-top: 1px solid var(--line-soft);
   font-size: 12px;
   color: var(--text-secondary);
+
+  // Test Name lamba asla tari div baher jaycha nahi — wrap karto
+  >div:last-child {
+    min-width: 0;
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+  }
 }
 
 .barcode-box {
@@ -484,13 +504,38 @@
   border: 1px solid #d1d9d9;
   border-radius: var(--r-sm);
   padding: 4px 8px;
+  width: 160px;
+  min-width: 160px;
+  max-width: 100%;
+  box-sizing: border-box;
+  flex-shrink: 0;
 
   ion-input {
     flex: 1;
+    min-width: 0;
     font-size: 12px;
     --padding-top: 4px;
     --padding-bottom: 4px;
     --padding-start: 0;
+  }
+
+  ion-button {
+    flex-shrink: 0;
+    margin: 0;
+  }
+}
+
+@media (max-width: 480px) {
+
+  .sample-header,
+  .sample-row {
+    grid-template-columns: 130px 24px 80px minmax(0, 1fr);
+    gap: 6px;
+  }
+
+  .barcode-box {
+    width: 130px;
+    min-width: 130px;
   }
 }
 
@@ -635,110 +680,88 @@ ion-modal {
   min-height: 100%;
   overflow-y: auto;
 
-  .invoice-header {
+ .invoice-header {
     text-align: center;
-    padding: 20px 0 16px;
-    border-bottom: 2px solid var(--brand);
-    margin-bottom: 16px;
-    background: var(--card-bg);
+    padding: 28px 20px 20px;
+    background: var(--brand-gradient);
+    border-bottom: none;
+    margin: -20px -20px 20px;
+    border-radius: 0 0 24px 24px;
+    box-shadow: 0 8px 24px rgba(7, 95, 93, 0.22);
 
     h2 {
       margin: 0;
-      font-size: 20px;
+      font-size: 21px;
       font-weight: 800;
-      color: var(--brand-deep);
+      color: #fff;
+      letter-spacing: -0.3px;
     }
 
     p {
       margin: 4px 0 0;
-      font-size: 13px;
-      color: var(--text-faint);
+      font-size: 12.5px;
+      color: rgba(255, 255, 255, 0.85);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
     }
   }
-
-  .invoice-body {
+  }
+ .invoice-body {
+    background: var(--card-bg);
+    border-radius: var(--r-lg);
+    border: 1px solid rgba(8, 123, 118, 0.08);
+    box-shadow: var(--shadow-sm);
+    padding: 4px 16px;
     margin-bottom: 16px;
 
     .invoice-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 8px 0;
-      font-size: 13px;
-      color: var(--text-secondary);
-      border-bottom: 1px solid #f1f5f5;
-      background: var(--card-bg);
+      padding: 12px 0;
+      border-bottom: 1px dashed var(--line-soft);
 
       span:first-child {
-        font-weight: 600;
-        color: var(--text-muted);
-        min-width: 110px;
-        flex-shrink: 0;
+        font-size: 11px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.4px;
+        color: var(--brand);
       }
 
       span:last-child {
-        font-weight: 600;
-        color: var(--text-secondary);
-        text-align: right;
+        font-weight: 700;
+        color: var(--text-primary, #1a2b2a);
       }
-    }
-  }
-
-  .invoice-test-table {
-    border: 1px solid var(--divider);
-    border-radius: var(--r-sm);
-    overflow: hidden;
-    margin-bottom: 16px;
-
-    .inv-test-header {
-      display: grid;
-      grid-template-columns: 30px 1fr 70px 70px;
-      background: var(--brand-soft);
-      padding: 10px 12px;
-      font-size: 11px;
-      font-weight: 700;
-      color: var(--brand-deep);
-      text-transform: uppercase;
-      gap: 6px;
-    }
-
-    .inv-test-row {
-      display: grid;
-      grid-template-columns: 30px 1fr 70px 70px;
-      padding: 10px 12px;
-      font-size: 13px;
-      color: var(--text-secondary);
-      border-top: 1px solid #f1f5f5;
-      background: var(--card-bg);
-      gap: 6px;
-    }
-  }
-
-  .invoice-totals {
-    background: #f8fbfb;
-    border-radius: var(--r-md);
-    padding: 14px 16px;
-    margin-bottom: 20px;
-
-    .inv-total-row {
-      display: flex;
-      justify-content: space-between;
-      padding: 6px 0;
-      font-size: 13px;
-      color: var(--text-secondary);
-      border-bottom: 1px solid #f1f5f5;
-      background: transparent;
 
       &:last-child { border-bottom: none; }
-
-      &.grand {
-        padding-top: 10px;
-        font-size: 16px;
-        font-weight: 800;
-        color: var(--brand);
-      }
     }
   }
+  .invoice-totals {
+    background: var(--brand-soft);
+    border: 1.5px solid var(--brand-light);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
 
+    .inv-total-row.grand {
+      font-size: 18px;
+      color: var(--brand-deep);
+      border-top: 2px solid var(--brand-light);
+      padding-top: 12px;
+    }
+  } .print-btn { box-shadow: var(--shadow-glow); }
+.invoice-totals {
+  .inv-total-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text-secondary);
+
+    span:first-child { color: var(--text-muted); }
+    span:last-child { font-weight: 700; color: var(--brand-deep); }
+  }
+}
   .invoice-actions {
     padding-top: 8px;
   }
@@ -760,15 +783,24 @@ ion-modal {
     font-size: 14px;
     font-weight: 600;
   }
-}
+
 
 /* =====================
    ANIMATION
 ===================== */
 @keyframes fadeUp {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
-}.add-btn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.add-btn {
   width: 58px;
   height: 58px;
   margin: 0;
@@ -1036,7 +1068,8 @@ ion-modal {
   overflow: hidden;
 }
 
-.inv-table-header, .inv-table-row {
+.inv-table-header,
+.inv-table-row {
   display: grid;
   grid-template-columns: 40px 1fr 70px 60px 70px;
   padding: 8px 10px;
@@ -1054,7 +1087,8 @@ ion-modal {
   border-top: 1px solid #eee;
 }
 
-.inv-sample-header, .inv-sample-row {
+.inv-sample-header,
+.inv-sample-row {
   display: grid;
   grid-template-columns: 1fr 1fr 2fr;
   padding: 8px 10px;
@@ -1228,7 +1262,9 @@ ion-modal {
   text-align: center;
   color: var(--text-faint);
   font-size: 13px;
-}.doctor-input-row {
+}
+
+.doctor-input-row {
   display: flex;
   align-items: center;
   gap: 10px;

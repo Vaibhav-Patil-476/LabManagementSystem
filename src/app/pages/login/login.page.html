@@ -1,96 +1,94 @@
-<ion-content class="login-page">
-  <div class="page-center-wrapper">
-    <div class="login-container">
+<ion-content class="login-page" [fullscreen]="true">
 
-      <!-- डावी बाजू (Left Panel: Logo & Branding) -->
-      <div class="left-panel">
-        <div class="branding-box">
-          <div class="logo">
-            <img src="assets/itlabspeed-logo.png" alt="ITLABSPEED DEV">
-          </div>
+  <!-- Ambient background -->
+  <div class="bg-layer">
+    <span class="orb orb-1"></span>
+    <span class="orb orb-2"></span>
+    <svg class="dna" viewBox="0 0 200 400" preserveAspectRatio="none">
+      <path d="M20 0 Q100 100 20 200 Q-60 300 20 400" stroke="#087b76" stroke-width="1" fill="none" opacity=".08" />
+      <path d="M180 0 Q100 100 180 200 Q260 300 180 400" stroke="#0aa39c" stroke-width="1" fill="none" opacity=".08" />
+    </svg>
+  </div>
 
-          <h2>ITLABSPEED</h2>
-          <p class="tagline">Secure, fast, and AI powered LIMS for your lab.</p>
-        </div>
+  <div class="page-wrap">
+
+    <!-- Hero -->
+    <div class="hero">
+      <div class="logo-ring">
+        <img src="assets/itlabspeed-logo.png" alt="ITLabSpeed">
       </div>
-
-      <!-- उजवी बाजू (Right Panel: Login Form) -->
-      <div class="right-panel">
-        <div class="form-wrapper">
-
-          <h1>Login to Your Account</h1>
-          <p class="signup-text">
-            Don't have an account? <span class="link-text">Sign Up</span><br>
-            or <span class="link-text">New Patient login</span>
-          </p>
-
-          <form (ngSubmit)="login()">
-
-            <!-- Username Input -->
-            <div class="input-group">
-              <label>Username</label>
-              <ion-item lines="none">
-                <ion-input
-                  type="email"
-                  name="email"
-                  placeholder="Enter Email / Username"
-                  [disabled]="loading"
-                  [(ngModel)]="email">
-                </ion-input>
-              </ion-item>
-            </div>
-
-            <!-- Password Input -->
-            <div class="input-group">
-              <label>Password</label>
-              <ion-item lines="none">
-                <ion-input
-                  type="password"
-                  name="password"
-                  placeholder="Enter Password"
-                  [disabled]="loading"
-                  [(ngModel)]="password">
-                </ion-input>
-              </ion-item>
-            </div>
-
-            <!-- Forgot Password -->
-            <div class="forgot-password">
-              <span class="link-text">Forgot Password?</span>
-            </div>
-
-            <!-- Login Button -->
-            <ion-button
-              expand="block"
-              type="submit"
-              [disabled]="!email || !password || loading"
-              class="submit-btn">
-              <ion-spinner name="crescent" *ngIf="loading"></ion-spinner>
-              <span *ngIf="!loading">Log In Securely</span>
-            </ion-button>
-
-          </form>
-
-          <!-- Social Login Options -->
-          <div class="divider">
-            <span>Or continue with</span>
-          </div>
-
-          <div class="social-login">
-            <ion-button fill="outline" color="dark" class="social-btn">
-              GOOGLE
-            </ion-button>
-            <ion-button fill="outline" color="dark" class="social-btn">
-              APPLE
-            </ion-button>
-            <ion-button fill="outline" color="dark" class="social-btn">
-              FACEBOOK
-            </ion-button>
-          </div>
-
-        </div>
-      </div>
-
+      <p class="tagline">LABORATORY MANAGEMENT SYSTEM</p>
+      <h1>Welcome Back</h1>
+      <p class="subtitle">Secure access to your laboratory workspace</p>
     </div>
+
+    <!-- Glass Card -->
+    <div class="glass-card">
+      <form (ngSubmit)="login()">
+
+        <!-- Email -->
+        <div class="field-group">
+          <label class="field-label">Email / Username</label>
+          <div class="field-box" [class.focused]="emailFocus">
+            <ion-icon name="mail-outline" class="lead-icon"></ion-icon>
+            <ion-input type="text" name="email" [disabled]="loading" [(ngModel)]="email" (ionFocus)="emailFocus=true"
+              (ionBlur)="emailFocus=false">
+            </ion-input>
+          </div>
+        </div>
+
+        <!-- Password -->
+        <div class="field-group">
+          <label class="field-label">Password</label>
+          <div class="field-box" [class.focused]="passFocus">
+            <ion-icon name="lock-closed-outline" class="lead-icon"></ion-icon>
+            <ion-input [type]="showPassword ? 'text' : 'password'" name="password" [disabled]="loading"
+              [(ngModel)]="password" (ionFocus)="passFocus=true" (ionBlur)="passFocus=false">
+            </ion-input>
+            <ion-icon [name]="showPassword ? 'eye-outline' : 'eye-off-outline'" class="trail-icon"
+              (click)="showPassword = !showPassword">
+            </ion-icon>
+          </div>
+        </div>
+
+        <div class="row-between">
+          <div class="remember" (click)="rememberMe = !rememberMe">
+            <span class="checkbox" [class.checked]="rememberMe"></span>
+            <span>Remember me</span>
+          </div>
+          <span class="link-text">Forgot Password?</span>
+        </div>
+
+        <ion-button expand="block" type="submit" class="submit-btn" [disabled]="!email || !password || loading">
+          <ion-spinner name="crescent" *ngIf="loading"></ion-spinner>
+          <span *ngIf="!loading">Continue Securely</span>
+        </ion-button>
+
+        <div class="divider"><span>or</span></div>
+
+
+
+        <div class="social-login">
+          <button type="button" class="social-btn">
+            <ion-icon name="logo-google"></ion-icon>
+            <span>Google</span>
+          </button>
+          <button type="button" class="social-btn">
+            <ion-icon name="logo-apple"></ion-icon>
+            <span>Apple</span>
+          </button>
+          <button type="button" class="social-btn">
+            <ion-icon name="logo-facebook"></ion-icon>
+            <span>Facebook</span>
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="footer">
+      <p>v1.0.0 &nbsp;•&nbsp; Powered by <b>ITLabSpeed</b></p>
+      <p><span class="link-text">Privacy Policy</span> &nbsp;·&nbsp; <span class="link-text">Terms</span></p>
+    </div>
+
   </div>
 </ion-content>

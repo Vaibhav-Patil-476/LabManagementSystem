@@ -11,6 +11,14 @@
  *   generic admin panel.
  * - Type: Plus Jakarta Sans (display) + Inter (body/UI) + JetBrains Mono
  *   (ids, barcodes, booking numbers) for a precise, clinical data feel.
+ *
+ * ✅ FIX ADDED (double scrollbar issue):
+ *   html/body were allowed to scroll AT THE SAME TIME as ion-content's
+ *   internal .inner-scroll, producing two visible scrollbars where only
+ *   one (the native body one) actually moved. html/body/ion-app are now
+ *   locked to overflow:hidden so ion-content is the single scroll owner,
+ *   and the premium scrollbar styling is applied to ion-content's actual
+ *   shadow-DOM scroll part (::part(scroll)) instead of the page body.
  */
 
 /* Core CSS required for Ionic components to work properly */
@@ -144,6 +152,33 @@
 }
 
 /* =====================================================================
+   ✅ SINGLE-SCROLL-OWNER FIX (double scrollbar issue)
+   -----------------------------------------------------------------------
+   html/body used to be free to scroll WHILE ion-content also scrolled
+   internally — two scroll containers moving independently produces two
+   scrollbars, and only the outer (body) one actually tracked drag/wheel.
+   Locking html/body/ion-app to overflow:hidden makes ion-content's own
+   .inner-scroll the only thing that can move.
+===================================================================== */
+html,
+body {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+ion-app {
+  height: 100%;
+  overflow: hidden;
+}
+
+ion-router-outlet,
+.ion-page {
+  overflow: hidden;
+}
+
+/* =====================================================================
    BASE / TYPOGRAPHY
 ===================================================================== */
 html,
@@ -165,7 +200,41 @@ h1, h2, h3, .greeting-name, .spotlight-count, .sheet-title-main {
   letter-spacing: 0.2px;
 }
 
-/* Slim premium scrollbars */
+/* =====================================================================
+   ✅ SLIM PREMIUM SCROLLBARS — applied to the actual scrolling elements
+   -----------------------------------------------------------------------
+   `::-webkit-scrollbar` on html/body is intentionally NOT used anymore
+   since body no longer scrolls (see fix above). Instead we style
+   ion-content's shadow-DOM scroll part directly, plus any plain
+   overflow:auto containers (modals, dropdowns, popovers) via the
+   generic selector below.
+===================================================================== */
+ion-content {
+  --overflow: auto;
+}
+
+ion-content::part(scroll) {
+  scrollbar-width: thin;
+  scrollbar-color: var(--brand-300) transparent;
+}
+
+ion-content::part(scroll)::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+ion-content::part(scroll)::-webkit-scrollbar-track {
+  background: transparent;
+}
+ion-content::part(scroll)::-webkit-scrollbar-thumb {
+  background: var(--brand-300);
+  border-radius: var(--radius-pill);
+}
+ion-content::part(scroll)::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-500);
+}
+
+/* Generic fallback for any other manually-scrolling container
+   (modal bodies, dropdowns, popovers) that isn't an ion-content */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -239,7 +308,9 @@ ion-checkbox {
   --checkbox-background-checked: var(--brand-600);
   --border-color-checked: var(--brand-600);
   --border-radius: 6px;
-}// ✅ Material calendar overlay la white background + shadow deण्यासाठी
+}
+
+// ✅ Material calendar overlay la white background + shadow deण्यासाठी
 // (theme import न karता, फक्त explicit override).
 .mat-datepicker-content {
   background-color: #ffffff !important;
@@ -253,7 +324,9 @@ ion-checkbox {
 
 .mat-calendar-body-cell-content {
   color: #1a1a1a;
-}// ==========================================================
+}
+
+// ==========================================================
 // PREMIUM ALERT (Delete Test / other confirm dialogs)
 // ==========================================================
 ion-alert.premium-alert {

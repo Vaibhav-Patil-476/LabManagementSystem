@@ -181,7 +181,32 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   @ViewChild('rangePicker') rangePicker!: any;
   rangeStart: Date | null = null;
   rangeEnd: Date | null = null;
+  franchiseSearchTerm = '';
+  filteredFranchiseList: any[] = [];
+  showFranchiseDropdown = false;
 
+  onFranchiseSearch() {
+    const q = this.franchiseSearchTerm.trim().toLowerCase();
+    if (!q) { this.filteredFranchiseList = []; this.selectedFranchiseId = null; this.applyFilters(); return; }
+    this.filteredFranchiseList = this.filterFranchises.filter((f: any) =>
+      (f.franchiseName || f.name || '').toLowerCase().includes(q)
+    );
+    this.showFranchiseDropdown = true;
+  }
+
+  selectFranchise(f: any) {
+    this.franchiseSearchTerm = f.franchiseName || f.name;
+    this.selectedFranchiseId = f.franchiseId;
+    this.showFranchiseDropdown = false;
+    this.applyFilters();
+  }
+
+  clearFranchise() {
+    this.franchiseSearchTerm = '';
+    this.selectedFranchiseId = null;
+    this.filteredFranchiseList = [];
+    this.applyFilters();
+  }
   get isSearchMode(): boolean { return this.quickSearch.trim().length > 0; }
   get isAdminRole(): boolean { return this.role === this.ROLE_LAB_ADMIN; }
   get canViewAmount(): boolean { return this.role === this.ROLE_LAB_ADMIN; }

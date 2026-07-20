@@ -8,7 +8,7 @@
 </ion-header>
 
 <ion-content class="report-content">
-
+  <div class="click-catcher" *ngIf="showFranchiseDropdown" (click)="showFranchiseDropdown=false"></div>
   <!-- ===================== TOP BAR ===================== -->
   <div class="top-bar">
     <span class="total-pill">
@@ -40,18 +40,20 @@
       </span>
       <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch" (ngModelChange)="onQuickSearchChange()" />
     </div>
-
-    <div class="filter-field select-field" *ngIf="roleService.isLabAdmin">
-      <span class="select-icon-badge">
+    <div class="filter-field search-field franchise-field" *ngIf="roleService.isLabAdmin && franchises.length > 0">
+      <span class="search-icon-badge">
         <ion-icon name="business-outline"></ion-icon>
       </span>
-      <ion-select interface="popover" fill="clear" justify="start" placeholder="Select Franchise"
-        [(ngModel)]="franchiseId" (ionChange)="onFranchiseChange($event.detail.value)">
-        <ion-select-option [value]="null">Select Franchise</ion-select-option>
-        <ion-select-option *ngFor="let f of franchises" [value]="f.franchiseId">
+      <input type="text" placeholder="Type franchise name" [(ngModel)]="franchiseSearchTerm"
+        (ngModelChange)="onFranchiseSearch()" (focus)="showFranchiseDropdown = true">
+      <ion-icon *ngIf="franchiseSearchTerm" name="close-circle-outline" class="clear-franchise"
+        (click)="clearFranchise(); $event.stopPropagation()"></ion-icon>
+
+      <div class="franchise-dropdown" *ngIf="showFranchiseDropdown && filteredFranchiseList.length > 0">
+        <div class="franchise-dropdown-item" *ngFor="let f of filteredFranchiseList" (click)="selectFranchise(f)">
           {{ f.franchiseName || f.name }}
-        </ion-select-option>
-      </ion-select>
+        </div>
+      </div>
     </div>
 
     <div class="filter-field date-field" (click)="openDateRangePicker()">

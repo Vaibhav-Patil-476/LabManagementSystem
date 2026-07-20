@@ -4,11 +4,20 @@ import { FormsModule } from '@angular/forms';
 import { Router, RouterModule } from '@angular/router';
 import {
   IonContent,
-  IonItem,
   IonInput,
   IonButton,
-  IonSpinner
+  IonSpinner,
+  IonIcon
 } from '@ionic/angular/standalone';
+import { addIcons } from 'ionicons';
+import {
+  mailOutline,
+  lockClosedOutline,
+  eyeOutline,
+  eyeOffOutline,
+  fingerPrintOutline,
+  scanOutline
+} from 'ionicons/icons';
 
 import { ToastService } from '../../services/toast';
 import { AuthService } from '../../services/auth';
@@ -23,10 +32,10 @@ import { AuthService } from '../../services/auth';
     FormsModule,
     RouterModule,
     IonContent,
-    IonItem,
     IonInput,
     IonButton,
-    IonSpinner
+    IonSpinner,
+    IonIcon
   ]
 })
 export class LoginPage {
@@ -34,12 +43,25 @@ export class LoginPage {
   email = '';
   password = '';
   loading = false;
+  showPassword = false;
+  rememberMe = false;
+  emailFocus = false;
+  passFocus = false;
 
   constructor(
     private router: Router,
     private toastService: ToastService,
     private authService: AuthService
-  ) { }
+  ) {
+    addIcons({
+      'mail-outline': mailOutline,
+      'lock-closed-outline': lockClosedOutline,
+      'eye-outline': eyeOutline,
+      'eye-off-outline': eyeOffOutline,
+      'finger-print-outline': fingerPrintOutline,
+      'scan-outline': scanOutline
+    });
+  }
 
   login() {
 
@@ -50,7 +72,6 @@ export class LoginPage {
 
     this.loading = true;
 
-    // ✅ jhuna session clear
     this.authService.logout();
 
     const body = {
@@ -62,28 +83,18 @@ export class LoginPage {
 
       next: (response) => {
 
-        // ✅ FAKTA token sessionStorage madhe
         this.authService.setToken(response.token);
 
-        // ✅ role/franchise/permissions — API varun fresh ghenar, save nahi karat
         this.authService.loadCurrentUser().subscribe({
 
           next: (user) => {
             this.loading = false;
-
-            console.log('CURRENT USER:', user);
-            console.log('ROLE:', this.authService.role);
-
             this.toastService.success('Success', 'Login Successful');
-
-            // ✅ router.navigate vaparla — full page reload nako,
-            // token sessionStorage madhe ahech, in-memory user data pan lगेच bharla
             this.router.navigate(['/dashboard']);
           },
 
           error: (err) => {
             this.loading = false;
-            console.log('CURRENT USER ERROR:', err);
             this.toastService.warning('Warning', 'Logged in, but role fetch failed.');
             this.router.navigate(['/dashboard']);
           }
@@ -92,7 +103,6 @@ export class LoginPage {
 
       error: (error) => {
         this.loading = false;
-        console.log(error);
 
         if (error.status === 401) {
           this.toastService.error('Login Failed', 'Invalid Username or Password');

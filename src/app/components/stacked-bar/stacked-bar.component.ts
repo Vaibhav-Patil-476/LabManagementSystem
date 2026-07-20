@@ -6,18 +6,71 @@ import { CommonModule } from '@angular/common';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="bar-track">
-      <div class="seg" [style.width.%]="pct(received)" style="background:#16866e"></div>
-      <div class="seg" [style.width.%]="pct(pending)" style="background:#2563eb"></div>
-      <div class="seg" [style.width.%]="pct(outSourced)" style="background:#7856c9"></div>
-      <div class="seg" [style.width.%]="pct(rejected)" style="background:#c05262"></div>
-    </div>
-  `,
+<div class="bar-track">
+
+  <div
+    *ngIf="received > 0"
+    class="seg received"
+    [style.width.%]="pct(received)">
+  </div>
+
+  <div
+    *ngIf="pending > 0"
+    class="seg pending"
+    [style.width.%]="pct(pending)">
+  </div>
+
+  <div
+    *ngIf="outSourced > 0"
+    class="seg outsourced"
+    [style.width.%]="pct(outSourced)">
+  </div>
+
+  <div
+    *ngIf="rejected > 0"
+    class="seg rejected"
+    [style.width.%]="pct(rejected)">
+  </div>
+
+</div>
+`,
   styles: [`
-    :host { display:block; height:8px; width:100%; }
-    .bar-track { display:flex; height:100%; width:100%; background:#eef2f2; border-radius:4px; overflow:hidden; }
-    .seg { height:100%; transition: width .2s ease; }
-  `]
+:host{
+    display:block;
+    width:100%;
+    height:18px;
+}
+
+.bar-track{
+    display:flex;
+    width:100%;
+    height:100%;
+    overflow:hidden;
+    border-radius:8px;
+    background:#eef2f2;
+}
+
+.seg{
+    height:100%;
+    transition:width .35s ease;
+}
+
+.received{
+    background:#16866e;
+}
+
+.pending{
+    background:#f59e0b;
+}
+
+.outsourced{
+    background:#2563eb;
+}
+
+.rejected{
+    background:#ef4444;
+}
+`]
 })
 export class StackedBarComponent {
   @Input() received = 0;

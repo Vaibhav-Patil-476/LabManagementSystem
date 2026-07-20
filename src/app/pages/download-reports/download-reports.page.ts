@@ -79,7 +79,9 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   quickSearch = '';
   franchiseId: any = null;
   franchises: any[] = [];
-
+  franchiseSearchTerm = '';
+  filteredFranchiseList: any[] = [];
+  showFranchiseDropdown = false;
   isLoading = false;
   isLoadingMore = false;
   isGenerating = false;
@@ -520,5 +522,31 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     } finally {
       this.isGenerating = false;
     }
+  }
+
+  onFranchiseSearch() {
+    const q = this.franchiseSearchTerm.trim().toLowerCase();
+    if (!q) {
+      this.filteredFranchiseList = [];
+      this.showFranchiseDropdown = false;
+      this.onFranchiseChange(null);
+      return;
+    }
+    this.filteredFranchiseList = this.franchises.filter((f: any) =>
+      (f.franchiseName || f.name || '').toLowerCase().includes(q)
+    );
+    this.showFranchiseDropdown = true;
+  }
+  selectFranchise(f: any) {
+    this.franchiseSearchTerm = f.franchiseName || f.name;
+    this.showFranchiseDropdown = false;
+    this.filteredFranchiseList = [];
+    this.onFranchiseChange(f.franchiseId);
+  }
+  clearFranchise() {
+    this.franchiseSearchTerm = '';
+    this.filteredFranchiseList = [];
+    this.showFranchiseDropdown = false;
+    this.onFranchiseChange(null);
   }
 }

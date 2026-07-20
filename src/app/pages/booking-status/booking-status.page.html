@@ -9,6 +9,9 @@
 
 <ion-content class="booking-content" [class.menu-open]="openActionRowId !== null">
 
+  <!-- ✅ franchise suggestion list उघडी असताना बाहेर click केल्यावर बंद करण्यासाठी -->
+  <div class="click-catcher" *ngIf="showFranchiseDropdown" (click)="showFranchiseDropdown=false"></div>
+
   <div class="form-card">
 
     <!-- ===================== TOP SUMMARY BAR ===================== -->
@@ -21,11 +24,12 @@
         <ion-icon name="information-circle-outline"></ion-icon>
         "Please refresh to see the latest data."
       </div>
-
     </div>
 
     <!-- ===================== FILTER BAR ===================== -->
     <div class="filter-bar">
+
+      <!-- Quick search — untouched -->
       <div class="filter-field search-field">
         <span class="search-icon-badge">
           <ion-icon name="search-outline"></ion-icon>
@@ -33,25 +37,24 @@
         <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch" (ngModelChange)="onQuickSearchChange()">
       </div>
 
-      <div class="filter-field select-field" *ngIf="filterFranchises.length > 0">
-        <span class="select-icon-badge">
+      <!-- Franchise — now type-ahead search box -->
+      <div class="filter-field search-field franchise-field" *ngIf="filterFranchises.length > 0">
+        <span class="search-icon-badge">
           <ion-icon name="business-outline"></ion-icon>
         </span>
+        <input type="text" placeholder="Type franchise name" [(ngModel)]="franchiseSearchTerm"
+          (ngModelChange)="onFranchiseSearch()" (focus)="showFranchiseDropdown = true">
+        <ion-icon *ngIf="franchiseSearchTerm" name="close-circle-outline" class="clear-franchise"
+          (click)="clearFranchise(); $event.stopPropagation()"></ion-icon>
 
-        <ion-select interface="popover" fill="clear" justify="start" placeholder="Select Franchise"
-          [(ngModel)]="selectedFranchiseId" (ionChange)="applyFilters()">
-
-          <ion-select-option [value]="null">
-            Select Franchise
-          </ion-select-option>
-
-          <ion-select-option *ngFor="let f of filterFranchises" [value]="f.franchiseId">
+        <div class="franchise-dropdown" *ngIf="showFranchiseDropdown && filteredFranchiseList.length > 0">
+          <div class="franchise-dropdown-item" *ngFor="let f of filteredFranchiseList" (click)="selectFranchise(f)">
             {{ f.franchiseName || f.name }}
-          </ion-select-option>
-
-        </ion-select>
+          </div>
+        </div>
       </div>
 
+      <!-- Date — untouched -->
       <div class="filter-field date-field" (click)="openDateRangePicker()">
         <span class="date-icon-badge">
           <ion-icon name="calendar-outline"></ion-icon>
@@ -82,9 +85,7 @@
       <div class="booking-card" *ngFor="let item of filteredBookings; trackBy: trackByBookingId"
         [class.expanded]="expandedBookingId === item.bookingId">
 
-        <!-- ===== Card header — always visible, tap to expand ===== -->
         <div class="bcard-header" (click)="toggleExpand(item)">
-
           <div class="bcard-header-left">
             <div class="bcard-id-row">
               <a class="id-link">#{{ item.bookingId }}</a>
@@ -103,7 +104,6 @@
           </div>
         </div>
 
-        <!-- ===== Quick stat strip — always visible ===== -->
         <div class="bcard-stats">
           <div class="bcard-stat">
             <span class="bcs-label">Client / Doctor</span>
@@ -116,7 +116,6 @@
           </div>
         </div>
 
-        <!-- ===== Expanded details — tests table + barcode + actions ===== -->
         <div class="bcard-details" *ngIf="expandedBookingId === item.bookingId">
 
           <div class="bcard-section-label">Tests</div>
@@ -380,11 +379,12 @@
 
                 <div class="summary-field payment-method-field" *ngIf="isAdminRole">
                   <label>Payment Method</label>
-                  <select [(ngModel)]="paymentMethod" [disabled]="!canEditBilling">
-                    <option value="cash">Cash</option>
-                    <option value="upi">UPI</option>
-                    <option value="online">Online</option>
-                  </select>
+                  <ion-select [(ngModel)]="paymentMethod" interface="popover" [disabled]="!canEditBilling"
+                    class="premium-select">
+                    <ion-select-option value="cash">Cash</ion-select-option>
+                    <ion-select-option value="upi">UPI</ion-select-option>
+                    <ion-select-option value="online">Online</ion-select-option>
+                  </ion-select>
                 </div>
               </div>
             </div>
@@ -429,33 +429,35 @@
 
           <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
 
-            <!-- SECTION: Patient details -->
             <div class="form-section">
               <div class="form-section-title">
                 <ion-icon name="person-outline"></ion-icon> Patient Details
               </div>
               <div class="patient-form-grid">
-                <div class="summary-field span-1">
-                  <label>Title</label>
-                  <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
-                    class="premium-select">
-                    <ion-select-option value="mr">Mr</ion-select-option>
-                    <ion-select-option value="mrs">Mrs</ion-select-option>
-                    <ion-select-option value="ms">Ms</ion-select-option>
-                    <ion-select-option value="dr">Dr</ion-select-option>
-                    <ion-select-option value="master">Master</ion-select-option>
-                    <ion-select-option value="baby">Baby</ion-select-option>
-                  </ion-select>
+                <div class="field-row">
+                  <div class="summary-field narrow">
+                    <label>Title</label>
+                    <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
+                      class="premium-select">
+                      <ion-select-option value="mr">Mr</ion-select-option>
+                      <ion-select-option value="mrs">Mrs</ion-select-option>
+                      <ion-select-option value="ms">Ms</ion-select-option>
+                      <ion-select-option value="dr">Dr</ion-select-option>
+                      <ion-select-option value="master">Master</ion-select-option>
+                      <ion-select-option value="baby">Baby</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="summary-field wide">
+                    <label>Patient Name</label>
+                    <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
+                  </div>
                 </div>
-                <div class="summary-field span-2">
-                  <label>Patient Name</label>
-                  <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
-                </div>
-                <div class="summary-field">
+
+                <div class="summary-field pair-field">
                   <label>Age</label>
                   <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
                 </div>
-                <div class="summary-field">
+                <div class="summary-field pair-field">
                   <label>Age Type</label>
                   <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="premium-select">
                     <ion-select-option value="years">Years</ion-select-option>
@@ -463,7 +465,7 @@
                     <ion-select-option value="days">Days</ion-select-option>
                   </ion-select>
                 </div>
-                <div class="summary-field">
+                <div class="summary-field pair-field">
                   <label>Gender</label>
                   <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="premium-select">
                     <ion-select-option value="male">Male</ion-select-option>
@@ -474,27 +476,28 @@
               </div>
             </div>
 
-            <!-- SECTION: Doctor & Lab -->
             <div class="form-section">
               <div class="form-section-title">
                 <ion-icon name="medkit-outline"></ion-icon> Doctor &amp; Lab
               </div>
               <div class="patient-form-grid">
-                <div class="summary-field">
-                  <label>Doctor Title</label>
-                  <ion-select [(ngModel)]="editPatientData.doctorTitle" interface="popover" placeholder="Select"
-                    class="premium-select">
-                    <ion-select-option value="dr">Dr</ion-select-option>
-                    <ion-select-option value="prof">Prof</ion-select-option>
-                  </ion-select>
-                </div>
-                <div class="summary-field span-2">
-                  <label>Ref. Doctor</label>
-                  <div class="inline-input-btn">
-                    <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name">
-                    <ion-button size="small" fill="solid" color="primary" (click)="openDoctorPicker()">
-                      <ion-icon slot="icon-only" name="add-outline"></ion-icon>
-                    </ion-button>
+                <div class="field-row">
+                  <div class="summary-field narrow">
+                    <label>Doctor Title</label>
+                    <ion-select [(ngModel)]="editPatientData.doctorTitle" interface="popover" placeholder="Select"
+                      class="premium-select">
+                      <ion-select-option value="dr">Dr</ion-select-option>
+                      <ion-select-option value="prof">Prof</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="summary-field wide">
+                    <label>Ref. Doctor</label>
+                    <div class="inline-input-btn">
+                      <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name">
+                      <ion-button size="small" fill="solid" color="primary" (click)="openDoctorPicker()">
+                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                      </ion-button>
+                    </div>
                   </div>
                 </div>
 
@@ -514,23 +517,22 @@
               </div>
             </div>
 
-            <!-- SECTION: Contact & identification -->
             <div class="form-section">
               <div class="form-section-title">
                 <ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
               </div>
               <div class="patient-form-grid">
-                <div class="summary-field">
+                <div class="summary-field pair-field">
                   <label>Mobile</label>
                   <input type="tel" [(ngModel)]="editPatientData.mobileNumber" placeholder="10 digit mobile"
                     maxlength="10">
                 </div>
-                <div class="summary-field">
+                <div class="summary-field pair-field">
                   <label>Aadhaar</label>
                   <input type="text" [(ngModel)]="editPatientData.aadhaarNumber" placeholder="Aadhaar number"
                     maxlength="12">
                 </div>
-                <div class="summary-field">
+                <div class="summary-field pair-field">
                   <label>UHID</label>
                   <input type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
                 </div>
@@ -541,7 +543,6 @@
               </div>
             </div>
 
-            <!-- SECTION: History & attachment -->
             <div class="form-section">
               <div class="form-section-title">
                 <ion-icon name="document-text-outline"></ion-icon> History &amp; Attachment
@@ -576,6 +577,7 @@
       </div>
     </ng-template>
   </ion-modal>
+
   <!-- ===================== PATIENT HISTORY MODAL ===================== -->
   <ion-modal [isOpen]="isHistoryModalOpen" cssClass="history-popup sheet-modal" (didDismiss)="closeHistoryModal()"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1">

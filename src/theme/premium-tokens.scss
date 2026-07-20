@@ -197,4 +197,43 @@ ion-modal.compact-popup::part(content) {
 
 .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
   background-color: var(--primary-light) !important;
+}ion-alert.premium-alert {
+  --background: #fff;
+  --backdrop-opacity: 0.45;
+
+  .alert-wrapper {
+    border-radius: var(--r-xl, 20px);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .alert-head h2 {
+    font-size: 18px;
+    font-weight: 800;
+    color: var(--primary-dark, #075f5d);
+  }
+
+  .alert-message {
+    font-size: 14px;
+    color: var(--text-mid, #5a6a6a);
+  }
+
+  .alert-button-group {
+    padding: 8px 16px 16px;
+  }
+
+  .alert-button {
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: var(--r-pill, 999px);
+
+    &.alert-btn-cancel {
+      color: var(--gray-accent, #7c8c8b);
+    }
+
+    &.alert-btn-danger {
+      color: #fff !important;
+      background: var(--brand-gradient);
+      box-shadow: var(--shadow-glow);
+    }
+  }
 }

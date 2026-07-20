@@ -1,28 +1,8 @@
-// ==========================================================
-// PREMIUM ENTERPRISE DESIGN SYSTEM — Booking Status (component scope)
-// ==========================================================
-// ✅ FIX (root cause + resolution):
-// All design tokens (--primary, --shadow-*, --r-*, --sp-*) used to
-// live on `:host` here. `ion-modal` presented declaratively is
-// re-parented by Ionic to a container directly under <ion-app> while
-// open, so its content stops being a DOM descendant of this
-// component's host. CSS custom properties only cascade through DOM
-// ancestry, so every var(--x) inside the modal silently resolved to
-// nothing — classes still matched (Angular's encapsulation attribute
-// travels with the node), but colors/shadows/radius/spacing vanished.
-//
-// Tokens now live once, globally, on `:root` in
-// `src/theme/premium-tokens.scss` (imported one time into
-// global.scss) — see that file. This stylesheet only contains
-// component-scoped structural/layout rules that consume those tokens
-// via var(); it does not redeclare them, to avoid duplication.
-// Ionic modal-shell rules that target the modal's own shadow parts
-// (`ion-modal.sheet-modal`, `::part(content)`, `.compact-popup`, and
-// the CDK/Material overlay globals) have also moved to
-// premium-tokens.scss, since those elements are portaled out of this
-// component's DOM subtree too and a component-scoped rule can never
-// reliably reach them once open.
-// ==========================================================
+// PREMIUM DESIGN SYSTEM — Booking Status
+// Tokens (--primary, --shadow-*, --r-*, --sp-*) globally defined in
+// src/theme/premium-tokens.scss (ion-modal portals out of :host, so
+// tokens can't live here). This file = component-scoped layout only.
+
 :host {
   display: block;
   width: 100%;
@@ -33,9 +13,6 @@
   -webkit-font-smoothing: antialiased;
 }
 
-// ==========================================================
-// HEADER
-// ==========================================================
 .booking-header {
   --background: var(--brand-gradient);
   --color: #ffffff;
@@ -61,9 +38,6 @@
   --overflow-x: hidden;
 }
 
-// ==========================================================
-// SHELL CARD
-// ==========================================================
 .form-card {
   background: var(--card-bg, #ffffff);
   border-radius: var(--r-lg);
@@ -75,9 +49,6 @@
   max-width: 100%;
 }
 
-// ==========================================================
-// SUMMARY BAR
-// ==========================================================
 .summary-bar {
   display: flex;
   flex-wrap: wrap;
@@ -128,9 +99,6 @@
   border-color: rgba(8, 123, 118, 0.14);
 }
 
-// ==========================================================
-// FILTER BAR
-// ==========================================================
 .filter-bar {
   position: relative;
   z-index: var(--z-filter);
@@ -307,9 +275,6 @@
   }
 }
 
-// ==========================================================
-// STATUS BADGES (table / card)
-// ==========================================================
 .status {
   display: inline-flex;
   align-items: center;
@@ -384,18 +349,27 @@
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
 }
 
 @keyframes slideUpIn {
-  from { opacity: 0; transform: translateY(10px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
-// ==========================================================
-// 3-DOT ACTION MENU
-// ==========================================================
 .action-menu-backdrop {
   position: fixed;
   inset: 0;
@@ -478,13 +452,6 @@
   pointer-events: none;
 }
 
-// ==========================================================
-// MODAL CONTENT — light-DOM structure rendered from our own
-// <ng-template>. These classes still match correctly even after
-// Ionic re-parents the modal (Angular's encapsulation attribute
-// travels with the node); they just needed tokens to be global,
-// which is now fixed upstream in premium-tokens.scss.
-// ==========================================================
 .test-modal-wrapper {
   background: var(--card-bg, #fff);
   border-radius: var(--r-xl) var(--r-xl) 0 0;
@@ -495,19 +462,26 @@
   flex-direction: column;
 }
 
+.sheet-top .close-modal-btn {
+  background: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    color: #fff;
+  }
+}
+
 .sheet-top {
-  background: var(--card-bg, #fff);
+  background: var(--brand-gradient);
   padding: 10px var(--sp-5) var(--sp-4);
-  border-bottom: 1px solid var(--border-color);
+  border-bottom: none;
   flex-shrink: 0;
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
 }
 
 .modal-handle {
-  width: 40px;
-  height: 5px;
-  background: #dbe6e5;
-  border-radius: var(--r-pill);
-  margin: 4px auto 14px;
+  background: rgba(255, 255, 255, 0.35);
 }
 
 .sheet-top-row {
@@ -522,25 +496,16 @@
 }
 
 .sheet-title-eyebrow {
-  color: var(--primary);
-  font-size: 11px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 2px;
+  color: rgba(255, 255, 255, 0.85);
 }
 
 .sheet-title-main {
-  color: var(--text-dark);
-  font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -0.3px;
+  color: #ffffff;
 }
 
+
 .sheet-title-sub {
-  color: var(--gray-accent);
-  font-size: 12.5px;
-  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 .close-modal-btn {
@@ -605,7 +570,9 @@
   gap: 0;
 }
 
-.info-col { width: 100%; }
+.info-col {
+  width: 100%;
+}
 
 .info-row {
   display: grid;
@@ -614,7 +581,7 @@
   column-gap: var(--sp-3);
   padding: 9px 0;
 
-  & + .info-row {
+  &+.info-row {
     border-top: 1px dashed var(--border-color);
   }
 }
@@ -698,7 +665,9 @@
   font-weight: 600;
   cursor: pointer;
 
-  &:hover { background: var(--primary-lighter); }
+  &:hover {
+    background: var(--primary-lighter);
+  }
 
   .price {
     font-weight: 800;
@@ -727,7 +696,8 @@
   width: 100%;
   border-collapse: collapse;
 
-  th, td {
+  th,
+  td {
     padding: 12px 14px;
     font-size: 13px;
     text-align: left;
@@ -743,8 +713,13 @@
     text-transform: uppercase;
   }
 
-  tr:last-child td { border-bottom: none; }
-  tr:hover td { background: var(--primary-lighter); }
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  tr:hover td {
+    background: var(--primary-lighter);
+  }
 }
 
 .franchise-tag {
@@ -791,18 +766,21 @@
   background: var(--section-bg);
   border-radius: var(--r-lg);
   padding: var(--sp-4);
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: var(--sp-3);
   min-width: 0;
   flex: 1 1 260px;
   box-sizing: border-box;
   transition: opacity 0.15s ease;
 
-  &.locked { opacity: 0.85; }
+  &.locked {
+    opacity: 0.85;
+  }
 }
 
 .summary-panel-title {
+  grid-column: 1 / -1;
   font-size: 11.5px;
   font-weight: 800;
   text-transform: uppercase;
@@ -817,50 +795,46 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+
+  &.payment-method-field {
+    grid-column: 1 / -1;
+  }
 }
 
 .summary-field label {
-  font-size: 11.5px;
-  font-weight: 700;
-  color: var(--text-mid);
+  font-size: 10.5px;
+  font-weight: 800;
+  color: var(--primary-dark);
   letter-spacing: 0.4px;
   text-transform: uppercase;
 }
 
 .summary-field input,
-.summary-field select,
-.summary-field textarea {
+.summary-field select {
   width: 100%;
-  height: 48px;
-  border: 1.5px solid var(--input-border);
+  height: 46px;
+  border: 1.5px solid var(--border-color, #dde5e5);
   border-radius: var(--r-sm);
-  background: #fdfefe;
+  background: #ffffff;
   padding: 0 14px;
-  font-size: 14.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--text-dark);
   outline: none;
   box-sizing: border-box;
-  transition: 0.18s ease;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+  box-shadow: 0 1px 3px rgba(6, 58, 56, 0.04);
 }
 
-.summary-field textarea {
-  min-height: 90px;
-  height: auto;
-  padding: 12px 14px;
-  font-weight: 500;
-  line-height: 1.5;
+.summary-field input::placeholder {
+  color: #9aabae;
 }
-
-.summary-field input::placeholder,
-.summary-field textarea::placeholder { color: #9aabae; }
 
 .summary-field input:focus,
-.summary-field select:focus,
-.summary-field textarea:focus {
+.summary-field select:focus {
   border-color: var(--primary);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+  box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.12);
 }
 
 .summary-field input.zero {
@@ -868,9 +842,49 @@
   font-weight: 800;
 }
 
+.summary-field input[readonly],
 .summary-field input.locked-field {
+  background: var(--section-bg, #f2f7f7);
   color: var(--gray-accent);
-  background: #eef2f2;
+  font-weight: 700;
+  border-style: dashed;
+}
+
+.summary-field select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%23087b76' stroke-width='2.5'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  padding-right: 34px;
+  cursor: pointer;
+}
+
+.summary-field textarea {
+  width: 100%;
+  min-height: 90px;
+  height: auto;
+  border: 1.5px solid var(--input-border);
+  border-radius: var(--r-sm);
+  background: #fdfefe;
+  padding: 12px 14px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.5;
+  color: var(--text-dark);
+  outline: none;
+  box-sizing: border-box;
+  transition: 0.18s ease;
+}
+
+.summary-field textarea::placeholder {
+  color: #9aabae;
+}
+
+.summary-field textarea:focus {
+  border-color: var(--primary);
+  background: #ffffff;
+  box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
 }
 
 .save-changes-btn {
@@ -902,15 +916,13 @@
   }
 }
 
-// ==========================================================
-// EDIT PATIENT — sectioned form
-// ==========================================================
 .form-section {
-  background: var(--card-bg-alt);
-  border: 1.5px solid var(--border-color);
+  background: var(--card-bg, #fff);
+  border: 1px solid rgba(8, 123, 118, 0.08);
   border-radius: var(--r-lg);
   padding: var(--sp-4) var(--sp-4) var(--sp-3);
   margin-bottom: var(--sp-4);
+  box-shadow: var(--shadow-xs);
 }
 
 .form-section-title {
@@ -936,9 +948,17 @@
   gap: var(--sp-3);
 }
 
-.summary-field.span-1 { grid-column: span 1; }
-.summary-field.span-2 { grid-column: span 2; }
-.summary-field.span-3 { grid-column: span 3; }
+.summary-field.span-1 {
+  grid-column: span 1;
+}
+
+.summary-field.span-2 {
+  grid-column: span 2;
+}
+
+.summary-field.span-3 {
+  grid-column: span 3;
+}
 
 .inline-input-btn {
   display: flex;
@@ -946,7 +966,10 @@
   gap: var(--sp-2);
 }
 
-.inline-input-btn input { flex: 1; min-width: 0; }
+.inline-input-btn input {
+  flex: 1;
+  min-width: 0;
+}
 
 .inline-input-btn ion-button {
   width: 48px;
@@ -963,7 +986,9 @@
   border-radius: var(--r-sm);
 }
 
-.inline-input-btn ion-button:active::part(native) { transform: scale(.96); }
+.inline-input-btn ion-button:active::part(native) {
+  transform: scale(.96);
+}
 
 .attach-btn {
   width: 100%;
@@ -981,7 +1006,10 @@
   cursor: pointer;
   transition: 0.15s ease;
 
-  ion-icon { font-size: 17px; color: var(--primary); }
+  ion-icon {
+    font-size: 17px;
+    color: var(--primary);
+  }
 
   &:hover {
     border-color: var(--primary);
@@ -998,11 +1026,14 @@
   color: var(--success);
   margin-top: 6px;
 
-  ion-icon { font-size: 15px; }
+  ion-icon {
+    font-size: 15px;
+  }
 }
 
-// ---- skeleton loaders ----
-.skeleton-block { padding: 4px 2px 12px; }
+.skeleton-block {
+  padding: 4px 2px 12px;
+}
 
 .skeleton-line {
   height: 14px;
@@ -1014,13 +1045,15 @@
 }
 
 @keyframes skeletonShine {
-  0% { background-position: 100% 50%; }
-  100% { background-position: 0 50%; }
+  0% {
+    background-position: 100% 50%;
+  }
+
+  100% {
+    background-position: 0 50%;
+  }
 }
 
-// ==========================================================
-// SECONDARY MODAL SHELL (doctor / lab / note / history / barcode)
-// ==========================================================
 .modal-page {
   background: var(--card-bg, #fff);
   height: 100%;
@@ -1035,15 +1068,32 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--sp-3);
-  padding: 2px 2px var(--sp-4);
+  padding: var(--sp-4) var(--sp-5);
+  margin: -2px -2px var(--sp-4);
+  background: var(--brand-gradient);
+  border-radius: var(--r-xl) var(--r-xl) 0 0;
 
   h2 {
     font-size: 16px;
     font-weight: 800;
-    color: var(--primary-dark);
+    color: #ffffff;
     margin: 0;
     letter-spacing: -0.2px;
   }
+
+  .close-modal-btn {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
+  }
+}
+
+.header-booking-tag {
+  color: rgba(255, 255, 255, 0.8);
 }
 
 .modal-body {
@@ -1125,9 +1175,6 @@
   }
 }
 
-// ==========================================================
-// PREMIUM SHARED CARD LANGUAGE — Barcode / History / Bill History
-// ==========================================================
 .premium-summary-card {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
@@ -1145,7 +1192,9 @@
   gap: 4px;
   min-width: 0;
 
-  &.full-span { grid-column: 1 / -1; }
+  &.full-span {
+    grid-column: 1 / -1;
+  }
 }
 
 .ps-label {
@@ -1194,7 +1243,10 @@
   border-radius: var(--r-pill);
   white-space: nowrap;
 
-  &.empty { background: var(--section-bg); color: var(--gray-accent); }
+  &.empty {
+    background: var(--section-bg);
+    color: var(--gray-accent);
+  }
 }
 
 .header-booking-tag {
@@ -1203,7 +1255,6 @@
   font-size: 13px;
 }
 
-// ---- Barcode row cards ----
 .barcode-row-card {
   background: var(--card-bg, #fff);
   border: 1.5px solid var(--border-color);
@@ -1270,7 +1321,9 @@
   }
 }
 
-.brc-field:last-child { grid-column: 1 / -1; }
+.brc-field:last-child {
+  grid-column: 1 / -1;
+}
 
 .brc-input {
   width: 100%;
@@ -1290,7 +1343,11 @@
   transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   min-width: 0;
 
-  ion-icon { color: var(--primary); font-size: 16px; flex-shrink: 0; }
+  ion-icon {
+    color: var(--primary);
+    font-size: 16px;
+    flex-shrink: 0;
+  }
 
   &:focus {
     border-color: var(--primary);
@@ -1298,10 +1355,15 @@
     box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
   }
 
-  &.readonly { color: var(--gray-accent); background: #eef2f2; }
+  &.readonly {
+    color: var(--gray-accent);
+    background: #eef2f2;
+  }
 }
 
-.brc-datetime-trigger { cursor: pointer; }
+.brc-datetime-trigger {
+  cursor: pointer;
+}
 
 .update-barcode-btn {
   --border-radius: var(--r-sm);
@@ -1324,54 +1386,81 @@
     box-shadow: none;
   }
 
-  ion-spinner { width: 16px; height: 16px; }
+  ion-spinner {
+    width: 16px;
+    height: 16px;
+  }
 }
 
-// ---- Patient History cards ----
 .history-card {
   background: var(--card-bg, #fff);
-  border: 1.5px solid var(--border-color);
+  border: 1px solid var(--border-color);
+  border-left: 3px solid var(--primary);
   border-radius: var(--r-md);
   padding: 13px 16px;
   margin-bottom: 10px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  transition: border-color 0.15s ease;
-
-  &:hover { border-color: rgba(8, 123, 118, 0.22); }
+  box-shadow: var(--shadow-xs);
 }
 
-.hc-name { font-size: 13.5px; font-weight: 700; color: var(--text-dark); }
-.hc-sub { font-size: 12px; color: var(--gray-accent); flex-shrink: 0; }
+.hc-name::before {
+  content: '';
+  display: inline-block;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  margin-right: 6px;
+  vertical-align: middle;
+}
 
-// ---- Bill History transaction cards ----
+// Bill transaction cards — gradient top strip + accent
 .bill-tx-card {
   background: var(--card-bg, #fff);
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-lg);
-  padding: var(--sp-4);
+  padding: var(--sp-4) var(--sp-4) var(--sp-4);
   margin-bottom: var(--sp-4);
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px var(--sp-4);
-  box-shadow: var(--shadow-xs);
+  gap: 14px var(--sp-4);
+  box-shadow: var(--shadow-sm);
+  position: relative;
+  overflow: hidden;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
+    background: var(--brand-gradient);
+  }
 }
 
-.btx-row { display: flex; flex-direction: column; gap: 3px; }
-.btx-paid { color: var(--success); }
-.btx-due { color: var(--danger); }
 
-// ---- Mobile: cards collapse to single column ----
-@media (max-width: 480px) {
-  .premium-summary-card { grid-template-columns: 1fr; }
-  .brc-fields { grid-template-columns: 1fr; }
-  .brc-field:last-child { grid-column: 1; }
-  .bill-tx-card { grid-template-columns: 1fr; }
-  .history-card { flex-direction: column; align-items: flex-start; }
-  .patient-form-grid { grid-template-columns: 1fr 1fr; }
-  .summary-field.span-2, .summary-field.span-3 { grid-column: span 2; }
+.btx-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 4px;
+}
+
+.btx-row .ps-label {
+  font-size: 10px;
+}
+
+.btx-row .ps-value {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.btx-paid {
+  color: var(--success);
+}
+
+.btx-due {
+  color: var(--danger);
 }
 
 .empty-state {
@@ -1419,15 +1508,12 @@
       color: var(--primary);
     }
 
-    &[disabled]::part(native) { opacity: 0.6; }
+    &[disabled]::part(native) {
+      opacity: 0.6;
+    }
   }
 }
 
-// ==========================================================
-// Material date-range-picker TRIGGER (this piece stays here — it's
-// a normal light-DOM field on the main page, not inside any modal,
-// so it never leaves this component's DOM subtree).
-// ==========================================================
 .hidden-range-field {
   position: absolute !important;
   width: 1px !important;
@@ -1442,11 +1528,6 @@
   pointer-events: none !important;
 }
 
-// ==========================================================
-// COMPACT DATE-TIME POPUP — inner light-DOM content only.
-// (The `ion-modal.compact-popup` shell/::part rules now live in
-// premium-tokens.scss since that shell is also portaled.)
-// ==========================================================
 .compact-popup-page {
   background: var(--card-bg, #fff);
   border-radius: var(--r-lg);
@@ -1478,9 +1559,14 @@
     background: rgba(255, 255, 255, 0.18);
     color: #ffffff;
 
-    &:hover { background: rgba(255, 255, 255, 0.3); color: #fff; }
+    &:hover {
+      background: rgba(255, 255, 255, 0.3);
+      color: #fff;
+    }
 
-    ion-icon { font-size: 16px; }
+    ion-icon {
+      font-size: 16px;
+    }
   }
 }
 
@@ -1511,7 +1597,10 @@
     min-width: 80px;
   }
 
-  .cancel-btn { --color: var(--gray-accent); --background: transparent; }
+  .cancel-btn {
+    --color: var(--gray-accent);
+    --background: transparent;
+  }
 
   .ok-btn {
     --color: #ffffff;
@@ -1542,9 +1631,6 @@
   }
 }
 
-// ==========================================================
-// BOOKING CARD LIST
-// ==========================================================
 .booking-card-list {
   display: flex;
   flex-direction: column;
@@ -1574,7 +1660,9 @@
   cursor: pointer;
   transition: background 0.12s ease;
 
-  &:active { background: var(--primary-lighter); }
+  &:active {
+    background: var(--primary-lighter);
+  }
 }
 
 .bcard-avatar {
@@ -1590,12 +1678,23 @@
   color: #fff;
   background: var(--brand-gradient);
 
-  &[data-tone="1"] { background: linear-gradient(135deg, #2568ae, #1c4f85); }
-  &[data-tone="2"] { background: linear-gradient(135deg, #b9791a, #93610f); }
-  &[data-tone="3"] { background: linear-gradient(135deg, #bd526f, #96405a); }
+  &[data-tone="1"] {
+    background: linear-gradient(135deg, #2568ae, #1c4f85);
+  }
+
+  &[data-tone="2"] {
+    background: linear-gradient(135deg, #b9791a, #93610f);
+  }
+
+  &[data-tone="3"] {
+    background: linear-gradient(135deg, #bd526f, #96405a);
+  }
 }
 
-.bcard-header-left { min-width: 0; flex: 1; }
+.bcard-header-left {
+  min-width: 0;
+  flex: 1;
+}
 
 .bcard-id-row {
   display: flex;
@@ -1649,6 +1748,7 @@
   transform: rotate(180deg);
   color: var(--primary);
 }
+
 .bcard-stats {
   display: flex;
   flex-wrap: wrap;
@@ -1696,7 +1796,9 @@
   color: var(--gray-accent);
   margin-bottom: 8px;
 
-  &:not(:first-child) { margin-top: var(--sp-4); }
+  &:not(:first-child) {
+    margin-top: var(--sp-4);
+  }
 }
 
 .bcard-test-table {
@@ -1727,7 +1829,9 @@
     border-bottom: 1px solid var(--border-color);
   }
 
-  tr:last-child td { border-bottom: none; }
+  tr:last-child td {
+    border-bottom: none;
+  }
 }
 
 .bcard-barcode-block {
@@ -1748,7 +1852,11 @@
     border-radius: var(--r-xs);
     padding: 8px 10px;
 
-    ion-icon { color: var(--primary); font-size: 15px; flex-shrink: 0; }
+    ion-icon {
+      color: var(--primary);
+      font-size: 15px;
+      flex-shrink: 0;
+    }
 
     &.empty {
       color: var(--gray-accent);
@@ -1787,10 +1895,11 @@
     border-radius: var(--r-xs);
   }
 
-  &:active::part(native) { background: var(--primary-lighter); }
+  &:active::part(native) {
+    background: var(--primary-lighter);
+  }
 }
 
-// ---- skeleton cards for loading state ----
 .table-skeleton {
   display: flex;
   flex-direction: column;
@@ -1804,9 +1913,10 @@
   padding: var(--sp-4);
 }
 
-ion-content.menu-open { --overflow: hidden; }
+ion-content.menu-open {
+  --overflow: hidden;
+}
 
-// ✅ Mobile overflow safety
 .test-modal-wrapper,
 .modal-page {
   max-width: 100vw;
@@ -1826,26 +1936,31 @@ ion-content.menu-open { --overflow: hidden; }
   width: 100%;
   box-sizing: border-box;
 
-  select, input, textarea {
+  select,
+  input,
+  textarea {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
   }
 }
 
-// ==========================================================
-// TABLET
-// ==========================================================
 @media (max-width: 900px) {
-  .modal-body-grid { flex-direction: column; }
-  .test-table-panel, .summary-side-panel { flex: 1 1 100%; }
+  .modal-body-grid {
+    flex-direction: column;
+  }
+
+  .test-table-panel,
+  .summary-side-panel {
+    flex: 1 1 100%;
+  }
 }
 
-// ==========================================================
-// MOBILE
-// ==========================================================
 @media (max-width: 640px) {
-  .booking-content { --padding-start: 0; --padding-end: 0; }
+  .booking-content {
+    --padding-start: 0;
+    --padding-end: 0;
+  }
 
   .form-card {
     margin: var(--sp-3);
@@ -1859,12 +1974,18 @@ ion-content.menu-open { --overflow: hidden; }
     padding-right: 2px;
   }
 
-  .sheet-title-main { font-size: 18px; }
+  .sheet-title-main {
+    font-size: 18px;
+  }
 
-  .close-modal-btn { width: 34px; height: 34px; }
+  .close-modal-btn {
+    width: 34px;
+    height: 34px;
+  }
 
-  .action-dropdown.fixed-dropdown { min-width: 200px; }
-
+  .action-dropdown.fixed-dropdown {
+    min-width: 200px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -1873,19 +1994,43 @@ ion-content.menu-open { --overflow: hidden; }
     align-items: stretch;
   }
 
-  .filter-field, .date-field { width: 100%; flex: 1 1 100%; }
+  .filter-field,
+  .date-field {
+    width: 100%;
+    flex: 1 1 100%;
+  }
 
-  .refresh-btn { width: 100%; }
+  .refresh-btn {
+    width: 100%;
+  }
 
-  .patient-form-grid { grid-template-columns: 1fr 1fr; }
-  .summary-field.span-1 { grid-column: span 1; }
-  .summary-field.span-2, .summary-field.span-3 { grid-column: 1 / -1; }
+  .patient-form-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  // Default: dead-space टाळण्यासाठी sagle fields full-width
+  .summary-field.span-1,
+  .summary-field.span-2,
+  .summary-field.span-3 {
+    grid-column: 1 / -1;
+  }
+
+  // Fakt "pair-field" class asलेले fields (e.g. Age + Age Type) — side-by-side
+  .summary-field.pair-field {
+    grid-column: span 1;
+  }
 }
 
 @media (max-height: 480px) and (orientation: landscape) {
-  .test-modal-body-pad { padding-bottom: var(--sp-4); }
-  .modal-body { max-height: calc(100vh - 60px); }
-}// ✅ ion-select ला summary-field input सारखा compact + premium दिसवण्यासाठी
+  .test-modal-body-pad {
+    padding-bottom: var(--sp-4);
+  }
+
+  .modal-body {
+    max-height: calc(100vh - 60px);
+  }
+}
+
 .premium-select {
   width: 100%;
   height: 48px;
@@ -1926,5 +2071,84 @@ ion-content.menu-open { --overflow: hidden; }
     --min-height: 46px;
     font-size: 13.5px;
     --background-hover: var(--primary-lighter, #eef8f7);
+  }
+}
+
+.franchise-field {
+  position: relative;
+  z-index: 30;
+}
+
+.clear-franchise {
+  color: var(--gray-accent);
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+  margin-left: 6px;
+}
+
+.franchise-dropdown {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: var(--card-bg, #ffffff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  max-height: 220px;
+  overflow-y: auto;
+  box-shadow: var(--shadow-lg);
+  box-sizing: border-box;
+}
+
+.franchise-dropdown-item {
+  padding: 12px 16px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+  border-bottom: 1px solid var(--border-color);
+  transition: background 0.12s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  &:hover {
+    background: var(--primary-light);
+  }
+}
+
+.click-catcher {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  background: transparent;
+}
+
+@media (max-width: 480px) {
+  .patient-form-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .summary-field.pair-field {
+    grid-column: span 1;
+  }
+}
+
+.field-row {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: var(--sp-3);
+  align-items: flex-end;
+
+  >.summary-field.narrow {
+    flex: 0 0 92px;
+  }
+
+  >.summary-field.wide {
+    flex: 1;
+    min-width: 0;
   }
 }

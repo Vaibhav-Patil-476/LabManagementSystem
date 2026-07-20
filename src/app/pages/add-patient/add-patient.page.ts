@@ -723,25 +723,28 @@ export class AddPatientComponent {
     setTimeout(() => this.ngZone.run(() => this.router.navigate(['/dashboard'])), 800);
   }
 
-  async cancel() {
-    const alert = await this.alertController.create({
-      header: 'Cancel Booking',
-      message: 'Are you sure you want to cancel?',
-      buttons: [
-        { text: 'No', role: 'cancel' },
-        {
-          text: 'Yes',
-          handler: () => {
-            this.toastService.warning('Cancelled', 'Booking was cancelled.');
-            this.ngZone.run(() => this.router.navigate(['/dashboard']));
-          }
+async cancel() {
+  const alert = await this.alertController.create({
+    cssClass: 'premium-alert',
+    header: 'Cancel Booking',
+    message: 'Are you sure you want to cancel?',
+    buttons: [
+      { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
+      {
+        text: 'Yes',
+        cssClass: 'alert-btn-danger',
+        handler: () => {
+          this.toastService.warning('Cancelled', 'Booking was cancelled.');
+          this.ngZone.run(() => this.router.navigate(['/dashboard']));
         }
-      ]
-    });
-    await alert.present();
-  }
-
+      }
+    ]
+  });
+  await alert.present();
+}
   async scanBarcode(sample: any) {
     this.toastService.warning('Scanner', 'Please enter barcode manually. Camera works on real device.');
   }
+
+  
 }

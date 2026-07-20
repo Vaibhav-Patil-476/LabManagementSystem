@@ -638,14 +638,21 @@ ion-content.menu-content {
   flex-shrink: 0;
 }
 
-.dot-received {
-  background: #16866e;
+.dot-received{
+    background:#16866e;
 }
 
-.dot-pending {
-  background: #bd7d19;
-}.dot.outsourced{
-  background:#2563eb;
+.dot-pending{
+    background:#f59e0b;
+}
+
+.dot-outsourced{
+    background:#2563eb;
+}
+
+.dot-rejected{
+    background:#ef4444;
+
 }.stats{
     display:grid;
     grid-template-columns:repeat(4,1fr);
@@ -1148,23 +1155,21 @@ ion-content.menu-content {
     line-height: 1.25;
     word-break: break-word;
   }
+.booking-stat-grid .received strong{
+    color:#16866e;
+}
 
-  .booking-stat-grid .received strong {
-    color: #16866e;
-  }
+.booking-stat-grid .pending strong{
+    color:#f59e0b;
+}
 
-  .booking-stat-grid .pending strong {
-    color: #bd7d19;
-  }
+.booking-stat-grid .outsourced strong{
+    color:#2563eb;
+}
 
-  .booking-stat-grid .outsourced strong {
-    color: #2563eb;
-  }
-
-  .booking-stat-grid .rejected strong {
-    color: #c05262;
-  }
-
+.booking-stat-grid .rejected strong{
+    color:#ef4444;
+}
   .booking-progress-bar,
   app-stacked-bar {
     margin-top: 12px;
