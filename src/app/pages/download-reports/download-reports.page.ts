@@ -467,6 +467,15 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return item.bucket === 'COMPLETE';
   }
 
+  getTestCountStatusClass(item: ReportBookingRow): string {
+    const total = item.tests.length;
+    if (total === 0) return 'pending';
+    const done = item.tests.filter(t =>
+      (t.status || '').toLowerCase().includes('complete') || (t.status || '').toLowerCase().includes('ready')
+    ).length;
+    return done === total ? 'completed' : 'pending';
+  }
+
   // ---------- role gates ----------
   get canShowDownloadControls(): boolean {
     return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';

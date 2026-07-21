@@ -79,6 +79,19 @@
       </ion-button>
     </div>
 
+    <!-- ===================== STATUS TABS ===================== -->
+    <div class="status-tabs-wrapper">
+      <div class="status-tabs">
+        <div *ngFor="let tab of statusTabs" class="status-tab" [class.active]="selectedReportStatus === tab.key"
+          (click)="setStatusTab(tab.key)">
+          <span class="tab-dot" [ngClass]="tab.badgeClass"></span>
+          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-count" [ngClass]="tab.badgeClass">{{ statusBucketCount[tab.key] }}</span>
+        </div>
+      </div>
+    </div>
+
+    
     <!-- ===================== BOOKING CARD LIST ===================== -->
     <div class="booking-card-list">
 
@@ -97,13 +110,14 @@
             </div>
           </div>
           <div class="bcard-header-right">
-            <span class="status" [ngClass]="item.reports?.length ? 'completed' : 'pending'">
-              {{ getReportProgress(item) }}
-            </span>
-            <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
+            <div class="bcard-count-box">
+              <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
+              <span class="count-line" [ngClass]="getTestCountStatusClass(item)">Test Count: {{ getReportProgress(item)
+                }}</span>
+              <span class="count-line">Sample Count: {{ item.samples?.length || 0 }}</span>
+            </div>
           </div>
         </div>
-
         <div class="bcard-stats">
           <div class="bcard-stat">
             <span class="bcs-label">Client / Doctor</span>
@@ -111,10 +125,18 @@
               'self' }}</span>
           </div>
           <div class="bcard-stat">
-            <span class="bcs-label">Samples</span>
-            <span class="bcs-value">{{ getSamples(item) }}</span>
+
+            <div class="bcard-barcode-inline">
+              <div class="barcode-line" *ngFor="let s of item.samples; trackBy: trackByBarcode">
+                <ion-icon name="qr-code-outline"></ion-icon>
+                <span>{{ s.barcode }} </span>
+                <small *ngIf="s.sampleType">{{ s.sampleType }}</small>
+              </div>
+              <div class="barcode-line empty" *ngIf="!item.samples?.length">—</div>
+            </div>
           </div>
         </div>
+
 
         <div class="bcard-details" *ngIf="expandedBookingId === item.bookingId">
 
@@ -139,16 +161,6 @@
               </tr>
             </tbody>
           </table>
-
-          <div class="bcard-section-label">Barcode</div>
-          <div class="bcard-barcode-block">
-            <div class="barcode-line" *ngFor="let s of item.samples; trackBy: trackByBarcode">
-              <ion-icon name="qr-code-outline"></ion-icon>
-              <span>{{ s.barcode }}</span>
-              <small *ngIf="s.sampleType">{{ s.sampleType }}</small>
-            </div>
-            <div class="barcode-line empty" *ngIf="!item.samples?.length">—</div>
-          </div>
 
           <div class="bcard-actions">
             <ion-button class="action-icon-btn" size="small" fill="clear"

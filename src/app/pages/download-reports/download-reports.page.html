@@ -124,21 +124,27 @@
           </div>
         </div>
         <div class="bcard-header-right">
-          <span class="reports-pill" *ngIf="roleService.isLabAdmin" [class.reports-complete]="reportsComplete(item)">
-            {{ reportsFraction(item) }}
-          </span>
+          <div class="bcard-count-box">
+            <span class="count-line" [ngClass]="getTestCountStatusClass(item)">Test Count: {{ reportsFraction(item)
+              }}</span>
+            <span class="count-line">Sample Count: {{ item.sampleCount }}</span>
+          </div>
           <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
         </div>
       </div>
-      <!-- ===== Quick stat strip — always visible ===== -->
-      <div class="bcard-stats" *ngIf="roleService.isLabAdmin">
+      <div class="bcard-stats">
         <div class="bcard-stat">
           <span class="bcs-label">Client/Doctor</span>
           <span class="bcs-value">{{ item.doctorName }}</span>
         </div>
         <div class="bcard-stat">
-          <span class="bcs-label">Samples</span>
-          <span class="bcs-value">{{ item.sampleCount }}</span>
+          <div class="bcard-barcode-inline">
+            <div class="barcode-line" *ngFor="let b of item.barcodes">
+              <ion-icon name="qr-code-outline"></ion-icon>
+              <span>{{ b }}</span>
+            </div>
+            <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
+          </div>
         </div>
       </div>
 
@@ -162,15 +168,6 @@
             </tr>
           </tbody>
         </table>
-
-        <div class="bcard-barcode-block">
-          <span class="bcs-label">Barcode</span>
-          <div class="barcode-line" *ngFor="let b of item.barcodes">
-            <ion-icon name="qr-code-outline"></ion-icon>
-            <span>{{ b }}</span>
-          </div>
-          <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
-        </div>
       </div>
     </div>
 

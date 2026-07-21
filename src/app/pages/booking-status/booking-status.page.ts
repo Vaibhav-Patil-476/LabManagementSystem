@@ -170,6 +170,30 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   expandedBookingId: number | null = null;
   role = '';
 
+readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
+  { key: 'all', label: 'All', badgeClass: 'badge-all' },
+  { key: 'completed', label: 'Completed', badgeClass: 'badge-complete' },
+  { key: 'pending', label: 'Pending', badgeClass: 'badge-pending' },
+  { key: 'in_process', label: 'In Process', badgeClass: 'badge-clinical' },
+  { key: 'snr', label: 'SNR', badgeClass: 'badge-snr' },
+];
+
+  get statusBucketCount(): Record<string, number> {
+    const counts: Record<string, number> = { all: 0, completed: 0, in_process: 0, pending: 0, snr: 0 };
+    const source = this.canViewAllBookings ? this.bookings : this.bookings.filter(b => b.createdBy === this.currentUserId);
+    source.forEach(b => {
+      counts['all'] = counts['all'] + 1;
+      const status = b.overallReportStatus || 'pending';
+      if (counts[status] !== undefined) {
+        counts[status] = counts[status] + 1;
+      }
+    });
+    return counts;
+  }
+
+  setStatusTab(key: string) {
+    this.selectedReportStatus = key;
+  }
   availableTests: BookingTest[] = [];
   private currentUserId = 0;
 
@@ -241,10 +265,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return list;
   }
 
-  get totalBookingsCount(): number {
-    const hasClientFilter = !!this.quickSearch?.trim() || this.selectedReportStatus !== 'all';
-    return hasClientFilter ? this.filteredBookings.length : this.totalBookingsFromServer;
-  }
+get totalBookingsCount(): number {
+  const hasClientFilter = !!this.quickSearch?.trim();
+  return hasClientFilter ? this.filteredBookings.length : this.totalBookingsFromServer;
+}
 
   get isDefaultTodayRange(): boolean {
     const today = this.formatDateForInput(new Date());
@@ -560,11 +584,23 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   getReportProgress(item: BookingListItem): string {
-    const reportCount = item.reports?.length || 0;
     const testCount = item.tests?.length || 0;
-    return `${reportCount}/${testCount || reportCount}`;
+    const completedCount = (item.tests || []).filter(t => {
+      const s = (t.status || '').toLowerCase();
+      return s.includes('complete') || s.includes('ready');
+    }).length;
+    return `${completedCount}/${testCount}`;
   }
 
+  getTestCountStatusClass(item: BookingListItem): string {
+    const testCount = item.tests?.length || 0;
+    if (testCount === 0) return 'pending';
+    const completedCount = (item.tests || []).filter(t => {
+      const s = (t.status || '').toLowerCase();
+      return s.includes('complete') || s.includes('ready');
+    }).length;
+    return completedCount === testCount ? 'completed' : 'pending';
+  }
   testStatusClass(status?: string): string {
     const s = (status || 'pending').toLowerCase();
     if (s.includes('process')) return 'badge-inprocess';
@@ -577,7 +613,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     const s = (status || 'pending').toLowerCase();
     if (s.includes('process')) return 'IN PROCESS';
     if (s === 'snr') return 'SNR';
-    if (s.includes('complete') || s.includes('ready')) return 'READY';
+    if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
     return 'PENDING';
   }
 

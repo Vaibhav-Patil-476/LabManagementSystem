@@ -1,42 +1,106 @@
 import { CommonModule } from "@angular/common";
 import { Component, OnInit, OnDestroy, ViewChild } from "@angular/core";
-import { Router } from "@angular/router";
-import { FormsModule } from '@angular/forms';
+import { Router, ActivatedRoute } from "@angular/router";
+
+import { FormsModule } from "@angular/forms";
+
 import {
-  IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu,
-  IonMenuButton, IonProgressBar, MenuController
+  IonContent,
+  IonIcon,
+  IonItem,
+  IonLabel,
+  IonList,
+  IonMenu,
+  IonMenuButton,
+  IonProgressBar,
+  IonModal,
+  IonSpinner,
+  IonSelect,
+  IonSelectOption,
+  IonDatetime,
+  IonButton,
+  MenuController
 } from "@ionic/angular/standalone";
-import { MatDatepickerModule } from '@angular/material/datepicker';
-import { MatFormFieldModule } from '@angular/material/form-field';
-import { MatInputModule } from '@angular/material/input';
-import { Subscription, interval, forkJoin, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
-import { StackedBarComponent } from '../../components/stacked-bar/stacked-bar.component';
-import { addIcons } from "ionicons";
+
+import { MatDatepickerModule } from "@angular/material/datepicker";
+import { MatFormFieldModule } from "@angular/material/form-field";
+import { MatInputModule } from "@angular/material/input";
+
 import {
-  beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
-  logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
-  personCircleOutline, personOutline, shareSocialOutline, clipboardOutline,
-  downloadOutline, listOutline, timeOutline
+  Subscription,
+  interval,
+  forkJoin,
+  Observable
+} from "rxjs";
+
+import { map } from "rxjs/operators";
+
+import { StackedBarComponent } from "../../components/stacked-bar/stacked-bar.component";
+
+import { addIcons } from "ionicons";
+
+import {
+  beakerOutline,
+  calendarOutline,
+  documentTextOutline,
+  flaskOutline,
+  logOutOutline,
+  notificationsOutline,
+  peopleOutline,
+  personAddOutline,
+  personCircleOutline,
+  personOutline,
+  shareSocialOutline,
+  clipboardOutline,
+  downloadOutline,
+  listOutline,
+  timeOutline,
+  searchOutline,
+  closeOutline,
+  closeCircleOutline,
+  chevronForwardOutline
 } from "ionicons/icons";
 
-import { AuthService } from '../../services/auth';
-import { LabApiService } from '../../services/lab-api';
-import { ToastService } from '../../services/toast';
-import { BookingRefreshService } from '../../services/booking-refresh';
-import { RoleService } from '../../services/role';
+import { AuthService } from "../../services/auth";
+import { LabApiService } from "../../services/lab-api";
+import { ToastService } from "../../services/toast";
+import { BookingRefreshService } from "../../services/booking-refresh";
+import { RoleService } from "../../services/role";
 
 @Component({
-  selector: 'app-dashboard',
-  templateUrl: './dashboard.page.html',
-  styleUrls: ['./dashboard.page.scss'],
+  selector: "app-dashboard",
+  templateUrl: "./dashboard.page.html",
+  styleUrls: ["./dashboard.page.scss"],
   standalone: true,
+
   imports: [
-    CommonModule, FormsModule,
-    IonContent, IonIcon, IonMenu, IonList, IonProgressBar,
-    StackedBarComponent,
-    MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    IonItem, IonLabel, IonMenuButton
+    // Angular
+    CommonModule,
+    FormsModule,
+
+    // Ionic
+    IonContent,
+    IonIcon,
+    IonItem,
+    IonLabel,
+    IonList,
+    IonMenu,
+    IonMenuButton,
+    IonProgressBar,
+    IonModal,
+    IonSpinner,
+    IonSelect,
+    IonSelectOption,
+    IonDatetime,
+    IonButton,
+
+    // Angular Material
+    MatDatepickerModule,
+    MatFormFieldModule,
+    MatInputModule,
+
+    // Custom Components
+    StackedBarComponent
   ]
 })
 export class DashboardPage implements OnInit, OnDestroy {
@@ -52,6 +116,114 @@ export class DashboardPage implements OnInit, OnDestroy {
   dailyBookings: any[] = [];
 
   filterDate: string = '';
+  globalSearchTerm = '';
+  isSearchModalOpen = false;
+  isSearching = false;
+  searchResults: any[] = [];
+  private searchDebounce: any = null;
+
+  printingId: any = null;
+
+  isEditTestModalOpen = false; isTestLoading = false; selectedBooking: any = null;
+  testSearchTerm = ''; filteredTests: any[] = []; selectedTests: any[] = [];
+  discount = 0; basePaidAmount = 0; payNowAmount = 0; paidAmount = 0;
+  paymentMethod = 'cash'; isSavingTest = false; availableTests: any[] = [];
+
+  isEditPatientModalOpen = false; isPatientLoading = false; editPatientData: any = null;
+
+  isBarcodeModalOpen = false; barcodeBooking: any = null; barcodeRows: any[] = [];
+  activeDateTimeRow: any = null; tempDateTimeValue = '';
+
+  get canEditPatient(): boolean { return this.roleService.isLabAdmin; }
+  get canViewAmount(): boolean { return this.roleService.isLabAdmin; }
+  get canEditBilling(): boolean { return this.roleService.isLabAdmin; }
+  get isAdminRole(): boolean { return this.roleService.isLabAdmin; }
+  get subTotal(): number { return this.selectedTests.reduce((s, t) => s + Number(t.testMrp || 0), 0); }
+  get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
+  get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
+
+  onGlobalSearchChange() {
+    if (this.searchDebounce) clearTimeout(this.searchDebounce);
+    const q = this.globalSearchTerm.trim();
+    if (!q) { this.isSearchModalOpen = false; this.searchResults = []; return; }
+    this.searchDebounce = setTimeout(() => this.performGlobalSearch(q), 400);
+  }
+
+  clearGlobalSearch() {
+    this.globalSearchTerm = '';
+    this.isSearchModalOpen = false;
+    this.searchResults = [];
+  }
+
+  closeSearchModal() {
+    this.isSearchModalOpen = false;
+  }
+
+  private performGlobalSearch(q: string) {
+    this.isSearching = true;
+    this.isSearchModalOpen = true;
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const start = '2015-01-01';
+    const end = this.nextDay(this.formatDateParam(new Date()));
+
+    this.labApi.getBookingStatusNew(labId, 0, 500, start, end).subscribe({
+      next: (res: any) => {
+        const list = res?.content || res || [];
+        const ql = q.toLowerCase();
+        this.searchResults = list
+          .filter((b: any) =>
+            String(b.bookingId).includes(ql) ||
+            (b.patientId || '').toLowerCase().includes(ql) ||
+            (b.customerName || '').toLowerCase().includes(ql) ||
+            (b.doctorName || '').toLowerCase().includes(ql)
+          )
+          .map((b: any) => this.mapSearchItem(b));
+        this.isSearching = false;
+      },
+      error: () => { this.isSearching = false; this.searchResults = []; }
+    });
+  }
+
+  private mapSearchItem(raw: any) {
+    const b = this.mapBooking(raw);
+    const testCount = b.tests.length;
+    const completedCount = b.tests.filter((t: any) => (t.status || '').toLowerCase().includes('complete')).length;
+    return {
+      ...b,
+      title: raw.title,
+      customerName: raw.customerName,
+      doctorName: raw.doctorName || 'self',
+      franchiseName: raw.franchiseName || 'SELF',
+      bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : '',
+      progress: `${completedCount}/${testCount}`,
+      statusClass: testCount > 0 && completedCount === testCount ? 'completed' : 'pending',
+      testsDisplay: b.tests.map((t: any) => ({
+        name: t.testName, status: this.testStatusLabel(t.status), statusClass: this.testStatusClass(t.status)
+      }))
+    };
+  }
+
+  expandedSearchId: any = null;
+
+
+  toggleSearchExpand(item: any) {
+    this.expandedSearchId = this.expandedSearchId === item.bookingId ? null : item.bookingId;
+  }
+
+
+
+  printBillInline(item: any) {
+    if (this.printingId === item.bookingId) return;
+    this.printingId = item.bookingId;
+    const payload = this.labApi.buildBillPayload(item.bookingId);
+    this.labApi.printBill(payload).subscribe({
+      next: (res: any) => {
+        this.printingId = null;
+        if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+      },
+      error: () => { this.printingId = null; }
+    });
+  }
   @ViewChild('datePicker') datePicker!: any;
   pickedDate: Date | null = null;
   loading = false;
@@ -79,7 +251,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   get canViewCollection(): boolean {
     return this.roleService.isLabAdmin;
   }
-
   constructor(
     private router: Router,
     private menuCtrl: MenuController,
@@ -104,7 +275,11 @@ export class DashboardPage implements OnInit, OnDestroy {
       'clipboard-outline': clipboardOutline,
       'download-outline': downloadOutline,
       'list-outline': listOutline,
-      'time-outline': timeOutline
+      'time-outline': timeOutline,
+      'search-outline': searchOutline,
+      'close-outline': closeOutline,
+      'close-circle-outline': closeCircleOutline,
+      'chevron-forward-outline': chevronForwardOutline,
     });
 
     this.filterDate = this.toKey(new Date());
@@ -118,6 +293,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
 
     this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
+    this.loadAvailableTests();
   }
 
   ngOnDestroy() {
@@ -225,6 +401,205 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   onDateChange() {
     this.loadDashboard();
+  }
+  loadAvailableTests() {
+    this.labApi.getTests().subscribe({
+      next: (res: any) => {
+        this.availableTests = (Array.isArray(res) ? res : []).map((t: any) => ({
+          testId: t.test_id ?? t.testId, testName: t.test_name || 'Unnamed Test', testMrp: t.test_price ?? 0
+        }));
+      },
+      error: () => { }
+    });
+  }
+
+  onEditPatientClick(item: any) { this.isSearchModalOpen = false; this.editPatientFromSearch(item); }
+  onEditTestClick(item: any) { this.isSearchModalOpen = false; this.editTestFromSearch(item); }
+  onEditBarcodeClick(item: any) { this.isSearchModalOpen = false; this.openBarcodeFromSearch(item); }
+
+  closeTestModal() { this.isEditTestModalOpen = false; this.selectedBooking = null; this.selectedTests = []; }
+
+  searchTestsInline() {
+    const t = this.testSearchTerm.trim().toLowerCase();
+    if (!t) { this.filteredTests = []; return; }
+    this.filteredTests = this.availableTests.filter(x =>
+      x.testName.toLowerCase().includes(t) && !this.selectedTests.some(s => s.testName === x.testName));
+  }
+
+  addTestInline(test: any) {
+    this.selectedTests.push({ ...test, isNewlyAdded: true });
+    this.testSearchTerm = ''; this.filteredTests = [];
+  }
+
+  removeTestInline(test: any) { this.selectedTests = this.selectedTests.filter(t => t !== test); }
+
+  onDiscountChangeInline() {
+    if (!this.canEditBilling) { this.discount = 0; return; }
+    if (this.discount < 0) this.discount = 0;
+    if (this.discount > this.subTotal) this.discount = this.subTotal;
+    this.onPayNowChangeInline();
+  }
+
+  onPayNowChangeInline() {
+    if (!this.canEditBilling) { this.payNowAmount = 0; this.paidAmount = this.basePaidAmount; return; }
+    if (this.payNowAmount < 0) this.payNowAmount = 0;
+    const maxPayable = Math.max(0, this.totalAmount - this.basePaidAmount);
+    if (this.payNowAmount > maxPayable) this.payNowAmount = maxPayable;
+    this.paidAmount = this.basePaidAmount + this.payNowAmount;
+  }
+
+  saveTestChanges() {
+    if (!this.selectedBooking || this.isSavingTest) return;
+    this.isSavingTest = true;
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const bookingId = this.selectedBooking.bookingId;
+    const newTests = this.selectedTests.filter(t => t.isNewlyAdded);
+    const existingTests = this.selectedTests.filter(t => !t.isNewlyAdded);
+
+    const patientBody: any = {
+      bookingId, customerName: this.selectedBooking.customerName,
+      ageType: this.selectedBooking.ageType, age: this.selectedBooking.age,
+      gender: this.selectedBooking.gender, mobileNumber: this.selectedBooking.mobileNumber,
+      aadhaarNumber: this.selectedBooking.aadhaarNumber, doctorid: this.selectedBooking.doctorId,
+      franchiseId: this.selectedBooking.franchiseId, createdOn: this.selectedBooking.createdOn,
+      tests: existingTests.map(t => ({ testId: t.testId, profileId: 0 })),
+      subTotalAmount: this.subTotal,
+      discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
+      totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
+      paidAmount: this.canEditBilling ? this.paidAmount : (this.selectedBooking.paidAmount || 0),
+      dueAmount: this.canEditBilling ? this.dueAmount : (this.selectedBooking.dueAmount || 0),
+      payNowAmount: this.canEditBilling ? this.payNowAmount : 0,
+      paymentMode: this.paymentMethod
+    };
+
+    this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
+      next: () => {
+        if (newTests.length > 0) {
+          const addTestBody: any = {
+            bookingId, customerName: this.selectedBooking.customerName,
+            age: this.selectedBooking.age, ageType: this.selectedBooking.ageType,
+            gender: this.selectedBooking.gender, aadhaarNumber: this.selectedBooking.aadhaarNumber || '',
+            tests: newTests.map(t => ({
+              testId: t.testId, testName: t.testName, testPrice: t.testMrp,
+              test_price: t.testMrp, assignedPrice: [t.testMrp], source: 'RPL', discount: 0, newTest: true
+            }))
+          };
+          this.labApi.addTestToBooking(addTestBody).subscribe({
+            next: () => this.finishTestSave(),
+            error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Test add fail zala'); }
+          });
+        } else this.finishTestSave();
+      },
+      error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Update fail zala'); }
+    });
+  }
+
+  private finishTestSave() {
+    this.isSavingTest = false;
+    this.toastService.success('Success', 'Booking updated successfully');
+    this.closeTestModal();
+    if (this.globalSearchTerm.trim()) this.performGlobalSearch(this.globalSearchTerm.trim());
+    this.loadDashboard(true);
+  }
+
+  editPatientFromSearch(item: any) {
+    this.editPatientData = null;
+    this.isPatientLoading = true;
+    this.isEditPatientModalOpen = true;
+    this.labApi.getSingleBooking(item.bookingId).subscribe({
+      next: (res: any) => {
+        const fresh = this.mapBooking(res);
+        const data: any = JSON.parse(JSON.stringify(fresh));
+        data.name = fresh.customerName;
+        data.doctor = fresh.doctorName || '';
+        data.lab = fresh.franchiseName || 'SELF';
+        this.editPatientData = data;
+        this.isPatientLoading = false;
+      },
+      error: () => { this.isPatientLoading = false; this.isEditPatientModalOpen = false; }
+    });
+  }
+
+  closePatientModal() { this.isEditPatientModalOpen = false; this.editPatientData = null; }
+
+  savePatientChanges() {
+    if (!this.editPatientData) return;
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const body = {
+      bookingId: this.editPatientData.bookingId, customerName: this.editPatientData.name,
+      ageType: this.editPatientData.ageType, age: this.editPatientData.age,
+      gender: this.editPatientData.gender, mobileNumber: this.editPatientData.mobileNumber,
+      aadhaarNumber: this.editPatientData.aadhaarNumber, doctorid: this.editPatientData.doctorId,
+      franchiseId: this.editPatientData.franchiseId, createdOn: this.editPatientData.createdOn
+    };
+    this.labApi.updatePatient(labId, this.editPatientData.bookingId, body).subscribe({
+      next: () => {
+        this.toastService.success('Success', 'Patient updated successfully');
+        this.closePatientModal();
+        if (this.globalSearchTerm.trim()) this.performGlobalSearch(this.globalSearchTerm.trim());
+      },
+      error: () => this.toastService.error('Error', 'Patient update fail zala')
+    });
+  }
+
+  openBarcodeFromSearch(item: any) {
+    this.barcodeBooking = item;
+    this.barcodeRows = (item.samples || []).map((s: any) => ({
+      accessionId: s.accessionId, sampleTypeId: s.sampleTypeId, sampleType: s.sampleType || '-',
+      oldBarcode: s.barcode, newBarcode: s.barcode, receiveDate: '', status: s.status || 'PENDING', saving: false
+    }));
+    this.isBarcodeModalOpen = true;
+  }
+
+  closeBarcodeModal() { this.isBarcodeModalOpen = false; this.barcodeBooking = null; this.barcodeRows = []; }
+
+  openDateTimePicker(row: any) { this.activeDateTimeRow = row; this.tempDateTimeValue = new Date().toISOString().slice(0, 19); }
+  closeDateTimePicker() { this.activeDateTimeRow = null; this.tempDateTimeValue = ''; }
+  confirmDateTime() {
+    if (this.activeDateTimeRow && this.tempDateTimeValue) this.activeDateTimeRow.receiveDate = this.tempDateTimeValue.slice(0, 16);
+    this.closeDateTimePicker();
+  }
+
+  updateBarcodeRow(row: any) {
+    if (!row.newBarcode?.trim()) { this.toastService.warning('Warning', 'Barcode rikama thevu naka'); return; }
+    if (!this.barcodeBooking) return;
+    row.saving = true;
+    const bookingId = this.barcodeBooking.bookingId;
+    const payload = [{ oldBarcode: row.oldBarcode, updatedBarcode: row.newBarcode.trim(), receiveDate: row.receiveDate || '', sampleTypeId: row.sampleTypeId, bookingId }];
+    this.labApi.updateBarcode(bookingId, payload).subscribe({
+      next: () => {
+        row.saving = false; row.oldBarcode = row.newBarcode; row.status = 'RECEIVED';
+        this.toastService.success('Success', 'Barcode updated successfully');
+        if (this.globalSearchTerm.trim()) this.performGlobalSearch(this.globalSearchTerm.trim());
+      },
+      error: () => { row.saving = false; this.toastService.error('Error', 'Barcode update fail zala'); }
+    });
+  }
+
+  editTestFromSearch(item: any) {
+    this.selectedBooking = item;
+    this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
+    this.discount = item.discountAmount || 0;
+    this.basePaidAmount = item.paidAmount || 0;
+    this.payNowAmount = 0;
+    this.paidAmount = this.basePaidAmount;
+    this.paymentMethod = 'cash';
+    this.testSearchTerm = '';
+    this.filteredTests = [];
+    this.isTestLoading = true;
+    this.isEditTestModalOpen = true;
+    this.labApi.getSingleBooking(item.bookingId).subscribe({
+      next: (res: any) => {
+        const fresh = this.mapBooking(res);
+        this.selectedBooking = fresh;
+        this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
+        this.discount = fresh.discountAmount || 0;
+        this.basePaidAmount = fresh.paidAmount || 0;
+        this.paidAmount = this.basePaidAmount;
+        this.isTestLoading = false;
+      },
+      error: () => { this.isTestLoading = false; }
+    });
   }
 
   resetToToday() {
@@ -394,7 +769,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         grouped[key] = {
           dateKey: key,
           date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          bookings: 0, samples: 0, received: 0, pending: 0, rejected: 0, tests: 0, amount: 0
+          bookings: 0, samples: 0, received: 0, pending: 0, outSourced: 0, rejected: 0, tests: 0, amount: 0
         };
       }
 
@@ -452,4 +827,58 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.authService.logout();
     window.location.href = '/login';
   }
+
+  onSearchButtonClick() {
+    const q = this.globalSearchTerm.trim();
+    if (!q) return;
+    this.performGlobalSearch(q);
+  }
+
+  onSearchKeyup(e: KeyboardEvent) {
+    if (e.key === 'Enter') this.onSearchButtonClick();
+  }
+
+  private mapBooking(raw: any): any {
+    const rawTests = (raw.bookingWithTestMappings || raw.tests || []).filter((t: any) => !!t.testName);
+    const tests = rawTests.map((t: any) => ({
+      testId: t.testId,
+      testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
+      testName: (t.testName || '').trim(),
+      testMrp: t.testMrp,
+      status: t.reportStatus || 'pending'
+    }));
+    const seen = new Set<string>();
+    const samples: any[] = [];
+    (raw.sampleAccessions || raw.samples || []).forEach((s: any) => {
+      const barcode = s.barCode || s.barcode;
+      if (!barcode || seen.has(barcode)) return;
+      seen.add(barcode);
+      samples.push({
+        accessionId: s.accessionId || s.sampleAccessionId,
+        barcode,
+        sampleType: s.sampleTypeData?.sample_type || s.sampleType,
+        sampleTypeId: s.sampleTypeData?.sample_type_id ?? s.sampleTypeId,
+        status: s.status
+      });
+    });
+    return { ...raw, tests, samples };
+  }
+
+  private testStatusLabel(status?: string): string {
+    const s = (status || 'pending').toLowerCase();
+    if (s.includes('process')) return 'IN PROCESS';
+    if (s === 'snr') return 'SNR';
+    if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
+    return 'PENDING';
+  }
+
+  private testStatusClass(status?: string): string {
+    const s = (status || 'pending').toLowerCase();
+    if (s.includes('process')) return 'badge-inprocess';
+    if (s === 'snr') return 'badge-snr';
+    if (s.includes('complete') || s.includes('ready')) return 'badge-ready';
+    return 'badge-pending';
+  }
+
+
 }
