@@ -109,12 +109,12 @@
 
       <!-- ===== Card header — always visible, tap to expand ===== -->
       <div class="bcard-header" (click)="toggleExpand(item)">
-        <ion-checkbox *ngIf="canShowDownloadControls" class="bcard-checkbox" [checked]="isSelected(item)"
-          (click)="$event.stopPropagation()" (ionChange)="toggleSelect(item, $event.detail.checked)">
-        </ion-checkbox>
-
         <div class="bcard-header-left">
           <div class="bcard-id-row">
+            <label class="bcard-checkbox-wrap" *ngIf="canShowDownloadControls" (click)="$event.stopPropagation()">
+              <input type="checkbox" class="bcard-checkbox" [checked]="isSelected(item)"
+                (change)="toggleSelect(item, $any($event.target).checked)">
+            </label>
             <a class="id-link">#{{ item.bookingId }}</a>
             <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
           </div>
@@ -130,7 +130,6 @@
           <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
         </div>
       </div>
-
       <!-- ===== Quick stat strip — always visible ===== -->
       <div class="bcard-stats" *ngIf="roleService.isLabAdmin">
         <div class="bcard-stat">
@@ -183,6 +182,7 @@
     <div class="empty-state" *ngIf="!isLoading && rowsForActiveTab.length === 0">
       <ion-icon name="document-text-outline"></ion-icon>
       <span>No data available</span>
+      <p class="empty-sub">Try adjusting the date range or search term.</p>
     </div>
 
     <div class="load-more-row" *ngIf="hasMoreForActiveTab">
