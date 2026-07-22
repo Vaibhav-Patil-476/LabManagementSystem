@@ -54,31 +54,52 @@
           <div class="sm-loading" *ngIf="isSearching">
             <ion-spinner name="dots"></ion-spinner><span>Searching...</span>
           </div>
-
           <div class="search-card" *ngFor="let item of searchResults"
             [class.expanded]="expandedSearchId === item.bookingId">
-            <div class="sc-top" (click)="toggleSearchExpand(item)">
-              <div class="sc-id-row">
-                <span class="sc-id">#{{ item.bookingId }}</span>
-                <span class="sc-date">{{ item.bookingDate }}</span>
+            <div class="sc-header" (click)="toggleSearchExpand(item)">
+              <div class="sc-header-left">
+                <div class="sc-id-row">
+                  <span class="sc-id">#{{ item.bookingId }}</span>
+                  <span class="sc-date">{{ item.bookingDate }}</span>
+                </div>
+                <div class="sc-name">{{ item.title | titlecase }} {{ item.customerName }}</div>
+                <div class="sc-sub">({{ item.gender | titlecase }}/{{ item.age }}) · {{ item.patientId }}</div>
               </div>
-              <span class="sc-count" [ngClass]="item.statusClass">{{ item.progress }}</span>
+              <div class="sc-header-right">
+                <div class="sc-count-box">
+                  <ion-icon name="chevron-down-outline" class="sc-chevron"></ion-icon>
+                  <span class="sc-count" [ngClass]="item.statusClass">Test Count: {{ item.progress }}</span>
+                  <span class="sc-count">Sample Count: {{ item.samples?.length || 0 }}</span>
+                </div>
+              </div>
             </div>
-            <div class="sc-name" (click)="toggleSearchExpand(item)">{{ item.title | titlecase }} {{ item.customerName }}
+
+            <div class="sc-stats">
+              <div class="sc-stat">
+                <span class="sc-stat-label">Client / Doctor</span>
+                <span class="sc-stat-value">({{ item.franchiseName }}) Dr. {{ item.doctorName }}</span>
+              </div>
+              <div class="sc-stat">
+                <div class="sc-barcode-inline">
+                  <div class="sc-barcode-row" *ngFor="let s of item.samples">
+                    <ion-icon name="qr-code-outline"></ion-icon>
+                    <span>{{ s.barcode }}</span>
+                    <small *ngIf="s.sampleType" class="sc-sample-badge">{{ s.sampleType }}</small>
+                  </div>
+                  <div class="sc-barcode-row empty" *ngIf="!item.samples?.length">—</div>
+                </div>
+              </div>
             </div>
-            <div class="sc-sub" (click)="toggleSearchExpand(item)">({{ item.gender | titlecase }}/{{ item.age }}) · {{
-              item.patientId }}</div>
-            <div class="sc-doctor" (click)="toggleSearchExpand(item)">({{ item.franchiseName }}) Dr. {{ item.doctorName
-              }}</div>
 
             <div class="sc-details" *ngIf="expandedSearchId === item.bookingId">
-              <div class="sc-barcode-row" *ngFor="let s of item.samples">
-                <ion-icon name="qr-code-outline"></ion-icon>
-                <span>{{ s.barcode }}</span>
-              </div>
-
               <div class="sc-section-label">Tests</div>
               <table class="sc-test-table">
+                <thead>
+                  <tr>
+                    <th>Test Name</th>
+                    <th>Status</th>
+                  </tr>
+                </thead>
                 <tbody>
                   <tr *ngFor="let t of item.testsDisplay">
                     <td>{{ t.name }}</td>
@@ -90,16 +111,27 @@
                 </tbody>
               </table>
 
-              <div class="sc-actions">
-                <button (click)="onEditPatientClick(item)"><ion-icon name="person-outline"></ion-icon> Edit
-                  Patient</button>
-                <button (click)="onEditTestClick(item)"><ion-icon name="cash-outline"></ion-icon> Edit Tests</button>
-                <button (click)="onEditBarcodeClick(item)"><ion-icon name="qr-code-outline"></ion-icon> Edit
-                  Barcode</button>
-                <button (click)="printBillInline(item)" [disabled]="printingId === item.bookingId">
-                  <ion-icon name="print-outline"></ion-icon> {{ printingId === item.bookingId ? 'Generating...' : 'Print
-                  Bill' }}
-                </button>
+              <div class="sc-actions-list">
+                <div class="sc-action-item" (click)="onEditTestClick(item)">
+                  <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
+                  <span>Edit Tests</span>
+                </div>
+                <div class="sc-action-item" (click)="onEditPatientClick(item)">
+                  <span class="sc-action-icon"><ion-icon name="person-outline"></ion-icon></span>
+                  <span>Edit Patient</span>
+                </div>
+                <div class="sc-action-item" (click)="onEditBarcodeClick(item)">
+                  <span class="sc-action-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
+                  <span>Edit Barcode</span>
+                </div>
+                <div class="sc-action-item" [class.item-loading]="printingId === item.bookingId"
+                  (click)="printBillInline(item)">
+                  <span class="sc-action-icon">
+                    <ion-spinner name="crescent" *ngIf="printingId === item.bookingId"></ion-spinner>
+                    <ion-icon name="print-outline" *ngIf="printingId !== item.bookingId"></ion-icon>
+                  </span>
+                  <span>{{ printingId === item.bookingId ? 'Generating...' : 'Print Bill' }}</span>
+                </div>
               </div>
             </div>
           </div>
@@ -112,95 +144,463 @@
       </div>
     </ng-template>
   </ion-modal>
-  <!-- EDIT TEST -->
+  <!-- ===================== EDIT TEST MODAL ===================== -->
   <ion-modal class="test-modal sheet-modal" [isOpen]="isEditTestModalOpen" (didDismiss)="closeTestModal()"
-    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+    [breakpoints]="[0, 1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+
     <ng-template>
+
       <div class="test-modal-wrapper">
+
+        <!-- ======================================================
+           SHEET HEADER
+           ====================================================== -->
+
         <div class="sheet-top">
+
           <div class="modal-handle"></div>
+
           <div class="sheet-top-row">
+
             <div class="sheet-top-title">
-              <div class="sheet-title-eyebrow">Booking #{{ selectedBooking?.bookingId }}</div>
-              <div class="sheet-title-main">Edit Test</div>
+
+              <div class="sheet-title-eyebrow">
+                Booking #{{ selectedBooking?.bookingId }}
+              </div>
+
+              <div class="sheet-title-main">
+                Edit Test
+              </div>
+
             </div>
-            <button class="close-modal-btn" (click)="closeTestModal()"><ion-icon
-                name="close-outline"></ion-icon></button>
+
+            <button type="button" class="close-modal-btn" (click)="closeTestModal()">
+
+              <ion-icon name="close-outline"></ion-icon>
+
+            </button>
+
           </div>
+
         </div>
+
+
+        <!-- ======================================================
+           MODAL BODY
+           ====================================================== -->
+
         <div class="test-modal-body-pad test-modal-scroll">
+
+          <!-- ====================================================
+             LOADING STATE
+             ==================================================== -->
+
           <div class="skeleton-block" *ngIf="isTestLoading">
-            <div class="skeleton-line" style="width:60%"></div>
-            <div class="skeleton-line" style="width:90%"></div>
+
+            <div class="skeleton-line" style="width:60%">
+            </div>
+
+            <div class="skeleton-line" style="width:90%">
+            </div>
+
           </div>
+
+
+          <!-- ====================================================
+             MAIN CONTENT
+             ==================================================== -->
+
           <ng-container *ngIf="!isTestLoading">
+
+            <!-- ================================================
+               UPDATE TEST HEADER
+               ================================================= -->
+
             <div class="section-label-row">
-              <span class="section-label-title">Update Test</span>
-              <span class="section-label-count">{{ selectedTests.length }} test(s)</span>
+
+              <span class="section-label-title">
+                Update Test
+              </span>
+
+              <span class="section-label-count">
+                {{ selectedTests.length }} test(s)
+              </span>
+
             </div>
+
+
+            <!-- ================================================
+               TEST SEARCH
+               ================================================= -->
+
             <div class="search-bar-row">
-              <input type="text" class="dash-plain-input" placeholder="Search test to add" [(ngModel)]="testSearchTerm"
-                (ngModelChange)="searchTestsInline()">
+
+              <ion-searchbar placeholder="Search test to add into bill" [(ngModel)]="testSearchTerm"
+                (ngModelChange)="searchTestsInline($event)" debounce="200">
+              </ion-searchbar>
+
+
+              <!-- Search suggestions -->
+
               <div class="search-dropdown" *ngIf="testSearchTerm && filteredTests.length > 0">
+
                 <div class="search-dropdown-item" *ngFor="let test of filteredTests" (click)="addTestInline(test)">
-                  <span>{{ test.testName }}</span>
-                  <span class="price">{{ canViewAmount ? ('₹' + test.testMrp) : '...' }}</span>
+
+                  <span>
+                    {{ test.testName }}
+                  </span>
+
+                  <span class="price">
+                    {{
+                    canViewAmount
+                    ? ('₹' + test.testMrp)
+                    : '...'
+                    }}
+                  </span>
+
                 </div>
+
               </div>
+
             </div>
+
+
+            <!-- ================================================
+               TEST TABLE + PAYMENT SUMMARY
+               ================================================= -->
+
             <div class="modal-body-grid">
+
+
+              <!-- ==============================================
+                 TEST TABLE
+                 ============================================== -->
+
               <div class="test-table-panel">
+
                 <table class="test-line-table">
+
                   <thead>
+
                     <tr>
-                      <th>Test Name</th>
-                      <th *ngIf="canViewAmount">Amount</th>
+
+                      <th>
+                        Test Name
+                      </th>
+
+                      <th *ngIf="canViewAmount">
+                        Amount
+                      </th>
+
+                      <th *ngIf="canViewAmount">
+                        Discount
+                      </th>
+
                       <th></th>
+
                     </tr>
+
                   </thead>
+
+
                   <tbody>
+
+                    <!-- Selected Tests -->
+
                     <tr *ngFor="let test of selectedTests">
-                      <td>{{ test.testName }} <span class="new-tag" *ngIf="test.isNewlyAdded">Not saved yet</span></td>
-                      <td *ngIf="canViewAmount">₹{{ test.testMrp }}</td>
-                      <td><ion-icon name="trash-outline" class="delete-icon"
-                          (click)="removeTestInline(test)"></ion-icon></td>
+
+                      <td class="test-name-cell">
+
+                        {{ test.testName }}
+
+                        <span class="franchise-tag" *ngIf="test.method">
+
+                          Method:
+                          {{ test.method }}
+
+                        </span>
+
+                        <span class="new-tag" *ngIf="test.isNewlyAdded">
+
+                          Not saved yet
+
+                        </span>
+
+                      </td>
+
+
+                      <td *ngIf="canViewAmount">
+
+                        ₹{{ test.testMrp }}
+
+                      </td>
+
+
+                      <td *ngIf="canViewAmount">
+
+                        {{ test.discount || 0 }}
+
+                      </td>
+
+
+                      <td>
+
+                        <ion-icon name="trash-outline" class="delete-icon" (click)="removeTestInline(test)">
+                        </ion-icon>
+
+                      </td>
+
                     </tr>
+
+
+                    <!-- Empty -->
+
                     <tr *ngIf="selectedTests.length === 0">
-                      <td colspan="3" class="empty-tests">No tests added</td>
+
+                      <td [attr.colspan]="canViewAmount ? 4 : 2" class="empty-tests">
+
+                        No tests added
+
+                      </td>
+
                     </tr>
+
                   </tbody>
+
                 </table>
+
               </div>
+
+
+              <!-- ==============================================
+                 PAYMENT SUMMARY
+                 SAME AS BOOKING STATUS
+                 ============================================== -->
+
               <div class="summary-side-panel" [class.locked]="!canEditBilling" *ngIf="isAdminRole">
-                <div class="summary-panel-title">Payment Summary</div>
-                <div class="summary-field"><label>Sub Total</label><input type="text" [value]="subTotal" readonly></div>
-                <div class="summary-field"><label>Discount</label><input type="number" [(ngModel)]="discount"
-                    [disabled]="!canEditBilling" (ngModelChange)="onDiscountChangeInline()"></div>
-                <div class="summary-field"><label>Total</label><input type="text" [value]="totalAmount" readonly></div>
-                <div class="summary-field"><label>Pay Now</label><input type="number" [(ngModel)]="payNowAmount"
-                    [disabled]="!canEditBilling" (ngModelChange)="onPayNowChangeInline()"></div>
-                <div class="summary-field"><label>Due</label><input type="text" [value]="dueAmount" readonly></div>
+
+
+                <!-- ============================================
+                   TITLE
+                   ============================================= -->
+
+                <div class="summary-panel-title">
+
+                  Payment Summary
+
+                </div>
+
+
+                <!-- ============================================
+                   SUB TOTAL
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Sub Total
+                  </label>
+
+                  <input type="text" [value]="
+                    canViewAmount
+                      ? subTotal
+                      : '...'
+                  " readonly>
+
+                </div>
+
+
+                <!-- ============================================
+                   DISCOUNT
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Discount
+                  </label>
+
+                  <ng-container *ngIf="canEditBilling; else discountLocked">
+
+                    <input type="number" [(ngModel)]="discount" (ngModelChange)="onDiscountChangeInline()"
+                      placeholder="0">
+
+                  </ng-container>
+
+
+                  <ng-template #discountLocked>
+
+                    <input type="text" value="." readonly disabled class="locked-field">
+
+                  </ng-template>
+
+                </div>
+
+
+                <!-- ============================================
+                   TOTAL
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Total
+                  </label>
+
+                  <input type="text" [value]="
+                    canViewAmount
+                      ? totalAmount
+                      : '.'
+                  " readonly>
+
+                </div>
+
+
+                <!-- ============================================
+                   ALREADY PAID
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Already Paid
+                  </label>
+
+                  <input type="text" [value]="
+                    canViewAmount
+                      ? basePaidAmount
+                      : '.'
+                  " readonly>
+
+                </div>
+
+
+                <!-- ============================================
+                   PAY NOW
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Pay Now
+                  </label>
+
+                  <ng-container *ngIf="canEditBilling; else payNowLocked">
+
+                    <input type="number" [(ngModel)]="payNowAmount" (ngModelChange)="onPayNowChangeInline()"
+                      placeholder="0">
+
+                  </ng-container>
+
+
+                  <ng-template #payNowLocked>
+
+                    <input type="text" value="." readonly disabled class="locked-field">
+
+                  </ng-template>
+
+                </div>
+
+
+                <!-- ============================================
+                   TOTAL PAID
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Total Paid
+                  </label>
+
+                  <input type="text" [value]="
+                    canViewAmount
+                      ? paidAmount
+                      : '.'
+                  " readonly>
+
+                </div>
+
+
+                <!-- ============================================
+                   DUE
+                   ============================================= -->
+
+                <div class="summary-field">
+
+                  <label>
+                    Due
+                  </label>
+
+                  <input type="text" [value]="
+                    canViewAmount
+                      ? dueAmount
+                      : '.'
+                  " readonly [class.zero]="dueAmount === 0">
+
+                </div>
+
+
+                <!-- ============================================
+                   PAYMENT METHOD
+                   ============================================= -->
+
                 <div class="summary-field payment-method-field">
-                  <label>Payment Method</label>
+
+                  <label>
+                    Payment Method
+                  </label>
+
                   <ion-select [(ngModel)]="paymentMethod" interface="popover" [disabled]="!canEditBilling"
                     class="premium-select">
-                    <ion-select-option value="cash">Cash</ion-select-option>
-                    <ion-select-option value="upi">UPI</ion-select-option>
-                    <ion-select-option value="online">Online</ion-select-option>
+
+                    <ion-select-option value="cash">
+                      Cash
+                    </ion-select-option>
+
+                    <ion-select-option value="upi">
+                      UPI
+                    </ion-select-option>
+
+                    <ion-select-option value="online">
+                      Online
+                    </ion-select-option>
+
                   </ion-select>
+
                 </div>
+
               </div>
+
             </div>
+
           </ng-container>
+
         </div>
+
+
+        <!-- ======================================================
+           FOOTER
+           ====================================================== -->
+
         <div class="sheet-footer">
+
           <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="saveTestChanges()"
             [disabled]="isSavingTest">
-            {{ isSavingTest ? 'Saving...' : 'Save Changes' }}
+
+            {{
+            isSavingTest
+            ? 'Saving...'
+            : 'Save Changes'
+            }}
+
           </ion-button>
+
         </div>
+
       </div>
+
     </ng-template>
+
   </ion-modal>
 
   <!-- EDIT PATIENT -->
@@ -224,13 +624,33 @@
             <div class="skeleton-line" style="width:50%"></div>
           </div>
           <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
+
             <div class="form-section">
               <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
               <div class="patient-form-grid">
-                <div class="summary-field span-3"><label>Patient Name</label><input type="text"
-                    [(ngModel)]="editPatientData.name"></div>
-                <div class="summary-field pair-field"><label>Age</label><input type="number"
-                    [(ngModel)]="editPatientData.age"></div>
+                <div class="field-row">
+                  <div class="summary-field narrow">
+                    <label>Title</label>
+                    <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
+                      class="premium-select">
+                      <ion-select-option value="mr">Mr</ion-select-option>
+                      <ion-select-option value="mrs">Mrs</ion-select-option>
+                      <ion-select-option value="ms">Ms</ion-select-option>
+                      <ion-select-option value="dr">Dr</ion-select-option>
+                      <ion-select-option value="master">Master</ion-select-option>
+                      <ion-select-option value="baby">Baby</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="summary-field wide">
+                    <label>Patient Name</label>
+                    <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
+                  </div>
+                </div>
+
+                <div class="summary-field pair-field">
+                  <label>Age</label>
+                  <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
+                </div>
                 <div class="summary-field pair-field">
                   <label>Age Type</label>
                   <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="premium-select">
@@ -249,26 +669,93 @@
                 </div>
               </div>
             </div>
+
             <div class="form-section">
               <div class="form-section-title"><ion-icon name="medkit-outline"></ion-icon> Doctor &amp; Lab</div>
               <div class="patient-form-grid">
-                <div class="summary-field span-3"><label>Ref. Doctor</label><input type="text"
-                    [(ngModel)]="editPatientData.doctor"></div>
-                <div class="summary-field span-3"><label>Lab</label><input type="text" [value]="editPatientData.lab"
-                    [readonly]="!isAdminRole"></div>
+                <div class="field-row">
+                  <div class="summary-field narrow">
+                    <label>Doctor Title</label>
+                    <ion-select [(ngModel)]="editPatientData.doctorTitle" interface="popover" placeholder="Select"
+                      class="premium-select">
+                      <ion-select-option value="dr">Dr</ion-select-option>
+                      <ion-select-option value="prof">Prof</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="summary-field wide">
+                    <label>Ref. Doctor</label>
+                    <div class="inline-input-btn">
+                      <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name">
+                      <ion-button size="small" fill="solid" color="primary" (click)="openDoctorPicker()">
+                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                      </ion-button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="summary-field span-3" *ngIf="isAdminRole">
+                  <label>Lab</label>
+                  <div class="inline-input-btn">
+                    <input type="text" [(ngModel)]="editPatientData.lab" placeholder="Lab (SELF)">
+                    <ion-button size="small" fill="solid" color="primary" (click)="openLabPicker()">
+                      <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+                    </ion-button>
+                  </div>
+                </div>
+                <div class="summary-field span-3" *ngIf="!isAdminRole">
+                  <label>Lab</label>
+                  <input type="text" [value]="editPatientData.lab" readonly>
+                </div>
               </div>
             </div>
+
             <div class="form-section">
-              <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact</div>
+              <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
+              </div>
               <div class="patient-form-grid">
-                <div class="summary-field pair-field"><label>Mobile</label><input type="tel"
-                    [(ngModel)]="editPatientData.mobileNumber" maxlength="10"></div>
-                <div class="summary-field pair-field"><label>Aadhaar</label><input type="text"
-                    [(ngModel)]="editPatientData.aadhaarNumber" maxlength="12"></div>
-                <div class="summary-field span-3"><label>Address</label><input type="text"
-                    [(ngModel)]="editPatientData.address"></div>
+                <div class="summary-field pair-field">
+                  <label>Mobile</label>
+                  <input type="tel" [(ngModel)]="editPatientData.mobileNumber" placeholder="10 digit mobile"
+                    maxlength="10">
+                </div>
+                <div class="summary-field pair-field">
+                  <label>Aadhaar</label>
+                  <input type="text" [(ngModel)]="editPatientData.aadhaarNumber" placeholder="Aadhaar number"
+                    maxlength="12">
+                </div>
+                <div class="summary-field pair-field">
+                  <label>UHID</label>
+                  <input type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
+                </div>
+                <div class="summary-field span-3">
+                  <label>Address</label>
+                  <input type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
+                </div>
               </div>
             </div>
+
+            <div class="form-section">
+              <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
+                Attachment</div>
+              <div class="patient-form-grid">
+                <div class="summary-field span-3">
+                  <label>Clinical History</label>
+                  <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
+                </div>
+                <div class="summary-field span-3">
+                  <label>Attachment</label>
+                  <input #patientFile type="file" hidden (change)="onPatientFileSelected($event)">
+                  <button class="attach-btn" (click)="patientFile.click()">
+                    <ion-icon name="attach-outline"></ion-icon>
+                    {{ editPatientData?.attachmentName || 'Choose File' }}
+                  </button>
+                  <div class="selected-file" *ngIf="editPatientData?.attachmentName">
+                    <ion-icon name="checkmark-circle"></ion-icon> {{ editPatientData.attachmentName }}
+                  </div>
+                </div>
+              </div>
+            </div>
+
           </div>
         </div>
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">

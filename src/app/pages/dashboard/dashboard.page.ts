@@ -19,6 +19,7 @@ import {
   IonSelectOption,
   IonDatetime,
   IonButton,
+  IonSearchbar,
   MenuController
 } from "@ionic/angular/standalone";
 
@@ -40,25 +41,13 @@ import { StackedBarComponent } from "../../components/stacked-bar/stacked-bar.co
 import { addIcons } from "ionicons";
 
 import {
-  beakerOutline,
-  calendarOutline,
-  documentTextOutline,
-  flaskOutline,
-  logOutOutline,
-  notificationsOutline,
-  peopleOutline,
-  personAddOutline,
-  personCircleOutline,
-  personOutline,
-  shareSocialOutline,
-  clipboardOutline,
-  downloadOutline,
-  listOutline,
-  timeOutline,
-  searchOutline,
-  closeOutline,
-  closeCircleOutline,
-  chevronForwardOutline
+  beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
+  logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
+  personCircleOutline, personOutline, shareSocialOutline, clipboardOutline,
+  downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
+  closeCircleOutline, chevronForwardOutline, chevronDownOutline,
+  printOutline, cashOutline, qrCodeOutline, addOutline, attachOutline,
+  checkmarkOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../services/auth";
@@ -93,6 +82,7 @@ import { RoleService } from "../../services/role";
     IonSelectOption,
     IonDatetime,
     IonButton,
+    IonSearchbar,
 
     // Angular Material
     MatDatepickerModule,
@@ -134,6 +124,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   isBarcodeModalOpen = false; barcodeBooking: any = null; barcodeRows: any[] = [];
   activeDateTimeRow: any = null; tempDateTimeValue = '';
 
+  // ---------- doctor / lab pickers (Edit Patient) ----------
+  showDoctorPicker = false; showLabPicker = false;
+  doctors: any[] = []; labs: any[] = [];
+  selectedDoctorPick: any = null; selectedLabPick: any = null;
+
   get canEditPatient(): boolean { return this.roleService.isLabAdmin; }
   get canViewAmount(): boolean { return this.roleService.isLabAdmin; }
   get canEditBilling(): boolean { return this.roleService.isLabAdmin; }
@@ -162,15 +157,28 @@ export class DashboardPage implements OnInit, OnDestroy {
   private performGlobalSearch(q: string) {
     this.isSearching = true;
     this.isSearchModalOpen = true;
-    const labId = this.authService.currentUserValue?.raw?.labId;
+    const currentUser = this.authService.currentUserValue;
+    const labId = currentUser?.raw?.labId;
+    const currentUserId = currentUser?.raw?.id;
+    const currentUsername = currentUser?.raw?.username;
     const start = '2015-01-01';
     const end = this.nextDay(this.formatDateParam(new Date()));
 
     this.labApi.getBookingStatusNew(labId, 0, 500, start, end).subscribe({
       next: (res: any) => {
         const list = res?.content || res || [];
+
+        // Admin la sagle disel, Staff/Franchise la fakt tyanchech booking disतील
+        const roleFiltered = this.roleService.isLabAdmin
+          ? list
+          : list.filter((b: any) => {
+            const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
+            const idMatch = !!currentUserId && b.createdBy === currentUserId;
+            return usernameMatch || idMatch;
+          });
+
         const ql = q.toLowerCase();
-        this.searchResults = list
+        this.searchResults = roleFiltered
           .filter((b: any) =>
             String(b.bookingId).includes(ql) ||
             (b.patientId || '').toLowerCase().includes(ql) ||
@@ -205,12 +213,9 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   expandedSearchId: any = null;
 
-
   toggleSearchExpand(item: any) {
     this.expandedSearchId = this.expandedSearchId === item.bookingId ? null : item.bookingId;
   }
-
-
 
   printBillInline(item: any) {
     if (this.printingId === item.bookingId) return;
@@ -279,7 +284,13 @@ export class DashboardPage implements OnInit, OnDestroy {
       'search-outline': searchOutline,
       'close-outline': closeOutline,
       'close-circle-outline': closeCircleOutline,
-      'chevron-forward-outline': chevronForwardOutline,
+      'chevron-forward-outline': chevronForwardOutline, 'chevron-down-outline': chevronDownOutline,
+      'print-outline': printOutline,
+      'cash-outline': cashOutline,
+      'qr-code-outline': qrCodeOutline,
+      'add-outline': addOutline,
+      'attach-outline': attachOutline,
+      'checkmark-outline': checkmarkOutline,
     });
 
     this.filterDate = this.toKey(new Date());
@@ -402,6 +413,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   onDateChange() {
     this.loadDashboard();
   }
+
   loadAvailableTests() {
     this.labApi.getTests().subscribe({
       next: (res: any) => {
@@ -409,7 +421,7 @@ export class DashboardPage implements OnInit, OnDestroy {
           testId: t.test_id ?? t.testId, testName: t.test_name || 'Unnamed Test', testMrp: t.test_price ?? 0
         }));
       },
-      error: () => { }
+      error: (err) => { console.log('AVAILABLE TESTS LOAD ERROR:', err); }
     });
   }
 
@@ -419,7 +431,8 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   closeTestModal() { this.isEditTestModalOpen = false; this.selectedBooking = null; this.selectedTests = []; }
 
-  searchTestsInline() {
+  searchTestsInline(val: string) {
+    this.testSearchTerm = val ?? '';
     const t = this.testSearchTerm.trim().toLowerCase();
     if (!t) { this.filteredTests = []; return; }
     this.filteredTests = this.availableTests.filter(x =>
@@ -513,6 +526,10 @@ export class DashboardPage implements OnInit, OnDestroy {
         data.name = fresh.customerName;
         data.doctor = fresh.doctorName || '';
         data.lab = fresh.franchiseName || 'SELF';
+        data.title = fresh.title || '';
+        data.doctorTitle = '';
+        data.doctorId = fresh.doctorId || null;
+        data.franchiseId = fresh.franchiseId || null;
         this.editPatientData = data;
         this.isPatientLoading = false;
       },
@@ -542,16 +559,79 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-  openBarcodeFromSearch(item: any) {
-    this.barcodeBooking = item;
-    this.barcodeRows = (item.samples || []).map((s: any) => ({
-      accessionId: s.accessionId, sampleTypeId: s.sampleTypeId, sampleType: s.sampleType || '-',
-      oldBarcode: s.barcode, newBarcode: s.barcode, receiveDate: '', status: s.status || 'PENDING', saving: false
-    }));
-    this.isBarcodeModalOpen = true;
+  // ---------- doctor / lab pickers ----------
+  openDoctorPicker() {
+    this.selectedDoctorPick = null;
+    this.showDoctorPicker = true;
+    this.labApi.getDoctors().subscribe({
+      next: (res: any) => { this.doctors = res?.content || res || []; },
+      error: () => { this.doctors = []; }
+    });
   }
 
-  closeBarcodeModal() { this.isBarcodeModalOpen = false; this.barcodeBooking = null; this.barcodeRows = []; }
+  selectDoctorForEdit(doc: any) {
+    if (!doc || !this.editPatientData) return;
+    this.editPatientData.doctor = doc?.doctor_name;
+    this.editPatientData.doctorId = doc?.doctorId;
+    this.showDoctorPicker = false;
+  }
+
+  openLabPicker() {
+    if (!this.isAdminRole) return;
+    this.selectedLabPick = null;
+    this.showLabPicker = true;
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => { this.labs = res?.content || res || []; },
+      error: () => { this.labs = []; }
+    });
+  }
+
+  selectLabForEdit(lab: any) {
+    if (!this.isAdminRole || !lab || !this.editPatientData) return;
+    this.editPatientData.lab = lab?.franchiseName || lab?.name;
+    this.editPatientData.franchiseId = lab?.franchiseId;
+    this.showLabPicker = false;
+  }
+
+  onPatientFileSelected(event: any) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      this.editPatientData.attachment = reader.result;
+      this.editPatientData.attachmentName = file.name;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  openBarcodeFromSearch(item: any) {
+    this.barcodeBooking = item;
+    this.barcodeRows = [];
+    this.isBarcodeModalOpen = true;
+
+    // fresh full booking fetch — barobar sampleTypeId/accessionId sathi
+    this.labApi.getSingleBooking(item.bookingId).subscribe({
+      next: (res: any) => {
+        const fresh = this.mapBooking(res);
+        this.barcodeBooking = fresh;
+        this.barcodeRows = (fresh.samples || []).map((s: any) => ({
+          accessionId: s.accessionId, sampleTypeId: s.sampleTypeId, sampleType: s.sampleType || '-',
+          oldBarcode: s.barcode, newBarcode: s.barcode, receiveDate: '', status: s.status || 'PENDING', saving: false
+        }));
+      },
+      error: () => {
+        this.toastService.error('Error', 'Barcode detail load fail zala');
+        this.isBarcodeModalOpen = false;
+      }
+    });
+  }
+
+closeBarcodeModal() {
+  this.isBarcodeModalOpen = false;
+  this.barcodeBooking = null;
+  this.barcodeRows = [];
+  if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true; 
+}
 
   openDateTimePicker(row: any) { this.activeDateTimeRow = row; this.tempDateTimeValue = new Date().toISOString().slice(0, 19); }
   closeDateTimePicker() { this.activeDateTimeRow = null; this.tempDateTimeValue = ''; }
@@ -560,19 +640,54 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.closeDateTimePicker();
   }
 
-  updateBarcodeRow(row: any) {
-    if (!row.newBarcode?.trim()) { this.toastService.warning('Warning', 'Barcode rikama thevu naka'); return; }
-    if (!this.barcodeBooking) return;
-    row.saving = true;
-    const bookingId = this.barcodeBooking.bookingId;
-    const payload = [{ oldBarcode: row.oldBarcode, updatedBarcode: row.newBarcode.trim(), receiveDate: row.receiveDate || '', sampleTypeId: row.sampleTypeId, bookingId }];
-    this.labApi.updateBarcode(bookingId, payload).subscribe({
-      next: () => {
-        row.saving = false; row.oldBarcode = row.newBarcode; row.status = 'RECEIVED';
-        this.toastService.success('Success', 'Barcode updated successfully');
-        if (this.globalSearchTerm.trim()) this.performGlobalSearch(this.globalSearchTerm.trim());
+ updateBarcodeRow(row: any) {
+  if (!row.newBarcode?.trim()) { this.toastService.warning('Warning', 'Barcode rikama thevu naka'); return; }
+  if (!this.barcodeBooking) return;
+  row.saving = true;
+  const bookingId = this.barcodeBooking.bookingId;
+  const payload = [{ oldBarcode: row.oldBarcode, updatedBarcode: row.newBarcode.trim(), receiveDate: row.receiveDate || '', sampleTypeId: row.sampleTypeId, bookingId }];
+  this.labApi.updateBarcode(bookingId, payload).subscribe({
+    next: () => {
+      row.saving = false; row.oldBarcode = row.newBarcode; row.status = 'RECEIVED';
+      this.toastService.success('Success', 'Barcode updated successfully');
+      // ✅ farak — modal band karat nahi, tasach ughada rahil
+      if (this.globalSearchTerm.trim()) this.refreshSearchResultsSilently();
+    },
+    error: () => { row.saving = false; this.toastService.error('Error', 'Barcode update fail zala'); }
+  });
+}
+
+  private refreshSearchResultsSilently() {
+    const q = this.globalSearchTerm.trim();
+    if (!q) return;
+    const currentUser = this.authService.currentUserValue;
+    const labId = currentUser?.raw?.labId;
+    const currentUserId = currentUser?.raw?.id;
+    const currentUsername = currentUser?.raw?.username;
+    const start = '2015-01-01';
+    const end = this.nextDay(this.formatDateParam(new Date()));
+
+    this.labApi.getBookingStatusNew(labId, 0, 500, start, end).subscribe({
+      next: (res: any) => {
+        const list = res?.content || res || [];
+        const roleFiltered = this.roleService.isLabAdmin
+          ? list
+          : list.filter((b: any) => {
+            const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
+            const idMatch = !!currentUserId && b.createdBy === currentUserId;
+            return usernameMatch || idMatch;
+          });
+        const ql = q.toLowerCase();
+        this.searchResults = roleFiltered
+          .filter((b: any) =>
+            String(b.bookingId).includes(ql) ||
+            (b.patientId || '').toLowerCase().includes(ql) ||
+            (b.customerName || '').toLowerCase().includes(ql) ||
+            (b.doctorName || '').toLowerCase().includes(ql)
+          )
+          .map((b: any) => this.mapSearchItem(b));
       },
-      error: () => { row.saving = false; this.toastService.error('Error', 'Barcode update fail zala'); }
+      error: () => { }
     });
   }
 
@@ -588,6 +703,9 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.filteredTests = [];
     this.isTestLoading = true;
     this.isEditTestModalOpen = true;
+
+    if (this.availableTests.length === 0) this.loadAvailableTests();
+
     this.labApi.getSingleBooking(item.bookingId).subscribe({
       next: (res: any) => {
         const fresh = this.mapBooking(res);
@@ -879,6 +997,5 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (s.includes('complete') || s.includes('ready')) return 'badge-ready';
     return 'badge-pending';
   }
-
 
 }

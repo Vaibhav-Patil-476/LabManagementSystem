@@ -91,7 +91,7 @@
       </div>
     </div>
 
-    
+
     <!-- ===================== BOOKING CARD LIST ===================== -->
     <div class="booking-card-list">
 
@@ -442,9 +442,7 @@
           <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
 
             <div class="form-section">
-              <div class="form-section-title">
-                <ion-icon name="person-outline"></ion-icon> Patient Details
-              </div>
+              <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
               <div class="patient-form-grid">
                 <div class="field-row">
                   <div class="summary-field narrow">
@@ -489,9 +487,7 @@
             </div>
 
             <div class="form-section">
-              <div class="form-section-title">
-                <ion-icon name="medkit-outline"></ion-icon> Doctor &amp; Lab
-              </div>
+              <div class="form-section-title"><ion-icon name="medkit-outline"></ion-icon> Doctor &amp; Lab</div>
               <div class="patient-form-grid">
                 <div class="field-row">
                   <div class="summary-field narrow">
@@ -530,8 +526,7 @@
             </div>
 
             <div class="form-section">
-              <div class="form-section-title">
-                <ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
+              <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
               </div>
               <div class="patient-form-grid">
                 <div class="summary-field pair-field">
@@ -556,9 +551,8 @@
             </div>
 
             <div class="form-section">
-              <div class="form-section-title">
-                <ion-icon name="document-text-outline"></ion-icon> History &amp; Attachment
-              </div>
+              <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
+                Attachment</div>
               <div class="patient-form-grid">
                 <div class="summary-field span-3">
                   <label>Clinical History</label>
@@ -651,18 +645,17 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== DOCTOR PICKER ===================== -->
+  <!-- DOCTOR PICKER -->
   <ion-modal [isOpen]="showDoctorPicker" cssClass="doctor-popup sheet-modal" (didDismiss)="showDoctorPicker=false"
-    [breakpoints]="[0, 1]" [initialBreakpoint]="1">
+    [breakpoints]="[0,1]" [initialBreakpoint]="1">
     <ng-template>
       <div class="modal-page">
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="modal-header">
             <h2>Select Doctor</h2>
-            <button class="close-modal-btn" (click)="showDoctorPicker = false">
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
+            <button class="close-modal-btn" (click)="showDoctorPicker=false"><ion-icon
+                name="close-outline"></ion-icon></button>
           </div>
         </div>
         <div class="modal-body">
@@ -675,7 +668,7 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" fill="solid" class="modal-save-btn" (click)="showDoctorPicker = false">
+          <ion-button expand="block" fill="solid" class="modal-save-btn" (click)="showDoctorPicker=false">
             <ion-icon slot="start" name="checkmark-outline"></ion-icon> Done
           </ion-button>
         </div>
@@ -683,18 +676,17 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== LAB PICKER ===================== -->
+  <!-- LAB PICKER -->
   <ion-modal [isOpen]="showLabPicker" cssClass="lab-popup sheet-modal" (didDismiss)="showLabPicker=false"
-    [breakpoints]="[0, 1]" [initialBreakpoint]="1">
+    [breakpoints]="[0,1]" [initialBreakpoint]="1">
     <ng-template>
       <div class="modal-page">
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="modal-header">
             <h2>Select Lab</h2>
-            <button class="close-modal-btn" (click)="showLabPicker = false">
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
+            <button class="close-modal-btn" (click)="showLabPicker=false"><ion-icon
+                name="close-outline"></ion-icon></button>
           </div>
         </div>
         <div class="modal-body">
@@ -708,7 +700,7 @@
               </ion-select>
             </div>
           </div>
-          <ion-button expand="block" fill="solid" class="modal-save-btn" (click)="showLabPicker = false">
+          <ion-button expand="block" fill="solid" class="modal-save-btn" (click)="showLabPicker=false">
             <ion-icon slot="start" name="checkmark-outline"></ion-icon> Done
           </ion-button>
         </div>

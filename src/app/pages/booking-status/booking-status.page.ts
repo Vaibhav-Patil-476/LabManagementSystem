@@ -178,19 +178,31 @@ readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
   { key: 'snr', label: 'SNR', badgeClass: 'badge-snr' },
 ];
 
-  get statusBucketCount(): Record<string, number> {
-    const counts: Record<string, number> = { all: 0, completed: 0, in_process: 0, pending: 0, snr: 0 };
-    const source = this.canViewAllBookings ? this.bookings : this.bookings.filter(b => b.createdBy === this.currentUserId);
-    source.forEach(b => {
-      counts['all'] = counts['all'] + 1;
-      const status = b.overallReportStatus || 'pending';
-      if (counts[status] !== undefined) {
-        counts[status] = counts[status] + 1;
-      }
-    });
-    return counts;
+ get statusBucketCount(): Record<string, number> {
+  const counts: Record<string, number> = { all: 0, completed: 0, in_process: 0, pending: 0, snr: 0 };
+
+  let source = this.canViewAllBookings ? this.bookings : this.bookings.filter(b => b.createdBy === this.currentUserId);
+
+  // ✅ NEW — quickSearch lagu asel tar counts pan tyaच matched data varunach kadha
+  const q = this.quickSearch?.trim().toLowerCase();
+  if (q) {
+    source = source.filter(b =>
+      String(b.bookingId).includes(q) ||
+      (b.patientId || '').toLowerCase().includes(q) ||
+      (b.customerName || '').toLowerCase().includes(q) ||
+      (b.doctor?.doctor_name || '').toLowerCase().includes(q)
+    );
   }
 
+  source.forEach(b => {
+    counts['all'] = counts['all'] + 1;
+    const status = b.overallReportStatus || 'pending';
+    if (counts[status] !== undefined) {
+      counts[status] = counts[status] + 1;
+    }
+  });
+  return counts;
+}
   setStatusTab(key: string) {
     this.selectedReportStatus = key;
   }
