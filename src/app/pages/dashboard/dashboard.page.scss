@@ -2730,4 +2730,110 @@ ion-content.menu-content {
     font-weight: 800 !important;
   }
 
+}// ==========================================================
+// BARCODE MODAL — PREMIUM SKELETON SHIMMER
+// ==========================================================
+
+.skeleton-block {
+  width: 100%;
+  padding: 4px 0 20px;
+}
+
+.skeleton-barcode-card {
+  position: relative;
+  width: 100%;
+  padding: 18px;
+  border-radius: 16px;
+  background: #ffffff;
+  border: 1px solid #edf1f4;
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
+  overflow: hidden;
+}
+
+// Common shimmer
+.skeleton-box,
+.skeleton-label,
+.skeleton-input,
+.skeleton-button {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(
+    90deg,
+    #edf1f4 0%,
+    #f8fafb 50%,
+    #edf1f4 100%
+  );
+  background-size: 200% 100%;
+  animation: barcodeSkeletonShimmer 1.5s ease-in-out infinite;
+}
+
+// Top section
+.skeleton-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.skeleton-badge {
+  width: 110px;
+  height: 28px;
+  border-radius: 8px;
+}
+
+.skeleton-status {
+  width: 75px;
+  height: 26px;
+  border-radius: 20px;
+}
+
+// Fields
+.skeleton-fields {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.skeleton-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.skeleton-label {
+  width: 75px;
+  height: 11px;
+  border-radius: 5px;
+}
+
+.skeleton-input {
+  width: 100%;
+  height: 44px;
+  border-radius: 9px;
+}
+
+// Button
+.skeleton-button {
+  width: 100%;
+  height: 44px;
+  margin-top: 20px;
+  border-radius: 10px;
+}
+
+// Shimmer animation
+@keyframes barcodeSkeletonShimmer {
+  0% {
+    background-position: 200% 0;
+  }
+
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+// Mobile responsive
+@media (max-width: 768px) {
+  .skeleton-fields {
+    grid-template-columns: 1fr;
+  }
 }

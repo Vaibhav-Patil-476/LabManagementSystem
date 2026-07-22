@@ -121,7 +121,8 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   isEditPatientModalOpen = false; isPatientLoading = false; editPatientData: any = null;
 
-  isBarcodeModalOpen = false; barcodeBooking: any = null; barcodeRows: any[] = [];
+ isBarcodeModalOpen = false; isBarcodeLoading = false; barcodeBooking: any = null; barcodeRows: any[] = [];
+  
   activeDateTimeRow: any = null; tempDateTimeValue = '';
 
   // ---------- doctor / lab pickers (Edit Patient) ----------
@@ -129,10 +130,12 @@ export class DashboardPage implements OnInit, OnDestroy {
   doctors: any[] = []; labs: any[] = [];
   selectedDoctorPick: any = null; selectedLabPick: any = null;
 
-  get canEditPatient(): boolean { return this.roleService.isLabAdmin; }
-  get canViewAmount(): boolean { return this.roleService.isLabAdmin; }
+ get canEditPatient(): boolean { return this.roleService.isLabAdmin; }
+  get canViewAmount(): boolean {
+  return this.roleService.isLabAdmin || this.isFranchiseRole;
+}
   get canEditBilling(): boolean { return this.roleService.isLabAdmin; }
-  get isAdminRole(): boolean { return this.roleService.isLabAdmin; }
+get isAdminRole(): boolean { return this.roleService.isLabAdmin; }
   get subTotal(): number { return this.selectedTests.reduce((s, t) => s + Number(t.testMrp || 0), 0); }
   get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
   get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
@@ -295,6 +298,14 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.filterDate = this.toKey(new Date());
   }
+// existing constants + add these
+private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
+private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
+
+get isFranchiseRole(): boolean {
+  const r = this.roleService.currentRole;
+  return r === this.ROLE_FRANCHISE || r === this.ROLE_FRANCHISE_STAFF;
+}
 
   // ---------- lifecycle ----------
   ngOnInit() {
@@ -604,27 +615,29 @@ export class DashboardPage implements OnInit, OnDestroy {
     reader.readAsDataURL(file);
   }
 
-  openBarcodeFromSearch(item: any) {
-    this.barcodeBooking = item;
-    this.barcodeRows = [];
-    this.isBarcodeModalOpen = true;
+openBarcodeFromSearch(item: any) {
+  this.barcodeBooking = item;
+  this.barcodeRows = [];
+  this.isBarcodeLoading = true; // ✅ NEW
+  this.isBarcodeModalOpen = true;
 
-    // fresh full booking fetch — barobar sampleTypeId/accessionId sathi
-    this.labApi.getSingleBooking(item.bookingId).subscribe({
-      next: (res: any) => {
-        const fresh = this.mapBooking(res);
-        this.barcodeBooking = fresh;
-        this.barcodeRows = (fresh.samples || []).map((s: any) => ({
-          accessionId: s.accessionId, sampleTypeId: s.sampleTypeId, sampleType: s.sampleType || '-',
-          oldBarcode: s.barcode, newBarcode: s.barcode, receiveDate: '', status: s.status || 'PENDING', saving: false
-        }));
-      },
-      error: () => {
-        this.toastService.error('Error', 'Barcode detail load fail zala');
-        this.isBarcodeModalOpen = false;
-      }
-    });
-  }
+  this.labApi.getSingleBooking(item.bookingId).subscribe({
+    next: (res: any) => {
+      const fresh = this.mapBooking(res);
+      this.barcodeBooking = fresh;
+      this.barcodeRows = (fresh.samples || []).map((s: any) => ({
+        accessionId: s.accessionId, sampleTypeId: s.sampleTypeId, sampleType: s.sampleType || '-',
+        oldBarcode: s.barcode, newBarcode: s.barcode, receiveDate: '', status: s.status || 'PENDING', saving: false
+      }));
+      this.isBarcodeLoading = false; // ✅ NEW
+    },
+    error: () => {
+      this.toastService.error('Error', 'Barcode detail load fail zala');
+      this.isBarcodeLoading = false; // ✅ NEW
+      this.isBarcodeModalOpen = false;
+    }
+  });
+}
 
 closeBarcodeModal() {
   this.isBarcodeModalOpen = false;

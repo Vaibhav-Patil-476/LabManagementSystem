@@ -377,7 +377,7 @@
                  SAME AS BOOKING STATUS
                  ============================================== -->
 
-              <div class="summary-side-panel" [class.locked]="!canEditBilling" *ngIf="isAdminRole">
+              <div class="summary-side-panel" [class.locked]="!canEditBilling" *ngIf="canViewAmount">
 
 
                 <!-- ============================================
@@ -782,32 +782,71 @@
           </div>
         </div>
         <div class="test-modal-body-pad test-modal-scroll" *ngIf="barcodeBooking">
-          <div class="barcode-row-card" *ngFor="let row of barcodeRows">
-            <div class="brc-top">
-              <span class="brc-sample-badge">{{ row.sampleType }}</span>
-              <span class="status brc-status" [ngClass]="row.status === 'RECEIVED' ? 'completed' : 'pending'">{{
-                row.status }}</span>
+
+          <!-- ✅ NEW — loading skeleton -->
+          <div class="skeleton-block" *ngIf="isBarcodeLoading">
+
+            <div class="skeleton-barcode-card">
+
+              <div class="skeleton-top-row">
+                <div class="skeleton-box skeleton-badge"></div>
+                <div class="skeleton-box skeleton-status"></div>
+              </div>
+
+              <div class="skeleton-fields">
+
+                <div class="skeleton-field">
+                  <div class="skeleton-label"></div>
+                  <div class="skeleton-input"></div>
+                </div>
+
+                <div class="skeleton-field">
+                  <div class="skeleton-label"></div>
+                  <div class="skeleton-input"></div>
+                </div>
+
+                <div class="skeleton-field">
+                  <div class="skeleton-label"></div>
+                  <div class="skeleton-input"></div>
+                </div>
+
+              </div>
+
+              <div class="skeleton-button"></div>
+
             </div>
-            <div class="brc-fields">
-              <div class="brc-field"><label>Old Barcode</label><input type="text" [value]="row.oldBarcode" readonly
-                  class="brc-input readonly"></div>
-              <div class="brc-field"><label>New Barcode</label><input type="text" [(ngModel)]="row.newBarcode"
-                  class="brc-input"></div>
-              <div class="brc-field">
-                <label>Receive Date &amp; Time</label>
-                <div class="brc-input brc-datetime-trigger" (click)="openDateTimePicker(row)">
-                  <ion-icon name="calendar-outline"></ion-icon>
-                  <span>{{ row.receiveDate ? (row.receiveDate | date:'MMM d, y, h:mm a') : 'Select date & time'
-                    }}</span>
+
+          </div>
+
+          <ng-container *ngIf="!isBarcodeLoading">
+            <div class="barcode-row-card" *ngFor="let row of barcodeRows">
+              <div class="brc-top">
+                <span class="brc-sample-badge">{{ row.sampleType }}</span>
+                <span class="status brc-status" [ngClass]="row.status === 'RECEIVED' ? 'completed' : 'pending'">{{
+                  row.status }}</span>
+              </div>
+              <div class="brc-fields">
+                <div class="brc-field"><label>Old Barcode</label><input type="text" [value]="row.oldBarcode" readonly
+                    class="brc-input readonly"></div>
+                <div class="brc-field"><label>New Barcode</label><input type="text" [(ngModel)]="row.newBarcode"
+                    class="brc-input"></div>
+                <div class="brc-field">
+                  <label>Receive Date &amp; Time</label>
+                  <div class="brc-input brc-datetime-trigger" (click)="openDateTimePicker(row)">
+                    <ion-icon name="calendar-outline"></ion-icon>
+                    <span>{{ row.receiveDate ? (row.receiveDate | date:'MMM d, y, h:mm a') : 'Select date & time'
+                      }}</span>
+                  </div>
                 </div>
               </div>
+              <ion-button expand="block" fill="solid" class="update-barcode-btn" [disabled]="row.saving"
+                (click)="updateBarcodeRow(row)">
+                {{ row.saving ? 'Saving...' : 'Update Barcode' }}
+              </ion-button>
             </div>
-            <ion-button expand="block" fill="solid" class="update-barcode-btn" [disabled]="row.saving"
-              (click)="updateBarcodeRow(row)">
-              {{ row.saving ? 'Saving...' : 'Update Barcode' }}
-            </ion-button>
-          </div>
-          <div *ngIf="barcodeRows.length === 0" class="empty-tests">No samples found</div>
+            <div *ngIf="barcodeRows.length === 0" class="empty-tests">No samples found</div>
+          </ng-container>
+
         </div>
       </div>
     </ng-template>

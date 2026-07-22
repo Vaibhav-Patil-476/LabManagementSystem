@@ -19,7 +19,8 @@
 
 
 
-      <div class="relation-box-wrap" *ngIf="isAdminRole">
+      <!-- COLLECTION CENTER -->
+      <div class="relation-box-wrap" *ngIf="canViewAmount">
         <div class="input-wrap lab-search-wrap">
           <ion-input type="text" placeholder="Select collection center" [(ngModel)]="labSearch"
             (ionInput)="searchLabInput()" (ionFocus)="onLabSearchFocus()">
@@ -35,7 +36,9 @@
               [class.selected]="selectedLab && compareLabs(selectedLab, lab)" (click)="selectLabFromPicker(lab)">
 
               {{ lab.franchiseName || lab.name }}
-              <span *ngIf="lab.centerCode">/{{ lab.centerCode }}</span>
+              <span *ngIf="lab.centerCode">
+                /{{ lab.centerCode }}
+              </span>
             </div>
 
             <div class="lab-picker-empty" *ngIf="filteredLabs.length === 0">
@@ -43,11 +46,10 @@
             </div>
           </div>
         </div>
-
-        <div class="lab-dropdown-backdrop" *ngIf="showLabDropdown" (click)="showLabDropdown=false">
-        </div>
       </div>
 
+      <div class="lab-dropdown-backdrop" *ngIf="showLabDropdown" (click)="showLabDropdown = false">
+      </div>
       <!-- backdrop, dropdown bahar click kelyavar band karण्यासाठी -->
       <div class="lab-dropdown-backdrop" *ngIf="showLabDropdown" (click)="showLabDropdown = false"></div>
     </div>
@@ -120,41 +122,46 @@
           </div>
         </div>
 
-        <!-- Doctor Search + Button -->
-        <div class="input-group doctor-group" style="flex:1; position:relative;">
 
-          <label>REF DOC. <span class="required">*</span></label>
+        <!-- Doctor Search + Button -->
+        <div class="input-group doctor-group doctor-search-wrapper" style="flex:1; position:relative;"
+          (click)="$event.stopPropagation()">
+
+          <label>
+            REF DOC. <span class="required">*</span>
+          </label>
 
           <div class="doctor-input-row">
 
             <div class="input-wrap">
+
               <ion-input type="text" placeholder="Search Doctor Name" [(ngModel)]="doctorSearch"
-                (ionInput)="searchDoctorInput()">
+                (ionInput)="searchDoctorInput()" (click)="$event.stopPropagation()">
               </ion-input>
+
             </div>
 
-            <ion-button class="add-btn" fill="solid" (click)="openAddDoctor()">
+            <ion-button class="add-btn" fill="solid" (click)="openAddDoctor(); $event.stopPropagation()">
               <ion-icon name="add-outline"></ion-icon>
             </ion-button>
 
           </div>
 
           <!-- Doctor Suggestions -->
-          <div class="test-suggestions overlay-dropdown" *ngIf="showDoctorSuggestions">
+          <div class="test-suggestions overlay-dropdown doctor-dropdown" *ngIf="showDoctorSuggestions"
+            (click)="$event.stopPropagation()">
+
             <div class="suggestion-item" *ngFor="let doc of filteredDoctors" (click)="selectDoctorFromSearch(doc)">
               {{ doc.doctor_name }}
             </div>
 
-            <div class="suggestion-item" *ngIf="filteredDoctors.length === 0">
-              No matching doctor — click + to add new
-            </div>
           </div>
 
         </div>
 
       </div>
 
-      <div class="input-row" *ngIf="!isAdminRole">
+      <div class="input-row" *ngIf="!canViewAmount">
         <div class="input-group" style="flex: 1; position: relative;">
           <label>LAB/HOS</label>
           <div class="input-wrap">
@@ -191,12 +198,13 @@
         </div>
       </div>
 
-      <div class="input-row" *ngIf="isAdminRole">
+      <div class="input-row" *ngIf="canViewAmount">
         <div class="input-group" style="flex: 1;">
           <label>CUSTOM FRANCHISE</label>
           <div class="input-wrap">
             <ion-input type="text" placeholder="Enter Franchise Name" [(ngModel)]="customFranchiseName"
-              (ionInput)="onCustomFranchiseInput()"></ion-input>
+              (ionInput)="onCustomFranchiseInput($event)">
+            </ion-input>
           </div>
         </div>
       </div>
@@ -316,7 +324,7 @@
       <div class="test-suggestions" *ngIf="showSuggestions">
         <div class="suggestion-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
           <span>{{ test.name }}</span>
-          <span class="sug-price" *ngIf="isAdminRole">₹{{ test.mrp }}</span>
+          <span class="sug-price" *ngIf="canViewAmount">₹{{ test.mrp }}</span>
         </div>
       </div>
 
@@ -324,9 +332,9 @@
         <div class="test-header" [class.staff-view]="isFranchiseRole">
           <div>#</div>
           <div>Test Name</div>
-          <div *ngIf="isAdminRole">Price</div>
+          <div *ngIf="canViewAmount">Price</div>
           <div>TAT</div>
-          <div *ngIf="isAdminRole">Dis</div>
+          <div *ngIf="canViewAmount">Dis</div>
           <div>Fluid</div>
           <div>Action</div>
         </div>
@@ -338,9 +346,9 @@
         <div class="test-row" *ngFor="let t of selectedTests; let i = index" [class.staff-view]="isFranchiseRole">
           <div>{{ i + 1 }}</div>
           <div>{{ t.name }}</div>
-          <div *ngIf="isAdminRole">₹{{ t.mrp }}</div>
+          <div *ngIf="canViewAmount">₹{{ t.mrp }}</div>
           <div>{{ t.tat }}</div>
-          <div *ngIf="isAdminRole">{{ t.dis || 0 }}</div>
+          <div *ngIf="canViewAmount">{{ t.dis || 0 }}</div>
           <div>{{ t.fluid }}</div>
           <div>
             <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
@@ -349,7 +357,7 @@
           </div>
         </div>
 
-        <div class="subtotal-row" *ngIf="isAdminRole">
+        <div class="subtotal-row" *ngIf="canViewAmount">
           <span>Sub Total :</span>
           <span class="subtotal-amount">₹{{ getSubTotal() }}</span>
         </div>
@@ -361,7 +369,7 @@
       </div>
     </div>
 
-    <div class="form-card" style="margin-top: 12px;" *ngIf="isAdminRole">
+    <div class="form-card" style="margin-top: 12px;" *ngIf="canViewAmount">
       <div class="form-card-title">Billing & Payment</div>
 
       <div class="input-row">
@@ -516,7 +524,7 @@
 
         <div class="modal-body">
 
-          <ng-container *ngIf="isAdminRole">
+          <ng-container *ngIf="canViewAmount">
             <div class="input-row">
               <div class="input-group" style="flex:1;">
                 <label>Type <span class="required">*</span></label>
@@ -572,7 +580,7 @@
             </div>
           </ng-container>
 
-          <ng-container *ngIf="!isAdminRole">
+          <ng-container *ngIf="!canViewAmount">
             <div class="input-group">
               <label>Doctor Name <span class="required">*</span></label>
               <div class="input-wrap">
@@ -683,7 +691,7 @@
           </div>
         </div>
 
-        <div class="invoice-totals" *ngIf="isAdminRole">
+        <div class="invoice-totals" *ngIf="canViewAmount">
           <div class="inv-total-row">
             <span>Sub Total</span>
             <span>₹{{ savedPatient?.totalAmount }}</span>

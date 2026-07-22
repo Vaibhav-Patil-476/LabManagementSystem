@@ -36,12 +36,117 @@ private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
     );
   }
 
-  createDoctor(body: any): Observable<any> {
-    return this.http.post(
-      `${this.BASE_URL}/api/v1/lab/doctor/create`,
-      body
+createDoctor(payload: any): Observable<any> {
+  const formData = new FormData();
+
+  formData.append(
+    'type',
+    String(payload.type ?? true)
+  );
+
+  formData.append(
+    'doctor_name',
+    String(payload.doctor_name ?? '')
+  );
+
+  formData.append(
+    'mobileNumber',
+    String(payload.mobileNumber ?? '')
+  );
+
+  // IMPORTANT:
+  // Backend DoctorDto.getEmail() null होऊ नये म्हणून
+  // email field नेहमी पाठवत आहोत.
+  formData.append(
+    'email',
+    String(payload.email ?? '')
+  );
+
+  formData.append(
+    'departmentId',
+    String(payload.departmentId ?? 1)
+  );
+
+  formData.append(
+    'address',
+    String(payload.address ?? '')
+  );
+
+  formData.append(
+    'signature',
+    String(payload.signature ?? '')
+  );
+
+  formData.append(
+    'username',
+    String(payload.username ?? '')
+  );
+
+  formData.append(
+    'password',
+    String(payload.password ?? '')
+  );
+
+  // IMPORTANT:
+  // Empty date_of_birth पाठवू नका.
+  // Backend ला java.util.Date अपेक्षित आहे.
+  if (payload.date_of_birth) {
+    formData.append(
+      'date_of_birth',
+      String(payload.date_of_birth)
     );
   }
+
+  formData.append(
+    'level',
+    String(payload.level ?? 1)
+  );
+
+  formData.append(
+    'degree',
+    String(payload.degree ?? '')
+  );
+
+  formData.append(
+    'isReferral',
+    String(payload.isReferral ?? true)
+  );
+
+  formData.append(
+    'labId',
+    String(
+      payload.labId ??
+      this.getCurrentLabId()
+    )
+  );
+
+  console.log(
+    'CREATE DOCTOR FORMDATA:',
+    {
+      type: payload.type ?? true,
+      doctor_name: payload.doctor_name ?? '',
+      mobileNumber: payload.mobileNumber ?? '',
+      email: payload.email ?? '',
+      departmentId: payload.departmentId ?? 1,
+      address: payload.address ?? '',
+      signature: payload.signature ?? '',
+      username: payload.username ?? '',
+      password: payload.password ?? '',
+      date_of_birth: payload.date_of_birth ?? '(not sent)',
+      level: payload.level ?? 1,
+      degree: payload.degree ?? '',
+      isReferral: payload.isReferral ?? true,
+      labId: payload.labId ?? this.getCurrentLabId()
+    }
+  );
+
+  return this.http.post(
+    `${this.BASE_URL}/api/v1/lab/doctor/create`,
+    formData
+  );
+}
+
+
 
   getFranchisesWithWallet(): Observable<any> {
     return this.http.get(
@@ -55,12 +160,12 @@ private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
     );
   }
 
-  createBooking(body: any): Observable<any> {
-    return this.http.post(
-      `${this.BASE_URL}/api/v1/lab/booking/patient/create`,
-      body
-    );
-  }
+createBooking(body: any): Observable<any> {
+  return this.http.post<any>(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/create`,
+    body
+  );
+}
 
   getBooking(id: number): Observable<any> {
     return this.http.get(
@@ -347,4 +452,11 @@ buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmou
       payload
     );
   }
+
+  checkBarcode(payload: any): Observable<any> {
+  return this.http.post(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/checkbarcode`,
+    payload
+  );
+}
 }
