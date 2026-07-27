@@ -14,10 +14,10 @@ export enum AppRole {
 export class RoleService {
 
   constructor(private authService: AuthService) {}
-
-  get currentRole(): string {
-    return this.authService.role;
-  }
+get currentRole(): string {
+  console.log('CURRENT ROLE CHECK:', this.authService.role);
+  return this.authService.role;
+}
 
   get canViewBilling(): boolean {
     return this.currentRole === AppRole.LAB_ADMIN;
@@ -51,11 +51,13 @@ export class RoleService {
 
   // Only Lab Admin can download the generated report PDFs.
   // Staff can view report status only (In Process / Pending / Complete etc.)
-  get canDownloadReports(): boolean {
-    return this.currentRole === AppRole.LAB_ADMIN;
-  }
+ get canDownloadReports(): boolean {
+  return this.currentRole === AppRole.LAB_ADMIN || this.currentRole === AppRole.FRANCHISE;
+}
 
   hasRole(...roles: AppRole[]): boolean {
     return roles.includes(this.currentRole as AppRole);
   }
+
+  
 }

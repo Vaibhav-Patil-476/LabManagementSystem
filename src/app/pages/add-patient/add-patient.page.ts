@@ -180,6 +180,8 @@ export class AddPatientComponent {
 
   selectedLab: any = null;
 
+  selectedStaffLab: any = null;
+
   labSearch = '';
 
   filteredLabs: any[] = [];
@@ -291,9 +293,15 @@ export class AddPatientComponent {
   get isAdminRole(): boolean {
     return this.roleService.isLabSideUI;
   }
-
+  get canEditPayment(): boolean {
+    return this.isAdminRole || this.isStaffRole;
+  }
   get canViewAmount(): boolean {
     return this.isAdminRole || this.isFranchiseRole;
+  }
+
+  get canViewAmountAdmin(): boolean {
+    return this.isAdminRole
   }
 
   get isFranchiseRole(): boolean {
@@ -301,6 +309,14 @@ export class AddPatientComponent {
       this.role === this.ROLE_FRANCHISE ||
       this.role === this.ROLE_FRANCHISE_STAFF
     );
+  }
+
+  get isFranchiseOnlyRole(): boolean {
+    return this.role === this.ROLE_FRANCHISE;
+  }
+
+  get isFranchiseStaffRole(): boolean {
+    return this.role === this.ROLE_FRANCHISE_STAFF;
   }
 
   get isStaffRole(): boolean {
@@ -327,6 +343,12 @@ export class AddPatientComponent {
     );
   }
 
+  getB2BSubTotal(): number {
+    return this.selectedTests.reduce(
+      (sum: number, t: any) => sum + Number(t?.b2b || 0),
+      0
+    );
+  }
   // ============================================================
   // CONSTRUCTOR
   // ============================================================
@@ -363,26 +385,26 @@ export class AddPatientComponent {
   }
 
 
- @HostListener('document:click', ['$event'])
-onDocumentClick(event: MouseEvent): void {
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
 
-  const target = event.target as HTMLElement;
+    const target = event.target as HTMLElement;
 
-  // Doctor search/dropdown च्या आत click असेल
-  // तर dropdown open ठेवा
-  if (
-    target.closest('.doctor-search-wrapper') ||
-    target.closest('.doctor-dropdown')
-  ) {
-    return;
+    // Doctor search/dropdown च्या आत click असेल
+    // तर dropdown open ठेवा
+    if (
+      target.closest('.doctor-search-wrapper') ||
+      target.closest('.doctor-dropdown')
+    ) {
+      return;
+    }
+
+    // Doctor suggestions close करा
+    this.showDoctorSuggestions = false;
+
+    // Filtered doctors clear करा
+    this.filteredDoctors = [];
   }
-
-  // Doctor suggestions close करा
-  this.showDoctorSuggestions = false;
-
-  // Filtered doctors clear करा
-  this.filteredDoctors = [];
-}
 
 
   private doctorSearchTimer: any = null;
@@ -619,7 +641,7 @@ onDocumentClick(event: MouseEvent): void {
 
       percentValue: '',
 
-      percentType: 'percent'
+      percentType: 'commission'
     };
   }
 
@@ -637,302 +659,327 @@ onDocumentClick(event: MouseEvent): void {
   // SAVE DOCTOR
   // ============================================================
 
-saveDoctor(): void {
-  const doctorName = String(
-    this.newDoctor?.name || ''
-  ).trim();
+  saveDoctor(): void {
+    const doctorName = String(
+      this.newDoctor?.name || ''
+    ).trim();
 
-  const mobileNumber = String(
-    this.newDoctor?.mobile || ''
-  ).trim();
+    const mobileNumber = String(
+      this.newDoctor?.mobile || ''
+    ).trim();
 
-  if (!doctorName) {
-    this.toastService.error(
-      'Validation Error',
-      'Please enter doctor name.'
-    );
-    return;
-  }
-
-  if (this.isAdminRole && !mobileNumber) {
-    this.toastService.error(
-      'Validation Error',
-      'Please enter mobile number.'
-    );
-    return;
-  }
-
-  const labId = this.labApi.getCurrentLabId();
-
-  if (!labId) {
-    this.toastService.error(
-      'Lab Error',
-      'Lab ID not found. Please login again.'
-    );
-    return;
-  }
-
-  const payload: any = {
-    type: true,
-
-    doctor_name:
-      doctorName,
-
-    mobileNumber:
-      mobileNumber,
-
-    email:
-      '',
-
-    departmentId:
-      1,
-
-    doctorid:
-      this.hasExistingDoctor &&
-      Number(this.selectedDoctorId) > 0
-        ? Number(this.selectedDoctorId)
-        : 0,
-
-    customDoctorName:
-      this.hasExistingDoctor
-        ? ''
-        : doctorName,
-
-    address:
-      '',
-
-    signature:
-      '',
-
-    username:
-      '',
-
-    password:
-      '',
-
-    level:
-      1,
-
-    degree:
-      String(
-        this.newDoctor?.degree || ''
-      ).trim(),
-
-    isReferral:
-      true,
-
-    labId:
-      labId
-  };
-
-  console.log(
-    'CREATE DOCTOR PAYLOAD:',
-    JSON.stringify(
-      payload,
-      null,
-      2
-    )
-  );
-
-  this.labApi.createDoctor(payload).subscribe({
-
-    next: (res: any) => {
-
-      console.log(
-        'CREATE DOCTOR SUCCESS:',
-        res
+    if (!doctorName) {
+      this.toastService.error(
+        'Validation Error',
+        'Please enter doctor name.'
       );
+      return;
+    }
 
-      const createdDoctorId =
-        Number(
-          res?.doctorid ??
-          res?.doctorId ??
-          res?.id ??
-          res?.data?.doctorid ??
-          res?.data?.doctorId ??
-          res?.data?.id ??
-          res?.doctor?.doctorid ??
-          res?.doctor?.doctorId ??
-          res?.doctor?.id ??
-          0
+    if (this.isAdminRole && !mobileNumber) {
+      this.toastService.error(
+        'Validation Error',
+        'Please enter mobile number.'
+      );
+      return;
+    }
+
+    const labId = this.labApi.getCurrentLabId();
+
+    if (!labId) {
+      this.toastService.error(
+        'Lab Error',
+        'Lab ID not found. Please login again.'
+      );
+      return;
+    }
+
+    const payload: any = {
+      type: true,
+
+      doctor_name:
+        doctorName,
+
+      mobileNumber:
+        mobileNumber,
+
+      email:
+        '',
+
+      departmentId:
+        1,
+
+      doctorid:
+        this.hasExistingDoctor &&
+          Number(this.selectedDoctorId) > 0
+          ? Number(this.selectedDoctorId)
+          : 0,
+
+      customDoctorName:
+        this.hasExistingDoctor
+          ? ''
+          : doctorName,
+
+      address:
+        '',
+
+      signature:
+        '',
+
+      username:
+        '',
+
+      password:
+        '',
+
+      level:
+        1,
+
+      degree:
+        String(
+          this.newDoctor?.degree || ''
+        ).trim(),
+
+      isReferral:
+        true,
+
+      labId:
+        labId
+    };
+
+    console.log(
+      'CREATE DOCTOR PAYLOAD:',
+      JSON.stringify(
+        payload,
+        null,
+        2
+      )
+    );
+
+    this.labApi.createDoctor(payload).subscribe({
+
+      next: (res: any) => {
+
+        console.log(
+          'CREATE DOCTOR SUCCESS:',
+          res
         );
 
-      console.log(
-        'CREATED DOCTOR ID:',
-        createdDoctorId
-      );
-
-      const immediateDoctor =
-        this.normalizeDoctor({
-
-          ...(res?.doctor || {}),
-
-          ...(res?.data || {}),
-
-          ...(res || {}),
-
-          id:
-            createdDoctorId > 0
-              ? createdDoctorId
-              : undefined,
-
-          doctorId:
-            createdDoctorId > 0
-              ? createdDoctorId
-              : undefined,
-
-          doctorid:
-            createdDoctorId > 0
-              ? createdDoctorId
-              : undefined,
-
-          doctor_name:
-            doctorName,
-
-          doctorName:
-            doctorName,
-
-          name:
-            doctorName,
-
-          mobileNumber:
-            mobileNumber,
-
-          degree:
-            this.newDoctor?.degree || '',
-
-          labId:
-            labId
-
-        });
-
-      if (immediateDoctor) {
-
-        const doctorNameLower =
-          doctorName
-            .trim()
-            .toLowerCase();
-
-        const existingIndex =
-          this.doctors.findIndex(
-            (doctor: any) => {
-
-              const existingDoctorId =
-                Number(
-                  doctor?.doctorid ??
-                  doctor?.doctorId ??
-                  doctor?.id ??
-                  doctor?.doctor_id ??
-                  0
-                );
-
-              const existingDoctorName =
-                String(
-                  doctor?.doctor_name ||
-                  doctor?.doctorName ||
-                  doctor?.name ||
-                  ''
-                )
-                  .trim()
-                  .toLowerCase();
-
-              return (
-                (
-                  createdDoctorId > 0 &&
-                  existingDoctorId ===
-                    createdDoctorId
-                ) ||
-                existingDoctorName ===
-                  doctorNameLower
-              );
-            }
+        const createdDoctorId =
+          Number(
+            res?.doctorid ??
+            res?.doctorId ??
+            res?.id ??
+            res?.data?.doctorid ??
+            res?.data?.doctorId ??
+            res?.data?.id ??
+            res?.doctor?.doctorid ??
+            res?.doctor?.doctorId ??
+            res?.doctor?.id ??
+            0
           );
 
-        if (existingIndex >= 0) {
+        console.log(
+          'CREATED DOCTOR ID:',
+          createdDoctorId
+        );
 
-          this.doctors[
-            existingIndex
-          ] = {
+        const immediateDoctor =
+          this.normalizeDoctor({
 
-            ...this.doctors[
-              existingIndex
-            ],
+            ...(res?.doctor || {}),
 
-            ...immediateDoctor,
+            ...(res?.data || {}),
+
+            ...(res || {}),
+
+            id:
+              createdDoctorId > 0
+                ? createdDoctorId
+                : undefined,
+
+            doctorId:
+              createdDoctorId > 0
+                ? createdDoctorId
+                : undefined,
 
             doctorid:
               createdDoctorId > 0
                 ? createdDoctorId
-                : this.doctors[
+                : undefined,
+
+            doctor_name:
+              doctorName,
+
+            doctorName:
+              doctorName,
+
+            name:
+              doctorName,
+
+            mobileNumber:
+              mobileNumber,
+
+            degree:
+              this.newDoctor?.degree || '',
+
+            labId:
+              labId
+
+          });
+
+        if (immediateDoctor) {
+
+          const doctorNameLower =
+            doctorName
+              .trim()
+              .toLowerCase();
+
+          const existingIndex =
+            this.doctors.findIndex(
+              (doctor: any) => {
+
+                const existingDoctorId =
+                  Number(
+                    doctor?.doctorid ??
+                    doctor?.doctorId ??
+                    doctor?.id ??
+                    doctor?.doctor_id ??
+                    0
+                  );
+
+                const existingDoctorName =
+                  String(
+                    doctor?.doctor_name ||
+                    doctor?.doctorName ||
+                    doctor?.name ||
+                    ''
+                  )
+                    .trim()
+                    .toLowerCase();
+
+                return (
+                  (
+                    createdDoctorId > 0 &&
+                    existingDoctorId ===
+                    createdDoctorId
+                  ) ||
+                  existingDoctorName ===
+                  doctorNameLower
+                );
+              }
+            );
+
+          if (existingIndex >= 0) {
+
+            this.doctors[
+              existingIndex
+            ] = {
+
+              ...this.doctors[
+              existingIndex
+              ],
+
+              ...immediateDoctor,
+
+              doctorid:
+                createdDoctorId > 0
+                  ? createdDoctorId
+                  : this.doctors[
                     existingIndex
                   ]?.doctorid
 
-          };
+            };
+
+          } else {
+
+            this.doctors = [
+
+              immediateDoctor,
+
+              ...this.doctors
+
+            ];
+
+          }
+
+          this.filteredDoctors = [
+            ...this.doctors
+          ];
+
+          const savedDoctor =
+            this.doctors.find(
+              (doctor: any) => {
+
+                const id =
+                  Number(
+                    doctor?.doctorid ??
+                    doctor?.doctorId ??
+                    doctor?.id ??
+                    0
+                  );
+
+                const name =
+                  String(
+                    doctor?.doctor_name ||
+                    doctor?.doctorName ||
+                    doctor?.name ||
+                    ''
+                  )
+                    .trim()
+                    .toLowerCase();
+
+                return (
+                  (
+                    createdDoctorId > 0 &&
+                    id === createdDoctorId
+                  ) ||
+                  name ===
+                  doctorNameLower
+                );
+              }
+            );
+
+          if (savedDoctor) {
+
+            this.selectedDoctor =
+              savedDoctor;
+
+            this.selectedDoctorId =
+              Number(
+                savedDoctor?.doctorid ??
+                savedDoctor?.doctorId ??
+                savedDoctor?.id ??
+                createdDoctorId
+              );
+
+            this.patient.doctorId =
+              this.selectedDoctorId;
+
+            this.patient.doctor =
+              doctorName;
+
+            this.doctorSearch =
+              doctorName;
+
+            this.showDoctorSuggestions =
+              false;
+          }
 
         } else {
 
-          this.doctors = [
-
-            immediateDoctor,
-
-            ...this.doctors
-
-          ];
-
-        }
-
-        this.filteredDoctors = [
-          ...this.doctors
-        ];
-
-        const savedDoctor =
-          this.doctors.find(
-            (doctor: any) => {
-
-              const id =
-                Number(
-                  doctor?.doctorid ??
-                  doctor?.doctorId ??
-                  doctor?.id ??
-                  0
-                );
-
-              const name =
-                String(
-                  doctor?.doctor_name ||
-                  doctor?.doctorName ||
-                  doctor?.name ||
-                  ''
-                )
-                  .trim()
-                  .toLowerCase();
-
-              return (
-                (
-                  createdDoctorId > 0 &&
-                  id === createdDoctorId
-                ) ||
-                name ===
-                  doctorNameLower
-              );
-            }
-          );
-
-        if (savedDoctor) {
-
           this.selectedDoctor =
-            savedDoctor;
+            null;
 
           this.selectedDoctorId =
-            Number(
-              savedDoctor?.doctorid ??
-              savedDoctor?.doctorId ??
-              savedDoctor?.id ??
-              createdDoctorId
-            );
+            createdDoctorId > 0
+              ? createdDoctorId
+              : null;
 
           this.patient.doctorId =
-            this.selectedDoctorId;
+            createdDoctorId > 0
+              ? createdDoctorId
+              : null;
 
           this.patient.doctor =
             doctorName;
@@ -940,70 +987,45 @@ saveDoctor(): void {
           this.doctorSearch =
             doctorName;
 
-          this.showDoctorSuggestions =
-            false;
         }
 
-      } else {
+        this.showAddDoctor =
+          false;
 
-        this.selectedDoctor =
-          null;
+        this.resetNewDoctorForm();
 
-        this.selectedDoctorId =
-          createdDoctorId > 0
-            ? createdDoctorId
-            : null;
+        this.toastService.success(
+          'Doctor Added',
+          `${doctorName} added successfully.`
+        );
 
-        this.patient.doctorId =
-          createdDoctorId > 0
-            ? createdDoctorId
-            : null;
+        this.refreshDoctorsInBackground(
+          doctorName,
+          createdDoctorId
+        );
+      },
 
-        this.patient.doctor =
-          doctorName;
+      error: (err: any) => {
 
-        this.doctorSearch =
-          doctorName;
+        console.error(
+          'CREATE DOCTOR API ERROR:',
+          err
+        );
 
+        const errorMessage =
+          err?.error?.message ||
+          err?.error?.error ||
+          err?.error?.detail ||
+          'Failed to add doctor.';
+
+        this.toastService.error(
+          'Error',
+          errorMessage
+        );
       }
 
-      this.showAddDoctor =
-        false;
-
-      this.resetNewDoctorForm();
-
-      this.toastService.success(
-        'Doctor Added',
-        `${doctorName} added successfully.`
-      );
-
-      this.refreshDoctorsInBackground(
-        doctorName,
-        createdDoctorId
-      );
-    },
-
-    error: (err: any) => {
-
-      console.error(
-        'CREATE DOCTOR API ERROR:',
-        err
-      );
-
-      const errorMessage =
-        err?.error?.message ||
-        err?.error?.error ||
-        err?.error?.detail ||
-        'Failed to add doctor.';
-
-      this.toastService.error(
-        'Error',
-        errorMessage
-      );
-    }
-
-  });
-}
+    });
+  }
 
   // ============================================================
   // BACKGROUND DOCTOR REFRESH
@@ -1020,81 +1042,81 @@ saveDoctor(): void {
   // Newly selected doctor preserve केला जातो.
   // ============================================================
 
-refreshDoctorsInBackground(
-  doctorName: string,
-  doctorId: number
-): void {
-  this.labApi.getDoctors().subscribe({
-    next: (res: any) => {
+  refreshDoctorsInBackground(
+    doctorName: string,
+    doctorId: number
+  ): void {
+    this.labApi.getDoctors().subscribe({
+      next: (res: any) => {
 
-      const doctors =
-        res?.data ||
-        res?.doctors ||
-        res?.content ||
-        res ||
-        [];
+        const doctors =
+          res?.data ||
+          res?.doctors ||
+          res?.content ||
+          res ||
+          [];
 
-      if (!Array.isArray(doctors)) {
-        return;
-      }
+        if (!Array.isArray(doctors)) {
+          return;
+        }
 
-      this.doctors = doctors;
+        this.doctors = doctors;
 
-      this.filteredDoctors = [
-        ...doctors
-      ];
+        this.filteredDoctors = [
+          ...doctors
+        ];
 
-      const matchedDoctor =
-        doctors.find((doctor: any) => {
+        const matchedDoctor =
+          doctors.find((doctor: any) => {
 
-          const id = Number(
-            doctor?.doctorid ??
-            doctor?.doctorId ??
-            doctor?.id ??
-            doctor?.doctor_id ??
-            0
-          );
+            const id = Number(
+              doctor?.doctorid ??
+              doctor?.doctorId ??
+              doctor?.id ??
+              doctor?.doctor_id ??
+              0
+            );
 
-          const name = String(
-            doctor?.doctor_name ??
-            doctor?.doctorName ??
-            doctor?.name ??
-            ''
-          )
-            .trim()
-            .toLowerCase();
+            const name = String(
+              doctor?.doctor_name ??
+              doctor?.doctorName ??
+              doctor?.name ??
+              ''
+            )
+              .trim()
+              .toLowerCase();
 
-          return (
-            (doctorId > 0 && id === doctorId) ||
-            name === doctorName.trim().toLowerCase()
-          );
-        });
+            return (
+              (doctorId > 0 && id === doctorId) ||
+              name === doctorName.trim().toLowerCase()
+            );
+          });
 
-      if (matchedDoctor) {
-        this.selectDoctor(
-          matchedDoctor
-        );
-
-        this.doctorSearch =
-          this.getDoctorName(
+        if (matchedDoctor) {
+          this.selectDoctor(
             matchedDoctor
           );
+
+          this.doctorSearch =
+            this.getDoctorName(
+              matchedDoctor
+            );
+        }
+
+        console.log(
+          'Doctors refreshed from backend:',
+          this.doctors
+        );
+      },
+
+      error: (err: any) => {
+        console.error(
+          'Background doctor refresh failed:',
+          err
+        );
       }
-
-      console.log(
-        'Doctors refreshed from backend:',
-        this.doctors
-      );
-    },
-
-    error: (err: any) => {
-      console.error(
-        'Background doctor refresh failed:',
-        err
-      );
-    }
-  });
-}
+    });
+  }
 
   // ============================================================
   // LOAD DOCTORS
@@ -1214,156 +1236,156 @@ refreshDoctorsInBackground(
 
   }
 
-searchDoctorInput(): void {
-  const searchTerm = String(
-    this.doctorSearch || ''
-  ).trim().toLowerCase();
+  searchDoctorInput(): void {
+    const searchTerm = String(
+      this.doctorSearch || ''
+    ).trim().toLowerCase();
 
-  this.selectedDoctor = null;
-  this.selectedDoctorId = 0;
+    this.selectedDoctor = null;
+    this.selectedDoctorId = 0;
 
-  if (!searchTerm) {
-    this.filteredDoctors = [];
-    this.showDoctorSuggestions = false;
-    return;
-  }
-
-  // Always fetch latest doctors from backend.
-  // त्यामुळे Company Web वर नवीन Doctor save केल्यानंतर
-  // Page Refresh करण्याची गरज नाही.
-  this.labApi.getDoctors().subscribe({
-    next: (res: any) => {
-
-      const doctors =
-        res?.data ||
-        res?.doctors ||
-        res?.content ||
-        res ||
-        [];
-
-      if (!Array.isArray(doctors)) {
-        this.filteredDoctors = [];
-        this.showDoctorSuggestions = false;
-        return;
-      }
-
-      // Update main doctor list with latest backend data
-      this.doctors = doctors;
-
-      // Search latest doctors
-      this.filteredDoctors = doctors.filter(
-        (doctor: any) => {
-
-          const doctorName = String(
-            doctor?.doctor_name ||
-            doctor?.doctorName ||
-            doctor?.name ||
-            ''
-          )
-            .trim()
-            .toLowerCase();
-
-          return doctorName.includes(
-            searchTerm
-          );
-        }
-      );
-
-      this.showDoctorSuggestions =
-        this.filteredDoctors.length > 0;
-
-      console.log(
-        'LATEST DOCTORS FROM BACKEND:',
-        this.doctors
-      );
-
-      console.log(
-        'FILTERED DOCTORS:',
-        this.filteredDoctors
-      );
-    },
-
-    error: (err: any) => {
-
-      console.error(
-        'GET LATEST DOCTORS ERROR:',
-        err
-      );
-
+    if (!searchTerm) {
       this.filteredDoctors = [];
       this.showDoctorSuggestions = false;
+      return;
     }
-  });
-}
+
+    // Always fetch latest doctors from backend.
+    // त्यामुळे Company Web वर नवीन Doctor save केल्यानंतर
+    // Page Refresh करण्याची गरज नाही.
+    this.labApi.getDoctors().subscribe({
+      next: (res: any) => {
+
+        const doctors =
+          res?.data ||
+          res?.doctors ||
+          res?.content ||
+          res ||
+          [];
+
+        if (!Array.isArray(doctors)) {
+          this.filteredDoctors = [];
+          this.showDoctorSuggestions = false;
+          return;
+        }
+
+        // Update main doctor list with latest backend data
+        this.doctors = doctors;
+
+        // Search latest doctors
+        this.filteredDoctors = doctors.filter(
+          (doctor: any) => {
+
+            const doctorName = String(
+              doctor?.doctor_name ||
+              doctor?.doctorName ||
+              doctor?.name ||
+              ''
+            )
+              .trim()
+              .toLowerCase();
+
+            return doctorName.includes(
+              searchTerm
+            );
+          }
+        );
+
+        this.showDoctorSuggestions =
+          this.filteredDoctors.length > 0;
+
+        console.log(
+          'LATEST DOCTORS FROM BACKEND:',
+          this.doctors
+        );
+
+        console.log(
+          'FILTERED DOCTORS:',
+          this.filteredDoctors
+        );
+      },
+
+      error: (err: any) => {
+
+        console.error(
+          'GET LATEST DOCTORS ERROR:',
+          err
+        );
+
+        this.filteredDoctors = [];
+        this.showDoctorSuggestions = false;
+      }
+    });
+  }
 
 
   // ============================================================
   // SELECT DOCTOR FROM SEARCH
   // ============================================================
 
-selectDoctorFromSearch(
-  doctor: any
-): void {
+  selectDoctorFromSearch(
+    doctor: any
+  ): void {
 
-  if (!doctor) {
-    return;
-  }
+    if (!doctor) {
+      return;
+    }
 
-  const doctorId =
-    Number(
-      doctor?.doctorid ??
-      doctor?.doctorId ??
-      doctor?.id ??
-      doctor?.doctor_id ??
-      0
+    const doctorId =
+      Number(
+        doctor?.doctorid ??
+        doctor?.doctorId ??
+        doctor?.id ??
+        doctor?.doctor_id ??
+        0
+      );
+
+    const doctorName =
+      String(
+        doctor?.doctor_name ||
+        doctor?.doctorName ||
+        doctor?.name ||
+        ''
+      ).trim();
+
+    if (!doctorId || doctorId <= 0) {
+
+      this.toastService.error(
+        'Doctor Error',
+        'Selected doctor ID not found.'
+      );
+
+      return;
+    }
+
+    this.selectedDoctor =
+      doctor;
+
+    this.selectedDoctorId =
+      doctorId;
+
+    this.patient.doctorId =
+      doctorId;
+
+    this.patient.doctor =
+      doctorName;
+
+    this.doctorSearch =
+      doctorName;
+
+    this.showDoctorSuggestions =
+      false;
+
+    console.log(
+      'SELECTED DOCTOR:',
+      doctor
     );
 
-  const doctorName =
-    String(
-      doctor?.doctor_name ||
-      doctor?.doctorName ||
-      doctor?.name ||
-      ''
-    ).trim();
-
-  if (!doctorId || doctorId <= 0) {
-
-    this.toastService.error(
-      'Doctor Error',
-      'Selected doctor ID not found.'
+    console.log(
+      'SELECTED DOCTOR ID:',
+      doctorId
     );
-
-    return;
   }
-
-  this.selectedDoctor =
-    doctor;
-
-  this.selectedDoctorId =
-    doctorId;
-
-  this.patient.doctorId =
-    doctorId;
-
-  this.patient.doctor =
-    doctorName;
-
-  this.doctorSearch =
-    doctorName;
-
-  this.showDoctorSuggestions =
-    false;
-
-  console.log(
-    'SELECTED DOCTOR:',
-    doctor
-  );
-
-  console.log(
-    'SELECTED DOCTOR ID:',
-    doctorId
-  );
-}
 
   // ============================================================
   // RESOLVE DOCTOR BEFORE BOOKING
@@ -1715,126 +1737,171 @@ selectDoctorFromSearch(
       });
   }
 
-  selectLab(
-    lab: any
-  ) {
-
-    this.selectedLab =
-      lab;
-
-    this.patient.lab =
-      lab?.franchiseName ||
-      lab?.name ||
-      '';
-  }
-
-  searchLabInput() {
-
-    const q =
-      String(
-        this.labSearch || ''
-      )
-        .trim()
-        .toLowerCase();
-
-    if (
-      q.length > 0
-    ) {
-
-      this.filteredLabs =
-        this.labs.filter(
-          (l: any) =>
-            String(
-              l?.franchiseName ||
-              l?.name ||
-              ''
-            )
-              .toLowerCase()
-              .includes(q)
-        );
-
-      this.showLabDropdown =
-        true;
-
-    } else {
-
-      this.filteredLabs = [];
-
-      this.showLabDropdown =
-        false;
-    }
-
-    this.selectedLab =
-      null;
-
-    this.patient.lab =
-      this.labSearch;
-  }
-
-  searchStaffLabInput() {
-
-    if (
-      this.isStaffRole
-    ) {
+  selectLab(lab: any): void {
+    if (!lab) {
       return;
     }
 
-    const q =
-      String(
-        this.staffLabSearch || ''
-      )
-        .trim()
-        .toLowerCase();
+    this.selectedLab = lab;
 
-    if (
-      q.length > 0
-    ) {
-
-      this.filteredStaffLabs =
-        this.labs.filter(
-          (l: any) =>
-            String(
-              l?.franchiseName ||
-              l?.name ||
-              ''
-            )
-              .toLowerCase()
-              .includes(q)
-        );
-
-      this.showStaffLabDropdown =
-        true;
-
-    } else {
-
-      this.filteredStaffLabs = [];
-
-      this.showStaffLabDropdown =
-        false;
-    }
-
-    this.selectedLab =
-      null;
-
-    this.patient.lab =
-      this.staffLabSearch;
-  }
-
-  selectStaffLabFromPicker(
-    lab: any
-  ) {
-
-    this.selectLab(
-      lab
-    );
-
-    this.staffLabSearch =
+    const labName = String(
+      lab?.labName ||
       lab?.franchiseName ||
       lab?.name ||
-      '';
+      ''
+    ).trim();
 
-    this.showStaffLabDropdown =
-      false;
+    this.patient.lab = labName;
+
+    this.labSearch = labName;
+
+    console.log(
+      'LAB SELECTED:',
+      lab
+    );
+  }
+
+  selectStaffLab(lab: any): void {
+    if (!lab) {
+      return;
+    }
+
+    this.selectedStaffLab = lab;
+
+    const labName = String(
+      lab?.labName || lab?.franchiseName || lab?.name || ''
+    ).trim();
+
+    this.patient.lab = labName;
+    this.staffLabSearch = labName;
+  }
+
+  searchLabInput(): void {
+    const q = String(this.labSearch || '')
+      .trim()
+      .toLowerCase();
+
+    // User ने काही type केले नसेल
+    if (!q) {
+      this.filteredLabs = [];
+      this.showLabDropdown = false;
+      this.selectedLab = null;
+      this.patient.lab = '';
+      return;
+    }
+
+    // User typing करताना selected lab reset
+    this.selectedLab = null;
+    this.patient.lab = this.labSearch;
+
+    // ✅ FIX: Collection Center साठी actual FRANCHISES varun search
+    // व्हायला हवं (getFranchises) — getFranchiseLabs() नाही, तो
+    // वेगळाच "staff sub-lab" list आहे (franchiseLabId वापरतो, real
+    // franchiseId नाही). त्यामुळेच booking चुकीच्या collection center
+    // ला जात होता.
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+
+        const list: any[] = Array.isArray(res)
+          ? res
+          : Array.isArray(res?.content)
+            ? res.content
+            : [];
+
+        // Latest backend list update
+        this.labs = list;
+
+        // Search by real franchiseName
+        this.filteredLabs = list.filter((lab: any) => {
+          const labName = String(
+            lab?.franchiseName ||
+            lab?.name ||
+            ''
+          )
+            .trim()
+            .toLowerCase();
+
+          return labName.includes(q);
+        });
+
+        this.showLabDropdown =
+          this.filteredLabs.length > 0;
+
+        console.log(
+          'LATEST FRANCHISES FROM BACKEND:',
+          this.labs
+        );
+
+        console.log(
+          'SEARCHED LAB:',
+          q
+        );
+
+        console.log(
+          'FILTERED LABS:',
+          this.filteredLabs
+        );
+      },
+
+      error: (err: any) => {
+        console.error(
+          'GET LATEST FRANCHISES ERROR:',
+          err
+        );
+
+        this.filteredLabs = [];
+        this.showLabDropdown = false;
+      }
+    });
+  }
+
+  searchStaffLabInput() {
+    if (this.isStaffRole) {
+      return;
+    }
+
+    const q = String(this.staffLabSearch || '').trim().toLowerCase();
+
+    // ✅ FIX: फक्त staff-lab selection reset, Collection Center la touch नाही
+    this.selectedStaffLab = null;
+    this.patient.lab = this.staffLabSearch;
+
+    if (!q) {
+      this.filteredStaffLabs = [];
+      this.showStaffLabDropdown = false;
+      return;
+    }
+    this.labApi.getFranchiseLabs().subscribe({
+      next: (res: any) => {
+        console.log('RAW RESPONSE:', res);
+
+        const list = Array.isArray(res) ? res : (res?.content || []);
+
+        const mapped = list.map((l: any) => ({
+          id: l.franchiseLabId,
+          franchiseLabId: l.franchiseLabId,
+          franchiseName: l.labName,
+          name: l.labName,
+          centerCode: '',
+          additionalDetails: l.additionalDetails || ''
+        }));
+
+        this.filteredStaffLabs = mapped.filter((l: any) =>
+          String(l?.franchiseName || l?.name || '').toLowerCase().includes(q)
+        );
+
+        this.showStaffLabDropdown = this.filteredStaffLabs.length > 0;
+      },
+      error: () => {
+        this.filteredStaffLabs = [];
+        this.showStaffLabDropdown = false;
+      },
+    });
+  }
+  selectStaffLabFromPicker(lab: any) {
+    // ✅ FIX: selectLab() नाही, selectStaffLab() वापर
+    this.selectStaffLab(lab);
+    this.showStaffLabDropdown = false;
   }
 
   onCustomFranchiseInput(
@@ -1875,42 +1942,93 @@ selectDoctorFromSearch(
       true;
   }
 
+  isSavingLab = false;
+
   saveLab() {
 
-    if (
-      !this.newLab.name.trim()
-    ) {
+    const labName = String(this.newLab?.name || '').trim();
 
+    if (!labName) {
       this.toastService.error(
         'Validation Error',
         'Please enter lab name.'
       );
-
       return;
     }
 
-    this.patient.lab =
-      this.newLab.name;
+    if (this.isSavingLab) {
+      return;
+    }
 
-    this.labSearch =
-      this.newLab.name;
+    this.isSavingLab = true;
 
-    this.staffLabSearch =
-      this.newLab.name;
+    const payload = {
+      labName: labName,
+      ownerName: null,
+      mobileNumber: this.newLab.contact
+        ? Number(this.newLab.contact)
+        : null,
+      whatsappNumber: null,
+      additionalDetails: String(this.newLab?.address || '').trim() || null
+    };
 
-    this.selectedLab =
-      null;
+    this.labApi.createFranchiseLab(payload).subscribe({
+      next: (res: any) => {
+        this.isSavingLab = false;
 
-    this.showAddLabModal =
-      false;
+        const newFranchiseLab = {
+          id: res?.franchiseLabId,
+          franchiseId: res?.franchiseLabId,
+          franchiseName: res?.labName || labName,
+          name: res?.labName || labName,
+          centerCode: '',
+          additionalDetails: res?.additionalDetails || this.newLab?.address || ''
+        };
 
-    this.toastService.success(
-      'Lab Added',
-      this.newLab.name +
-      ' added successfully.'
-    );
+        // ✅ Naveen lab फक्त staff-lab list madhe add — Collection
+        // Center cha this.labs/filteredLabs/selectedLab/labSearch
+        // touch नाही.
+        this.filteredStaffLabs = [newFranchiseLab, ...this.filteredStaffLabs];
+
+        this.selectStaffLab(newFranchiseLab);
+
+        this.showAddLabModal = false;
+
+        this.toastService.success(
+          'Lab Added',
+          newFranchiseLab.franchiseName + ' added successfully.'
+        );
+
+        // Background madhe latest labs sync kara (company web var
+        // add kelele labs pan yenar text kelyavar).
+        this.refreshFranchiseLabsInBackground();
+      },
+      error: (err: any) => {
+        this.isSavingLab = false;
+        console.error('CREATE LAB ERROR:', err);
+        const message = err?.error?.message || err?.error?.error || 'Failed to add lab.';
+        this.toastService.error('Error', message);
+      }
+    });
   }
 
+  private refreshFranchiseLabsInBackground(): void {
+    this.labApi.getFranchiseLabs().subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res) ? res : (res?.content || []);
+        const mapped = list.map((l: any) => ({
+          id: l.franchiseLabId,
+          franchiseLabId: l.franchiseLabId,
+          franchiseName: l.labName,
+          name: l.labName,
+          centerCode: ''
+        }));
+        // ✅ FIX: फक्त filteredStaffLabs
+        this.filteredStaffLabs = mapped;
+      },
+      error: () => { }
+    });
+  }
   toggleLabDropdown() {
 
     if (
@@ -1939,21 +2057,34 @@ selectDoctorFromSearch(
       true;
   }
 
-  selectLabFromPicker(
-    lab: any
-  ) {
+  selectLabFromPicker(lab: any): void {
+    if (!lab) {
+      return;
+    }
 
-    this.selectLab(
-      lab
-    );
+    this.selectLab(lab);
 
-    this.labSearch =
+    const labName = String(
+      lab?.labName ||
       lab?.franchiseName ||
       lab?.name ||
-      '';
+      ''
+    ).trim();
 
-    this.showLabDropdown =
-      false;
+    // Textbox clear करू नका.
+    // Selected lab चा name textbox मध्ये राहील.
+    this.labSearch = labName;
+
+    this.patient.lab = labName;
+
+    this.selectedLab = lab;
+
+    this.showLabDropdown = false;
+
+    console.log(
+      'SELECTED LAB:',
+      lab
+    );
   }
 
   // ============================================================
@@ -2736,654 +2867,664 @@ selectDoctorFromSearch(
   }
 
 
-// ============================================================
-// SAVE PATIENT / BOOKING
-// ============================================================
-
-savePatient(): void {
-  const patientName = String(this.patient?.name || '').trim();
-
-  if (!patientName) {
-    this.toastService.error('Validation Error', 'Please enter patient full name.');
-    return;
-  }
-
-  if (
-    this.patient?.age === null ||
-    this.patient?.age === undefined ||
-    String(this.patient.age).trim() === ''
-  ) {
-    this.toastService.error('Validation Error', 'Please enter patient age.');
-    return;
-  }
-
-  if (!this.selectedTests || this.selectedTests.length === 0) {
-    this.toastService.error('Validation Error', 'Please select at least one test.');
-    return;
-  }
-
-  const selectedDoctorId = Number(
-    this.selectedDoctor?.doctorid ??
-    this.selectedDoctor?.doctorId ??
-    this.selectedDoctor?.id ??
-    this.selectedDoctor?.doctor_id ??
-    this.patient?.doctorId ??
-    0
-  );
-
-  const customDoctorName = String(
-    this.selectedDoctor
-      ? ''
-      : this.doctorSearch || this.patient?.doctor || ''
-  ).trim();
-
-  const hasExistingDoctor = selectedDoctorId > 0;
-  const hasCustomDoctor = customDoctorName.length > 0;
-
-  const selfDoctor = (this.doctors || []).find((doctor: any) => {
-    const name = String(
-      doctor?.doctor_name ||
-      doctor?.doctorName ||
-      doctor?.name ||
-      ''
-    ).trim().toLowerCase();
-
-    return name === 'self' || name === 'self doctor';
-  });
-
-  const selfDoctorId = Number(
-    selfDoctor?.doctorid ??
-    selfDoctor?.doctorId ??
-    selfDoctor?.id ??
-    selfDoctor?.doctor_id ??
-    0
-  );
-
-  const finalDoctorId = hasExistingDoctor
-    ? selectedDoctorId
-    : selfDoctorId > 0
-      ? selfDoctorId
-      : 3916;
-
-  if (!hasExistingDoctor && !hasCustomDoctor) {
-    this.toastService.error(
-      'Validation Error',
-      'Please select or enter doctor.'
-    );
-    return;
-  }
-
-  if (!finalDoctorId || finalDoctorId <= 0) {
-    this.toastService.error(
-      'Doctor Error',
-      'Doctor is required please reload or select doctor.'
-    );
-    return;
-  }
-
-  const selectedFranchiseId = Number(
-    this.selectedLab?.franchiseId ??
-    this.selectedLab?.id ??
-    0
-  );
-
-  const franchiseId = selectedFranchiseId;
-
-  const customFranchiseLab = String(
-    this.customFranchiseName || ''
-  ).trim();
-
-  if (!franchiseId || franchiseId <= 0) {
-    this.toastService.error(
-      'Validation Error',
-      'Please select a collection center / franchise from the dropdown.'
-    );
-    return;
-  }
-
-  const tests = this.selectedTests.map((t: any) => {
-    const testId = Number(
-      t?.id ??
-      t?.testId ??
-      0
-    );
-
-    const sample = this.selectedSampleTests.find(
-      (s: any) => Number(s?.testId) === testId
-    );
-
-    const barcode = String(
-      sample?.barcode || ''
-    ).trim();
-
-    const testName = String(
-      t?.name ??
-      t?.test_name ??
-      'NA'
-    ).trim();
-
-    const testMrp = Number(
-      t?.mrp ??
-      t?.test_mrp ??
-      t?.price ??
-      0
-    );
-
-    const testPrice = Number(
-      t?.price ??
-      t?.test_price ??
-      t?.mrp ??
-      0
-    );
-
-    const assignedPrice = Number(
-      t?.assignedPrice ??
-      testPrice
-    );
-
-    const sampleId = Number(
-      sample?.sampleId ??
-      t?.sampleId ??
-      0
-    );
-
-    const sampleName = String(
-      sample?.sampleType ??
-      t?.sampleType ??
-      'OTHER'
-    ).trim();
-
-    const sampleColor = String(
-      sample?.color ??
-      t?.color ??
-      ''
-    );
-
-    return {
-      testId,
-      test_name: testName,
-      test_mrp: testMrp,
-      test_price: testPrice,
-      selectedFluids: [],
-      selectedFluid: 0,
-      sampleId,
-      sampleName,
-      sampleColor,
-      barcode,
-      confirmBarcode: String(
-        sample?.confirmBarcode || barcode
-      ).trim(),
-      assignedPrice,
-      source: t?.source || 'RPL',
-      outSourceLocations: t?.outSourceLocations ?? null,
-      discount: Number(t?.discount || 0),
-      tat: String(t?.tat ?? 'N/A'),
-      testPrice,
-      dob: null,
-      height: null,
-      weight: null,
-      remark: null,
-      history: null,
-      fluid: null,
-      document: null,
-      drawnOnTime: null
-    };
-  });
-
-  const subTotalAmount = Number(
-    this.getSubTotal() || 0
-  );
-
-  const totalAmount = Number(
-    this.billing?.grandTotal || 0
-  );
-
-  const discountAmount = Number(
-    this.billing?.discountAmount || 0
-  );
-
-  const paidAmount = Number(
-    this.billing?.paidAmount || 0
-  );
-
-  const dueAmount = Number(
-    this.billing?.dueAmount || 0
-  );
-
-  const isCashPayment =
-    this.billing?.paymentMode === 'cash';
-
-  const isUpiPayment =
-    this.billing?.paymentMode === 'upi';
-
-  const payload: any = {
-    title: String(
-      this.patient?.title || 'mr'
-    ).trim(),
-
-    customerName: patientName,
-
-    age: String(
-      this.patient?.age ?? ''
-    ).trim(),
-
-    ageType: String(
-      this.patient?.ageType || 'years'
-    ).trim(),
-
-    gender: String(
-      this.patient?.gender || 'male'
-    ).trim(),
-
-    mobileNumber: String(
-      this.patient?.phone || ''
-    ).trim(),
-
-    aadhaarNumber: String(
-      this.patient?.aadhaar || ''
-    ).trim(),
-
-    address: String(
-      this.patient?.address || ''
-    ).trim(),
-
-    history: String(
-      this.patient?.history || ''
-    ).trim(),
-
-    uploadDoc: String(
-      this.selectedFileBase64 || ''
-    ).trim(),
-
-    height: '',
-    weight: '',
-    urgent: false,
-
-    onlineReport:
-      !!this.patient?.eReport,
-
-    homeCollection:
-      !!this.patient?.homeCollection,
-
-    membershipNo: '',
-
-    subTotalAmount,
-
-    totalAmount,
-
-    discountAmount,
-
-    paymentCash:
-      isCashPayment,
-
-    cashAmount:
-      isCashPayment
-        ? paidAmount
-        : 0,
-
-    paymentUPI:
-      isUpiPayment,
-
-    upiAmount:
-      isUpiPayment
-        ? paidAmount
-        : 0,
-
-    paymentOnline:
-      false,
-
-    onlineAmount:
-      '0',
-
-    paidAmount,
-
-    dueAmount,
-
-    discountedAmount:
-      discountAmount,
-
-    discountFrom:
-      this.billing?.discountFromDoctor?.doctor_name ||
-      this.billing?.discountFromDoctor?.name ||
-      '',
-
-    remark: '',
-
-    doctorid:
-      finalDoctorId,
-
-    customDoctorName:
-      customDoctorName,
-
-    customFranchiseLab:
-      customFranchiseLab,
-
-    customFranchiseLabId:
-      '',
-
-    franchiseId:
-      franchiseId,
-
-    paymentTransactionId:
-      String(
-        this.billing?.transactionId || ''
-      ).trim(),
-
-    uhidNumber:
-      String(
-        this.patient?.uhid || ''
-      ).trim(),
-
-    rateListDiscount:
-      0,
-
-    drawnOnTime:
-      '',
-
-    commissionToDoctor:
-      false,
-
-    otherCharges:
-      Number(
-        this.patient?.otherCharges || 0
-      ),
-
-    createdOn:
-      new Date().toISOString(),
-
-    tests
-  };
-
-  console.log(
-    'SELECTED DOCTOR:',
-    this.selectedDoctor
-  );
-
-  console.log(
-    'SELECTED DOCTOR ID:',
-    selectedDoctorId
-  );
-
-  console.log(
-    'SELF DOCTOR:',
-    selfDoctor
-  );
-
-  console.log(
-    'SELF DOCTOR ID:',
-    selfDoctorId
-  );
-
-  console.log(
-    'FINAL DOCTOR ID:',
-    finalDoctorId
-  );
-
-  console.log(
-    'CUSTOM DOCTOR NAME:',
-    customDoctorName
-  );
-
-  console.log(
-    'FINAL BOOKING PAYLOAD:',
-    JSON.stringify(payload, null, 2)
-  );
-
-  this.proceedBookingSave(payload);
-}
-
-
-
-private proceedBookingSave(
-  payload: any
-): void {
-
-  console.log(
-    'SENDING CREATE BOOKING BODY:',
-    JSON.stringify(
-      payload,
-      null,
-      2
-    )
-  );
-
-  this.labApi.createBooking(
-    payload
-  ).subscribe({
-
-    // ==========================================================
-    // SUCCESS
-    // ==========================================================
-
-next: (res: any) => {
-
-  console.log(
-    'BOOKING SUCCESS:',
-    res
-  );
-
-  this.bookingRefresh
-    .triggerRefresh();
-
-  setTimeout(() => {
-
-    this.ngZone.run(() => {
-
-      console.log(
-        'Refreshing Last Patient without page reload...'
-      );
-
-      this.loadLastPatient();
-
-    });
-
-  }, 300);
-
-  this.toastService.success(
-    'Booking Saved',
-    'Patient booking created successfully.'
-  );
-
-  const bookingId =
-    res?.bookingId ??
-    res?.id ??
-    res?.data?.bookingId ??
-    res?.data?.id ??
-    '—';
-
-  this.savedPatient = {
-
-    name:
-      (
-        this.patient?.title
-          ? String(
-              this.patient.title
-            ).toUpperCase() + '. '
-          : ''
-      ) +
-      (
-        this.patient?.name ||
-        '—'
-      ),
-
-    doctor:
-      (
-        this.patient?.doctorTitle
-          ? String(
-              this.patient.doctorTitle
-            ).toUpperCase() + '. '
-          : ''
-      ) +
-      (
-        this.doctorSearch ||
-        this.patient?.doctor ||
-        this.selectedDoctor?.doctor_name ||
-        this.selectedDoctor?.doctorName ||
-        this.selectedDoctor?.name ||
-        '—'
-      ),
-
-    bookingDate:
-      new Date()
-        .toLocaleString(
-          'en-IN',
-          {
-            day: '2-digit',
-            month: '2-digit',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-          }
-        ),
-
-    id:
-      bookingId,
-
-    phone:
-      this.patient?.phone ||
-      '',
-
-    totalAmount:
-      this.getSubTotal(),
-
-    discount:
-      this.billing?.discountAmount ||
-      0,
-
-    grandTotal:
-      this.billing?.grandTotal ||
-      0
-  };
-
-  if (
-    this.isAdminRole
-  ) {
-
-    this.showInvoice =
-      true;
-
-  } else {
-
-    this.toastService.success(
-      'Done!',
-      'You can create the next booking now.'
-    );
-
-    this.resetFormKeepingDoctorAndFranchise();
-
-    setTimeout(() => {
-
-      this.ngZone.run(() => {
-
-        this.loadLastPatient();
-
-      });
-
-    }, 300);
-
-  }
-
-},
-
-
-    // ==========================================================
-    // ERROR
-    // ==========================================================
-
-    error: (err: any) => {
-
-      console.error(
-        'CREATE BOOKING ERROR:',
-        err
-      );
-
-      console.error(
-        'STATUS:',
-        err?.status
-      );
-
-      console.error(
-        'STATUS TEXT:',
-        err?.statusText
-      );
-
-      console.error(
-        'ERROR BODY:',
-        err?.error
-      );
-
-      const message = String(
-        err?.error?.message ||
-        err?.error?.error ||
-        err?.error?.detail ||
-        ''
-      ).trim();
-
-      const normalizedMessage =
-        message.toLowerCase();
-
-      // ========================================================
-      // BARCODE ALREADY USED
-      // ========================================================
-
-      const isBarcodeAlreadyUsed =
-        normalizedMessage.includes('barcode') &&
-        (
-          normalizedMessage.includes('already') ||
-          normalizedMessage.includes('used') ||
-          normalizedMessage.includes('exist') ||
-          normalizedMessage.includes('duplicate') ||
-          normalizedMessage.includes('assigned') ||
-          normalizedMessage.includes('taken')
-        );
-
-      if (
-        isBarcodeAlreadyUsed
-      ) {
-
-        this.toastService.error(
-          'Barcode Already Used',
-          'This barcode has already been used. Please enter a different barcode.'
-        );
-
-        return;
-      }
-
-      // ========================================================
-      // BARCODE DUPLICATE / UNIQUE CONSTRAINT
-      // ========================================================
-
-      const isDuplicateBarcode =
-        normalizedMessage.includes('duplicate') &&
-        normalizedMessage.includes('barcode');
-
-      if (
-        isDuplicateBarcode
-      ) {
-
-        this.toastService.error(
-          'Invalid Barcode',
-          'This barcode is already assigned. Please use another barcode.'
-        );
-
-        return;
-      }
-
-      // ========================================================
-      // DEFAULT BOOKING ERROR
-      // ========================================================
-
-      this.toastService.error(
-        'Booking Error',
-        message ||
-        'Failed to save booking.'
-      );
-
+  // ============================================================
+  // SAVE PATIENT / BOOKING
+  // ============================================================
+
+  savePatient(): void {
+    const patientName = String(this.patient?.name || '').trim();
+
+    if (!patientName) {
+      this.toastService.error('Validation Error', 'Please enter patient full name.');
+      return;
     }
 
-  });
-}
+    if (
+      this.patient?.age === null ||
+      this.patient?.age === undefined ||
+      String(this.patient.age).trim() === ''
+    ) {
+      this.toastService.error('Validation Error', 'Please enter patient age.');
+      return;
+    }
+
+    if (!this.selectedTests || this.selectedTests.length === 0) {
+      this.toastService.error('Validation Error', 'Please select at least one test.');
+      return;
+    }
+
+    const selectedDoctorId = Number(
+      this.selectedDoctor?.doctorid ??
+      this.selectedDoctor?.doctorId ??
+      this.selectedDoctor?.id ??
+      this.selectedDoctor?.doctor_id ??
+      this.patient?.doctorId ??
+      0
+    );
+
+    const customDoctorName = String(
+      this.selectedDoctor
+        ? ''
+        : this.doctorSearch || this.patient?.doctor || ''
+    ).trim();
+
+    const hasExistingDoctor = selectedDoctorId > 0;
+    const hasCustomDoctor = customDoctorName.length > 0;
+
+    const selfDoctor = (this.doctors || []).find((doctor: any) => {
+      const name = String(
+        doctor?.doctor_name ||
+        doctor?.doctorName ||
+        doctor?.name ||
+        ''
+      ).trim().toLowerCase();
+
+      return name === 'self' || name === 'self doctor';
+    });
+
+    const selfDoctorId = Number(
+      selfDoctor?.doctorid ??
+      selfDoctor?.doctorId ??
+      selfDoctor?.id ??
+      selfDoctor?.doctor_id ??
+      0
+    );
+
+    const finalDoctorId = hasExistingDoctor
+      ? selectedDoctorId
+      : selfDoctorId > 0
+        ? selfDoctorId
+        : 3916;
+
+    if (!hasExistingDoctor && !hasCustomDoctor) {
+      this.toastService.error(
+        'Validation Error',
+        'Please select or enter doctor.'
+      );
+      return;
+    }
+
+    if (!finalDoctorId || finalDoctorId <= 0) {
+      this.toastService.error(
+        'Doctor Error',
+        'Doctor is required please reload or select doctor.'
+      );
+      return;
+    }
+
+    const selectedFranchiseId = Number(
+      this.selectedLab?.franchiseId ??
+      this.selectedLab?.id ??
+      0
+    );
+
+    const franchiseId = selectedFranchiseId;
+
+    // ✅ FIX: Admin cha "Custom Franchise" input, ani staff/franchise-staff
+    // cha LAB/HOS typed/selected lab — donhi sathi backend cha same
+    // customFranchiseLab / customFranchiseLabId fields vaparto.
+    const customFranchiseLab = this.isAdminRole
+      ? String(this.customFranchiseName || '').trim()
+      : String(this.patient?.lab || '').trim();
+
+    const customFranchiseLabId = this.isAdminRole
+      ? ''
+      : String(
+        this.selectedStaffLab?.franchiseLabId ??
+        this.selectedStaffLab?.id ??
+        ''
+      );
+
+    if (!franchiseId || franchiseId <= 0) {
+      this.toastService.error(
+        'Validation Error',
+        'Please select a collection center / franchise from the dropdown.'
+      );
+      return;
+    }
+
+    const tests = this.selectedTests.map((t: any) => {
+      const testId = Number(
+        t?.id ??
+        t?.testId ??
+        0
+      );
+
+      const sample = this.selectedSampleTests.find(
+        (s: any) => Number(s?.testId) === testId
+      );
+
+      const barcode = String(
+        sample?.barcode || ''
+      ).trim();
+
+      const testName = String(
+        t?.name ??
+        t?.test_name ??
+        'NA'
+      ).trim();
+
+      const testMrp = Number(
+        t?.mrp ??
+        t?.test_mrp ??
+        t?.price ??
+        0
+      );
+
+      const testPrice = Number(
+        t?.price ??
+        t?.test_price ??
+        t?.mrp ??
+        0
+      );
+
+      const assignedPrice = Number(
+        t?.assignedPrice ??
+        testPrice
+      );
+
+      const sampleId = Number(
+        sample?.sampleId ??
+        t?.sampleId ??
+        0
+      );
+
+      const sampleName = String(
+        sample?.sampleType ??
+        t?.sampleType ??
+        'OTHER'
+      ).trim();
+
+      const sampleColor = String(
+        sample?.color ??
+        t?.color ??
+        ''
+      );
+
+      return {
+        testId,
+        test_name: testName,
+        test_mrp: testMrp,
+        test_price: testPrice,
+        selectedFluids: [],
+        selectedFluid: 0,
+        sampleId,
+        sampleName,
+        sampleColor,
+        barcode,
+        confirmBarcode: String(
+          sample?.confirmBarcode || barcode
+        ).trim(),
+        assignedPrice,
+        source: t?.source || 'RPL',
+        outSourceLocations: t?.outSourceLocations ?? null,
+        discount: Number(t?.discount || 0),
+        tat: String(t?.tat ?? 'N/A'),
+        testPrice,
+        dob: null,
+        height: null,
+        weight: null,
+        remark: null,
+        history: null,
+        fluid: null,
+        document: null,
+        drawnOnTime: null
+      };
+    });
+
+    const subTotalAmount = Number(
+      this.getSubTotal() || 0
+    );
+
+    const totalAmount = Number(
+      this.billing?.grandTotal || 0
+    );
+
+    const discountAmount = Number(
+      this.billing?.discountAmount || 0
+    );
+
+    const paidAmount = Number(
+      this.billing?.paidAmount || 0
+    );
+
+    const dueAmount = Number(
+      this.billing?.dueAmount || 0
+    );
+
+    const isCashPayment =
+      this.billing?.paymentMode === 'cash';
+
+    const isUpiPayment =
+      this.billing?.paymentMode === 'upi';
+
+    const payload: any = {
+      title: String(
+        this.patient?.title || 'mr'
+      ).trim(),
+
+      customerName: patientName,
+
+      age: String(
+        this.patient?.age ?? ''
+      ).trim(),
+
+      ageType: String(
+        this.patient?.ageType || 'years'
+      ).trim(),
+
+      gender: String(
+        this.patient?.gender || 'male'
+      ).trim(),
+
+      mobileNumber: String(
+        this.patient?.phone || ''
+      ).trim(),
+
+      aadhaarNumber: String(
+        this.patient?.aadhaar || ''
+      ).trim(),
+
+      address: String(
+        this.patient?.address || ''
+      ).trim(),
+
+      history: String(
+        this.patient?.history || ''
+      ).trim(),
+
+      uploadDoc: String(
+        this.selectedFileBase64 || ''
+      ).trim(),
+
+      height: '',
+      weight: '',
+      urgent: false,
+
+      onlineReport:
+        !!this.patient?.eReport,
+
+      homeCollection:
+        !!this.patient?.homeCollection,
+
+      membershipNo: '',
+
+      subTotalAmount,
+
+      totalAmount,
+
+      discountAmount,
+
+      paymentCash:
+        isCashPayment,
+
+      cashAmount:
+        isCashPayment
+          ? paidAmount
+          : 0,
+
+      paymentUPI:
+        isUpiPayment,
+
+      upiAmount:
+        isUpiPayment
+          ? paidAmount
+          : 0,
+
+      paymentOnline:
+        false,
+
+      onlineAmount:
+        '0',
+
+      paidAmount,
+
+      dueAmount,
+
+      discountedAmount:
+        discountAmount,
+
+      discountFrom:
+        this.billing?.discountFromDoctor?.doctor_name ||
+        this.billing?.discountFromDoctor?.name ||
+        '',
+
+      remark: '',
+
+      doctorid:
+        finalDoctorId,
+
+      customDoctorName:
+        customDoctorName,
+
+      customFranchiseLab:
+        customFranchiseLab,
+
+      customFranchiseLabId:
+        customFranchiseLabId,
+      franchiseId:
+        franchiseId,
+
+      paymentTransactionId:
+        String(
+          this.billing?.transactionId || ''
+        ).trim(),
+
+      uhidNumber:
+        String(
+          this.patient?.uhid || ''
+        ).trim(),
+
+      rateListDiscount:
+        0,
+
+      drawnOnTime:
+        '',
+
+      commissionToDoctor:
+        false,
+
+      otherCharges:
+        Number(
+          this.patient?.otherCharges || 0
+        ),
+
+      createdOn:
+        new Date().toISOString(),
+
+      tests
+    };
+
+    console.log(
+      'SELECTED DOCTOR:',
+      this.selectedDoctor
+    );
+
+    console.log(
+      'SELECTED DOCTOR ID:',
+      selectedDoctorId
+    );
+
+    console.log(
+      'SELF DOCTOR:',
+      selfDoctor
+    );
+
+    console.log(
+      'SELF DOCTOR ID:',
+      selfDoctorId
+    );
+
+    console.log(
+      'FINAL DOCTOR ID:',
+      finalDoctorId
+    );
+
+    console.log(
+      'CUSTOM DOCTOR NAME:',
+      customDoctorName
+    );
+
+    console.log(
+      'FINAL BOOKING PAYLOAD:',
+      JSON.stringify(payload, null, 2)
+    );
+
+    this.proceedBookingSave(payload);
+  }
+
+
+
+  private proceedBookingSave(
+    payload: any
+  ): void {
+
+    console.log(
+      'SENDING CREATE BOOKING BODY:',
+      JSON.stringify(
+        payload,
+        null,
+        2
+      )
+    );
+
+    this.labApi.createBooking(
+      payload
+    ).subscribe({
+
+      // ==========================================================
+      // SUCCESS
+      // ==========================================================
+
+      next: (res: any) => {
+
+        console.log(
+          'BOOKING SUCCESS:',
+          res
+        );
+
+        this.bookingRefresh
+          .triggerRefresh();
+
+        setTimeout(() => {
+
+          this.ngZone.run(() => {
+
+            console.log(
+              'Refreshing Last Patient without page reload...'
+            );
+
+            this.loadLastPatient();
+
+          });
+
+        }, 300);
+
+        this.toastService.success(
+          'Booking Saved',
+          'Patient booking created successfully.'
+        );
+
+        const bookingId =
+          res?.bookingId ??
+          res?.id ??
+          res?.data?.bookingId ??
+          res?.data?.id ??
+          '—';
+
+        this.savedPatient = {
+
+          name:
+            (
+              this.patient?.title
+                ? String(
+                  this.patient.title
+                ).toUpperCase() + '. '
+                : ''
+            ) +
+            (
+              this.patient?.name ||
+              '—'
+            ),
+
+          doctor:
+            (
+              this.patient?.doctorTitle
+                ? String(
+                  this.patient.doctorTitle
+                ).toUpperCase() + '. '
+                : ''
+            ) +
+            (
+              this.doctorSearch ||
+              this.patient?.doctor ||
+              this.selectedDoctor?.doctor_name ||
+              this.selectedDoctor?.doctorName ||
+              this.selectedDoctor?.name ||
+              '—'
+            ),
+
+          bookingDate:
+            new Date()
+              .toLocaleString(
+                'en-IN',
+                {
+                  day: '2-digit',
+                  month: '2-digit',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  hour12: true
+                }
+              ),
+
+          id:
+            bookingId,
+
+          phone:
+            this.patient?.phone ||
+            '',
+
+          totalAmount:
+            this.getSubTotal(),
+
+          discount:
+            this.billing?.discountAmount ||
+            0,
+
+          grandTotal:
+            this.billing?.grandTotal ||
+            0
+        };
+
+        if (
+          this.isAdminRole
+        ) {
+
+          this.showInvoice =
+            true;
+
+        } else {
+
+          this.toastService.success(
+            'Done!',
+            'You can create the next booking now.'
+          );
+
+          this.resetFormKeepingDoctorAndFranchise();
+
+          setTimeout(() => {
+
+            this.ngZone.run(() => {
+
+              this.loadLastPatient();
+
+            });
+
+          }, 300);
+
+        }
+
+      },
+
+
+      // ==========================================================
+      // ERROR
+      // ==========================================================
+
+      error: (err: any) => {
+
+        console.error(
+          'CREATE BOOKING ERROR:',
+          err
+        );
+
+        console.error(
+          'STATUS:',
+          err?.status
+        );
+
+        console.error(
+          'STATUS TEXT:',
+          err?.statusText
+        );
+
+        console.error(
+          'ERROR BODY:',
+          err?.error
+        );
+
+        const message = String(
+          err?.error?.message ||
+          err?.error?.error ||
+          err?.error?.detail ||
+          ''
+        ).trim();
+
+        const normalizedMessage =
+          message.toLowerCase();
+
+        // ========================================================
+        // BARCODE ALREADY USED
+        // ========================================================
+
+        const isBarcodeAlreadyUsed =
+          normalizedMessage.includes('barcode') &&
+          (
+            normalizedMessage.includes('already') ||
+            normalizedMessage.includes('used') ||
+            normalizedMessage.includes('exist') ||
+            normalizedMessage.includes('duplicate') ||
+            normalizedMessage.includes('assigned') ||
+            normalizedMessage.includes('taken')
+          );
+
+        if (
+          isBarcodeAlreadyUsed
+        ) {
+
+          this.toastService.error(
+            'Barcode Already Used',
+            'This barcode has already been used. Please enter a different barcode.'
+          );
+
+          return;
+        }
+
+        // ========================================================
+        // BARCODE DUPLICATE / UNIQUE CONSTRAINT
+        // ========================================================
+
+        const isDuplicateBarcode =
+          normalizedMessage.includes('duplicate') &&
+          normalizedMessage.includes('barcode');
+
+        if (
+          isDuplicateBarcode
+        ) {
+
+          this.toastService.error(
+            'Invalid Barcode',
+            'This barcode is already assigned. Please use another barcode.'
+          );
+
+          return;
+        }
+
+        // ========================================================
+        // DEFAULT BOOKING ERROR
+        // ========================================================
+
+        this.toastService.error(
+          'Booking Error',
+          message ||
+          'Failed to save booking.'
+        );
+
+      }
+
+    });
+  }
 
 
   // ============================================================

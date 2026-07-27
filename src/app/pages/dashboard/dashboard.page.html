@@ -116,7 +116,7 @@
                   <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
                   <span>Edit Tests</span>
                 </div>
-                <div class="sc-action-item" (click)="onEditPatientClick(item)">
+                <div class="sc-action-item" *ngIf="canEditPatient" (click)="onEditPatientClick(item)">
                   <span class="sc-action-icon"><ion-icon name="person-outline"></ion-icon></span>
                   <span>Edit Patient</span>
                 </div>
@@ -131,6 +131,14 @@
                     <ion-icon name="print-outline" *ngIf="printingId !== item.bookingId"></ion-icon>
                   </span>
                   <span>{{ printingId === item.bookingId ? 'Generating...' : 'Print Bill' }}</span>
+                </div>
+                <div class="sc-action-item" *ngIf="canShowDownloadReport && item.hasCompletedTest"
+                  [class.item-loading]="downloadingReportId === item.bookingId" (click)="downloadReportInline(item)">
+                  <span class="sc-action-icon">
+                    <ion-spinner name="crescent" *ngIf="downloadingReportId === item.bookingId"></ion-spinner>
+                    <ion-icon name="download-outline" *ngIf="downloadingReportId !== item.bookingId"></ion-icon>
+                  </span>
+                  <span>{{ downloadingReportId === item.bookingId ? 'Generating...' : 'Download Report' }}</span>
                 </div>
               </div>
             </div>
@@ -344,10 +352,10 @@
 
 
                       <td>
-
-                        <ion-icon name="trash-outline" class="delete-icon" (click)="removeTestInline(test)">
+                        <ion-icon name="trash-outline" class="delete-icon"
+                          [class.disabled-icon]="!(test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr')"
+                          (click)="(test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr') && removeTestInline(test)">
                         </ion-icon>
-
                       </td>
 
                     </tr>
@@ -478,29 +486,11 @@
                 <!-- ============================================
                    PAY NOW
                    ============================================= -->
-
-                <div class="summary-field">
-
-                  <label>
-                    Pay Now
-                  </label>
-
-                  <ng-container *ngIf="canEditBilling; else payNowLocked">
-
-                    <input type="number" [(ngModel)]="payNowAmount" (ngModelChange)="onPayNowChangeInline()"
-                      placeholder="0">
-
-                  </ng-container>
-
-
-                  <ng-template #payNowLocked>
-
-                    <input type="text" value="." readonly disabled class="locked-field">
-
-                  </ng-template>
-
+                <div class="summary-field" *ngIf="canViewPayment">
+                  <label>Pay Now</label>
+                  <input type="number" [(ngModel)]="payNowAmount" (ngModelChange)="onPayNowChangeInline()"
+                    placeholder="0">
                 </div>
-
 
                 <!-- ============================================
                    TOTAL PAID
@@ -525,48 +515,23 @@
                    DUE
                    ============================================= -->
 
-                <div class="summary-field">
-
-                  <label>
-                    Due
-                  </label>
-
-                  <input type="text" [value]="
-                    canViewAmount
-                      ? dueAmount
-                      : '.'
-                  " readonly [class.zero]="dueAmount === 0">
-
+                <div class="summary-field" *ngIf="canViewPayment">
+                  <label>Due</label>
+                  <input type="text" [value]="dueAmount" readonly [class.zero]="dueAmount === 0">
                 </div>
-
 
                 <!-- ============================================
                    PAYMENT METHOD
                    ============================================= -->
 
-                <div class="summary-field payment-method-field">
-
-                  <label>
-                    Payment Method
-                  </label>
-
-                  <ion-select [(ngModel)]="paymentMethod" interface="popover" [disabled]="!canEditBilling"
+                <div class="summary-field payment-method-field" *ngIf="canViewPayment">
+                  <label>Payment Method</label>
+                  <ion-select [(ngModel)]="paymentMethod" interface="popover" [disabled]="!canViewPayment"
                     class="premium-select">
-
-                    <ion-select-option value="cash">
-                      Cash
-                    </ion-select-option>
-
-                    <ion-select-option value="upi">
-                      UPI
-                    </ion-select-option>
-
-                    <ion-select-option value="online">
-                      Online
-                    </ion-select-option>
-
+                    <ion-select-option value="cash">Cash</ion-select-option>
+                    <ion-select-option value="upi">UPI</ion-select-option>
+                    <ion-select-option value="online">Online</ion-select-option>
                   </ion-select>
-
                 </div>
 
               </div>
@@ -669,43 +634,55 @@
                 </div>
               </div>
             </div>
-
             <div class="form-section">
-              <div class="form-section-title"><ion-icon name="medkit-outline"></ion-icon> Doctor &amp; Lab</div>
-              <div class="patient-form-grid">
-                <div class="field-row">
-                  <div class="summary-field narrow">
-                    <label>Doctor Title</label>
-                    <ion-select [(ngModel)]="editPatientData.doctorTitle" interface="popover" placeholder="Select"
-                      class="premium-select">
-                      <ion-select-option value="dr">Dr</ion-select-option>
-                      <ion-select-option value="prof">Prof</ion-select-option>
-                    </ion-select>
+              <div class="form-section-title">
+                <ion-icon name="medkit-outline"></ion-icon>
+                Doctor &amp; Lab
+              </div>
+
+              <div class="doctor-lab-stack">
+
+                <div class="summary-field doctor-search-field" style="position: relative;">
+                  <label>Ref. Doctor</label>
+
+                  <div class="doctor-input-wrapper">
+                    <input type="text" [(ngModel)]="doctorSearch" (ngModelChange)="searchDoctorInput()"
+                      placeholder="Search doctor name" autocomplete="off" name="refDoctorSearch">
+
+                    <ion-icon *ngIf="doctorSearch" name="close-circle-outline" class="clear-doctor-search"
+                      (click)="doctorSearch = ''; searchDoctorInput()">
+                    </ion-icon>
                   </div>
-                  <div class="summary-field wide">
-                    <label>Ref. Doctor</label>
-                    <div class="inline-input-btn">
-                      <input type="text" [(ngModel)]="editPatientData.doctor" placeholder="Doctor name">
-                      <ion-button size="small" fill="solid" color="primary" (click)="openDoctorPicker()">
-                        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
-                      </ion-button>
+
+                  <div class="test-suggestions overlay-dropdown doctor-dropdown" *ngIf="showDoctorSuggestions">
+                    <div class="suggestion-item" *ngFor="let doc of filteredDoctors"
+                      (mousedown)="$event.preventDefault()" (click)="selectDoctorFromSearch(doc)">
+                      {{ doc.doctor_name || doc.doctorName || doc.name }}
                     </div>
                   </div>
                 </div>
 
-                <div class="summary-field span-3" *ngIf="isAdminRole">
-                  <label>Lab</label>
-                  <div class="inline-input-btn">
-                    <input type="text" [(ngModel)]="editPatientData.lab" placeholder="Lab (SELF)">
-                    <ion-button size="small" fill="solid" color="primary" (click)="openLabPicker()">
-                      <ion-icon slot="icon-only" name="add-outline"></ion-icon>
-                    </ion-button>
+                <div class="summary-field">
+                  <label>Custom Doctor Name</label>
+                  <input type="text" [(ngModel)]="editPatientData.customDoctorName"
+                    placeholder="Enter custom doctor name">
+                </div>
+
+                <div class="summary-field lab-search-field" style="position: relative;">
+                  <label>Custom Lab Name</label>
+                  <input type="text" [(ngModel)]="customLabSearch" (ngModelChange)="searchCustomLabInput()"
+                    placeholder="Enter custom lab name" autocomplete="off">
+
+                  <div class="test-suggestions overlay-dropdown"
+                    *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
+                    <div class="suggestion-item" *ngFor="let lab of filteredCustomLabs"
+                      (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
+                      <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
+                          *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
+                    </div>
                   </div>
                 </div>
-                <div class="summary-field span-3" *ngIf="!isAdminRole">
-                  <label>Lab</label>
-                  <input type="text" [value]="editPatientData.lab" readonly>
-                </div>
+
               </div>
             </div>
 
@@ -822,26 +799,28 @@
             <div class="barcode-row-card" *ngFor="let row of barcodeRows">
               <div class="brc-top">
                 <span class="brc-sample-badge">{{ row.sampleType }}</span>
-                <span class="status brc-status" [ngClass]="row.status === 'RECEIVED' ? 'completed' : 'pending'">{{
+                <span class="status brc-status"
+                  [ngClass]="row.status === 'RECEIVED' ? 'completed' : (row.status === 'CANCEL' ? 'cancel-status' : 'pending')">{{
                   row.status }}</span>
               </div>
               <div class="brc-fields">
                 <div class="brc-field"><label>Old Barcode</label><input type="text" [value]="row.oldBarcode" readonly
                     class="brc-input readonly"></div>
                 <div class="brc-field"><label>New Barcode</label><input type="text" [(ngModel)]="row.newBarcode"
-                    class="brc-input"></div>
+                    class="brc-input" [readonly]="!row.canEditBarcode" [disabled]="!row.canEditBarcode"></div>
                 <div class="brc-field">
                   <label>Receive Date &amp; Time</label>
-                  <div class="brc-input brc-datetime-trigger" (click)="openDateTimePicker(row)">
+                  <div class="brc-input brc-datetime-trigger" [class.disabled-field]="!row.canEditBarcode"
+                    (click)="row.canEditBarcode && openDateTimePicker(row)">
                     <ion-icon name="calendar-outline"></ion-icon>
                     <span>{{ row.receiveDate ? (row.receiveDate | date:'MMM d, y, h:mm a') : 'Select date & time'
                       }}</span>
                   </div>
                 </div>
               </div>
-              <ion-button expand="block" fill="solid" class="update-barcode-btn" [disabled]="row.saving"
-                (click)="updateBarcodeRow(row)">
-                {{ row.saving ? 'Saving...' : 'Update Barcode' }}
+              <ion-button expand="block" fill="solid" class="update-barcode-btn"
+                [disabled]="row.saving || !row.canEditBarcode" (click)="updateBarcodeRow(row)">
+                {{ row.saving ? 'Saving...' : (row.canEditBarcode ? 'Update Barcode' : 'Not Allowed') }}
               </ion-button>
             </div>
             <div *ngIf="barcodeRows.length === 0" class="empty-tests">No samples found</div>
@@ -909,23 +888,29 @@
           <span class="filter-icon"><ion-icon name="calendar-outline"></ion-icon></span>
           <div>
             <p>Viewing activity for</p>
-            <strong>{{ filterDate === todayKey ? 'Today' : 'Selected date' }}</strong>
+            <strong>{{ (fromDate === todayKey && toDate === todayKey) ? 'Today' : '' }}</strong>
           </div>
         </div>
 
         <div class="filter-controls">
-          <button type="button" class="date-trigger" (click)="openDatePicker()" aria-label="Select dashboard date">
+          <button type="button" class="date-trigger" (click)="openDateRangePicker()"
+            aria-label="Select dashboard date range">
             <ion-icon name="calendar-outline"></ion-icon>
-            <span>{{ filterDate | date:'MM/dd/yyyy' }}</span>
+            <span>{{ fromDate | date:'MM/dd/yyyy' }} – {{ toDate | date:'MM/dd/yyyy' }}</span>
           </button>
 
           <mat-form-field class="hidden-date-field" appearance="fill">
-            <input matInput [matDatepicker]="datePicker" [(ngModel)]="pickedDate" [ngModelOptions]="{standalone: true}"
-              (dateChange)="onPickedDateChange($event)" readonly>
-            <mat-datepicker #datePicker></mat-datepicker>
+            <mat-date-range-input [rangePicker]="rangePicker">
+              <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+                (dateChange)="onRangeStartChange($event)" readonly>
+              <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+                (dateChange)="onRangeEndChange($event)" readonly>
+            </mat-date-range-input>
+            <mat-date-range-picker #rangePicker></mat-date-range-picker>
           </mat-form-field>
 
-          <button type="button" *ngIf="filterDate !== todayKey" class="today-button" (click)="resetToToday()">
+          <button type="button" *ngIf="!(fromDate === todayKey && toDate === todayKey)" class="today-button"
+            (click)="resetToToday()">
             Today
           </button>
         </div>
@@ -933,7 +918,20 @@
 
       <ng-container *ngIf="loading; else loadedContent">
         <section class="stats-grid" aria-label="Loading dashboard statistics">
-          <article class="metric-card skeleton-card" *ngFor="let i of [1,2,3,4]">
+          <article class="metric-card dual-metric skeleton-card" *ngFor="let i of [1,2,3]">
+            <span class="skeleton shimmer metric-icon-placeholder"></span>
+            <div class="dual-metric-body">
+              <span class="skeleton shimmer line-sm" style="width:50%"></span>
+              <div class="dual-metric-row">
+                <div>
+                  <span class="skeleton shimmer line-md"></span>
+                  <span class="skeleton shimmer line-sm"></span>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="metric-card skeleton-card">
             <span class="skeleton shimmer metric-icon-placeholder"></span>
             <div>
               <span class="skeleton shimmer line-lg"></span>
@@ -1014,13 +1012,12 @@
               <span class="skeleton shimmer line-md"></span>
               <div class="booking-skeleton-main">
                 <span class="skeleton shimmer line-lg"></span>
-                <span class="skeleton shimmer line-lg"></span>
+
               </div>
               <div class="booking-skeleton-stats">
                 <span class="skeleton shimmer"></span>
-                <span class="skeleton shimmer"></span>
-                <span class="skeleton shimmer"></span>
-                <span class="skeleton shimmer"></span>
+
+
               </div>
             </article>
           </div>

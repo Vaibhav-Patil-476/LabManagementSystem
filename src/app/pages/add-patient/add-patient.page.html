@@ -161,28 +161,31 @@
 
       </div>
 
-      <div class="input-row" *ngIf="!canViewAmount">
+      <div class="input-row" *ngIf="!isAdminRole">
         <div class="input-group" style="flex: 1; position: relative;">
           <label>LAB/HOS</label>
-          <div class="input-wrap">
-            <ion-input type="text" placeholder="Lab" [(ngModel)]="staffLabSearch" [readonly]="isStaffRole"
-              (ionInput)="searchStaffLabInput()">
-            </ion-input>
+          <div class="doctor-input-row">
+
+            <div class="input-wrap">
+              <ion-input type="text" placeholder="Lab" [(ngModel)]="staffLabSearch" [readonly]="isStaffRole"
+                (ionInput)="searchStaffLabInput()">
+              </ion-input>
+
+            </div>
+            <ion-button class="add-btn" fill="solid" (click)="openAddLabModal(); $event.stopPropagation()">
+              <ion-icon name="add-outline"></ion-icon>
+            </ion-button>
+
           </div>
 
-          <div class="test-suggestions overlay-dropdown" *ngIf="showStaffLabDropdown && !isStaffSideUI">
+          <div class="test-suggestions overlay-dropdown" *ngIf="showStaffLabDropdown">
             <div class="suggestion-item" *ngFor="let lab of filteredStaffLabs" (click)="selectStaffLabFromPicker(lab)">
-              <span>{{ lab.franchiseName || lab.name }}</span>
+              <span>{{ lab.franchiseName || lab.name }}<ng-container *ngIf="lab.additionalDetails"> - {{
+                  lab.additionalDetails }}</ng-container></span>
             </div>
-            <div class="suggestion-item" *ngIf="filteredStaffLabs.length === 0">
-              No matching lab — click + to add new
-            </div>
+
           </div>
         </div>
-
-        <ion-button class="add-btn" fill="solid" color="primary" (click)="openAddLabModal()" *ngIf="!isStaffSideUI">
-          <ion-icon name="add-outline"></ion-icon>
-        </ion-button>
       </div>
 
     </div>
@@ -198,7 +201,7 @@
         </div>
       </div>
 
-      <div class="input-row" *ngIf="canViewAmount">
+      <div class="input-row" *ngIf="canViewAmountAdmin">
         <div class="input-group" style="flex: 1;">
           <label>CUSTOM FRANCHISE</label>
           <div class="input-wrap">
@@ -324,17 +327,19 @@
       <div class="test-suggestions" *ngIf="showSuggestions">
         <div class="suggestion-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
           <span>{{ test.name }}</span>
-          <span class="sug-price" *ngIf="canViewAmount">₹{{ test.mrp }}</span>
+          <span class="sug-price" *ngIf="!isStaffRole && !isFranchiseStaffRole">₹{{ test.mrp }}</span>
         </div>
       </div>
 
-      <div class="test-table" [class.staff-view]="isFranchiseRole">
-        <div class="test-header" [class.staff-view]="isFranchiseRole">
+      <!-- ===================== LAB_ADMIN VIEW ===================== -->
+      <!-- Columns: #, Test Name, Price, TAT, Dis, Fluid, Action -->
+      <div class="test-table" *ngIf="isAdminRole">
+        <div class="test-header">
           <div>#</div>
           <div>Test Name</div>
-          <div *ngIf="canViewAmount">Price</div>
+          <div>Price</div>
           <div>TAT</div>
-          <div *ngIf="canViewAmount">Dis</div>
+          <div>Dis</div>
           <div>Fluid</div>
           <div>Action</div>
         </div>
@@ -343,12 +348,12 @@
           No Tests selected
         </div>
 
-        <div class="test-row" *ngFor="let t of selectedTests; let i = index" [class.staff-view]="isFranchiseRole">
+        <div class="test-row" *ngFor="let t of selectedTests; let i = index">
           <div>{{ i + 1 }}</div>
           <div>{{ t.name }}</div>
-          <div *ngIf="canViewAmount">₹{{ t.mrp }}</div>
+          <div>₹{{ t.mrp }}</div>
           <div>{{ t.tat }}</div>
-          <div *ngIf="canViewAmount">{{ t.dis || 0 }}</div>
+          <div>{{ t.dis || 0 }}</div>
           <div>{{ t.fluid }}</div>
           <div>
             <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
@@ -357,19 +362,117 @@
           </div>
         </div>
 
-        <div class="subtotal-row" *ngIf="canViewAmount">
+        <div class="subtotal-row">
           <span>Sub Total :</span>
           <span class="subtotal-amount">₹{{ getSubTotal() }}</span>
         </div>
+      </div>
 
-        <div class="subtotal-row" *ngIf="isFranchiseRole">
+      <!-- ===================== FRANCHISE VIEW ===================== -->
+      <!-- Columns: #, Test Name, B2B, TAT, MRP, Fluid, Action -->
+      <div class="test-table" *ngIf="isFranchiseOnlyRole">
+        <div class="test-header">
+          <div>#</div>
+          <div>Test Name</div>
+          <div>B2B</div>
+          <div>TAT</div>
+          <div>MRP</div>
+
+          <div>Action</div>
+        </div>
+
+        <div class="test-empty" *ngIf="selectedTests.length === 0">
+          No Tests selected
+        </div>
+
+        <div class="test-row" *ngFor="let t of selectedTests; let i = index">
+          <div>{{ i + 1 }}</div>
+          <div>{{ t.name }}</div>
+          <div>{{ t.b2b }}</div>
+          <div>{{ t.tat }}</div>
+          <div>{{ t.mrp }}</div>
+
+          <div>
+            <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <div class="subtotal-row">
+          <span>Sub Total :</span>
+          <span class="subtotal-amount">{{ getB2BSubTotal() }}</span>
+        </div>
+      </div>
+
+      <!-- ===================== FRANCHISE STAFF VIEW ===================== -->
+      <!-- Columns: #, Test Name, TAT, Fluid, Action (NO price/B2B/MRP shown) -->
+      <div class="test-table" *ngIf="isFranchiseStaffRole">
+        <div class="test-header">
+          <div>#</div>
+          <div>Test Name</div>
+          <div>TAT</div>
+          <div>Fluid</div>
+          <div>Action</div>
+        </div>
+
+        <div class="test-empty" *ngIf="selectedTests.length === 0">
+          No Tests selected
+        </div>
+
+        <div class="test-row" *ngFor="let t of selectedTests; let i = index">
+          <div>{{ i + 1 }}</div>
+          <div>{{ t.name }}</div>
+          <div>{{ t.tat }}</div>
+          <div>{{ t.fluid }}</div>
+          <div>
+            <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <div class="subtotal-row">
+          <span>Sub Total :</span>
+          <span class="subtotal-amount">.</span>
+        </div>
+      </div>
+
+      <!-- ===================== STAFF VIEW ===================== -->
+      <!-- Columns: #, Test Name, TAT, Fluid, Action (NO price shown) -->
+      <div class="test-table" *ngIf="isStaffRole">
+        <div class="test-header">
+          <div>#</div>
+          <div>Test Name</div>
+          <div>TAT</div>
+          <div>Fluid</div>
+          <div>Action</div>
+        </div>
+
+        <div class="test-empty" *ngIf="selectedTests.length === 0">
+          No Tests selected
+        </div>
+
+        <div class="test-row" *ngFor="let t of selectedTests; let i = index">
+          <div>{{ i + 1 }}</div>
+          <div>{{ t.name }}</div>
+          <div>{{ t.tat }}</div>
+          <div>{{ t.fluid }}</div>
+          <div>
+            <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
+              <ion-icon name="trash-outline"></ion-icon>
+            </ion-button>
+          </div>
+        </div>
+
+        <div class="subtotal-row">
           <span>Sub Total :</span>
           <span class="subtotal-amount">.</span>
         </div>
       </div>
     </div>
 
-    <div class="form-card" style="margin-top: 12px;" *ngIf="canViewAmount">
+    <div class="form-card" style="margin-top: 12px;" *ngIf="isAdminRole">
       <div class="form-card-title">Billing & Payment</div>
 
       <div class="input-row">
@@ -414,7 +517,8 @@
         <div class="input-group" style="flex: 1;">
           <label>Payment Mode</label>
           <div class="input-wrap">
-            <ion-select [(ngModel)]="billing.paymentMode" interface="popover" (ionChange)="calculateBilling()">
+            <ion-select [(ngModel)]="billing.paymentMode" interface="popover" (ionChange)="calculateBilling()"
+              [disabled]="!canEditPayment">
               <ion-select-option value="cash">Cash</ion-select-option>
               <ion-select-option value="upi">UPI</ion-select-option>
             </ion-select>
@@ -432,8 +536,9 @@
         <div class="input-group" style="flex: 1;">
           <label>Paid Amount</label>
           <div class="input-wrap">
-            <ion-input type="number" placeholder="0" [(ngModel)]="billing.paidAmount"
+            <ion-input *ngIf="canEditPayment" type="number" placeholder="0" [(ngModel)]="billing.paidAmount"
               (ionInput)="calculateBilling()"></ion-input>
+            <ion-input *ngIf="!canEditPayment" type="text" [value]="'**'" readonly></ion-input>
           </div>
         </div>
         <div class="input-group" style="flex: 1;">
@@ -457,7 +562,7 @@
         <div class="input-group" style="flex: 1;">
           <label>Due Amount</label>
           <div class="input-wrap">
-            <ion-input type="text" [value]="billing.dueAmount" readonly></ion-input>
+            <ion-input type="text" [value]="canViewAmount ? billing.dueAmount : '**'" readonly></ion-input>
           </div>
         </div>
         <div class="input-group" style="flex: 1;">
@@ -523,8 +628,7 @@
         </div>
 
         <div class="modal-body">
-
-          <ng-container *ngIf="canViewAmount">
+          <ng-container *ngIf="isAdminRole">
             <div class="input-row">
               <div class="input-group" style="flex:1;">
                 <label>Type <span class="required">*</span></label>
@@ -580,7 +684,7 @@
             </div>
           </ng-container>
 
-          <ng-container *ngIf="!canViewAmount">
+          <ng-container *ngIf="isFranchiseRole || isStaffRole">
             <div class="input-group">
               <label>Doctor Name <span class="required">*</span></label>
               <div class="input-wrap">
@@ -589,19 +693,18 @@
             </div>
 
             <div class="input-group">
-              <label>Percent Value:</label>
+              <label>Franchise Value</label>
               <div class="input-wrap">
-                <ion-input type="number" placeholder="Enter Percent Value"
-                  [(ngModel)]="newDoctor.percentValue"></ion-input>
+                <ion-input type="number" placeholder="Enter Value" [(ngModel)]="newDoctor.percentValue"></ion-input>
               </div>
             </div>
 
             <div class="input-group">
-              <label>Percent Type:</label>
+              <label>Percent Type</label>
               <div class="input-wrap">
-                <ion-select [(ngModel)]="newDoctor.percentType" interface="popover" placeholder="Select Percent Type">
-                  <ion-select-option value="percent">Percent (%)</ion-select-option>
-                  <ion-select-option value="fixed">Fixed</ion-select-option>
+                <ion-select [(ngModel)]="newDoctor.percentType" interface="popover" placeholder="Select Type">
+                  <ion-select-option value="commission">Commission</ion-select-option>
+                  <ion-select-option value="discount">Discount</ion-select-option>
                 </ion-select>
               </div>
             </div>
@@ -625,6 +728,7 @@
           <ion-button fill="clear" color="danger" (click)="showAddLabModal = false">
             <ion-icon name="close-outline"></ion-icon>
           </ion-button>
+
         </div>
 
         <div class="modal-body">

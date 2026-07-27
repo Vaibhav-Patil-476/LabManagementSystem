@@ -22,7 +22,7 @@ import { AuthService } from '../../services/auth';
 import { RoleService } from '../../services/role';
 import { ToastService } from '../../services/toast';
 
-export type ReportTabKey = 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR';
+export type ReportTabKey = 'ALL' | 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR' | 'CANCEL';
 
 export interface ReportTestRow {
   name: string;
@@ -45,7 +45,7 @@ export interface ReportBookingRow {
   reportId?: number;
   remark?: string;
   file?: string;
-  bucket: ReportTabKey;
+  bucket?: ReportTabKey;   // 👈 add kara
 }
 
 @Component({
@@ -65,13 +65,17 @@ export interface ReportBookingRow {
 })
 export class DownloadReportsPage implements OnInit, OnDestroy {
 
-  readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
-    { key: 'COMPLETE', label: 'Complete', badgeClass: 'badge-complete' },
-    { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
-    { key: 'PARTIALLY_COMPLETE', label: 'Partially Complete', badgeClass: 'badge-partial' },
-    { key: 'PENDING', label: 'Pending', badgeClass: 'badge-pending' },
-    { key: 'SNR', label: 'SNR', badgeClass: 'badge-snr' },
-  ];
+readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
+  { key: 'ALL', label: 'All', badgeClass: 'badge-all' },
+  { key: 'COMPLETE', label: 'Complete', badgeClass: 'badge-complete' },
+  { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
+  { key: 'PARTIALLY_COMPLETE', label: 'Partially Complete', badgeClass: 'badge-partial' },
+  { key: 'PENDING', label: 'Pending', badgeClass: 'badge-pending' },
+  { key: 'SNR', label: 'SNR', badgeClass: 'badge-snr' },
+  { key: 'CANCEL', label: 'Cancel', badgeClass: 'badge-cancel' },
+];
+
+
 
   activeTab: ReportTabKey = 'COMPLETE';
   fromDate: string = this.todayIso();
@@ -88,7 +92,15 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   hasMore = false;
   totalBookingsFromServer = 0;
   expandedId: number | string | null = null;
+  // ---------- Lab typeahead + add-lab modal ----------
+  franchiseLabs: any[] = [];
+  labSearchTerm = '';
+  filteredLabList: any[] = [];
+  showLabDropdown = false;
 
+  isAddLabModalOpen = false;
+  isSavingLab = false;
+  newLabData = { labName: '', ownerName: '', mobileNumber: '', whatsappNumber: '', additionalDetails: '' };
   selectedIds = new Set<string>();
 
   private bookings: ReportBookingRow[] = [];
@@ -114,11 +126,12 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
   constructor(
     private labApi: LabApiService,
-    private authService: AuthService,
+    public authService: AuthService,
     public roleService: RoleService,
     private toast: ToastService,
     private ngZone: NgZone,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    
   ) {
     addIcons({
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
@@ -130,8 +143,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
   // ---------- lifecycle ----------
   ngOnInit() {
-    this.loadFranchises();
-    this.loadData();
+    this.loadFilterFranchises();
   }
 
   ngOnDestroy() {
@@ -160,17 +172,103 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return new Date().toISOString().slice(0, 10);
   }
 
-  // ---------- franchise dropdown ----------
-  private loadFranchises() {
-    this.labApi.getFranchises().subscribe({
-      next: (res: any) => this.ngZone.run(() => {
-        this.franchises = res?.content || res || [];
-        this.cdr.detectChanges();
-      }),
-      error: () => this.ngZone.run(() => { this.franchises = []; })
-    });
-  }
+ private loadFilterFranchises(): void {
+  const currentRole = this.authService?.role;
+  const currentFranchiseId = this.authService?.franchiseId;
+  const currentFranchiseName = this.authService?.franchiseName;
 
+  const isFranchiseUser =
+    currentRole === 'ROLE_FRANCHISE' ||
+    currentRole === 'ROLE_FRANCHISE_STAFF';
+
+  const canSearchAllFranchises =
+    currentRole === 'ROLE_LAB_ADMIN' ||
+    currentRole === 'ROLE_STAFF';
+
+  this.labApi.getFranchises().subscribe({
+    next: (res: any) => this.ngZone.run(() => {
+
+      this.franchises = Array.isArray(res?.content)
+        ? res.content
+        : (Array.isArray(res) ? res : []);
+
+      /*
+       * =========================================================
+       * FRANCHISE / FRANCHISE STAFF
+       * =========================================================
+       * स्वतःच्या franchise वरच filter locked राहील.
+       */
+      if (isFranchiseUser) {
+
+        const matched = this.franchises.find((f: any) =>
+          Number(f?.franchiseId) === Number(currentFranchiseId)
+        );
+
+        if (matched) {
+          this.franchiseId = Number(matched.franchiseId);
+          this.franchiseSearchTerm =
+            matched.franchiseName ||
+            currentFranchiseName ||
+            '';
+        } else if (
+          currentFranchiseId !== null &&
+          currentFranchiseId !== undefined &&
+          Number(currentFranchiseId) > 0
+        ) {
+          this.franchiseId = Number(currentFranchiseId);
+          this.franchiseSearchTerm = currentFranchiseName || '';
+        } else {
+          this.franchiseId = null;
+          this.franchiseSearchTerm = '';
+        }
+
+      /*
+       * =========================================================
+       * LAB ADMIN / STAFF
+       * =========================================================
+       * All Franchises initially.
+       * User franchise search करून specific franchise select करू शकतो.
+       */
+      } else if (canSearchAllFranchises) {
+
+        this.franchiseId = null;
+        this.franchiseSearchTerm = '';
+        this.filteredFranchiseList = [];
+        this.showFranchiseDropdown = false;
+
+      } else {
+
+        this.franchiseId = null;
+        this.franchiseSearchTerm = '';
+
+      }
+
+      this.loadData();
+      this.cdr.detectChanges();
+    }),
+
+    error: () => this.ngZone.run(() => {
+
+      this.franchises = [];
+
+      if (
+        isFranchiseUser &&
+        currentFranchiseId !== null &&
+        currentFranchiseId !== undefined &&
+        Number(currentFranchiseId) > 0
+      ) {
+        this.franchiseId = Number(currentFranchiseId);
+        this.franchiseSearchTerm = currentFranchiseName || '';
+
+      } else {
+        this.franchiseId = null;
+        this.franchiseSearchTerm = '';
+      }
+
+      this.loadData();
+    })
+  });
+}
   onFranchiseChange(id: any) {
     this.franchiseId = id;
     if (this.isSearchMode) this.runSearch();
@@ -248,7 +346,13 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
             rows = rows.filter(r => r.createdBy === this.authService.userId);
           }
 
-          this.searchDataset = rows;
+          const seenIds = new Set<string>();
+          this.searchDataset = rows.filter(r => {
+            const key = String(r.bookingId);
+            if (seenIds.has(key)) return false;
+            seenIds.add(key);
+            return true;
+          });
           this.hasSearchLoaded = true;
           this.applySearchFilter();
           this.isLoading = false;
@@ -290,37 +394,32 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.autoSwitchTab();
   }
 
-  private autoSwitchTab() {
-    if (this.autoTabSwitched) return;
+private autoSwitchTab() {
+  if (this.autoTabSwitched) return;
 
-    const order: ReportTabKey[] = ['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR'];
-    const counts: Record<ReportTabKey, number> = {
-      COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0
-    };
+  const order: ReportTabKey[] = ['ALL', 'COMPLETE', 'CLINICAL', 'PENDING', 'SNR', 'CANCEL'];
+  const counts = this.bucketCount;
 
-    this.filteredDataset.forEach(r => counts[r.bucket]++);
-
-    if (counts[this.activeTab] === 0) {
-      const tab = order.find(x => counts[x] > 0);
-      if (tab) this.activeTab = tab;
-    }
-
-    this.autoTabSwitched = true;
+  if (counts[this.activeTab] === 0) {
+    const tab = order.find(x => counts[x] > 0);
+    if (tab) this.activeTab = tab;
   }
+
+  this.autoTabSwitched = true;
+}
 
   // ---------- data loading ----------
-  loadData() {
-    this.hasSearchLoaded = false;
-    this.searchDataset = [];
-    this.filteredDataset = [];
-    this.autoTabSwitched = false;
-    this.selectedIds.clear();
-    this.bookings = [];
-    this.currentPage = 0;
-    this.hasMore = false;
-    this.activeTab = 'COMPLETE';
-    this.fetchPage();
-  }
+ loadData() {
+  this.hasSearchLoaded = false;
+  this.searchDataset = [];
+  this.filteredDataset = [];
+  this.autoTabSwitched = false;
+  this.selectedIds.clear();
+  this.bookings = [];
+  this.currentPage = 0;
+  this.hasMore = false;
+  this.fetchPage();
+}
 
   loadMore() {
     if (!this.hasMore || this.isLoadingMore) return;
@@ -350,9 +449,16 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
           rows = rows.filter(r => r.createdBy === currentUserId);
         }
 
-        this.bookings = isLoadMore ? [...this.bookings, ...rows] : rows;
-        this.hasMore = rawList.length === this.pageSize;
+        const merged = isLoadMore ? [...this.bookings, ...rows] : rows;
+        const seenIds = new Set<string>();
+        this.bookings = merged.filter(r => {
+          const key = String(r.bookingId);
+          if (seenIds.has(key)) return false;
+          seenIds.add(key);
+          return true;
+        });
         this.totalBookingsFromServer = res?.totalElements ?? res?.totalCount ?? this.bookings.length;
+        this.hasMore = this.bookings.length < this.totalBookingsFromServer;
         this.isLoading = false;
         this.isLoadingMore = false;
         this.cdr.detectChanges();
@@ -367,16 +473,51 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       }
     });
   }
+private testMatchesTab(status: string | undefined, tabKey: ReportTabKey): boolean {
+  const s = (status || 'snr').toLowerCase();
 
+  switch (tabKey) {
+    case 'COMPLETE':
+      return s.includes('complete') || s.includes('ready');
+    case 'SNR':
+      return s === 'snr';
+    case 'CANCEL':
+      return s === 'cancel' || s === 'cancelled';
+    case 'CLINICAL':
+      return s.includes('clinical');
+    case 'PARTIALLY_COMPLETE':
+      // "Partially complete" ha booking-level concept ahe (test-level nahi),
+      // tyामुळे ha tab आता egzакt match करत नाही — 'pending' madhe merge kela.
+      return false;
+    case 'PENDING':
+      return !(
+        s.includes('complete') || s.includes('ready') ||
+        s === 'snr' || s === 'cancel' || s === 'cancelled' ||
+        s.includes('clinical')
+      );
+    default:
+      return false;
+  }
+}
   // ---------- mapping ----------
-  private mapToRow(raw: any): ReportBookingRow {
+private mapToRow(raw: any): ReportBookingRow {
     const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
 
-    const tests: ReportTestRow[] = rawTestMappings.map((t: any) => ({
-      name: (t.testName || '').trim(),
-      status: t.reportStatus || 'pending',
-      testCode: t.testCode
-    }));
+    const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
+      const matchedSample = (raw.sampleAccessions || []).find(
+        (s: any) => Number(s.testId) === Number(t.testId)
+      );
+      const sampleStatus = (matchedSample?.status || '').toUpperCase();
+      const isSampleReceived = sampleStatus === 'RECEIVED';
+      const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
+
+      return {
+        name: (t.testName || '').trim(),
+        status: (t.cancelDate || t.deleted) ? 'cancel' :
+          (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : defaultStatus),
+        testCode: t.testCode
+      };
+    });
 
     const seenBarcodes = new Set<string>();
     const barcodes: string[] = [];
@@ -433,23 +574,38 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.expandedId = this.expandedId === item.bookingId ? null : item.bookingId;
   }
 
-  get rowsForActiveTab(): ReportBookingRow[] {
-    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
-    return source.filter(r => r.bucket === this.activeTab);
+ get rowsForActiveTab(): ReportBookingRow[] {
+  const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+
+  if (this.activeTab === 'ALL') {
+    return source;
   }
+
+  return source.filter(r =>
+    (r.tests || []).some(t => this.testMatchesTab(t.status, this.activeTab))
+  );
+}
 
   get totalBookings(): number {
     return this.isSearchMode ? this.filteredDataset.length : this.totalBookingsFromServer;
   }
 
-  get bucketCount() {
-    const counts: Record<ReportTabKey, number> = {
-      COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0
-    };
-    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
-    for (const row of source) counts[row.bucket]++;
-    return counts;
-  }
+ get bucketCount() {
+  const counts: Record<ReportTabKey, number> = {
+    ALL: 0, COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0, CANCEL: 0
+  };
+  const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+
+  counts.ALL = source.length;
+
+  (['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR', 'CANCEL'] as ReportTabKey[]).forEach(key => {
+    counts[key] = source.filter(r =>
+      (r.tests || []).some(t => this.testMatchesTab(t.status, key))
+    ).length;
+  });
+
+  return counts;
+}
 
   get hasMoreForActiveTab(): boolean {
     return this.hasMore;
@@ -466,7 +622,39 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   reportsComplete(item: ReportBookingRow): boolean {
     return item.bucket === 'COMPLETE';
   }
+testStatusClass(status?: string): string {
+    const s = (status || 'snr').toLowerCase();
 
+    if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
+    if (s === 'snr') return 'badge-snr';
+    if (s.includes('clinical')) return 'badge-clinical';
+    if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
+    if (s.includes('complete') || s.includes('ready')) return 'badge-ready';
+    if (
+      s.includes('process') ||
+      s.includes('outsource') ||
+      s.includes('doctor approval')
+    ) return 'badge-inprocess';
+
+    return 'badge-pending';
+  }
+
+  testStatusLabel(status?: string): string {
+    const s = (status || 'snr').toLowerCase();
+
+    if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
+    if (s === 'snr') return 'SAMPLE NOT RECEIVED';
+    if (s.includes('clinical')) return 'CLINICAL';
+    if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
+    if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
+    if (
+      s.includes('process') ||
+      s.includes('outsource') ||
+      s.includes('doctor approval')
+    ) return 'IN PROCESS';
+
+    return 'PENDING';
+  }
   getTestCountStatusClass(item: ReportBookingRow): string {
     const total = item.tests.length;
     if (total === 0) return 'pending';
@@ -477,9 +665,9 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- role gates ----------
-  get canShowDownloadControls(): boolean {
-    return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
-  }
+get canShowDownloadControls(): boolean {
+  return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
+}
 
   // ---------- selection ----------
   isSelected(item: ReportBookingRow): boolean {
@@ -533,26 +721,54 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
   }
 
+  onFranchiseBlur() {
+  // ✅ Delay deऊन blur close kार — jेणेकरून dropdown item cha click
+  // (jो blur peksha थोडा नंतर fire होतो) आधी process होईल,
+  // ani मगच dropdown बंद होईल.
+  setTimeout(() => {
+    this.showFranchiseDropdown = false;
+  }, 200);
+}
+
   onFranchiseSearch() {
     const q = this.franchiseSearchTerm.trim().toLowerCase();
+
     if (!q) {
       this.filteredFranchiseList = [];
       this.showFranchiseDropdown = false;
-      this.onFranchiseChange(null);
+      // text clear zala tari selected franchise tashich rahil,
+      // jopryant user explicitly clear (X icon) dabat nahi.
       return;
     }
+
     this.filteredFranchiseList = this.franchises.filter((f: any) =>
       (f.franchiseName || f.name || '').toLowerCase().includes(q)
     );
     this.showFranchiseDropdown = true;
   }
+
   selectFranchise(f: any) {
-    this.franchiseSearchTerm = f.franchiseName || f.name;
+    const franchiseId = f?.franchiseId ?? f?.id ?? null;
+    if (franchiseId === null || franchiseId === undefined || Number(franchiseId) <= 0) {
+      return;
+    }
+
+    this.franchiseSearchTerm = f.franchiseName || f.name || '';
     this.showFranchiseDropdown = false;
     this.filteredFranchiseList = [];
-    this.onFranchiseChange(f.franchiseId);
+    this.onFranchiseChange(Number(franchiseId));
   }
   clearFranchise() {
+    const role = this.authService?.role;
+    if (role === 'ROLE_FRANCHISE' || role === 'ROLE_FRANCHISE_STAFF') {
+      // Franchise user cannot clear their own franchise filter
+      const currentFranchiseId = this.authService?.franchiseId;
+      const currentFranchiseName = this.authService?.franchiseName;
+      this.franchiseId = currentFranchiseId ? Number(currentFranchiseId) : null;
+      this.franchiseSearchTerm = currentFranchiseName || '';
+      return;
+    }
+
     this.franchiseSearchTerm = '';
     this.filteredFranchiseList = [];
     this.showFranchiseDropdown = false;

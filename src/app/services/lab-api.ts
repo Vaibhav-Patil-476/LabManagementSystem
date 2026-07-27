@@ -459,4 +459,30 @@ buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmou
     payload
   );
 }
+// ---------- Franchise Lab (custom lab / hospital) ----------
+  getFranchiseLabs(): Observable<any[]> {
+    return this.http.get<any[]>(
+      `${this.BASE_URL}/api/v1/lab/franchise/lab/`
+    );
+  }
+
+  createFranchiseLab(payload: {
+    labName: string;
+    ownerName?: string | null;
+    mobileNumber?: string | number | null;
+    whatsappNumber?: string | number | null;
+    additionalDetails?: string | null;
+  }): Observable<any> {
+    return this.http.post(
+      `${this.BASE_URL}/api/v1/lab/franchise/lab/create`,
+      payload
+    );
+  }
+
+  // ✅ Delete booking API — labId + bookingId path pattern (deleteTest sarkha)
+deleteBooking(labId: number, bookingId: number): Observable<any> {
+  return this.http.delete(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/delete-booking/${bookingId}`
+  );
+}
 }

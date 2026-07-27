@@ -27,6 +27,7 @@ export interface BookingSample {
   sampleType?: string;
   sampleTypeId?: number;
   status?: string;
+  testId?: number;
 }
 export interface BookingTest {
   testId: number;
@@ -61,6 +62,8 @@ export interface BookingListItem {
   address?: string;
   history?: string;
   attachmentName?: string;
+  customDoctorName?: string;
+  customFranchiseLab?: string;
   subTotalAmount?: number;
   totalAmount?: number;
   discountAmount?: number;
@@ -111,7 +114,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   currentPage = 0;
   pageSize = 20;
-
+  totalPages = 1;
   private readonly SEARCH_START_DATE = '2015-01-01';
   private readonly SEARCH_PAGE_SIZE = 500;
   private searchDebounceTimer: any = null;
@@ -133,7 +136,15 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   isPatientModalOpen = false;
   isPatientLoading = false;
   editPatientData: any = null;
-
+  doctorSearch = '';
+  filteredDoctors: any[] = [];
+  showDoctorSuggestions = false;
+  customLabSearch = '';
+  filteredCustomLabs: any[] = [];
+  showCustomLabDropdown = false;
+  labSearch = '';
+  filteredLabs: any[] = [];
+  showLabDropdown = false;
   showDoctorPicker = false;
   showLabPicker = false;
   doctors: any[] = [];
@@ -155,7 +166,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   barcodeRows: {
     accessionId?: number; sampleTypeId?: number; sampleType: string;
     oldBarcode: string; newBarcode: string; receiveDate: string;
-    status: string; saving: boolean;
+    status: string; canEditBarcode: boolean; saving: boolean;
   }[] = [];
   activeDateTimeRow: any = null;
   tempDateTimeValue = '';
@@ -169,50 +180,76 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   actionMenuPosition = { top: 0, left: 0 };
   expandedBookingId: number | null = null;
   role = '';
+readonly statusTabs: {
+    key: string;
+    label: string;
+    badgeClass: string;
+  }[] = [
+      { key: 'all', label: 'All', badgeClass: 'badge-all' },
+      { key: 'completed', label: 'Completed', badgeClass: 'badge-complete' },
+      { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
+      { key: 'pending', label: 'Pending', badgeClass: 'badge-pending' },
+      { key: 'snr', label: 'SNR', badgeClass: 'badge-snr' },
+      { key: 'cancel', label: 'Cancel', badgeClass: 'badge-cancel' }
+    ];
+  // get statusBucketCount(): Record<string, number> {
+  //   const counts: Record<string, number> = { all: 0, completed: 0, in_process: 0, pending: 0, snr: 0, cancel: 0 };
 
-readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
-  { key: 'all', label: 'All', badgeClass: 'badge-all' },
-  { key: 'completed', label: 'Completed', badgeClass: 'badge-complete' },
-  { key: 'pending', label: 'Pending', badgeClass: 'badge-pending' },
-  { key: 'in_process', label: 'In Process', badgeClass: 'badge-clinical' },
-  { key: 'snr', label: 'SNR', badgeClass: 'badge-snr' },
-];
+  //   // ✅ list (filteredBookings) sarkhाच source vapar — createdBy filter kadhla,
+  //   // karan booking-card-list madhe pan asa filter nahi, tyamule count mismatch hoत hota.
+  //   let source = [...this.bookings];
+
+  //   const q = this.quickSearch?.trim().toLowerCase();
+  //   if (q) {
+  //     source = source.filter(b =>
+  //       String(b.bookingId).includes(q) ||
+  //       (b.patientId || '').toLowerCase().includes(q) ||
+  //       (b.customerName || '').toLowerCase().includes(q) ||
+  //       (b.doctor?.doctor_name || '').toLowerCase().includes(q)
+  //     );
+  //   }
+
+  //   source.forEach(b => {
+  //     counts['all'] = counts['all'] + 1;
+  //     const status = b.overallReportStatus || 'pending';
+  //     if (counts[status] !== undefined) {
+  //       counts[status] = counts[status] + 1;
+  //     }
+  //   });
+  //   return counts;
+  // }
 
  get statusBucketCount(): Record<string, number> {
-  const counts: Record<string, number> = { all: 0, completed: 0, in_process: 0, pending: 0, snr: 0 };
+    const counts: Record<string, number> = { all: 0, completed: 0, CLINICAL: 0, pending: 0, snr: 0, cancel: 0 };
 
-  let source = this.canViewAllBookings ? this.bookings : this.bookings.filter(b => b.createdBy === this.currentUserId);
+    let source = [...this.bookings];
 
-  // ✅ NEW — quickSearch lagu asel tar counts pan tyaच matched data varunach kadha
-  const q = this.quickSearch?.trim().toLowerCase();
-  if (q) {
-    source = source.filter(b =>
-      String(b.bookingId).includes(q) ||
-      (b.patientId || '').toLowerCase().includes(q) ||
-      (b.customerName || '').toLowerCase().includes(q) ||
-      (b.doctor?.doctor_name || '').toLowerCase().includes(q)
-    );
-  }
-
-  source.forEach(b => {
-    counts['all'] = counts['all'] + 1;
-    const status = b.overallReportStatus || 'pending';
-    if (counts[status] !== undefined) {
-      counts[status] = counts[status] + 1;
+    const q = this.quickSearch?.trim().toLowerCase();
+    if (q) {
+      source = source.filter(b =>
+        String(b.bookingId).includes(q) ||
+        (b.patientId || '').toLowerCase().includes(q) ||
+        (b.customerName || '').toLowerCase().includes(q) ||
+        (b.doctor?.doctor_name || '').toLowerCase().includes(q)
+      );
     }
-  });
-  return counts;
-}
+
+    counts['all'] = source.length;
+
+    ['completed', 'CLINICAL', 'pending', 'snr', 'cancel'].forEach(key => {
+      counts[key] = source.filter(b =>
+        (b.tests || []).some(t => this.testMatchesTab(t.status, key))
+      ).length;
+    });
+
+    return counts;
+  }
   setStatusTab(key: string) {
     this.selectedReportStatus = key;
   }
   availableTests: BookingTest[] = [];
   private currentUserId = 0;
 
-  private readonly ROLE_LAB_ADMIN = 'ROLE_LAB_ADMIN';
-  private readonly ROLE_STAFF = 'ROLE_STAFF';
-  private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
-  private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
 
   @ViewChild('rangePicker') rangePicker!: any;
   rangeStart: Date | null = null;
@@ -221,35 +258,114 @@ readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
   filteredFranchiseList: any[] = [];
   showFranchiseDropdown = false;
 
+
+  onFranchiseBlur() {
+    // ✅ Delay deऊन blur close kार — jेणेकरून item cha click
+    // (jो blur peksha थोडा नंतर fire होतो) आधी process होईल,
+    // ani मगच dropdown बंद होईल.
+    setTimeout(() => {
+      this.showFranchiseDropdown = false;
+    }, 200);
+  }
+
+  // ---------- franchise search ----------
   onFranchiseSearch() {
-    const q = this.franchiseSearchTerm.trim().toLowerCase();
-    if (!q) { this.filteredFranchiseList = []; this.selectedFranchiseId = null; this.applyFilters(); return; }
-    this.filteredFranchiseList = this.filterFranchises.filter((f: any) =>
-      (f.franchiseName || f.name || '').toLowerCase().includes(q)
-    );
+
+    const q =
+      this.franchiseSearchTerm
+        .trim()
+        .toLowerCase();
+
+    if (!q) {
+
+      this.filteredFranchiseList = [];
+      this.showFranchiseDropdown = false;
+
+      /*
+       * ✅ Text box manually rikama kela (X icon click na karta)
+       * tar — franchise-role user sodun — filter clear karun
+       * sagळa data परत load kar. Aadhi fakt dropdown lapवला
+       * jat hota, data reload hot navhata.
+       */
+      const isFranchiseUser =
+        this.role === this.ROLE_FRANCHISE ||
+        this.role === this.ROLE_FRANCHISE_STAFF;
+
+      if (!isFranchiseUser && this.selectedFranchiseId !== null) {
+        this.selectedFranchiseId = null;
+        this.currentPage = 0;
+        this.loadBookings();
+      }
+
+      return;
+    }
+
+    this.filteredFranchiseList =
+      this.filterFranchises.filter(
+        (f: any) =>
+          (
+            f.franchiseName ||
+            f.name ||
+            ''
+          )
+            .toLowerCase()
+            .includes(q)
+      );
+
     this.showFranchiseDropdown = true;
   }
 
+  // ---------- select franchise ----------
   selectFranchise(f: any) {
-    this.franchiseSearchTerm = f.franchiseName || f.name;
-    this.selectedFranchiseId = f.franchiseId;
+
+    const franchiseId =
+      f?.franchiseId ??
+      f?.id ??
+      null;
+
+    if (
+      franchiseId === null ||
+      franchiseId === undefined ||
+      Number(franchiseId) <= 0
+    ) {
+      return;
+    }
+
+    this.franchiseSearchTerm =
+      f.franchiseName ||
+      f.name ||
+      '';
+
+    this.selectedFranchiseId =
+      Number(franchiseId);
+
     this.showFranchiseDropdown = false;
+
+    this.filteredFranchiseList = [];
+
+    this.currentPage = 0;
+
     this.applyFilters();
   }
 
-  clearFranchise() {
-    this.franchiseSearchTerm = '';
-    this.selectedFranchiseId = null;
-    this.filteredFranchiseList = [];
-    this.applyFilters();
-  }
+
+
   get isSearchMode(): boolean { return this.quickSearch.trim().length > 0; }
+
+  private readonly ROLE_LAB_ADMIN = 'ROLE_LAB_ADMIN';
+  private readonly ROLE_STAFF = 'ROLE_STAFF';
+  private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
+  private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
+
   get isAdminRole(): boolean { return this.role === this.ROLE_LAB_ADMIN; }
-  get canViewAmount(): boolean { return this.role === this.ROLE_LAB_ADMIN; }
-  get isFranchiseRole(): boolean { return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF; }
-  get canEditBilling(): boolean { return this.role === this.ROLE_LAB_ADMIN; }
-  get canEditPatient(): boolean { return this.role === this.ROLE_LAB_ADMIN; }
-  get canViewAllBookings(): boolean { return this.role === this.ROLE_LAB_ADMIN; }
+  get isStaffRole(): boolean { return this.role === this.ROLE_STAFF; }
+  get isFranchiseOnlyRole(): boolean { return this.role === this.ROLE_FRANCHISE; }
+
+  get canEditPatient(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
+  get canViewAmount(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
+  get canEditBilling(): boolean { return this.isAdminRole || this.isStaffRole; }
+  get canViewPayment(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
+  get canViewAllBookings(): boolean { return this.isAdminRole; }
   get canSaveBooking(): boolean {
     return [this.ROLE_LAB_ADMIN, this.ROLE_STAFF, this.ROLE_FRANCHISE, this.ROLE_FRANCHISE_STAFF].includes(this.role);
   }
@@ -259,28 +375,205 @@ readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
   get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
   get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
 
+  // get filteredBookings(): BookingListItem[] {
+
+  //   let list: BookingListItem[] = [
+  //     ...this.bookings
+  //   ];
+
+  //   /*
+  //    * Report status filter
+  //    */
+  //   if (
+  //     this.selectedReportStatus &&
+  //     this.selectedReportStatus !== 'all'
+  //   ) {
+
+  //     list = list.filter(
+  //       (booking: BookingListItem) => {
+
+  //         const status =
+  //           booking.overallReportStatus ||
+  //           (
+  //             booking.reports?.length
+  //               ? 'completed'
+  //               : 'pending'
+  //           );
+
+  //         return (
+  //           status.toLowerCase() ===
+  //           this.selectedReportStatus.toLowerCase()
+  //         );
+
+  //       }
+  //     );
+
+  //   }
+
+  //   /*
+  //    * Quick search filter
+  //    */
+  //   const q =
+  //     this.quickSearch
+  //       ?.trim()
+  //       .toLowerCase();
+
+  //   if (q) {
+
+  //     list = list.filter(
+  //       (booking: BookingListItem) => {
+
+  //         const bookingId =
+  //           String(
+  //             booking.bookingId ?? ''
+  //           ).toLowerCase();
+
+  //         const patientId =
+  //           String(
+  //             booking.patientId ?? ''
+  //           ).toLowerCase();
+
+  //         const customerName =
+  //           String(
+  //             booking.customerName ?? ''
+  //           ).toLowerCase();
+
+  //         const doctorName =
+  //           String(
+  //             booking.doctor?.doctor_name ?? ''
+  //           ).toLowerCase();
+
+  //         return (
+  //           bookingId.includes(q) ||
+  //           patientId.includes(q) ||
+  //           customerName.includes(q) ||
+  //           doctorName.includes(q)
+  //         );
+
+  //       }
+  //     );
+
+  //   }
+
+  //   return list;
+  // }
+
   get filteredBookings(): BookingListItem[] {
-    let list = this.bookings;
-    if (!this.canViewAllBookings) list = list.filter((b: any) => b.createdBy === this.currentUserId);
-    if (this.selectedReportStatus !== 'all') {
-      list = list.filter(b => (b.overallReportStatus || (b.reports?.length ? 'completed' : 'pending')) === this.selectedReportStatus);
-    }
-    const q = this.quickSearch?.trim().toLowerCase();
-    if (q) {
-      list = list.filter(b =>
-        String(b.bookingId).includes(q) ||
-        (b.patientId || '').toLowerCase().includes(q) ||
-        (b.customerName || '').toLowerCase().includes(q) ||
-        (b.doctor?.doctor_name || '').toLowerCase().includes(q)
+
+    let list: BookingListItem[] = [
+      ...this.bookings
+    ];
+
+    /*
+     * Report status filter — ata booking-level nahi,
+     * TEST-level check karто: booking madhe kimaan
+     * 1 test tya status cha asel tar booking dakhav.
+     */
+    if (
+      this.selectedReportStatus &&
+      this.selectedReportStatus !== 'all'
+    ) {
+
+      list = list.filter(
+        (booking: BookingListItem) =>
+          (booking.tests || []).some(
+            (t) => this.testMatchesTab(t.status, this.selectedReportStatus)
+          )
       );
+
     }
+
+    /*
+     * Quick search filter
+     */
+    const q =
+      this.quickSearch
+        ?.trim()
+        .toLowerCase();
+
+    if (q) {
+
+      list = list.filter(
+        (booking: BookingListItem) => {
+
+          const bookingId =
+            String(
+              booking.bookingId ?? ''
+            ).toLowerCase();
+
+          const patientId =
+            String(
+              booking.patientId ?? ''
+            ).toLowerCase();
+
+          const customerName =
+            String(
+              booking.customerName ?? ''
+            ).toLowerCase();
+
+          const doctorName =
+            String(
+              booking.doctor?.doctor_name ?? ''
+            ).toLowerCase();
+
+          return (
+            bookingId.includes(q) ||
+            patientId.includes(q) ||
+            customerName.includes(q) ||
+            doctorName.includes(q)
+          );
+
+        }
+      );
+
+    }
+
     return list;
   }
+private testMatchesTab(status: string | undefined, tabKey: string): boolean {
+    const s = (status || 'snr').toLowerCase();
 
-get totalBookingsCount(): number {
-  const hasClientFilter = !!this.quickSearch?.trim();
-  return hasClientFilter ? this.filteredBookings.length : this.totalBookingsFromServer;
-}
+    switch (tabKey) {
+      case 'completed':
+        return s.includes('complete') || s.includes('ready');
+      case 'cancel':
+        return s === 'cancel' || s === 'cancelled';
+      case 'snr':
+        return s === 'snr';
+      case 'CLINICAL':
+        return s.includes('clinical');
+      case 'pending':
+        return !(
+          s.includes('complete') || s.includes('ready') ||
+          s === 'cancel' || s === 'cancelled' ||
+          s === 'snr' ||
+          s.includes('clinical')
+        );
+      default:
+        return false;
+    }
+  }
+
+  get totalBookingsCount(): number {
+
+    /*
+     * If user is searching, show currently visible filtered records.
+     * Status-tab filter (Completed/Pending/SNR/etc.) badge la affect
+     * karayla nahi pahije — to fakt list खाली filter karto.
+     */
+    const hasQuickSearch =
+      !!this.quickSearch?.trim();
+
+    if (hasQuickSearch) {
+      return this.filteredBookings.length;
+    }
+
+    /*
+     * Otherwise show backend total (status tab change zala tarihi
+     * fixed rahil).
+     */
+    return this.totalBookingsFromServer;
+  }
 
   get isDefaultTodayRange(): boolean {
     const today = this.formatDateForInput(new Date());
@@ -304,19 +597,25 @@ get totalBookingsCount(): number {
   }
 
   // ---------- lifecycle ----------
-  ngOnInit() {
-    this.loadCurrentUser();
+  ngOnInit(): void {
     const today = this.formatDateForInput(new Date());
+
     this.fromDate = today;
     this.toDate = today;
+
+    this.loadCurrentUser();
     this.loadAvailableTests();
-    this.loadFilterFranchises();
   }
 
-  ionViewWillEnter() { this.loadCurrentUser(); }
-  ionViewWillLeave() { this.closeActionMenu(); }
+  ionViewWillEnter(): void {
+    this.loadCurrentUser();
+  }
 
-  ngOnDestroy() {
+  ionViewWillLeave(): void {
+    this.closeActionMenu();
+  }
+
+  ngOnDestroy(): void {
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
@@ -325,266 +624,870 @@ get totalBookingsCount(): number {
 
   @HostListener('window:resize')
   @HostListener('window:orientationchange')
-  onViewportChange() {
-    if (this.openActionRowId !== null) this.closeActionMenu();
+  onViewportChange(): void {
+    if (this.openActionRowId !== null) {
+      this.closeActionMenu();
+    }
   }
 
-  showToast(msg: string, type: 'success' | 'error' | 'warning' = 'success') {
-    if (type === 'success') this.toast.success('Success', msg);
-    else if (type === 'error') this.toast.error('Error', msg);
-    else this.toast.warning('Warning', msg);
+  showToast(
+    msg: string,
+    type: 'success' | 'error' | 'warning' = 'success'
+  ): void {
+    if (type === 'success') {
+      this.toast.success('Success', msg);
+    } else if (type === 'error') {
+      this.toast.error('Error', msg);
+    } else {
+      this.toast.warning('Warning', msg);
+    }
   }
 
-  private loadCurrentUser() {
-    const cached = this.authService.currentUserValue;
-    if (cached) {
+
+  // ---------- current user ----------
+  private loadCurrentUser(): void {
+    const cachedUser = this.authService.currentUserValue;
+
+    if (cachedUser) {
       this.role = this.authService.role;
-      this.currentUserId = cached?.raw?.id || 0;
-      this.loadBookings();
+      this.currentUserId =
+        cachedUser?.raw?.id ??
+        cachedUser?.userId ??
+        0;
+
+      /*
+       * IMPORTANT:
+       * Do not call loadBookings() here.
+       *
+       * loadFilterFranchises() will first resolve
+       * the logged-in franchise ID and then load bookings.
+       */
+      this.loadFilterFranchises();
+
       this.cdr.detectChanges();
       return;
     }
+
     this.authService.loadCurrentUser().subscribe({
-      next: () => this.ngZone.run(() => {
-        this.role = this.authService.role;
-        this.currentUserId = this.authService.currentUserValue?.raw?.id || 0;
-        this.loadBookings();
-        this.cdr.detectChanges();
-      }),
-      error: (err) => console.log('CURRENT USER (booking-status) ERROR:', err)
-    });
-  }
-
-  // ---------- date helpers ----------
-  private formatDateForInput(d: Date): string {
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-
-  private addOneDay(dateStr: string): string {
-    if (!dateStr) return dateStr;
-    const d = new Date(dateStr + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    return this.formatDateForInput(d);
-  }
-
-  private toDateObj(dateStr: string): Date | null {
-    return dateStr ? new Date(dateStr + 'T00:00:00') : null;
-  }
-
-  private toDateStr(d: Date | null): string {
-    return d ? this.formatDateForInput(d) : '';
-  }
-
-  openDateRangePicker() {
-    this.rangeStart = this.toDateObj(this.fromDate);
-    this.rangeEnd = this.toDateObj(this.toDate);
-    this.rangePicker?.open();
-  }
-
-  onRangeStartChange(event: any) { this.rangeStart = event?.value || null; }
-
-  onRangeEndChange(event: any) {
-    this.rangeEnd = event?.value || null;
-    if (this.rangeStart && this.rangeEnd) {
-      this.fromDate = this.toDateStr(this.rangeStart);
-      this.toDate = this.toDateStr(this.rangeEnd);
-      this.applyFilters();
-    }
-  }
-
-  onQuickSearchChange() {
-    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
-    this.searchDebounceTimer = setTimeout(() => {
-      this.currentPage = 0;
-      this.loadBookings();
-    }, this.SEARCH_DEBOUNCE_MS);
-  }
-
-  // ---------- mapping ----------
-  private mapBookingItem(raw: any): BookingListItem {
-    if (!raw) return raw;
-
-    const rawTestMappings = (
-      raw.bookingWithTestMappings || raw.testMappings || raw.tests || []
-    ).filter((t: any) => !!t.testName);
-
-    // ✅ आधी reports/statusByTestId तयार करा
-    const reportsRaw = raw.reports || [];
-    const reports = reportsRaw
-      .filter((r: any) => !!r.reportId)
-      .map((r: any) => ({ reportId: r.reportId, reportStatus: r.reportStatus || 'PENDING' }));
-
-    const statusByTestId = new Map<number, string>();
-    reportsRaw.forEach((r: any) => {
-      if (r.testId != null) statusByTestId.set(r.testId, r.reportStatus || 'PENDING');
-    });
-    const tests: BookingTest[] = rawTestMappings.map((t: any) => {
-      const mappingId = t.testMappingId ?? t.bookingWithTestMappingId;
-      if (!mappingId) {
-        console.log('MISSING testMappingId for test:', t.testName, t);
-      }
-      return {
-        testId: t.testId,
-        testMappingId: mappingId,
-        testName: (t.testName || '').trim(),
-        testPrice: t.testPrice,
-        testMrp: t.testMrp,
-        method: t.testCode,
-        status: statusByTestId.get(t.testId) || t.reportStatus || 'pending',
-        reportId: statusByTestId.has(t.testId) ? undefined : t.reportId,
-        sample: t.sample || t.sampleTypeName || t.sampleType || t.sampleTypeData?.sample_type || '',
-        resultValue: ''
-      };
-    });
-    const seenBarcodes = new Set<string>();
-    const samples: BookingSample[] = [];
-    (raw.sampleAccessions || raw.samples || []).forEach((s: any) => {
-      const barcode = s.barCode || s.barcode;
-      if (!barcode || seenBarcodes.has(barcode)) return;
-      seenBarcodes.add(barcode);
-      samples.push({
-        barcode,
-        sampleType: s.sampleTypeData?.sample_type || s.sampleType || s.sampleTypeName,
-        sampleTypeId: s.sampleTypeData?.sample_type_id ?? s.sampleTypeId,
-        status: s.status
-      });
-    });
-
-
-
-    let overallReportStatus = 'pending';
-    if (tests.length > 0) {
-      const statuses = tests.map(t => (t.status || '').toLowerCase());
-      if (statuses.every(s => s.includes('complete'))) overallReportStatus = 'completed';
-      else if (statuses.some(s => s === 'snr')) overallReportStatus = 'snr';
-      else if (statuses.some(s => s.includes('process'))) overallReportStatus = 'in_process';
-    }
-
-    return {
-      ...raw,
-      bookingId: raw.bookingId,
-      patientId: raw.patientId,
-      customerName: raw.customerName,
-      title: raw.title,
-      age: raw.age,
-      ageType: raw.ageType,
-      gender: raw.gender,
-      createdBy: raw.createdBy,
-      tests, samples, reports,
-      doctor: { doctorId: raw.doctorId, doctor_name: raw.doctorName },
-      franchise: { franchiseId: raw.franchiseId, franchiseName: raw.franchiseName },
-      overallReportStatus,
-      bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined
-    };
-  }
-
-  // ---------- data loading ----------
-  loadBookings(isLoadMore: boolean = false) {
-    if (isLoadMore) this.isLoadingMore = true; else this.isLoadingList = true;
-    const labId = this.labApi.getCurrentLabId();
-
-    const searchActive = this.isSearchMode;
-    const startDate = searchActive ? this.SEARCH_START_DATE : this.fromDate;
-    const endDateExclusive = searchActive
-      ? this.addOneDay(this.formatDateForInput(new Date()))
-      : this.addOneDay(this.toDate);
-    const pageToUse = searchActive ? 0 : this.currentPage;
-    const pageSizeToUse = searchActive ? this.SEARCH_PAGE_SIZE : this.pageSize;
-
-    this.labApi.getBookingStatusNew(labId, pageToUse, pageSizeToUse, startDate, endDateExclusive, this.selectedFranchiseId || undefined)
-      .subscribe({
-        next: (res: any) => this.ngZone.run(() => {
-          const rawList = Array.isArray(res?.content ?? res) ? (res?.content ?? res) : [];
-          const mapped = rawList.map((b: any) => this.mapBookingItem(b));
-
-          this.bookings = (isLoadMore && !searchActive) ? [...this.bookings, ...mapped] : mapped;
-          this.hasMore = !searchActive && rawList.length === pageSizeToUse;
-          this.totalBookingsFromServer = searchActive
-            ? mapped.length
-            : (res?.totalElements ?? res?.totalCount ?? rawList.length);
-
-          this.isLoadingList = false;
-          this.isLoadingMore = false;
-          this.cdr.detectChanges();
-        }),
-        error: (err) => {
-          console.log('BOOKINGS LIST ERROR:', err);
-          this.ngZone.run(() => {
-            this.isLoadingList = false;
-            this.isLoadingMore = false;
-            this.showToast('Bookings load karayla fail zala', 'error');
-          });
-        }
-      });
-  }
-
-  loadMoreBookings() {
-    if (!this.hasMore || this.isLoadingMore || this.isSearchMode) return;
-    this.currentPage++;
-    this.loadBookings(true);
-  }
-
-  applyFilters() {
-    this.currentPage = 0;
-    this.loadBookings();
-  }
-
-  private loadFilterFranchises() {
-    this.labApi.getFranchises().subscribe({
-      next: (res: any) => this.ngZone.run(() => {
-        this.filterFranchises = res?.content || res || [];
-        this.cdr.detectChanges();
-      }),
-      error: () => this.ngZone.run(() => {
-        this.filterFranchises = [];
-        this.cdr.detectChanges();
-      })
-    });
-  }
-
-  trackByBookingId(index: number, item: BookingListItem): number {
-    return item.bookingId ?? item.id ?? index;
-  }
-
-  trackByBarcode(index: number, s: BookingSample): string {
-    return s.barcode || String(index);
-  }
-
-  private fetchSingleBooking(bookingId: number, cb: (b: BookingListItem) => void, onError?: () => void) {
-    this.labApi.getSingleBooking(bookingId).subscribe({
-      next: (res: any) => this.ngZone.run(() => {
-
-        console.log('RAW REPORTS ARRAY:', res?.reports);
-        console.log('RAW TESTS ARRAY:', res?.tests);
-        cb(this.mapBookingItem(res));
-        this.cdr.detectChanges();
-      }),
-      error: (err) => {
-        console.log('SINGLE BOOKING ERROR:', err);
+      next: () => {
         this.ngZone.run(() => {
-          this.showToast('Booking detail load fail zala', 'error');
-          onError?.();
+          this.role = this.authService.role;
+
+          const currentUser =
+            this.authService.currentUserValue;
+
+          this.currentUserId =
+            currentUser?.raw?.id ??
+            currentUser?.userId ??
+            0;
+
+          /*
+           * Current user is now available.
+           * Resolve franchise first, then load bookings.
+           */
+          this.loadFilterFranchises();
+
+          this.cdr.detectChanges();
+        });
+      },
+
+      error: () => {
+        this.ngZone.run(() => {
+          this.role = this.authService.role || '';
+          this.currentUserId = 0;
+
+          /*
+           * Even if current-user API fails,
+           * try loading franchise filter.
+           */
+          this.loadFilterFranchises();
+
           this.cdr.detectChanges();
         });
       }
     });
   }
 
-  loadAvailableTests() {
-    this.labApi.getTests().subscribe({
-      next: (res: any) => {
-        const apiTests = res || [];
-        this.availableTests = (Array.isArray(apiTests) ? apiTests : []).map((t: any) => ({
-          testId: t.test_id ?? t.testId,
-          testName: t.test_name || 'Unnamed Test',
-          testPrice: t.price2 ?? 0,
-          testMrp: t.test_price ?? 0,
-          sample: t.sampleTypeName || 'OTHER'
-        }));
+
+  // ---------- date helpers ----------
+  private formatDateForInput(d: Date): string {
+    return (
+      d.getFullYear() +
+      '-' +
+      String(d.getMonth() + 1).padStart(2, '0') +
+      '-' +
+      String(d.getDate()).padStart(2, '0')
+    );
+  }
+
+  private addOneDay(dateStr: string): string {
+    if (!dateStr) {
+      return dateStr;
+    }
+
+    const d = new Date(dateStr + 'T00:00:00');
+
+    d.setDate(d.getDate() + 1);
+
+    return this.formatDateForInput(d);
+  }
+
+  private toDateObj(dateStr: string): Date | null {
+    return dateStr
+      ? new Date(dateStr + 'T00:00:00')
+      : null;
+  }
+
+  private toDateStr(d: Date | null): string {
+    return d
+      ? this.formatDateForInput(d)
+      : '';
+  }
+
+  openDateRangePicker(): void {
+    this.rangeStart =
+      this.toDateObj(this.fromDate);
+
+    this.rangeEnd =
+      this.toDateObj(this.toDate);
+
+    this.rangePicker?.open();
+  }
+
+  onRangeStartChange(event: any): void {
+    this.rangeStart =
+      event?.value || null;
+  }
+
+  onRangeEndChange(event: any): void {
+    this.rangeEnd =
+      event?.value || null;
+
+    if (
+      this.rangeStart &&
+      this.rangeEnd
+    ) {
+      this.fromDate =
+        this.toDateStr(this.rangeStart);
+
+      this.toDate =
+        this.toDateStr(this.rangeEnd);
+
+      this.applyFilters();
+    }
+  }
+
+  onQuickSearchChange(): void {
+    if (this.searchDebounceTimer) {
+      clearTimeout(this.searchDebounceTimer);
+    }
+
+    this.searchDebounceTimer =
+      setTimeout(() => {
+        this.currentPage = 0;
+        this.loadBookings();
+      }, this.SEARCH_DEBOUNCE_MS);
+  }
+
+
+  // ---------- mapping ----------
+  private mapBookingItem(raw: any): BookingListItem {
+    if (!raw) {
+      return raw;
+    }
+
+    const rawTestMappings = (
+      raw.bookingWithTestMappings ||
+      raw.testMappings ||
+      raw.tests ||
+      []
+    ).filter(
+      (t: any) => !!t.testName
+    );
+
+    const reportsRaw =
+      raw.reports || [];
+
+    const reports = reportsRaw
+      .filter(
+        (r: any) => !!r.reportId
+      )
+      .map(
+        (r: any) => ({
+          reportId: r.reportId,
+          reportStatus:
+            r.reportStatus || 'PENDING'
+        })
+      );
+
+    const statusByTestId =
+      new Map<number, string>();
+
+    reportsRaw.forEach(
+      (r: any) => {
+        if (r.testId != null) {
+          statusByTestId.set(
+            r.testId,
+            r.reportStatus || 'PENDING'
+          );
+        }
+      }
+    );
+
+    const tests: BookingTest[] =
+      rawTestMappings.map(
+        (t: any) => {
+
+          const mappingId =
+            t.testMappingId ??
+            t.bookingWithTestMappingId;
+
+          // ✅ testId varun directly sample match kar — sample object madhech testId ahe
+          const matchedSample = (
+            raw.sampleAccessions ||
+            raw.samples ||
+            []
+          ).find((s: any) => Number(s.testId) === Number(t.testId));
+
+          const sampleStatus = (matchedSample?.status || '').toUpperCase();
+          const isSampleReceived = sampleStatus === 'RECEIVED';
+          const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
+          console.log('FINAL STATUS FOR TEST:', t.testId, '=>',
+            statusByTestId.get(t.testId), '|', t.reportStatus, '|', defaultStatus);
+
+          return {
+            testId: t.testId,
+
+            testMappingId:
+              mappingId,
+
+            testName:
+              (t.testName || '').trim(),
+
+            testPrice:
+              t.testPrice,
+
+            testMrp:
+              t.testMrp,
+
+            method:
+              t.testCode,
+            status:
+              (t.cancelDate || t.deleted) ? 'cancel' :
+                (statusByTestId.get(t.testId) ||
+                  (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||
+                  defaultStatus),
+
+            reportId:
+              statusByTestId.has(t.testId)
+                ? undefined
+                : t.reportId,
+
+            sample:
+              t.sample ||
+              t.sampleTypeName ||
+              t.sampleType ||
+              t.sampleTypeData?.sample_type ||
+              '',
+
+            resultValue: ''
+          };
+        }
+      );
+
+    const seenBarcodes =
+      new Set<string>();
+
+    const samples: BookingSample[] = [];
+
+    (
+      raw.sampleAccessions ||
+      raw.samples ||
+      []
+    ).forEach(
+      (s: any) => {
+
+        const barcode =
+          s.barCode ||
+          s.barcode;
+
+        if (
+          !barcode ||
+          seenBarcodes.has(barcode)
+        ) {
+          return;
+        }
+
+        seenBarcodes.add(barcode);
+
+        samples.push({
+          barcode,
+
+          sampleType:
+            s.sampleTypeData?.sample_type ||
+            s.sampleType ||
+            s.sampleTypeName,
+
+          sampleTypeId:
+            s.sampleTypeData?.sample_type_id ??
+            s.sampleTypeId,
+
+          status:
+            s.status,
+
+          testId:
+            Number(s.testId)
+        });
+      }
+    );
+
+    let overallReportStatus =
+      'pending';
+
+    if (tests.length > 0) {
+
+      const statuses =
+        tests.map(
+          t =>
+            (t.status || '')
+              .toLowerCase()
+        );
+
+      if (
+        statuses.length > 0 &&
+        statuses.every(s => s === 'cancel')
+      ) {
+        overallReportStatus = 'cancel';
+
+      } else if (
+        statuses.every(
+          s => s.includes('complete')
+        )
+      ) {
+        overallReportStatus =
+          'completed';
+
+      } else if (
+        statuses.some(
+          s => s === 'snr'
+        )
+      ) {
+        overallReportStatus =
+          'snr';
+
+      } else if (
+        statuses.some(
+          s => s.includes('process')
+        )
+      ) {
+        overallReportStatus =
+          'in_process';
+      }
+    }
+
+    return {
+      ...raw,
+
+      bookingId:
+        raw.bookingId,
+
+      patientId:
+        raw.patientId,
+
+      customerName:
+        raw.customerName,
+
+      title:
+        raw.title,
+
+      age:
+        raw.age,
+
+      ageType:
+        raw.ageType,
+
+      gender:
+        raw.gender,
+
+      createdBy:
+        raw.createdBy,
+
+      tests,
+
+      samples,
+
+      reports,
+      doctor: {
+        doctorId: raw.doctorId,
+        doctor_name: raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self'
       },
-      error: (err) => console.log('AVAILABLE TESTS ERROR:', err)
+
+      franchise: {
+        franchiseId: raw.franchiseId,
+        franchiseName: raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF'
+      },
+      overallReportStatus,
+
+      bookingDate:
+        raw.createdOn
+          ? new Date(
+            raw.createdOn
+          ).toLocaleString()
+          : undefined
+    };
+  }
+
+
+  // ---------- data loading ----------
+  loadBookings(isLoadMore: boolean = false): void {
+
+    this.isLoadingList = true;
+
+    const labId = this.labApi.getCurrentLabId();
+
+    const searchActive = !!this.isSearchMode;
+
+    const startDate = searchActive
+      ? this.SEARCH_START_DATE
+      : this.fromDate;
+
+    const endDateExclusive = searchActive
+      ? this.addOneDay(this.formatDateForInput(new Date()))
+      : this.addOneDay(this.toDate);
+
+    const franchiseId =
+      this.selectedFranchiseId !== null &&
+        this.selectedFranchiseId !== undefined &&
+        this.selectedFranchiseId !== '' &&
+        Number(this.selectedFranchiseId) > 0
+        ? Number(this.selectedFranchiseId)
+        : undefined;
+
+    // ✅ Ata sagळ्या cases sathी (All / Completed / SNR / Cancel / search)
+    // ekच path — sध्याच्या date-range cha SAGळा data ekत्र fetch kार.
+    // Load More cha vegळा logic kadhun taklа, tyामुळे tab-mismatch bug
+    // yeणe shakya nahi.
+    this.fetchAllPagesForRange(labId, startDate, endDateExclusive, franchiseId).then((allResults) => {
+      this.ngZone.run(() => {
+        this.bookings = allResults.map((booking: any) => this.mapBookingItem(booking));
+        this.totalBookingsFromServer = this.bookings.length;
+        this.hasMore = false;
+        this.isLoadingList = false;
+        this.isLoadingMore = false;
+        this.cdr.detectChanges();
+      });
     });
   }
+
+  // ---------- template aliases ----------
+  loadData(): void {
+    this.currentPage = 0;
+    this.loadBookings();
+  }
+
+  get isLoading(): boolean {
+    return this.isLoadingList;
+  }
+
+  private fetchAllPagesForRange(labId: number, startDate: string, endDate: string, franchiseId: any): Promise<any[]> {
+    return new Promise((resolve) => {
+      let allResults: any[] = [];
+      let page = 0;
+      const size = 100;
+      const MAX_PAGES = 50;
+
+      const fetchPage = () => {
+        this.labApi.getBookingStatusNew(labId, page, size, startDate, endDate, franchiseId).subscribe({
+          next: (res: any) => {
+            const content = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+            allResults = allResults.concat(content);
+
+            if (content.length === 0 || content.length < size || page >= MAX_PAGES) {
+              resolve(allResults);
+            } else {
+              page++;
+              fetchPage();
+            }
+          },
+          error: () => resolve(allResults)
+        });
+      };
+
+      fetchPage();
+    });
+  }
+
+
+
+
+
+  // ---------- load more ----------
+  loadMoreBookings(): void {
+
+
+  }
+
+
+
+
+  // ---------- apply filters ----------
+  applyFilters(): void {
+
+    this.currentPage = 0;
+
+    this.loadBookings();
+  }
+
+
+  // ---------- franchise filter loading ----------
+  private loadFilterFranchises(): void {
+
+    /*
+     * Read current logged-in user data
+     * dynamically from AuthService.
+     */
+    const currentRole =
+      this.authService?.role;
+
+    const currentFranchiseId =
+      this.authService?.franchiseId;
+
+    const currentFranchiseName =
+      this.authService?.franchiseName;
+
+    /*
+     * Franchise users should always have
+     * their own franchise selected.
+     */
+    const isFranchiseUser =
+      currentRole === 'ROLE_FRANCHISE' ||
+      currentRole === 'ROLE_FRANCHISE_STAFF';
+
+    this.labApi.getFranchises().subscribe({
+
+      next: (res: any) => {
+
+        this.ngZone.run(() => {
+
+          this.filterFranchises =
+            Array.isArray(res?.content)
+              ? res.content
+              : Array.isArray(res)
+                ? res
+                : [];
+
+          if (isFranchiseUser) {
+
+            /*
+             * Find logged-in franchise in
+             * available franchise list.
+             */
+            const matchedFranchise =
+              this.filterFranchises.find(
+                (f: any) =>
+                  Number(
+                    f?.franchiseId
+                  ) ===
+                  Number(
+                    currentFranchiseId
+                  )
+              );
+
+            if (matchedFranchise) {
+
+              this.selectedFranchiseId =
+                Number(
+                  matchedFranchise.franchiseId
+                );
+
+              this.franchiseSearchTerm =
+                matchedFranchise.franchiseName ||
+                currentFranchiseName ||
+                '';
+
+            } else if (
+              currentFranchiseId !== null &&
+              currentFranchiseId !== undefined &&
+              Number(
+                currentFranchiseId
+              ) > 0
+            ) {
+
+              /*
+               * Franchise not found in dropdown,
+               * but AuthService has valid ID.
+               *
+               * Use AuthService franchise ID
+               * directly.
+               */
+              this.selectedFranchiseId =
+                Number(
+                  currentFranchiseId
+                );
+
+              this.franchiseSearchTerm =
+                currentFranchiseName || '';
+
+            } else {
+
+              this.selectedFranchiseId =
+                null;
+
+              this.franchiseSearchTerm =
+                '';
+            }
+
+          } else {
+
+            /*
+             * LAB_ADMIN / STAFF:
+             *
+             * null means All Franchises.
+             */
+            this.selectedFranchiseId =
+              null;
+
+            this.franchiseSearchTerm =
+              '';
+          }
+
+          /*
+           * Important:
+           * Booking API is called only after
+           * franchise selection is ready.
+           */
+          this.currentPage = 0;
+
+          this.loadBookings();
+
+          this.cdr.detectChanges();
+        });
+      },
+
+      error: () => {
+
+        this.ngZone.run(() => {
+
+          this.filterFranchises = [];
+
+          /*
+           * Even if franchise list API fails,
+           * franchise users can still load
+           * their own bookings using the
+           * dynamic AuthService franchise ID.
+           */
+          if (
+            isFranchiseUser &&
+            currentFranchiseId !== null &&
+            currentFranchiseId !== undefined &&
+            Number(
+              currentFranchiseId
+            ) > 0
+          ) {
+
+            this.selectedFranchiseId =
+              Number(
+                currentFranchiseId
+              );
+
+            this.franchiseSearchTerm =
+              currentFranchiseName || '';
+
+          } else {
+
+            /*
+             * Admin / Staff:
+             * No franchise filter.
+             */
+            this.selectedFranchiseId =
+              null;
+
+            this.franchiseSearchTerm =
+              '';
+          }
+
+          this.currentPage = 0;
+
+          this.loadBookings();
+
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
+
+
+
+  // ---------- clear franchise ----------
+  clearFranchise(): void {
+
+    /*
+     * Franchise user cannot clear
+     * their own franchise filter.
+     */
+    if (
+      this.role === 'ROLE_FRANCHISE' ||
+      this.role === 'ROLE_FRANCHISE_STAFF'
+    ) {
+
+      const currentFranchiseId =
+        this.authService?.franchiseId;
+
+      const currentFranchiseName =
+        this.authService?.franchiseName;
+
+      this.selectedFranchiseId =
+        currentFranchiseId
+          ? Number(
+            currentFranchiseId
+          )
+          : null;
+
+      this.franchiseSearchTerm =
+        currentFranchiseName || '';
+
+      return;
+    }
+
+    /*
+     * Admin / Staff:
+     * Clear means All Franchises.
+     */
+    this.franchiseSearchTerm =
+      '';
+
+    this.selectedFranchiseId =
+      null;
+
+    this.filteredFranchiseList =
+      [];
+
+    this.showFranchiseDropdown =
+      false;
+
+    this.currentPage = 0;
+
+    this.loadBookings();
+  }
+
+
+  // ---------- track by ----------
+  trackByBookingId(
+    index: number,
+    item: BookingListItem
+  ): number {
+    return (
+      item.bookingId ??
+      item.id ??
+      index
+    );
+  }
+
+  trackByBarcode(
+    index: number,
+    s: BookingSample
+  ): string {
+    return (
+      s.barcode ||
+      String(index)
+    );
+  }
+
+
+  // ---------- single booking ----------
+  private fetchSingleBooking(
+    bookingId: number,
+    cb: (
+      b: BookingListItem
+    ) => void,
+    onError?: () => void
+  ): void {
+
+    this.labApi
+      .getSingleBooking(
+        bookingId
+      )
+      .subscribe({
+
+        next: (res: any) => {
+
+          this.ngZone.run(() => {
+
+            cb(
+              this.mapBookingItem(
+                res
+              )
+            );
+
+            this.cdr.detectChanges();
+          });
+        },
+
+        error: () => {
+
+          this.ngZone.run(() => {
+
+            this.showToast(
+              'Booking detail load fail zala',
+              'error'
+            );
+
+            onError?.();
+
+            this.cdr.detectChanges();
+          });
+        }
+      });
+  }
+
+
+  // ---------- available tests ----------
+  loadAvailableTests(): void {
+
+    this.labApi.getTests().subscribe({
+
+      next: (res: any) => {
+
+        const apiTests =
+          Array.isArray(res)
+            ? res
+            : [];
+
+        this.availableTests =
+          apiTests.map(
+            (t: any) => ({
+
+              testId:
+                t.test_id ??
+                t.testId,
+
+              testName:
+                t.test_name ||
+                'Unnamed Test',
+
+              testPrice:
+                t.price2 ??
+                0,
+
+              testMrp:
+                t.test_price ??
+                0,
+
+              sample:
+                t.sampleTypeName ||
+                'OTHER'
+            })
+          );
+      },
+
+      error: () => {
+
+        this.availableTests =
+          [];
+      }
+    });
+  }
+
 
   // ---------- card / row helpers ----------
   toggleExpand(item: BookingListItem) {
@@ -613,19 +1516,37 @@ get totalBookingsCount(): number {
     }).length;
     return completedCount === testCount ? 'completed' : 'pending';
   }
-  testStatusClass(status?: string): string {
-    const s = (status || 'pending').toLowerCase();
-    if (s.includes('process')) return 'badge-inprocess';
+testStatusClass(status?: string): string {
+    const s = (status || 'snr').toLowerCase();
+
+    if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
     if (s === 'snr') return 'badge-snr';
+    if (s.includes('clinical')) return 'badge-clinical';
+    if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
     if (s.includes('complete') || s.includes('ready')) return 'badge-ready';
+    if (
+      s.includes('process') ||
+      s.includes('outsource') ||
+      s.includes('doctor approval')
+    ) return 'badge-inprocess';
+
     return 'badge-pending';
   }
 
   testStatusLabel(status?: string): string {
-    const s = (status || 'pending').toLowerCase();
-    if (s.includes('process')) return 'IN PROCESS';
-    if (s === 'snr') return 'SNR';
+    const s = (status || 'snr').toLowerCase();
+
+    if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
+    if (s === 'snr') return 'SAMPLE NOT RECEIVED';
+    if (s.includes('clinical')) return 'CLINICAL';
+    if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
     if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
+    if (
+      s.includes('process') ||
+      s.includes('outsource') ||
+      s.includes('doctor approval')
+    ) return 'IN PROCESS';
+
     return 'PENDING';
   }
 
@@ -743,53 +1664,383 @@ get totalBookingsCount(): number {
     this.showToast(`${test.testName} added`, 'success');
   }
 
-  async removeTest(test: BookingTest) {
-    const alert = await this.alertController.create({
-      cssClass: 'premium-alert',
-      header: 'Delete Test',
-      message: `Are you sure you want to delete "${test.testName}"?`,
-      buttons: [
-        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
-        {
-          text: 'Yes, Delete',
-          cssClass: 'alert-btn-danger',
-          handler: () => {
-            if (test.isNewlyAdded) {
-              this.selectedTests = this.selectedTests.filter(t => t !== test);
-              this.showToast(`${test.testName} removed`, 'warning');
-              return;
+// async removeTest(test: BookingTest) {
+
+//   // =========================================================
+//   // CONFIRM DELETE POPUP
+//   // =========================================================
+//   const alert = await this.alertController.create({
+//     cssClass: 'premium-alert',
+//     header: 'Delete Test',
+//     message: `Are you sure you want to delete "${test.testName}"?`,
+//     buttons: [
+//       {
+//         text: 'No',
+//         role: 'cancel',
+//         cssClass: 'alert-btn-cancel'
+//       },
+//       {
+//         text: 'Yes, Delete',
+//         role: 'destructive',
+//         cssClass: 'alert-btn-danger',
+
+//         handler: () => {
+
+//           // =====================================================
+//           // NEWLY ADDED TEST
+//           // Database मध्ये save झालेला नाही.
+//           // फक्त UI मधून remove करायचा.
+//           // =====================================================
+//           if (test.isNewlyAdded) {
+
+//             this.selectedTests = this.selectedTests.filter(
+//               t => t !== test
+//             );
+
+//             this.showToast(
+//               `${test.testName} removed`,
+//               'warning'
+//             );
+
+//             this.cdr.detectChanges();
+
+//             return;
+//           }
+
+//           // =====================================================
+//           // EXISTING DATABASE TEST
+//           // =====================================================
+//           if (!test.testMappingId) {
+
+//             this.showToast(
+//               'Test ID missing. Cannot delete this test.',
+//               'error'
+//             );
+
+//             return;
+//           }
+
+//           // =====================================================
+//           // GET LAB ID
+//           // =====================================================
+//           const labId = this.labApi.getCurrentLabId();
+
+//           // =====================================================
+//           // GET BOOKING ID
+//           // =====================================================
+//           const bookingId = this.selectedBooking?.bookingId;
+
+//           if (!bookingId) {
+
+//             this.showToast(
+//               'Booking ID missing. Cannot delete test.',
+//               'error'
+//             );
+
+//             return;
+//           }
+
+//           // =====================================================
+//           // DELETE ONLY SELECTED TEST FROM DATABASE
+//           // =====================================================
+//           this.labApi
+//             .deleteTestFromBooking(
+//               labId,
+//               bookingId,
+//               test.testMappingId
+//             )
+//             .subscribe({
+
+//               // =================================================
+//               // SUCCESS
+//               // =================================================
+//               next: () => {
+
+//                 this.ngZone.run(() => {
+
+//                   // =================================================
+//                   // ONLY SELECTED TEST REMOVE FROM UI
+//                   // बाकीचे tests तसेच राहतील.
+//                   // शेवटचा test असेल तर selectedTests = [] होईल.
+//                   // =================================================
+//                   this.selectedTests =
+//                     this.selectedTests.filter(
+//                       t =>
+//                         t.testMappingId !==
+//                         test.testMappingId
+//                     );
+
+//                   // =================================================
+//                   // UPDATE SELECTED BOOKING
+//                   // =================================================
+//                   if (this.selectedBooking?.tests) {
+//                     this.selectedBooking.tests =
+//                       this.selectedBooking.tests.filter(
+//                         (t: BookingTest) =>
+//                           t.testMappingId !==
+//                           test.testMappingId
+//                       );
+//                   }
+
+//                   // =================================================
+//                   // SUCCESS MESSAGE
+//                   // =================================================
+//                   this.showToast(
+//                     `${test.testName} deleted successfully`,
+//                     'success'
+//                   );
+
+//                   // =================================================
+//                   // REFRESH UI
+//                   // =================================================
+//                   this.cdr.detectChanges();
+
+//                   // =================================================
+//                   // REFRESH BOOKING LIST
+//                   // =================================================
+//                   this.loadBookings();
+
+//                 });
+
+//               },
+
+//               // =================================================
+//               // ERROR
+//               // =================================================
+//               error: (err) => {
+
+//                 this.ngZone.run(() => {
+
+//                   console.error(
+//                     'DELETE TEST ERROR:',
+//                     err
+//                   );
+
+//                   this.showToast(
+//                     err?.error?.message ||
+//                     'Failed to delete test from database.',
+//                     'error'
+//                   );
+
+//                 });
+
+//               }
+
+//             });
+
+//         }
+//       }
+//     ]
+//   });
+
+//   // =========================================================
+//   // SHOW CONFIRMATION POPUP
+//   // =========================================================
+//   await alert.present();
+// }
+
+async removeTest(test: BookingTest) {
+
+  // =========================================================
+  // CONFIRM DELETE POPUP
+  // =========================================================
+  const alert = await this.alertController.create({
+    cssClass: 'premium-alert',
+    header: 'Delete Test',
+    message: `Are you sure you want to delete "${test.testName}"?`,
+    buttons: [
+      {
+        text: 'No',
+        role: 'cancel',
+        cssClass: 'alert-btn-cancel'
+      },
+      {
+        text: 'Yes, Delete',
+        role: 'destructive',
+        cssClass: 'alert-btn-danger',
+
+        handler: () => {
+
+          // =====================================================
+          // NEWLY ADDED TEST
+          // Database मध्ये अजून save झालेला नाही.
+          // फक्त UI मधून selected test remove करायचा.
+          // =====================================================
+          if (test.isNewlyAdded) {
+
+            // Remove only selected test
+            this.selectedTests =
+              this.selectedTests.filter(
+                t => t !== test
+              );
+
+            // Update selected booking tests also
+            if (this.selectedBooking?.tests) {
+
+              this.selectedBooking.tests =
+                this.selectedBooking.tests.filter(
+                  (t: BookingTest) =>
+                    t !== test
+                );
             }
 
-            if (!test.testMappingId) {
-              this.showToast('Test ID missing', 'error');
-              return;
-            }
+            // Allow empty booking
+            // selectedTests = [] allowed
 
-            const labId = this.labApi.getCurrentLabId();
-            const bookingId = this.selectedBooking!.bookingId;
+            this.showToast(
+              `${test.testName} removed`,
+              'warning'
+            );
 
-            this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
-              next: () => this.ngZone.run(() => {
-                this.selectedTests = this.selectedTests.filter(t => t !== test);
-                this.showToast(`${test.testName} deleted from patient`, 'success');
-                this.fetchSingleBooking(bookingId, (fresh) => {
-                  this.selectedBooking = fresh;
-                  this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
-                  this.loadBookings();
-                  this.cdr.detectChanges();
-                });
-              }),
-              error: (err) => this.ngZone.run(() => {
-                console.log('DELETE TEST ERROR:', err);
-                this.showToast('' + (err.error?.message || 'Unknown error'), 'error');
-              })
-            });
+            this.cdr.detectChanges();
+
+            return;
           }
+
+          // =====================================================
+          // EXISTING DATABASE TEST
+          // =====================================================
+          if (!test.testMappingId) {
+
+            this.showToast(
+              'Test ID missing. Cannot delete this test.',
+              'error'
+            );
+
+            return;
+          }
+
+          // =====================================================
+          // GET LAB ID
+          // =====================================================
+          const labId =
+            this.labApi.getCurrentLabId();
+
+          if (!labId) {
+
+            this.showToast(
+              'Lab ID missing. Cannot delete test.',
+              'error'
+            );
+
+            return;
+          }
+
+          // =====================================================
+          // GET BOOKING ID
+          // =====================================================
+          const bookingId =
+            this.selectedBooking?.bookingId;
+
+          if (!bookingId) {
+
+            this.showToast(
+              'Booking ID missing. Cannot delete test.',
+              'error'
+            );
+
+            return;
+          }
+
+          // =====================================================
+          // DELETE ONLY SELECTED TEST FROM DATABASE
+          // =====================================================
+          this.labApi
+            .deleteTestFromBooking(
+              labId,
+              bookingId,
+              test.testMappingId
+            )
+            .subscribe({
+
+              // =================================================
+              // DELETE SUCCESS
+              // =================================================
+              next: () => {
+
+                this.ngZone.run(() => {
+
+                  // =================================================
+                  // REMOVE ONLY SELECTED TEST
+                  // बाकीचे tests तसेच राहतील.
+                  // शेवटचा test असेल तर [] होईल.
+                  // =================================================
+                  this.selectedTests =
+                    this.selectedTests.filter(
+                      t =>
+                        t.testMappingId !==
+                        test.testMappingId
+                    );
+
+                  // =================================================
+                  // UPDATE SELECTED BOOKING
+                  // =================================================
+                  if (this.selectedBooking?.tests) {
+
+                    this.selectedBooking.tests =
+                      this.selectedBooking.tests.filter(
+                        (t: BookingTest) =>
+                          t.testMappingId !==
+                          test.testMappingId
+                      );
+                  }
+
+                  // =================================================
+                  // SUCCESS MESSAGE
+                  // =================================================
+                  this.showToast(
+                    `${test.testName} deleted successfully`,
+                    'success'
+                  );
+
+                  // =================================================
+                  // REFRESH CURRENT UI
+                  // =================================================
+                  this.cdr.detectChanges();
+
+                  // =================================================
+                  // REFRESH BOOKING STATUS LIST
+                  // =================================================
+                  this.loadBookings();
+
+                });
+
+              },
+
+              // =================================================
+              // DELETE ERROR
+              // =================================================
+              error: (err) => {
+
+                this.ngZone.run(() => {
+
+                  console.error(
+                    'DELETE TEST ERROR:',
+                    err
+                  );
+
+                  this.showToast(
+                    err?.error?.message ||
+                    'Failed to delete test from database.',
+                    'error'
+                  );
+
+                });
+
+              }
+
+            });
+
         }
-      ]
-    });
-    await alert.present();
-  }
+      }
+    ]
+  });
+
+  // =========================================================
+  // SHOW CONFIRMATION POPUP
+  // =========================================================
+  await alert.present();
+}
   onDiscountChange() {
     if (!this.canEditBilling) { this.discount = 0; return; }
     if (this.discount < 0) this.discount = 0;
@@ -798,94 +2049,263 @@ get totalBookingsCount(): number {
   }
 
   onPayNowChange() {
-    if (!this.canEditBilling) { this.payNowAmount = 0; this.paidAmount = this.basePaidAmount; return; }
+    if (!this.canViewPayment) { this.payNowAmount = 0; this.paidAmount = this.basePaidAmount; return; }
     if (this.payNowAmount < 0) this.payNowAmount = 0;
     const maxPayable = Math.max(0, this.totalAmount - this.basePaidAmount);
     if (this.payNowAmount > maxPayable) this.payNowAmount = maxPayable;
     this.paidAmount = this.basePaidAmount + this.payNowAmount;
   }
 
-  updateTestBooking() {
-    if (!this.selectedBooking || this.isSavingTest) return;
-    if (this.selectedTests.length === 0) {
-      this.showToast('Please add at least one test', 'warning');
-      return;
-    }
+updateTestBooking() {
+  if (!this.selectedBooking || this.isSavingTest) return;
 
-    this.isSavingTest = true;
-    const labId = this.labApi.getCurrentLabId();
-    const bookingId = this.selectedBooking.bookingId;
-    const newTests = this.selectedTests.filter(t => t.isNewlyAdded);
-    const existingTests = this.selectedTests.filter(t => !t.isNewlyAdded);
+  // =========================================================
+  // EMPTY TESTS ARE ALLOWED
+  // User can delete all tests and save/update the booking.
+  // =========================================================
 
-    const patientBody: any = {
+  this.isSavingTest = true;
+
+  const labId = this.labApi.getCurrentLabId();
+  const bookingId = this.selectedBooking.bookingId;
+
+  const newTests = this.selectedTests.filter(
+    t => t.isNewlyAdded
+  );
+
+  const existingTests = this.selectedTests.filter(
+    t => !t.isNewlyAdded
+  );
+
+  // =========================================================
+  // UPDATE PATIENT / BOOKING BODY
+  // =========================================================
+  const patientBody: any = {
+    bookingId,
+
+    customerName: this.selectedBooking.customerName,
+    ageType: this.selectedBooking.ageType,
+    age: this.selectedBooking.age,
+    gender: this.selectedBooking.gender,
+
+    mobileNumber: this.selectedBooking.mobileNumber,
+    aadhaarNumber: this.selectedBooking.aadhaarNumber,
+
+    doctorid: this.selectedBooking.doctor?.doctorId,
+    franchiseId: this.selectedBooking.franchise?.franchiseId,
+
+    createdOn: this.selectedBooking.createdOn,
+
+    // =======================================================
+    // EXISTING TESTS
+    // If all tests are deleted, this will be []
+    // This is now allowed.
+    // =======================================================
+    tests: existingTests.map(t => ({
+      testId: t.testId,
+      profileId: 0
+    })),
+
+    // =======================================================
+    // BILLING
+    // =======================================================
+    subTotalAmount: this.subTotal,
+
+    discountAmount: this.canEditBilling
+      ? this.discount
+      : (this.selectedBooking.discountAmount || 0),
+
+    totalAmount: this.canEditBilling
+      ? this.totalAmount
+      : (this.selectedBooking.totalAmount || 0),
+
+    paidAmount: this.canEditBilling
+      ? this.paidAmount
+      : (this.selectedBooking.paidAmount || 0),
+
+    dueAmount: this.canEditBilling
+      ? this.dueAmount
+      : (this.selectedBooking.dueAmount || 0),
+
+    payNowAmount: this.canEditBilling
+      ? this.payNowAmount
+      : 0,
+
+    paymentMode: this.paymentMethod
+  };
+
+  // =========================================================
+  // UPDATE BOOKING / PATIENT
+  // =========================================================
+  this.labApi
+    .updatePatient(
+      labId,
       bookingId,
-      customerName: this.selectedBooking.customerName,
-      ageType: this.selectedBooking.ageType,
-      age: this.selectedBooking.age,
-      gender: this.selectedBooking.gender,
-      mobileNumber: this.selectedBooking.mobileNumber,
-      aadhaarNumber: this.selectedBooking.aadhaarNumber,
-      doctorid: this.selectedBooking.doctor?.doctorId,
-      franchiseId: this.selectedBooking.franchise?.franchiseId,
-      createdOn: this.selectedBooking.createdOn,
-      tests: existingTests.map(t => ({ testId: t.testId, profileId: 0 })),
-      subTotalAmount: this.subTotal,
-      discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
-      totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
-      paidAmount: this.canEditBilling ? this.paidAmount : (this.selectedBooking.paidAmount || 0),
-      dueAmount: this.canEditBilling ? this.dueAmount : (this.selectedBooking.dueAmount || 0),
-      payNowAmount: this.canEditBilling ? this.payNowAmount : 0,
-      paymentMode: this.paymentMethod
-    };
+      patientBody
+    )
+    .subscribe({
 
-    this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
+      // =======================================================
+      // UPDATE PATIENT SUCCESS
+      // =======================================================
       next: () => {
+
+        // =====================================================
+        // IF NEW TESTS ARE PRESENT
+        // ADD ONLY NEWLY ADDED TESTS
+        // =====================================================
         if (newTests.length > 0) {
+
           const addTestBody: any = {
+
             bookingId,
-            customerName: this.selectedBooking!.customerName,
-            age: this.selectedBooking!.age,
-            ageType: this.selectedBooking!.ageType,
-            gender: this.selectedBooking!.gender,
-            aadhaarNumber: this.selectedBooking!.aadhaarNumber || '',
+
+            customerName:
+              this.selectedBooking!.customerName,
+
+            age:
+              this.selectedBooking!.age,
+
+            ageType:
+              this.selectedBooking!.ageType,
+
+            gender:
+              this.selectedBooking!.gender,
+
+            aadhaarNumber:
+              this.selectedBooking!.aadhaarNumber || '',
+
             tests: newTests.map(t => ({
-              testId: t.testId,
-              testName: t.testName,
-              testPrice: t.testMrp,
-              doctorTestDiscountPrice: 0,
-              doctorTestCommissionPrice: 0,
-              test_price: t.testPrice ?? t.testMrp,
-              assignedPrice: [t.testPrice ?? t.testMrp],
-              source: t.method || 'RPL',
-              discount: 0,
-              newTest: true
+
+              testId:
+                t.testId,
+
+              testName:
+                t.testName,
+
+              testPrice:
+                t.testMrp,
+
+              doctorTestDiscountPrice:
+                0,
+
+              doctorTestCommissionPrice:
+                0,
+
+              test_price:
+                t.testPrice ?? t.testMrp,
+
+              assignedPrice: [
+                t.testPrice ?? t.testMrp
+              ],
+
+              source:
+                t.method || 'RPL',
+
+              discount:
+                0,
+
+              newTest:
+                true
             }))
           };
 
-          this.labApi.addTestToBooking(addTestBody).subscribe({
-            next: () => this.verifyAndFinishSave(bookingId, newTests),
-            error: (err) => {
-              console.log('ADD TEST ERROR:', err);
-              this.ngZone.run(() => {
-                this.isSavingTest = false;
-                this.showToast('Naveen test add nahi zala: ' + (err.error?.message || 'Unknown error'), 'error');
-              });
-            }
-          });
+          // ===================================================
+          // ADD NEW TESTS
+          // ===================================================
+          this.labApi
+            .addTestToBooking(addTestBody)
+            .subscribe({
+
+              // =================================================
+              // ADD TEST SUCCESS
+              // =================================================
+              next: () => {
+
+                this.verifyAndFinishSave(
+                  bookingId,
+                  newTests
+                );
+
+              },
+
+              // =================================================
+              // ADD TEST ERROR
+              // =================================================
+              error: (err) => {
+
+                console.log(
+                  'ADD TEST ERROR:',
+                  err
+                );
+
+                this.ngZone.run(() => {
+
+                  this.isSavingTest = false;
+
+                  this.showToast(
+                    'Naveen test add nahi zala: ' +
+                    (
+                      err.error?.message ||
+                      'Unknown error'
+                    ),
+                    'error'
+                  );
+
+                });
+
+              }
+
+            });
+
         } else {
-          this.verifyAndFinishSave(bookingId, []);
+
+          // ===================================================
+          // NO NEW TESTS
+          //
+          // This also handles:
+          // selectedTests = []
+          //
+          // Booking will still be saved/updated.
+          // ===================================================
+          this.verifyAndFinishSave(
+            bookingId,
+            []
+          );
+
         }
+
       },
+
+      // =======================================================
+      // UPDATE PATIENT ERROR
+      // =======================================================
       error: (err) => {
-        console.log('UPDATE PATIENT ERROR:', err);
+
+        console.log(
+          'UPDATE PATIENT ERROR:',
+          err
+        );
+
         this.ngZone.run(() => {
+
           this.isSavingTest = false;
-          this.showToast('Failed to update booking: ' + (err.error?.message || 'Unknown error'), 'error');
+
+          this.showToast(
+            'Failed to update booking: ' +
+            (
+              err.error?.message ||
+              'Unknown error'
+            ),
+            'error'
+          );
+
         });
+
       }
+
     });
-  }
+}
 
   private verifyAndFinishSave(bookingId: number, newTests: BookingTest[]) {
     this.labApi.getSingleBooking(bookingId).subscribe({
@@ -938,7 +2358,18 @@ get totalBookingsCount(): number {
       data.franchiseId = fresh.franchise?.franchiseId || null;
       data.title = fresh.title || '';
       data.doctorTitle = '';
+      data.customDoctorName = fresh.customDoctorName || '';
+      data.customFranchiseLab = fresh.customFranchiseLab || '';
       this.editPatientData = data;
+
+      this.doctorSearch = data.doctor;
+      this.labSearch = data.lab;
+      this.customLabSearch = data.customFranchiseLab || '';
+      this.filteredDoctors = [];
+      this.filteredLabs = [];
+      this.showDoctorSuggestions = false;
+      this.showLabDropdown = false;
+      this.isPatientLoading = false;
       this.isPatientLoading = false;
     }, () => {
       this.isPatientLoading = false;
@@ -950,29 +2381,82 @@ get totalBookingsCount(): number {
     this.isPatientModalOpen = false;
     this.isPatientLoading = false;
     this.editPatientData = null;
+    this.doctorSearch = '';
+    this.labSearch = '';
+    this.customLabSearch = '';
+    this.filteredCustomLabs = [];
+    this.showCustomLabDropdown = false;
+    this.filteredDoctors = [];
+    this.filteredLabs = [];
+    this.showDoctorSuggestions = false;
+    this.showLabDropdown = false;
   }
 
   updatePatient() {
     if (!this.canEditPatient || !this.editPatientData) return;
 
+    const doctorId = Number(this.editPatientData.doctorId || 0);
+    const doctorName = String(this.editPatientData.doctor || '').trim();
+    const franchiseId = Number(this.editPatientData.franchiseId || 0);
+    const labName = String(this.editPatientData.lab || '').trim();
+
     const body = {
       bookingId: this.editPatientData.bookingId,
       customerName: this.editPatientData.name,
+      title: this.editPatientData.title,
       ageType: this.editPatientData.ageType,
       age: this.editPatientData.age,
       gender: this.editPatientData.gender,
       mobileNumber: this.editPatientData.mobileNumber,
       aadhaarNumber: this.editPatientData.aadhaarNumber,
-      doctorid: this.editPatientData.doctorId,
-      franchiseId: this.editPatientData.franchiseId,
+      uhidNumber: this.editPatientData.uhidNumber,   // ✅ added
+      doctorid: doctorId > 0 ? doctorId : 0,
+      customDoctorName: String(this.editPatientData.customDoctorName || '').trim(),
+      franchiseId: franchiseId > 0 ? franchiseId : (this.editPatientData.franchiseId || 0),
+      customFranchiseLab: String(this.editPatientData.customFranchiseLab || '').trim(),
       createdOn: this.editPatientData.createdOn
     };
 
-    this.labApi.updatePatient(this.labApi.getCurrentLabId(), this.editPatientData.bookingId, body).subscribe({
+    const bookingId = this.editPatientData.bookingId;
+
+    this.labApi.updatePatient(this.labApi.getCurrentLabId(), bookingId, body).subscribe({
       next: () => this.ngZone.run(() => {
         this.showToast('Patient updated successfully', 'success');
+        const idx = this.bookings.findIndex(b => b.bookingId === bookingId);
+        if (idx > -1) {
+          const updated: BookingListItem = { ...this.bookings[idx] };
+          const customDoctorName = String(this.editPatientData.customDoctorName || '').trim();
+          const customFranchiseLab = String(this.editPatientData.customFranchiseLab || '').trim();
+
+          updated.customerName = this.editPatientData.name;
+          updated.title = this.editPatientData.title;
+          updated.age = this.editPatientData.age;
+          updated.ageType = this.editPatientData.ageType;
+          updated.gender = this.editPatientData.gender;
+          updated.aadhaarNumber = this.editPatientData.aadhaarNumber;
+          updated.uhidNumber = this.editPatientData.uhidNumber;   // ✅ added
+          updated.customDoctorName = customDoctorName;
+          updated.customDoctorName = customDoctorName;
+          updated.customFranchiseLab = customFranchiseLab;
+
+          updated.doctor = {
+            doctorId: doctorId > 0 ? doctorId : undefined,
+            doctor_name: customDoctorName || doctorName || 'self'
+          };
+          updated.franchise = {
+            franchiseId: franchiseId > 0 ? franchiseId : undefined,
+            franchiseName: customFranchiseLab || labName || 'SELF'
+          };
+
+          this.bookings = [
+            ...this.bookings.slice(0, idx),
+            updated,
+            ...this.bookings.slice(idx + 1)
+          ];
+        }
+
         this.closePatientModal();
-        this.loadBookings();
+        this.cdr.detectChanges();
       }),
       error: (err) => {
         console.log('UPDATE PATIENT ERROR:', err);
@@ -1018,6 +2502,117 @@ get totalBookingsCount(): number {
     this.editPatientData.lab = lab?.franchiseName || lab?.name;
     this.editPatientData.franchiseId = lab?.franchiseId;
     this.showLabPicker = false;
+  }
+
+  searchDoctorInput(): void {
+    const searchTerm = String(this.doctorSearch || '').trim().toLowerCase();
+    if (!this.editPatientData) return;
+
+    this.editPatientData.doctor = this.doctorSearch;
+    this.editPatientData.doctorId = null; // custom typed nave — id reset
+
+    if (!searchTerm) {
+      this.filteredDoctors = [];
+      this.showDoctorSuggestions = false;
+      return;
+    }
+
+    this.labApi.getDoctors().subscribe({
+      next: (res: any) => {
+        const doctors = res?.data || res?.doctors || res?.content || res || [];
+        if (!Array.isArray(doctors)) {
+          this.filteredDoctors = [];
+          this.showDoctorSuggestions = false;
+          return;
+        }
+        this.doctors = doctors;
+        this.filteredDoctors = doctors.filter((doc: any) => {
+          const name = String(doc?.doctor_name || doc?.doctorName || doc?.name || '').trim().toLowerCase();
+          return name.includes(searchTerm);
+        });
+        this.showDoctorSuggestions = this.filteredDoctors.length > 0;
+      },
+      error: () => { this.filteredDoctors = []; this.showDoctorSuggestions = false; }
+    });
+  }
+
+  selectDoctorFromSearch(doc: any): void {
+    if (!doc || !this.editPatientData) return;
+    const doctorId = Number(doc?.doctorid ?? doc?.doctorId ?? doc?.id ?? 0);
+    const doctorName = String(doc?.doctor_name || doc?.doctorName || doc?.name || '').trim();
+    this.editPatientData.doctor = doctorName;
+    this.editPatientData.doctorId = doctorId;
+    this.doctorSearch = doctorName;
+    this.showDoctorSuggestions = false;
+  }
+
+  searchLabInput(): void {
+    const q = String(this.labSearch || '').trim().toLowerCase();
+    if (!this.editPatientData) return;
+
+    this.editPatientData.lab = this.labSearch;
+    this.editPatientData.franchiseId = null; // custom typed nave — id reset
+
+    if (!q) {
+      this.filteredLabs = [];
+      this.showLabDropdown = false;
+      return;
+    }
+
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res) ? res : (res?.content || []);
+        this.labs = list;
+        this.filteredLabs = list.filter((lab: any) => {
+          const name = String(lab?.franchiseName || lab?.name || '').trim().toLowerCase();
+          return name.includes(q);
+        });
+        this.showLabDropdown = this.filteredLabs.length > 0;
+      },
+      error: () => { this.filteredLabs = []; this.showLabDropdown = false; }
+    });
+  }
+  searchCustomLabInput(): void {
+    const q = String(this.customLabSearch || '').trim().toLowerCase();
+    if (!this.editPatientData) return;
+
+    this.editPatientData.customFranchiseLab = this.customLabSearch;
+
+    if (!q) {
+      this.filteredCustomLabs = [];
+      this.showCustomLabDropdown = false;
+      return;
+    }
+
+    this.labApi.getFranchiseLabs().subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res) ? res : (res?.content || []);
+        this.filteredCustomLabs = list.filter((lab: any) => {
+          const name = String(lab?.labName || lab?.franchiseName || lab?.name || '').trim().toLowerCase();
+          return name.includes(q);
+        });
+        this.showCustomLabDropdown = this.filteredCustomLabs.length > 0;
+      },
+      error: () => { this.filteredCustomLabs = []; this.showCustomLabDropdown = false; }
+    });
+  }
+
+  selectCustomLabFromSearch(lab: any): void {
+    if (!lab || !this.editPatientData) return;
+    const name = String(lab?.labName || lab?.franchiseName || lab?.name || '').trim();
+    this.editPatientData.customFranchiseLab = name;
+    this.customLabSearch = name;
+    this.showCustomLabDropdown = false;
+  }
+
+  selectLabFromSearch(lab: any): void {
+    if (!lab || !this.editPatientData) return;
+    const franchiseId = Number(lab?.franchiseId ?? lab?.id ?? 0);
+    const franchiseName = String(lab?.franchiseName || lab?.name || '').trim();
+    this.editPatientData.lab = franchiseName;
+    this.editPatientData.franchiseId = franchiseId;
+    this.labSearch = franchiseName;
+    this.showLabDropdown = false;
   }
 
   onPatientFileSelected(event: any) {
@@ -1111,19 +2706,45 @@ get totalBookingsCount(): number {
   openBarcodeModal(item: BookingListItem) {
     this.closeActionMenu();
     this.barcodeBooking = item;
-    this.barcodeRows = (item.samples || []).map((s: any) => ({
-      accessionId: s.accessionId || s.sampleAccessionId,
-      sampleTypeId: s.sampleTypeId,
-      sampleType: s.sampleType || '-',
-      oldBarcode: s.barcode,
-      newBarcode: s.barcode,
-      receiveDate: '',
-      status: s.status || 'PENDING',
-      saving: false
-    }));
+
+    this.barcodeRows = (item.samples || []).map((s: any) => {
+
+      const matchedTest = (item.tests || []).find(
+        t => Number(t.testId) === Number(s.testId)
+      );
+
+      const testStatus = (matchedTest?.status || '').toLowerCase();
+
+      let displayStatus: string;
+      let canEdit: boolean;
+
+      if (testStatus === 'cancel' || testStatus === 'cancelled') {
+        displayStatus = 'CANCEL';
+        canEdit = false;
+      } else if (testStatus === 'snr') {
+        displayStatus = 'PENDING';
+        canEdit = true;
+      } else {
+        // in_process, complete, ani baki sagळे -> locked/received
+        displayStatus = 'RECEIVED';
+        canEdit = false;
+      }
+
+      return {
+        accessionId: s.accessionId || s.sampleAccessionId,
+        sampleTypeId: s.sampleTypeId,
+        sampleType: s.sampleType || '-',
+        oldBarcode: s.barcode,
+        newBarcode: s.barcode,
+        receiveDate: '',
+        status: displayStatus,
+        canEditBarcode: canEdit,
+        saving: false
+      };
+    });
+
     this.isBarcodeModalOpen = true;
   }
-
   closeBarcodeModal() {
     this.isBarcodeModalOpen = false;
     this.barcodeBooking = null;
@@ -1148,16 +2769,59 @@ get totalBookingsCount(): number {
     }
     this.closeDateTimePicker();
   }
+  canDeleteBooking(item: BookingListItem): boolean {
+    const tests = item.tests || [];
+    if (tests.length === 0) return false;
+    // ✅ sagळे tests SNR aslyasच delete allow — konatahi ek
+    // complete/in-process/cancel asel tar delete disू nahi.
+    return tests.every(t => (t.status || '').toLowerCase() === 'snr');
+  }
+  async deleteBooking(item: BookingListItem) {
+    this.closeActionMenu();
+
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Confirmation',
+      message: 'Are you sure you want to Delete this booking? Deleting a booking will remove all associated data, including tests, samples, and reports.',
+      buttons: [
+        { text: 'Cancel', role: 'cancel', cssClass: 'alert-btn-cancel' },
+        {
+          text: 'Delete',
+          cssClass: 'alert-btn-danger',
+          handler: () => {
+            const labId = this.labApi.getCurrentLabId();
+            this.labApi.deleteBooking(labId, item.bookingId).subscribe({
+              next: () => this.ngZone.run(() => {
+                this.showToast('Booking deleted successfully', 'success');
+                this.loadBookings();
+              }),
+              error: (err) => this.ngZone.run(() => {
+                console.log('DELETE BOOKING ERROR:', err);
+                this.showToast('Booking delete fail zala: ' + (err.error?.message || 'Unknown error'), 'error');
+              })
+            });
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
 
   updateBarcodeRow(row: {
     sampleTypeId?: number; newBarcode: string; oldBarcode: string;
-    receiveDate: string; status: string; saving: boolean;
+    receiveDate: string; status: string; canEditBarcode: boolean; saving: boolean;
   }) {
+    if (!row.canEditBarcode) {
+      this.showToast('Ha barcode edit karayla allowed nahi (test in-process/complete ahe)', 'warning');
+      return;
+    }
     if (!row.newBarcode?.trim()) {
       this.showToast('Barcode rikama thevu naka', 'warning');
       return;
     }
-    if (!this.barcodeBooking) return;
+    if (!this.barcodeBooking) {
+      return;
+    }
 
     row.saving = true;
     const bookingId = this.barcodeBooking.bookingId;

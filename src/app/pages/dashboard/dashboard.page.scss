@@ -1813,7 +1813,7 @@ ion-content.menu-content {
 
 .test-line-table {
   width: 100%;
-  table-layout: fixed;        // ✅ NEW — column widths force-fixed, overflow थांबेल
+  table-layout: fixed;
   border-collapse: collapse;
   border: 1.5px solid var(--line);
   border-radius: var(--r-md);
@@ -1821,12 +1821,13 @@ ion-content.menu-content {
 
   th,
   td {
-    padding: 10px 12px;
+    padding: 12px;
     font-size: 13px;
     text-align: left;
     border-bottom: 1px solid var(--line);
-    word-wrap: break-word;     // ✅ NEW
-    overflow-wrap: break-word; // ✅ NEW
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: top;
   }
 
   th {
@@ -1835,19 +1836,35 @@ ion-content.menu-content {
     text-transform: uppercase;
     color: var(--brand-deep);
   }
+
+  th:first-child, td:first-child { width: 46%; }
+  th:nth-child(2), td:nth-child(2) { width: 18%; }
+  th:nth-child(3), td:nth-child(3) { width: 18%; }
+  th:last-child, td:last-child { width: 18%; text-align: right; }
+}
+.disabled-icon {
+  opacity: 0.3;
+  pointer-events: none;
+}
+.test-name-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .new-tag {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  margin-left: 6px;
-  margin-top: 4px;
-  padding: 3px 9px;
+  align-self: flex-start;
+  margin: 0;
+  padding: 3px 10px;
   border-radius: 999px;
   background: linear-gradient(135deg, #fff0f3, #ffe3e8);
   color: #c05262;
-  font-size: 10px;
+  font-size: 9.5px;
   font-weight: 800;
   letter-spacing: 0.2px;
   text-transform: uppercase;
@@ -1916,12 +1933,37 @@ ion-content.menu-content {
     grid-column: span 1;
   }
 }
+.doctor-lab-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;          // 20px वरून वाढवलं — fields मधलं space
+  width: 100%;
+
+  .summary-field { width: 100%; }
+
+  label {
+    color: var(--brand-deep, #075f5d) !important;   // teal color
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    margin-bottom: 10px !important;   // label आणि box मध्ये space वाढवलं
+    display: block !important;
+  }
+
+  input {
+    width: 100%;
+    height: 52px;
+    padding: 0 16px !important;
+    box-sizing: border-box;
+  }
+}
 
 .patient-edit-body {
   .patient-form-grid {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 16px;
+    gap: 20px;
   }
 
   .summary-field.span-3 {
@@ -1932,7 +1974,24 @@ ion-content.menu-content {
     grid-column: span 1;
   }
 
+  .doctor-input-wrapper {
+    position: relative;
+    width: 100%;
 
+    input {
+      padding-right: 42px !important;
+    }
+
+    .clear-doctor-search {
+      position: absolute;
+      right: 16px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 20px;
+    }
+  }
 
   .form-section-title {
     font-size: 13.5px;
@@ -1951,16 +2010,24 @@ ion-content.menu-content {
     }
   }
 
-  .patient-form-grid {
-    gap: 16px;
+  .form-section {
+    margin-bottom: 20px;
   }
 
-  .summary-field label {
-    font-size: 11px;
-    font-weight: 800;
-    color: var(--brand-deep);
-    margin-bottom: 2px;
-    display: block;
+  .summary-field {
+    margin-bottom: 4px;
+  }
+
+  .summary-field label,
+  .form-section label,
+  .doctor-lab-stack label {
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    color: var(--brand-deep) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.3px !important;
+    margin-bottom: 8px !important;
+    display: block !important;
   }
 
   .summary-field input,
@@ -1971,8 +2038,9 @@ ion-content.menu-content {
     background: var(--section-bg);
     border: 1.5px solid #dde5e5;
     border-radius: var(--r-md);
-    font-size: 14.5px;
-    font-weight: 600;
+    color: #14222e;
+    font-size: 15px;
+    font-weight: 700;
     box-shadow: none;
     padding: 0 16px;
     box-sizing: border-box;
@@ -2009,7 +2077,7 @@ ion-content.menu-content {
     }
   }
 
-.field-row {
+  .field-row {
     grid-column: 1 / -1;
     display: flex;
     gap: 16px;
@@ -2024,6 +2092,7 @@ ion-content.menu-content {
       min-width: 0;
     }
   }
+
   .inline-input-btn {
     display: flex;
     gap: 8px;
@@ -2046,7 +2115,6 @@ ion-content.menu-content {
     }
   }
 }
-
 .barcode-row-card {
   background: #fff;
   border: 1.5px solid var(--line);
@@ -2220,12 +2288,12 @@ ion-content.menu-content {
 
   th:first-child,
   td:first-child {
-    width: 60%;
+    width: 45%;
   }
 
   th:last-child,
   td:last-child {
-    width: 40%;
+    width: 55%;
   }
 
   th {
@@ -2248,6 +2316,8 @@ ion-content.menu-content {
     border-bottom: 1px solid var(--line);
     text-align: left;
     vertical-align: middle;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
   }
 
   tr:last-child td {
@@ -2264,11 +2334,11 @@ ion-content.menu-content {
   text-transform: uppercase;
   letter-spacing: .2px;
   color: #fff;
-  white-space: nowrap;
+  white-space: normal;
   box-shadow: 0 2px 6px rgba(6, 58, 56, .12);
 
   &.badge-pending {
-    background: #bd7d19;
+    background: #f0ad4e;
   }
 
   &.badge-inprocess {
@@ -2276,13 +2346,23 @@ ion-content.menu-content {
   }
 
   &.badge-snr {
-    background: #c05262;
+    background: #6f42c1;
+  }
+
+  &.badge-recheck {
+    background: #6f42c1;
+  }
+
+  &.badge-cancel {
+    background: #dc3545;
   }
 
   &.badge-ready {
     background: #16866e;
   }
-}.attach-btn {
+}
+
+.attach-btn {
   width: 100%;
   height: 48px;
   border: 1.5px dashed #cfdcdc;
@@ -2835,5 +2915,62 @@ ion-content.menu-content {
 @media (max-width: 768px) {
   .skeleton-fields {
     grid-template-columns: 1fr;
+  }
+}.doctor-search-field,
+.lab-search-field {
+  position: relative;
+}
+
+.overlay-dropdown,
+.doctor-dropdown {
+  position: absolute !important;
+  top: calc(100% + 6px) !important;
+  left: 0 !important;
+  right: 0 !important;
+  width: 100% !important;
+  max-height: 220px !important;
+  overflow-y: auto !important;
+  background: #ffffff !important;
+  border: 1px solid #dce7e7 !important;
+  border-radius: 12px !important;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.14) !important;
+  z-index: 99999 !important;
+  padding: 6px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+}
+
+.overlay-dropdown .suggestion-item,
+.doctor-dropdown .suggestion-item {
+  padding: 10px 14px !important;
+  font-size: 14px !important;
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  color: #1f2937 !important;
+
+  &:hover {
+    background: rgba(8, 123, 118, 0.08) !important;
+  }
+}
+
+.patient-form-grid,
+.form-section {
+  overflow: visible !important;
+}.doctor-input-wrapper {
+  display: flex;
+  align-items: center;
+  position: relative;
+
+  input {
+    width: 100%;
+    padding-right: 34px;
+  }
+
+  .clear-doctor-search {
+    position: absolute;
+    right: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 17px;
   }
 }

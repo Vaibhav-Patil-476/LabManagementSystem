@@ -423,9 +423,23 @@
 // =========================
 .status-tabs-wrapper {
   padding: 4px 16px 8px;
-  // fade edges so a scrollable row doesn't look abruptly cut off
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+
+  // Fade edges so a scrollable row doesn't look abruptly cut off
+  -webkit-mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 14px),
+    transparent 100%
+  );
+
+  mask-image: linear-gradient(
+    to right,
+    transparent 0,
+    #000 14px,
+    #000 calc(100% - 14px),
+    transparent 100%
+  );
 }
 
 .status-tabs {
@@ -457,35 +471,65 @@
   box-shadow: var(--shadow-xs);
   cursor: pointer;
   white-space: nowrap;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 
+  transition:
+    border-color 0.15s ease,
+    background 0.15s ease,
+    box-shadow 0.15s ease,
+    transform 0.1s ease;
+
+  // =========================
+  // TAB DOT
+  // =========================
   .tab-dot {
     width: 8px;
     height: 8px;
     border-radius: 50%;
     flex-shrink: 0;
 
+    // ALL - GRAY
+    &.badge-all {
+      background: #607d8b;
+    }
+
+    // COMPLETE - GREEN
     &.badge-complete {
       background: var(--success);
     }
 
+    // CLINICAL - BLUE
     &.badge-clinical {
       background: var(--info);
     }
 
+    // PARTIALLY COMPLETE - PINK
     &.badge-partial {
       background: var(--pink);
     }
 
+    // PENDING - ORANGE
     &.badge-pending {
       background: var(--warning);
     }
 
+    &.badge-clinical {
+  background: #2470b9;
+}
+
+    // SNR - PURPLE
     &.badge-snr {
       background: var(--purple);
     }
+
+    // CANCEL - RED
+    &.badge-cancel {
+      background: var(--danger);
+    }
   }
 
+  // =========================
+  // TAB LABEL
+  // =========================
   .tab-label {
     font-weight: 700;
     font-size: 0.85rem;
@@ -493,6 +537,9 @@
     transition: color 0.15s ease;
   }
 
+  // =========================
+  // TAB COUNT
+  // =========================
   .tab-count {
     min-width: 24px;
     height: 24px;
@@ -506,56 +553,145 @@
     font-weight: 800;
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
 
+    // ALL - GRAY
+    &.badge-all {
+      background: #607d8b;
+    }
+
+    // COMPLETE - GREEN
     &.badge-complete {
       background: var(--success);
     }
 
+    // CLINICAL - BLUE
     &.badge-clinical {
       background: var(--info);
     }
 
+    // PARTIALLY COMPLETE - PINK
     &.badge-partial {
       background: var(--pink);
     }
 
+    // PENDING - ORANGE
     &.badge-pending {
       background: var(--warning);
     }
 
+    // SNR - PURPLE
     &.badge-snr {
       background: var(--purple);
     }
+
+    // CANCEL - RED
+    &.badge-cancel {
+      background: var(--danger);
+    }
   }
 
+  // =========================
+  // HOVER
+  // =========================
   &:hover {
     border-color: rgba(8, 123, 118, 0.35);
     box-shadow: var(--shadow-sm);
   }
 
+  // =========================
+  // PRESS
+  // =========================
   &:active {
     transform: scale(0.97);
   }
 
+  // =========================
+  // ACTIVE TAB
+  // =========================
   &.active {
-    background: var(--brand-gradient);
     border-color: transparent;
-    box-shadow: var(--shadow-glow);
 
     .tab-dot {
-      background: #ffffff;
+      background: #ffffff !important;
     }
 
     .tab-label {
-      color: #ffffff;
+      color: #ffffff !important;
     }
 
     .tab-count {
       background: rgba(255, 255, 255, 0.22) !important;
+      color: #ffffff !important;
       box-shadow: none;
+    }
+
+    // =========================
+    // ALL - GRAY
+    // =========================
+    &:has(.tab-dot.badge-all) {
+      background: #607d8b !important;
+      border-color: #607d8b !important;
+      box-shadow: 0 8px 22px rgba(96, 125, 139, 0.28);
+    }
+
+    // =========================
+    // COMPLETE - GREEN
+    // =========================
+    &:has(.tab-dot.badge-complete) {
+      background: var(--success) !important;
+      border-color: var(--success) !important;
+      box-shadow: 0 8px 22px rgba(22, 134, 110, 0.28);
+    }
+
+    // =========================
+    // CLINICAL - BLUE
+    // =========================
+    &:has(.tab-dot.badge-clinical) {
+      background: var(--info) !important;
+      border-color: var(--info) !important;
+      box-shadow: 0 8px 22px rgba(36, 112, 185, 0.28);
+    }
+
+    // =========================
+    // PARTIALLY COMPLETE - PINK
+    // =========================
+    &:has(.tab-dot.badge-partial) {
+      background: var(--pink) !important;
+      border-color: var(--pink) !important;
+      box-shadow: 0 8px 22px rgba(189, 82, 111, 0.28);
+    }
+
+    // =========================
+    // PENDING - ORANGE
+    // =========================
+    &:has(.tab-dot.badge-pending) {
+      background: var(--warning) !important;
+      border-color: var(--warning) !important;
+      box-shadow: 0 8px 22px rgba(189, 125, 25, 0.28);
+    }
+
+    // =========================
+    // SNR - PURPLE
+    // =========================
+    &:has(.tab-dot.badge-snr) {
+      background: var(--purple) !important;
+      border-color: var(--purple) !important;
+      box-shadow: 0 8px 22px rgba(120, 86, 201, 0.28);
+    }
+
+    // =========================
+    // CANCEL - RED
+    // =========================
+    &:has(.tab-dot.badge-cancel) {
+      background: var(--danger) !important;
+      border-color: var(--danger) !important;
+      box-shadow: 0 8px 22px rgba(192, 82, 98, 0.28);
     }
   }
 }
 
+// =========================
+// MOBILE
+// =========================
 @media (max-width: 480px) {
   .status-tabs-wrapper {
     padding: 4px 0 8px;
@@ -737,8 +873,39 @@
   &.status-snr {
     background: var(--purple);
   }
-}
 
+  // 👇 testStatusClass() cha output ithe map hoto
+  &.badge-ready {
+    background: var(--success);
+  }
+
+  &.badge-inprocess {
+    background: var(--info);
+  }
+
+  &.badge-snr {
+    background: var(--purple);
+  }
+
+  &.badge-clinical {
+    background: #2470b9 !important;
+    color: #fff !important;
+  }
+
+  &.badge-pending {
+    background: var(--warning);
+  }
+
+  &.badge-recheck {
+    background: var(--warning);
+  }
+
+  &.badge-cancel {
+    background: var(--danger-bg);
+    color: var(--danger);
+    border: 1px solid var(--danger);
+  }
+}
 .reports-pill {
   display: inline-block;
   padding: 4px 12px;
@@ -1170,6 +1337,9 @@
   border-radius: var(--r-sm);
   max-height: 220px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  touch-action: pan-y;
+  overscroll-behavior: contain;
   box-shadow: var(--shadow-lg);
   box-sizing: border-box;
 }
@@ -1197,4 +1367,29 @@
   inset: 0;
   z-index: 20;
   background: transparent;
+}.badge-all { background: #607d8b; color: #fff; }.download-action-bar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 12px;
+  border-radius: 14px;
+  background: #eef8f7;
+  border: 1px solid #d6efed;
+
+  .selected-count {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--brand-deep, #075f5d);
+  }
+
+  ion-button {
+    --background: linear-gradient(135deg, #087d78, #055f5d);
+    --color: #fff;
+    --border-radius: 10px;
+  }
 }
