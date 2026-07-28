@@ -727,7 +727,7 @@
                     {{ editPatientData?.attachmentName || 'Choose File' }}
                   </button>
                   <div class="selected-file" *ngIf="editPatientData?.attachmentName">
-                    <ion-icon name="checkmark-circle"></ion-icon> {{ editPatientData.attachmentName }}
+                    <ion-icon name="checkmark-outline"></ion-icon> {{ editPatientData.attachmentName }}
                   </div>
                 </div>
               </div>
@@ -738,6 +738,250 @@
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
           <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="savePatientChanges()">Save
             Changes</ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- WALLET MODAL -->
+  <ion-modal class="test-modal sheet-modal" [isOpen]="isWalletModalOpen" (didDismiss)="closeWalletModal()"
+    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+    <ng-template>
+      <div class="test-modal-wrapper">
+        <div class="sheet-top">
+          <div class="modal-handle"></div>
+          <div class="sheet-top-row">
+            <div class="sheet-top-title">
+              <div class="sheet-title-eyebrow">Wallet</div>
+              <div class="sheet-title-main">Wallet Details</div>
+            </div>
+            <button type="button" class="close-modal-btn" (click)="closeWalletModal()">
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="test-modal-body-pad test-modal-scroll">
+
+          <div class="wallet-stats-grid">
+            <div class="ws-box ws-accent-green">
+              <span class="ws-label">Your Balance</span>
+              <strong class="ws-value ws-text-green">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+            </div>
+            <div class="ws-box ws-accent-blue">
+              <span class="ws-label">Total Limit</span>
+              <strong class="ws-value">₹{{ (wallet?.totalLimit ?? 0) | number:'1.2-2' }}</strong>
+            </div>
+            <div class="ws-box ws-accent-red">
+              <span class="ws-label">Used Limit</span>
+              <strong class="ws-value">₹{{ (wallet?.usedLimit ?? 0) | number:'1.2-2' }}</strong>
+            </div>
+            <div class="ws-box ws-accent-yellow">
+              <span class="ws-label">Remaining Limit</span>
+              <strong class="ws-value">₹{{ (wallet?.remainingLimit ?? 0) | number:'1.2-2' }}</strong>
+            </div>
+          </div>
+
+          <div class="wallet-filter-row">
+            <ion-select [(ngModel)]="walletFilterScope" (ionChange)="onWalletFilterChange()" interface="popover"
+              placeholder="Select filter" class="premium-select wallet-filter-select">
+              <ion-select-option value="user">User</ion-select-option>
+              <ion-select-option value="lab">Lab</ion-select-option>
+            </ion-select>
+
+            <ion-select [(ngModel)]="walletPaymentModeFilter" (ionChange)="onWalletFilterChange()" interface="popover"
+              placeholder="Select Payment Mode" class="premium-select wallet-filter-select"
+              [interfaceOptions]="{ cssClass: 'premium-select-popover' }">
+              <ion-select-option value="">All Modes</ion-select-option>
+              <ion-select-option value="franchise_wallet">Franchise Wallet</ion-select-option>
+              <ion-select-option value="online">Online</ion-select-option>
+              <ion-select-option value="razorpay_online_payment">Razorpay online payment</ion-select-option>
+              <ion-select-option value="from_lab">From Lab</ion-select-option>
+            </ion-select>
+          </div>
+
+          <ion-button expand="block" fill="solid" class="save-changes-btn wallet-addfunds-btn"
+            (click)="openAddFundsModal()">
+            Add Funds
+          </ion-button>
+
+          <div class="section-label-row wallet-tx-heading">
+            <span class="section-label-title">Transactions</span>
+            <span class="section-label-count">{{ walletTotalRows }} total</span>
+          </div>
+
+          <div class="wallet-table-wrapper">
+            <table class="wallet-tx-table">
+              <thead>
+                <tr>
+                  <th>Amount</th>
+                  <th>Type</th>
+                  <th>Date</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let tx of walletTransactions">
+                  <td class="wtx-amount"
+                    [ngClass]="(tx.closingBalance - tx.openingBalance) < 0 ? 'wtx-debit' : 'wtx-credit'">
+                    ₹{{ (tx.closingBalance - tx.openingBalance) | number:'1.2-2' }} /-
+                  </td>
+                  <td>
+                    <span class="wtx-type-badge"
+                      [ngClass]="tx.transactionType === 'CREDIT' ? 'wtx-badge-credit' : 'wtx-badge-debit'">
+                      {{ tx.transactionType }}
+                    </span>
+                  </td>
+                  <td class="wtx-date">{{ tx?.createdOn | date:'dd-MM-yyyy hh:mm a' }}</td>
+                  <td class="wtx-desc">{{ tx?.description || 'N/A' }}</td>
+                </tr>
+                <tr *ngIf="walletTransactions.length === 0 && !isWalletLoading">
+                  <td colspan="4" class="empty-tests">No transactions found</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="sm-loading" *ngIf="isWalletLoading">
+            <ion-spinner name="dots"></ion-spinner><span>Loading...</span>
+          </div>
+
+          <ion-button fill="clear" expand="block"
+            *ngIf="walletTransactions.length < walletTotalRows && !isWalletLoading" (click)="onWalletScroll()">
+            Load more
+          </ion-button>
+
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ADD FUNDS MODAL -->
+  <ion-modal class="test-modal sheet-modal" [isOpen]="isAddFundsModalOpen" (didDismiss)="closeAddFundsModal()"
+    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+    <ng-template>
+      <div class="test-modal-wrapper">
+        <div class="sheet-top">
+          <div class="modal-handle"></div>
+          <div class="sheet-top-row">
+            <div class="sheet-top-title">
+              <div class="sheet-title-eyebrow">Wallet</div>
+              <div class="sheet-title-main">Add Funds</div>
+            </div>
+            <button type="button" class="close-modal-btn" (click)="closeAddFundsModal()">
+              <ion-icon name="close-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="test-modal-body-pad test-modal-scroll">
+
+          <!-- AMOUNT -->
+          <div class="summary-field">
+            <label>Amount</label>
+            <input type="number" [(ngModel)]="addFundsAmount" placeholder="Enter amount" min="1">
+          </div>
+
+          <!-- PAYMENT METHOD SELECTOR -->
+          <div class="section-label-row">
+            <span class="section-label-title">Payment Method</span>
+          </div>
+
+          <div class="services-grid">
+            <div class="service-card" (click)="selectPaymentMethod('razorpay')"
+              [style.border]="selectedPaymentMethod === 'razorpay' ? '2px solid #087b76' : '1px solid transparent'"
+              [style.background]="selectedPaymentMethod === 'razorpay' ? '#e6f5f4' : ''" style="position: relative;">
+              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'razorpay'"
+                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+              <span class="service-icon teal"><ion-icon name="card-outline"></ion-icon></span>
+              <span class="service-name">Razorpay</span>
+            </div>
+
+            <div class="service-card" (click)="selectPaymentMethod('icici')"
+              [style.border]="selectedPaymentMethod === 'icici' ? '2px solid #087b76' : '1px solid transparent'"
+              [style.background]="selectedPaymentMethod === 'icici' ? '#e6f5f4' : ''" style="position: relative;">
+              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'icici'"
+                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+              <span class="service-icon blue"><ion-icon name="business-outline"></ion-icon></span>
+              <span class="service-name">ICICI</span>
+            </div>
+
+            <div class="service-card" (click)="selectPaymentMethod('upi')"
+              [style.border]="selectedPaymentMethod === 'upi' ? '2px solid #087b76' : '1px solid transparent'"
+              [style.background]="selectedPaymentMethod === 'upi' ? '#e6f5f4' : ''" style="position: relative;">
+              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'upi'"
+                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+              <span class="service-icon violet"><ion-icon name="phone-portrait-outline"></ion-icon></span>
+              <span class="service-name">UPI</span>
+            </div>
+
+            <div class="service-card" (click)="selectPaymentMethod('qr')"
+              [style.border]="selectedPaymentMethod === 'qr' ? '2px solid #087b76' : '1px solid transparent'"
+              [style.background]="selectedPaymentMethod === 'qr' ? '#e6f5f4' : ''" style="position: relative;">
+              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'qr'"
+                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+              <span class="service-icon amber"><ion-icon name="qr-code-outline"></ion-icon></span>
+              <span class="service-name">QR Code</span>
+            </div>
+
+            <div class="service-card" (click)="selectPaymentMethod('bank')"
+              [style.border]="selectedPaymentMethod === 'bank' ? '2px solid #087b76' : '1px solid transparent'"
+              [style.background]="selectedPaymentMethod === 'bank' ? '#e6f5f4' : ''" style="position: relative;">
+              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'bank'"
+                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+              <span class="service-icon rose"><ion-icon name="lock-closed-outline"></ion-icon></span>
+              <span class="service-name">Bank Transfer</span>
+            </div>
+          </div>
+
+          <!-- UPI DETAILS -->
+          <div class="form-section" *ngIf="selectedPaymentMethod === 'upi'">
+            <div class="form-section-title"><ion-icon name="phone-portrait-outline"></ion-icon> UPI Payment</div>
+            <div class="summary-field">
+              <label>UPI ID</label>
+              <input type="text" [value]="upiId" readonly>
+            </div>
+          </div>
+
+          <!-- QR DETAILS -->
+          <div class="form-section" *ngIf="selectedPaymentMethod === 'qr'">
+            <div class="form-section-title"><ion-icon name="qr-code-outline"></ion-icon> Scan QR to Pay</div>
+            <img [src]="qrImageUrl" alt="Payment QR" style="max-width:220px; display:block; margin:0 auto;">
+          </div>
+
+          <!-- BANK DETAILS -->
+          <div class="form-section" *ngIf="selectedPaymentMethod === 'bank'">
+            <div class="form-section-title"><ion-icon name="business-outline"></ion-icon> Bank Details</div>
+            <div class="patient-form-grid">
+              <div class="summary-field span-3">
+                <label>Bank Name</label>
+                <input type="text" [value]="bankDetails.bankName" readonly>
+              </div>
+              <div class="summary-field pair-field">
+                <label>Account Number</label>
+                <input type="text" [value]="bankDetails.accountNumber" readonly>
+              </div>
+              <div class="summary-field pair-field">
+                <label>IFSC</label>
+                <input type="text" [value]="bankDetails.ifsc" readonly>
+              </div>
+            </div>
+          </div>
+
+          <!-- TRANSACTION ID (manual methods only) -->
+          <div class="summary-field" *ngIf="isManualPaymentMethod">
+            <label>Transaction Id</label>
+            <input type="text" [(ngModel)]="transactionId" placeholder="Enter transaction ID">
+            <span class="sc-empty" *ngIf="transactionIdError" style="color:#e74c3c;">{{ transactionIdError }}</span>
+          </div>
+
+        </div>
+
+        <div class="sheet-footer">
+          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="submitAddFunds()"
+            [disabled]="isAddFundsSaving">
+            {{ isAddFundsSaving ? 'Processing...' : (isManualPaymentMethod ? 'Submit for Approval' : 'Pay Now') }}
+          </ion-button>
         </div>
       </div>
     </ng-template>
@@ -851,6 +1095,9 @@
       </div>
     </ng-template>
   </ion-modal>
+
+
+
   <ion-content class="dashboard-content" [fullscreen]="true">
     <main class="dashboard-shell">
       <header class="app-header">
@@ -1059,7 +1306,7 @@
           </article>
         </section>
 
-        <section class="focus-card" aria-label="Today's booking highlight">
+        <!-- <section class="focus-card" aria-label="Today's booking highlight">
           <div class="focus-primary">
             <p>Today · {{ todayKeyLabel }}</p>
             <div>
@@ -1077,8 +1324,42 @@
 
           <span class="focus-orb orb-one"></span>
           <span class="focus-orb orb-two"></span>
-        </section>
+        </section> -->
+        <!-- <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
+          <div class="wm-clickable" (click)="openWalletModal()">
+            <span class="wm-icon-badge">
+              <ion-icon name="wallet-outline"></ion-icon>
+            </span>
+            <div class="wm-info">
+              <span class="wm-label">Balance</span>
+              <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+            </div>
+          </div>
 
+          <button type="button" class="wm-add-btn" (click)="openAddFundsModal()">
+            <ion-icon name="add-circle-outline"></ion-icon>
+          </button>
+
+          <span class="wallet-orb wm-orb-one"></span>
+          <span class="wallet-orb wm-orb-two"></span>
+        </div> -->
+        <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
+          <span class="wm-icon-badge">
+            <ion-icon name="wallet-outline"></ion-icon>
+          </span>
+
+          <div class="wm-info">
+            <span class="wm-label">Balance</span>
+            <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+          </div>
+
+          <button type="button" class="wm-add-btn" (click)="openWalletModal()">
+            <ion-icon name="add-circle-outline"></ion-icon>
+          </button>
+
+          <span class="wallet-orb wm-orb-one"></span>
+          <span class="wallet-orb wm-orb-two"></span>
+        </div>
         <section class="content-section">
           <div class="section-heading">
             <div>

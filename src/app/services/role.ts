@@ -15,7 +15,7 @@ export class RoleService {
 
   constructor(private authService: AuthService) {}
 get currentRole(): string {
-  console.log('CURRENT ROLE CHECK:', this.authService.role);
+ 
   return this.authService.role;
 }
 

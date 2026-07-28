@@ -21,7 +21,7 @@ import {
   IonButton,
   IonSearchbar,
   MenuController,
-  AlertController   
+  AlertController
 } from "@ionic/angular/standalone";
 
 import { MatDatepickerModule } from "@angular/material/datepicker";
@@ -48,7 +48,7 @@ import {
   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, addOutline, attachOutline,
-  checkmarkOutline
+  checkmarkOutline, walletOutline, cardOutline, removeCircleOutline, addCircleOutline, closeCircleOutline as closeCircleOutlineIcon, businessOutline, phonePortraitOutline, lockClosedOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../services/auth";
@@ -56,7 +56,7 @@ import { LabApiService } from "../../services/lab-api";
 import { ToastService } from "../../services/toast";
 import { BookingRefreshService } from "../../services/booking-refresh";
 import { RoleService } from "../../services/role";
-
+import { WalletService } from "../../services/wallet";
 // ✅ dashboard cha barcode row type — BookingListItem cha
 // dashboard shi kahi sambandh nahi (to fakt booking-status.page.ts
 // madhe define ahe), tyамुळे ithe 'any' based shape vaparlay.
@@ -149,6 +149,46 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   isBarcodeModalOpen = false; isBarcodeLoading = false; barcodeBooking: any = null;
   barcodeRows: BarcodeRow[] = [];   // ✅ ekच declaration — duplicate kadhla
+  // ---------- Franchise Wallet ----------
+  wallet: any = null;
+  isWalletModalOpen = false;
+  isWalletLoading = false;
+  walletTransactions: any[] = [];
+  walletTotalRows = 0;
+  walletPage = 0;
+  walletSize = 20;
+
+  isAddFundsModalOpen = false;
+  addFundsMode: 'online' | 'offline' = 'online';
+  addFundsAmount: any = null;
+  addFundsRemark = '';
+  isAddFundsSaving = false;
+
+  // Wallet modal filters
+  walletFilterScope: 'user' | 'lab' = 'user'; // ⚠️ UI-only for now — no backend param
+  // confirmed for this yet; wire once clarified. Does not affect API call below.
+  walletPaymentModeFilter: string = '';
+
+
+  selectedPaymentMethod: 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici' = 'razorpay';
+  transactionId = '';
+  transactionIdError = '';
+
+  // ⚠️ Static payment info — replace with real values, or fetch from a lab
+  // settings API if one exists (none was provided in the given endpoint list).
+  upiId = '7776008079@ybl';
+  qrImageUrl = 'assets/images/payment-qr.png';
+  bankDetails = { bankName: 'Bank of Maharashtra', accountNumber: '60117071950', ifsc: 'MAHB0000172' };
+  get canViewWallet(): boolean {
+    const role = this.authService.role;
+    return role === 'ROLE_FRANCHISE' || role === 'ROLE_FRANCHISE_STAFF' || role === 'ROLE_LAB_ADMIN';
+  }
+
+
+  get isManualPaymentMethod(): boolean {
+    return this.selectedPaymentMethod === 'upi' || this.selectedPaymentMethod === 'qr' || this.selectedPaymentMethod === 'bank';
+  }
+
 
   activeDateTimeRow: any = null; tempDateTimeValue = '';
 
@@ -336,10 +376,65 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
   }
 
-  private loadInProgress = false;
-  private refreshSub?: Subscription;
-  private pollSub?: Subscription;
+private loadInProgress = false;
+private refreshSub?: Subscription;
+private pollSub?: Subscription;
+private walletPollSub?: Subscription;
+private refreshWalletSilently() {
+  const labId = this.authService.labId;
+  const franchiseId = this.authService.franchiseId;
 
+  if (!labId || !franchiseId) {
+    return;
+  }
+
+  // Balance silently update करा
+  this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+    next: (res: any) => {
+      this.wallet = res?.content
+        ? {
+            ...res,
+            ...(res.content[0] || {})
+          }
+        : res;
+
+      this.cdr.detectChanges();
+    },
+    error: (err) => {
+      console.error('SILENT WALLET REFRESH ERROR:', err);
+    }
+  });
+
+  // Modal open असेल तर transactions पण silently update करा
+  if (this.isWalletModalOpen) {
+    this.walletService
+      .getWallet(
+        labId,
+        franchiseId,
+        0,
+        this.walletSize,
+        true,
+        this.walletPaymentModeFilter
+      )
+      .subscribe({
+        next: (res: any) => {
+          const content = res?.transaction?.content || [];
+
+          // Loading false ठेवायचा — spinner दिसणार नाही
+          this.walletTransactions = content;
+
+          this.walletTotalRows =
+            res?.transaction?.totalElements ??
+            content.length;
+
+          this.cdr.detectChanges();
+        },
+        error: (err) => {
+          console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err);
+        }
+      });
+  }
+}
   get todayKey(): string {
     return this.toKey(new Date());
   }
@@ -369,7 +464,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     private roleService: RoleService,
     private ngZone: NgZone,
     private alertController: AlertController,
-     private cdr: ChangeDetectorRef,
+    private walletService: WalletService,
+    private cdr: ChangeDetectorRef,
   ) {
     addIcons({
       'people-outline': peopleOutline,
@@ -397,7 +493,14 @@ export class DashboardPage implements OnInit, OnDestroy {
       'add-outline': addOutline,
       'attach-outline': attachOutline,
       'checkmark-outline': checkmarkOutline,
-      
+      'wallet-outline': walletOutline,
+      'card-outline': cardOutline,
+      'remove-circle-outline': removeCircleOutline,
+      'add-circle-outline': addCircleOutline,
+      'business-outline': businessOutline,
+      'phone-portrait-outline': phonePortraitOutline,
+      'lock-closed-outline': lockClosedOutline,
+
 
     });
 
@@ -417,34 +520,59 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   // ---------- lifecycle ----------
-  ngOnInit() {
-    if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
-    this.loadAvailableTests();
+ ngOnInit() {
+  if (!this.authService.isLoggedIn()) {
+    this.router.navigate(['/login']);
+    return;
   }
 
-  ngOnDestroy() {
-    this.refreshSub?.unsubscribe();
-    this.pollSub?.unsubscribe();
-  }
+  this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
 
-  ionViewWillEnter() {
-    this.initDashboard();
-    this.startPolling();
-  }
+  this.loadAvailableTests();
 
-  ionViewWillLeave() {
-    this.pollSub?.unsubscribe();
+if (this.canViewWallet) {
+  this.loadWallet();
+  this.startWalletPolling();
+}
+}
+
+ngOnDestroy() {
+  this.refreshSub?.unsubscribe();
+  this.pollSub?.unsubscribe();
+  this.walletPollSub?.unsubscribe();
+}
+
+ionViewWillEnter() {
+  this.initDashboard();
+  this.startPolling();
+
+  if (this.canViewWallet) {
+    this.startWalletPolling();
   }
+}
+
+ionViewWillLeave() {
+  this.pollSub?.unsubscribe();
+  this.walletPollSub?.unsubscribe();
+}
 
   private startPolling() {
     this.pollSub?.unsubscribe();
     this.pollSub = interval(15000).subscribe(() => this.loadDashboard(true));
   }
+
+private startWalletPolling() {
+  this.walletPollSub?.unsubscribe();
+
+  if (!this.canViewWallet) {
+    return;
+  }
+
+  this.walletPollSub = interval(3000).subscribe(() => {
+    // कोणताही loading spinner नाही
+    this.refreshWalletSilently();
+  });
+}
 
   // ---------- init ----------
   initDashboard() {
@@ -579,266 +707,266 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.selectedTests.push({ ...test, isNewlyAdded: true });
     this.testSearchTerm = ''; this.filteredTests = [];
   }
-// async removeTestInline(test: any) {
+  // async removeTestInline(test: any) {
 
-//   // ✅ Booking la kimaan 1 test asayla hava — shevatcha test delete karायला allow nahi
-//   if (this.selectedTests.length <= 1) {
-//     const alert = await this.alertController.create({
-//       cssClass: 'premium-alert',
-//       header: 'Not Allowed',
-//       message: 'Booking madhe kimaan 1 test asayla have. Shevatcha test delete karta yenar nahi.',
-//       buttons: [
-//         { text: 'OK', role: 'cancel', cssClass: 'alert-btn-cancel' }
-//       ]
-//     });
-//     await alert.present();
-//     return;
-//   }
+  //   // ✅ Booking la kimaan 1 test asayla hava — shevatcha test delete karायला allow nahi
+  //   if (this.selectedTests.length <= 1) {
+  //     const alert = await this.alertController.create({
+  //       cssClass: 'premium-alert',
+  //       header: 'Not Allowed',
+  //       message: 'Booking madhe kimaan 1 test asayla have. Shevatcha test delete karta yenar nahi.',
+  //       buttons: [
+  //         { text: 'OK', role: 'cancel', cssClass: 'alert-btn-cancel' }
+  //       ]
+  //     });
+  //     await alert.present();
+  //     return;
+  //   }
 
-//   // Newly added (not yet saved) test — direct local removal, no API call needed
-//   if (test.isNewlyAdded) {
-//     this.selectedTests = this.selectedTests.filter(t => t !== test);
-//     this.toastService.warning('Warning', `${test.testName} removed`);
-//     return;
-//   }
+  //   // Newly added (not yet saved) test — direct local removal, no API call needed
+  //   if (test.isNewlyAdded) {
+  //     this.selectedTests = this.selectedTests.filter(t => t !== test);
+  //     this.toastService.warning('Warning', `${test.testName} removed`);
+  //     return;
+  //   }
 
-//   // Existing/saved test — must confirm + go through backend before touching UI list
-//   const alert = await this.alertController.create({
-//     cssClass: 'premium-alert',
-//     header: 'Delete Test',
-//     message: `Are you sure you want to delete "${test.testName}"?`,
-//     buttons: [
-//       { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
-//       {
-//         text: 'Yes, Delete',
-//         cssClass: 'alert-btn-danger',
-//         handler: () => {
-//           if (!test.testMappingId) {
-//             this.toastService.error('Error', 'Test ID missing');
-//             return;
-//           }
+  //   // Existing/saved test — must confirm + go through backend before touching UI list
+  //   const alert = await this.alertController.create({
+  //     cssClass: 'premium-alert',
+  //     header: 'Delete Test',
+  //     message: `Are you sure you want to delete "${test.testName}"?`,
+  //     buttons: [
+  //       { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
+  //       {
+  //         text: 'Yes, Delete',
+  //         cssClass: 'alert-btn-danger',
+  //         handler: () => {
+  //           if (!test.testMappingId) {
+  //             this.toastService.error('Error', 'Test ID missing');
+  //             return;
+  //           }
 
-//           const labId = this.authService.currentUserValue?.raw?.labId;
-//           const bookingId = this.selectedBooking.bookingId;
+  //           const labId = this.authService.currentUserValue?.raw?.labId;
+  //           const bookingId = this.selectedBooking.bookingId;
 
-//           this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
-//             next: () => {
-//               this.selectedTests = this.selectedTests.filter(t => t !== test);
-//               this.toastService.success('Success', `${test.testName} deleted from patient`);
+  //           this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
+  //             next: () => {
+  //               this.selectedTests = this.selectedTests.filter(t => t !== test);
+  //               this.toastService.success('Success', `${test.testName} deleted from patient`);
 
-//               this.labApi.getSingleBooking(bookingId).subscribe({
-//                 next: (res: any) => {
-//                   const fresh = this.mapBooking(res);
-//                   this.selectedBooking = fresh;
-//                   this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
-//                   this.loadDashboard(true);
-//                 },
-//                 error: () => { /* silent */ }
-//               });
-//             },
-//             error: (err) => {
-//               this.toastService.error('Error', '' + (err.error?.message || 'Test delete karta yenar nahi'));
-//             }
-//           });
-//         }
-//       }
-//     ]
-//   });
+  //               this.labApi.getSingleBooking(bookingId).subscribe({
+  //                 next: (res: any) => {
+  //                   const fresh = this.mapBooking(res);
+  //                   this.selectedBooking = fresh;
+  //                   this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
+  //                   this.loadDashboard(true);
+  //                 },
+  //                 error: () => { /* silent */ }
+  //               });
+  //             },
+  //             error: (err) => {
+  //               this.toastService.error('Error', '' + (err.error?.message || 'Test delete karta yenar nahi'));
+  //             }
+  //           });
+  //         }
+  //       }
+  //     ]
+  //   });
 
-//   await alert.present();
-// }
-async removeTestInline(test: any) {
+  //   await alert.present();
+  // }
+  async removeTestInline(test: any) {
 
-  // =========================================================
-  // CONFIRM DELETE POPUP
-  // =========================================================
-  const alert = await this.alertController.create({
-    cssClass: 'premium-alert',
-    header: 'Delete Test',
-    message: `Are you sure you want to delete "${test.testName}"?`,
-    buttons: [
-      {
-        text: 'No',
-        role: 'cancel',
-        cssClass: 'alert-btn-cancel'
-      },
-      {
-        text: 'Yes, Delete',
-        role: 'destructive',
-        cssClass: 'alert-btn-danger',
+    // =========================================================
+    // CONFIRM DELETE POPUP
+    // =========================================================
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Delete Test',
+      message: `Are you sure you want to delete "${test.testName}"?`,
+      buttons: [
+        {
+          text: 'No',
+          role: 'cancel',
+          cssClass: 'alert-btn-cancel'
+        },
+        {
+          text: 'Yes, Delete',
+          role: 'destructive',
+          cssClass: 'alert-btn-danger',
 
-        handler: () => {
+          handler: () => {
 
-          // =====================================================
-          // NEWLY ADDED TEST
-          // Database मध्ये अजून save झालेला नाही.
-          // फक्त selectedTests मधून हा specific test remove करायचा.
-          // =====================================================
-          if (test.isNewlyAdded) {
+            // =====================================================
+            // NEWLY ADDED TEST
+            // Database मध्ये अजून save झालेला नाही.
+            // फक्त selectedTests मधून हा specific test remove करायचा.
+            // =====================================================
+            if (test.isNewlyAdded) {
 
-            this.selectedTests = this.selectedTests.filter(
-              (t: any) => t !== test
-            );
+              this.selectedTests = this.selectedTests.filter(
+                (t: any) => t !== test
+              );
 
-            // selectedBooking मधूनही फक्त हाच test remove करा
-            if (this.selectedBooking?.tests) {
-              this.selectedBooking.tests =
-                this.selectedBooking.tests.filter(
-                  (t: any) => t !== test
-                );
+              // selectedBooking मधूनही फक्त हाच test remove करा
+              if (this.selectedBooking?.tests) {
+                this.selectedBooking.tests =
+                  this.selectedBooking.tests.filter(
+                    (t: any) => t !== test
+                  );
+              }
+
+              this.toastService.warning(
+                'Warning',
+                `${test.testName} removed`
+              );
+
+              this.cdr.detectChanges();
+
+              return;
             }
 
-            this.toastService.warning(
-              'Warning',
-              `${test.testName} removed`
-            );
+            // =====================================================
+            // EXISTING DATABASE TEST
+            // =====================================================
+            if (!test.testMappingId) {
 
-            this.cdr.detectChanges();
+              this.toastService.error(
+                'Error',
+                'Test ID missing. Cannot delete this test.'
+              );
 
-            return;
-          }
+              return;
+            }
 
-          // =====================================================
-          // EXISTING DATABASE TEST
-          // =====================================================
-          if (!test.testMappingId) {
+            // =====================================================
+            // GET LAB ID
+            // =====================================================
+            const labId = this.labApi.getCurrentLabId();
 
-            this.toastService.error(
-              'Error',
-              'Test ID missing. Cannot delete this test.'
-            );
+            if (!labId) {
 
-            return;
-          }
+              this.toastService.error(
+                'Error',
+                'Lab ID missing. Cannot delete test.'
+              );
 
-          // =====================================================
-          // GET LAB ID
-          // =====================================================
-          const labId = this.labApi.getCurrentLabId();
+              return;
+            }
 
-          if (!labId) {
+            // =====================================================
+            // GET BOOKING ID
+            // =====================================================
+            const bookingId = this.selectedBooking?.bookingId;
 
-            this.toastService.error(
-              'Error',
-              'Lab ID missing. Cannot delete test.'
-            );
+            if (!bookingId) {
 
-            return;
-          }
+              this.toastService.error(
+                'Error',
+                'Booking ID missing. Cannot delete test.'
+              );
 
-          // =====================================================
-          // GET BOOKING ID
-          // =====================================================
-          const bookingId = this.selectedBooking?.bookingId;
+              return;
+            }
 
-          if (!bookingId) {
+            // =====================================================
+            // DELETE ONLY SELECTED TEST FROM DATABASE
+            // =====================================================
+            this.labApi
+              .deleteTestFromBooking(
+                labId,
+                bookingId,
+                test.testMappingId
+              )
+              .subscribe({
 
-            this.toastService.error(
-              'Error',
-              'Booking ID missing. Cannot delete test.'
-            );
+                // =================================================
+                // SUCCESS
+                // =================================================
+                next: () => {
 
-            return;
-          }
+                  this.ngZone.run(() => {
 
-          // =====================================================
-          // DELETE ONLY SELECTED TEST FROM DATABASE
-          // =====================================================
-          this.labApi
-            .deleteTestFromBooking(
-              labId,
-              bookingId,
-              test.testMappingId
-            )
-            .subscribe({
-
-              // =================================================
-              // SUCCESS
-              // =================================================
-              next: () => {
-
-                this.ngZone.run(() => {
-
-                  // =================================================
-                  // ONLY SELECTED TEST REMOVE FROM selectedTests
-                  // बाकीचे tests तसेच राहतील.
-                  // =================================================
-                  this.selectedTests =
-                    this.selectedTests.filter(
-                      (t: any) =>
-                        t.testMappingId !==
-                        test.testMappingId
-                    );
-
-                  // =================================================
-                  // ONLY SELECTED TEST REMOVE FROM selectedBooking
-                  // =================================================
-                  if (this.selectedBooking?.tests) {
-
-                    this.selectedBooking.tests =
-                      this.selectedBooking.tests.filter(
+                    // =================================================
+                    // ONLY SELECTED TEST REMOVE FROM selectedTests
+                    // बाकीचे tests तसेच राहतील.
+                    // =================================================
+                    this.selectedTests =
+                      this.selectedTests.filter(
                         (t: any) =>
                           t.testMappingId !==
                           test.testMappingId
                       );
-                  }
 
-                  // =================================================
-                  // SUCCESS MESSAGE
-                  // =================================================
-                  this.toastService.success(
-                    'Success',
-                    `${test.testName} deleted successfully`
-                  );
+                    // =================================================
+                    // ONLY SELECTED TEST REMOVE FROM selectedBooking
+                    // =================================================
+                    if (this.selectedBooking?.tests) {
 
-                  // =================================================
-                  // UPDATE UI
-                  // =================================================
-                  this.cdr.detectChanges();
+                      this.selectedBooking.tests =
+                        this.selectedBooking.tests.filter(
+                          (t: any) =>
+                            t.testMappingId !==
+                            test.testMappingId
+                        );
+                    }
 
-                  // =================================================
-                  // REFRESH DASHBOARD / BOOKING DATA
-                  // =================================================
-                  this.loadDashboard(true);
+                    // =================================================
+                    // SUCCESS MESSAGE
+                    // =================================================
+                    this.toastService.success(
+                      'Success',
+                      `${test.testName} deleted successfully`
+                    );
 
-                });
+                    // =================================================
+                    // UPDATE UI
+                    // =================================================
+                    this.cdr.detectChanges();
 
-              },
+                    // =================================================
+                    // REFRESH DASHBOARD / BOOKING DATA
+                    // =================================================
+                    this.loadDashboard(true);
 
-              // =================================================
-              // ERROR
-              // =================================================
-              error: (err) => {
+                  });
 
-                this.ngZone.run(() => {
+                },
 
-                  console.error(
-                    'DELETE TEST ERROR:',
-                    err
-                  );
+                // =================================================
+                // ERROR
+                // =================================================
+                error: (err) => {
 
-                  this.toastService.error(
-                    'Error',
-                    err?.error?.message ||
-                    'Failed to delete test from database.'
-                  );
+                  this.ngZone.run(() => {
 
-                });
+                    console.error(
+                      'DELETE TEST ERROR:',
+                      err
+                    );
 
-              }
+                    this.toastService.error(
+                      'Error',
+                      err?.error?.message ||
+                      'Failed to delete test from database.'
+                    );
 
-            });
+                  });
 
+                }
+
+              });
+
+          }
         }
-      }
-    ]
-  });
+      ]
+    });
 
-  // =========================================================
-  // SHOW CONFIRMATION POPUP
-  // =========================================================
-  await alert.present();
-}
+    // =========================================================
+    // SHOW CONFIRMATION POPUP
+    // =========================================================
+    await alert.present();
+  }
   onDiscountChangeInline() {
     if (!this.canEditBilling) { this.discount = 0; return; }
     if (this.discount < 0) this.discount = 0;
@@ -854,53 +982,53 @@ async removeTestInline(test: any) {
     this.paidAmount = this.basePaidAmount + this.payNowAmount;
   }
 
-saveTestChanges() {
-  if (!this.selectedBooking || this.isSavingTest) return;
-  this.isSavingTest = true;
-  const labId = this.authService.currentUserValue?.raw?.labId;
-  const bookingId = this.selectedBooking.bookingId;
-  const newTests = this.selectedTests.filter(t => t.isNewlyAdded);
-  const existingTests = this.selectedTests.filter(t => !t.isNewlyAdded);
+  saveTestChanges() {
+    if (!this.selectedBooking || this.isSavingTest) return;
+    this.isSavingTest = true;
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const bookingId = this.selectedBooking.bookingId;
+    const newTests = this.selectedTests.filter(t => t.isNewlyAdded);
+    const existingTests = this.selectedTests.filter(t => !t.isNewlyAdded);
 
-  const patientBody: any = {
-    bookingId, customerName: this.selectedBooking.customerName,
-    ageType: this.selectedBooking.ageType, age: this.selectedBooking.age,
-    gender: this.selectedBooking.gender, mobileNumber: this.selectedBooking.mobileNumber,
-    aadhaarNumber: this.selectedBooking.aadhaarNumber, doctorid: this.selectedBooking.doctorId,
-    franchiseId: this.selectedBooking.franchiseId, createdOn: this.selectedBooking.createdOn,
-    tests: existingTests.map(t => ({ testId: t.testId, profileId: 0 })),
-    subTotalAmount: this.subTotal,
-    discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
-    totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
-    paidAmount: this.canEditBilling ? this.paidAmount : (this.selectedBooking.paidAmount || 0),
-    dueAmount: this.canEditBilling ? this.dueAmount : (this.selectedBooking.dueAmount || 0),
-    payNowAmount: this.canEditBilling ? this.payNowAmount : 0,
-    paymentMode: this.paymentMethod
-  };
+    const patientBody: any = {
+      bookingId, customerName: this.selectedBooking.customerName,
+      ageType: this.selectedBooking.ageType, age: this.selectedBooking.age,
+      gender: this.selectedBooking.gender, mobileNumber: this.selectedBooking.mobileNumber,
+      aadhaarNumber: this.selectedBooking.aadhaarNumber, doctorid: this.selectedBooking.doctorId,
+      franchiseId: this.selectedBooking.franchiseId, createdOn: this.selectedBooking.createdOn,
+      tests: existingTests.map(t => ({ testId: t.testId, profileId: 0 })),
+      subTotalAmount: this.subTotal,
+      discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
+      totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
+      paidAmount: this.canEditBilling ? this.paidAmount : (this.selectedBooking.paidAmount || 0),
+      dueAmount: this.canEditBilling ? this.dueAmount : (this.selectedBooking.dueAmount || 0),
+      payNowAmount: this.canEditBilling ? this.payNowAmount : 0,
+      paymentMode: this.paymentMethod
+    };
 
-  this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
-    next: () => {
-      if (newTests.length > 0) {
-        const addTestBody: any = {
-          bookingId, customerName: this.selectedBooking.customerName,
-          age: this.selectedBooking.age, ageType: this.selectedBooking.ageType,
-          gender: this.selectedBooking.gender, aadhaarNumber: this.selectedBooking.aadhaarNumber || '',
-          tests: newTests.map(t => ({
-            testId: t.testId, testName: t.testName, testPrice: t.testMrp,
-            test_price: t.testMrp, assignedPrice: [t.testMrp], source: 'RPL', discount: 0, newTest: true
-          }))
-        };
-        this.labApi.addTestToBooking(addTestBody).subscribe({
-          next: () => this.finishTestSave(),
-          error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Test add fail zala'); }
-        });
-      } else {
-        this.finishTestSave();
-      }
-    },
-    error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Update fail zala'); }
-  });
-}
+    this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
+      next: () => {
+        if (newTests.length > 0) {
+          const addTestBody: any = {
+            bookingId, customerName: this.selectedBooking.customerName,
+            age: this.selectedBooking.age, ageType: this.selectedBooking.ageType,
+            gender: this.selectedBooking.gender, aadhaarNumber: this.selectedBooking.aadhaarNumber || '',
+            tests: newTests.map(t => ({
+              testId: t.testId, testName: t.testName, testPrice: t.testMrp,
+              test_price: t.testMrp, assignedPrice: [t.testMrp], source: 'RPL', discount: 0, newTest: true
+            }))
+          };
+          this.labApi.addTestToBooking(addTestBody).subscribe({
+            next: () => this.finishTestSave(),
+            error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Test add fail zala'); }
+          });
+        } else {
+          this.finishTestSave();
+        }
+      },
+      error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Update fail zala'); }
+    });
+  }
 
   private finishTestSave() {
     this.isSavingTest = false;
@@ -1652,8 +1780,8 @@ saveTestChanges() {
       franchiseName: raw.franchiseName || raw.customFranchiseLab || 'SELF'
     };
   }
-  
-private testStatusLabel(status?: string): string {
+
+  private testStatusLabel(status?: string): string {
     const s = (status || 'snr').toLowerCase();
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
     if (s === 'snr') return 'SNR';   // ⬅️ changed from 'SAMPLE NOT RECEIVED'
@@ -1673,4 +1801,284 @@ private testStatusLabel(status?: string): string {
     return 'badge-pending';
   }
 
+
+  // ============================================================
+  // FRANCHISE WALLET
+  // ============================================================
+ 
+  loadWallet() {
+    const labId = this.authService.labId;
+    const franchiseId = this.authService.franchiseId;
+    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+      next: (res: any) => {
+        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+      },
+      error: (err) => {
+        console.log('WALLET LOAD ERROR:', err);
+      }
+    });
+  }
+ 
+  openWalletModal() {
+    this.isWalletModalOpen = true;
+    this.walletPage = 0;
+    this.walletTransactions = [];
+    this.loadWalletTransactions();
+  }
+ 
+  closeWalletModal() {
+    this.isWalletModalOpen = false;
+  }
+ 
+  onWalletFilterChange() {
+    this.walletPage = 0;
+    this.walletTransactions = [];
+    this.loadWalletTransactions();
+  }
+ 
+// loadWalletTransactions() {
+//   const labId = this.authService.labId;
+//   const franchiseId = this.authService.franchiseId;
+//   this.isWalletLoading = true;
+//   this.walletService.getWallet(labId, franchiseId, this.walletPage, this.walletSize, true, this.walletPaymentModeFilter).subscribe({
+   
+//     next: (res: any) => {
+//       const content = res?.transaction?.content || [];
+//       this.walletTransactions = [...this.walletTransactions, ...content];
+//       this.walletTotalRows = res?.transaction?.totalElements ?? this.walletTransactions.length;
+//       this.isWalletLoading = false;
+      
+//     },
+//     error: (err) => {
+//       this.isWalletLoading = false;
+//       this.toastService.error('Error', 'Wallet transactions load fail zala');
+      
+//     }
+//   });
+// }
+
+loadWalletTransactions() {
+  const labId = this.authService.labId;
+  const franchiseId = this.authService.franchiseId;
+
+  console.log('========== WALLET TRANSACTIONS DEBUG ==========');
+  console.log('LOGIN DATA:', JSON.parse(localStorage.getItem('loginData') || '{}'));
+  console.log('LAB ID:', labId);
+  console.log('FRANCHISE ID:', franchiseId);
+  console.log('PAGE:', this.walletPage);
+  console.log('SIZE:', this.walletSize);
+  console.log('PAYMENT MODE FILTER:', this.walletPaymentModeFilter);
+  console.log('===============================================');
+
+  this.isWalletLoading = true;
+
+  this.walletService
+    .getWallet(
+      labId,
+      franchiseId,
+      this.walletPage,
+      this.walletSize,
+      true,
+      this.walletPaymentModeFilter
+    )
+    .subscribe({
+
+      next: (res: any) => {
+
+        console.log('WALLET API RESPONSE:', res);
+        console.log('TRANSACTION CONTENT:', res?.transaction?.content);
+        console.log('TOTAL ELEMENTS:', res?.transaction?.totalElements);
+
+        const content = res?.transaction?.content || [];
+
+        this.walletTransactions = [
+          ...this.walletTransactions,
+          ...content
+        ];
+
+        this.walletTotalRows =
+          res?.transaction?.totalElements ??
+          this.walletTransactions.length;
+
+        this.isWalletLoading = false;
+      },
+
+      error: (err) => {
+
+        console.error('WALLET API ERROR:', err);
+
+        this.isWalletLoading = false;
+
+        this.toastService.error(
+          'Error',
+          'Wallet transactions load fail zala'
+        );
+      }
+    });
 }
+ 
+  onWalletScroll() {
+    if (this.walletTransactions.length >= this.walletTotalRows) return;
+    this.walletPage++;
+    this.loadWalletTransactions();
+  }
+ 
+  // ---------- Add Funds Modal ----------
+ 
+  openAddFundsModal() {
+    this.addFundsAmount = null;
+    this.selectedPaymentMethod = 'razorpay';
+    this.transactionId = '';
+    this.transactionIdError = '';
+    this.isAddFundsModalOpen = true;
+  }
+ 
+  closeAddFundsModal() {
+    this.isAddFundsModalOpen = false;
+  }
+ 
+  selectPaymentMethod(method: 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici') {
+    this.selectedPaymentMethod = method;
+    this.transactionId = '';
+    this.transactionIdError = '';
+  }
+ 
+  submitAddFunds() {
+    if (!this.addFundsAmount || Number(this.addFundsAmount) <= 0) {
+      this.toastService.warning('Warning', 'Please enter a valid amount');
+      return;
+    }
+ 
+    if (this.isManualPaymentMethod) {
+      if (!this.transactionId?.trim()) {
+        this.transactionIdError = 'Transaction Id is required';
+        return;
+      }
+      this.transactionIdError = '';
+      this.submitManualAddFunds();
+    } else {
+      this.submitOnlineAddFunds();
+    }
+  }
+ 
+  // UPI / QR / Bank — manual submission, goes for admin approval via
+  // approve-offline-order later.
+  private submitManualAddFunds() {
+    this.isAddFundsSaving = true;
+    const payload = {
+      labId: this.authService.labId,
+      franchiseId: this.authService.franchiseId,
+      amount: Number(this.addFundsAmount),
+      paymentMode: this.selectedPaymentMethod,
+      transactionId: this.transactionId.trim(),
+      remark: `${this.selectedPaymentMethod.toUpperCase()} payment - Txn: ${this.transactionId.trim()}`
+    };
+ 
+    this.walletService.addFundsToLabWallet(payload).subscribe({
+      next: () => {
+        this.isAddFundsSaving = false;
+        this.toastService.success('Success', 'Payment submitted, pending approval');
+        this.closeAddFundsModal();
+        this.loadWallet();
+      },
+      error: (err) => {
+        this.isAddFundsSaving = false;
+        this.toastService.error('Error', err?.error?.message || 'Add funds fail zala');
+      }
+    });
+  }
+ 
+  // Razorpay / ICICI — gateway based flow
+  private submitOnlineAddFunds() {
+    this.isAddFundsSaving = true;
+    const payload: any = {
+      labId: this.authService.labId,
+      franchiseId: this.authService.franchiseId,
+      amount: Number(this.addFundsAmount)
+    };
+    // ⚠️ 'gateway' key is an assumption to tell backend which gateway to use —
+    // confirm the actual key/value against your /order/create Postman body.
+    if (this.selectedPaymentMethod === 'icici') {
+      payload.gateway = 'icici';
+    }
+ 
+    this.walletService.createRazorpayOrder(payload).subscribe({
+      next: (orderRes: any) => {
+        this.isAddFundsSaving = false;
+        this.openRazorpayCheckout(orderRes);
+      },
+      error: (err) => {
+        this.isAddFundsSaving = false;
+        this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+      }
+    });
+  }
+ 
+  private ensureRazorpayScriptLoaded(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if ((window as any).Razorpay) { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject('Razorpay script load fail zala');
+      document.body.appendChild(script);
+    });
+  }
+ 
+  private async openRazorpayCheckout(orderRes: any) {
+    try {
+      await this.ensureRazorpayScriptLoaded();
+    } catch (e) {
+      this.toastService.error('Error', 'Payment gateway load fail zale');
+      return;
+    }
+ 
+    // Adjust keys below to match your /order/create response shape exactly.
+    const options: any = {
+      key: orderRes?.razorpayKey || orderRes?.key,
+      amount: orderRes?.amount,
+      currency: orderRes?.currency || 'INR',
+      order_id: orderRes?.razorpayOrderId || orderRes?.orderId || orderRes?.id,
+      name: 'Franchise Wallet Recharge',
+      description: 'Add funds to wallet',
+      handler: (response: any) => {
+        this.ngZone.run(() => {
+          // ⚠️ BACKEND REQUIREMENT: no capture/verify endpoint was provided.
+          // Wire the actual verification API call here once available, e.g.:
+          // this.walletService.verifyPayment(response).subscribe(...)
+          this.toastService.success('Success', 'Payment completed. Awaiting verification.');
+          this.closeAddFundsModal();
+          this.loadWallet();
+        });
+      },
+      modal: {
+        ondismiss: () => {
+          this.ngZone.run(() => {
+            this.toastService.warning('Warning', 'Payment cancelled');
+          });
+        }
+      },
+      theme: { color: '#087b76' }
+    };
+ 
+    const rzp = new (window as any).Razorpay(options);
+    rzp.open();
+  }
+ 
+  // ---------- Offline order approval (Lab Admin action) ----------
+  approveOfflinePayment(paymentId: any) {
+    this.walletService.approveOfflineOrder(paymentId).subscribe({
+      next: () => {
+        this.toastService.success('Success', 'Offline payment approved');
+        this.loadWallet();
+        if (this.isWalletModalOpen) {
+          this.walletPage = 0;
+          this.walletTransactions = [];
+          this.loadWalletTransactions();
+        }
+      },
+      error: (err) => {
+        this.toastService.error('Error', err?.error?.message || 'Approve fail zala');
+      }
+    });
+  }}
