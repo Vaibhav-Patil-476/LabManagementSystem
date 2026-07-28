@@ -46,7 +46,7 @@
   box-shadow: var(--shadow-md);
   border: 1px solid rgba(8, 123, 118, 0.06);
   box-sizing: border-box;
-  max-width: 100%;
+  
 }
 
 .summary-bar {
@@ -308,36 +308,28 @@
 }
 
 .status-badge {
-  display: inline-block;
-  padding: 4px 11px;
-  border-radius: var(--r-pill);
-  font-size: 10.5px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-  color: #fff;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12);
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  padding: 5px 12px !important;
+  border-radius: var(--r-pill) !important;
+  font-size: 10px !important;
+  font-weight: 700 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.2px !important;
+  color: #fff !important;
+  white-space: nowrap !important;
+  line-height: 1.3 !important;
+  vertical-align: middle !important;
+  box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12) !important;
 
-  &.badge-pending {
-    background: var(--warning);
-  }
-
-  &.badge-inprocess {
-    background: var(--info);
-  } &.badge-clinical {
-    background: #2470b9 !important;
-    color: #fff !important;
-  }
-
-&.badge-snr {
-  --danger:  #6f42c1; /* Changes the variable value to purple locally */
-  background: var(--danger);
-}
-
-  &.badge-ready {
-    background: var(--success);
-  }
+  &.badge-pending { background: var(--warning) !important; }
+  &.badge-inprocess { background: var(--info) !important; }
+  &.badge-clinical { background: #2470b9 !important; color: #fff !important; }
+  &.badge-snr { background: #6f42c1 !important; }
+  &.badge-ready { background: var(--success) !important; }
+  &.badge-recheck { background: #6f42c1 !important; color: #fff !important; }
+  &.badge-cancel { background: #dc3545 !important; color: #fff !important; }
 }
 
 @keyframes dropdownIn {
@@ -810,12 +802,8 @@
 }
 
 .test-line-table {
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--r-md);
-  overflow: hidden;
-  background: var(--card-bg, #fff);
+  table-layout: fixed;
   width: 100%;
-  border-collapse: collapse;
 
   th,
   td {
@@ -823,6 +811,7 @@
     font-size: 13px;
     text-align: left;
     border-bottom: 1px solid var(--border-color);
+    vertical-align: middle;
   }
 
   th {
@@ -841,6 +830,24 @@
   tr:hover td {
     background: var(--primary-lighter);
   }
+
+  // lock last column (delete icon) width so it never gets pushed out
+  th:last-child,
+  td:last-child {
+    width: 40px;
+    min-width: 40px;
+    text-align: center;
+    padding: 12px 8px;
+  }
+}
+
+.test-name-cell {
+  width: auto;
+  min-width: 0;
+  word-break: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  line-height: 1.4;
 }
 
 .franchise-tag {
@@ -849,20 +856,25 @@
   color: var(--gray-accent);
   margin-top: 3px;
   font-weight: 600;
+  word-break: break-word;
 }
 
 .new-tag {
   display: inline-block;
   margin-left: 6px;
+  margin-top: 4px;
   padding: 2px 8px;
   border-radius: var(--r-pill);
   background: var(--danger-bg);
   color: var(--danger);
   font-size: 10.5px;
   font-weight: 700;
+  white-space: nowrap;
 }
 
 .delete-icon {
+  display: inline-flex;
+  flex-shrink: 0;
   color: #b7c4c3;
   cursor: pointer;
   font-size: 19px;
@@ -1865,84 +1877,88 @@
     transform: scale(0.97);
   }
 
-&.active {
-  border-color: transparent !important;
+  &.active {
+    border-color: transparent !important;
 
-  .tab-dot {
-    background: #ffffff !important;
+    .tab-dot {
+      background: #ffffff !important;
+    }
+
+    .tab-label {
+      color: #ffffff !important;
+    }
+
+    .tab-count {
+      background: rgba(255, 255, 255, 0.22) !important;
+      color: #ffffff !important;
+      box-shadow: none !important;
+    }
+
+    // ALL - TEAL
+    &.badge-all {
+      background: #087b76 !important;
+      border-color: #087b76 !important;
+      box-shadow: 0 8px 22px rgba(8, 123, 118, 0.28) !important;
+    }
+
+    // COMPLETED - GREEN
+    &.badge-complete {
+      background: var(--success) !important;
+      border-color: var(--success) !important;
+    }
+
+    // PENDING - ORANGE
+    &.badge-pending {
+      background: var(--warning) !important;
+      border-color: var(--warning) !important;
+    }
+
+    // IN PROCESS - BLUE
+    &.badge-clinical {
+      background: var(--info) !important;
+      border-color: var(--info) !important;
+    }
+
+    // SNR - PURPLE
+    &.badge-snr {
+      background: var(--purple, #7856c9) !important;
+      border-color: var(--purple, #7856c9) !important;
+    }
+
+    // CANCEL - RED
+    &.badge-cancel {
+      background: var(--danger) !important;
+      border-color: var(--danger) !important;
+    }
+
+    &.active-clinical {
+      background: #2470b9 !important;
+      border-color: #2470b9 !important;
+
+      .tab-dot,
+      .tab-label {
+        color: #fff !important;
+        background: #fff !important;
+      }
+
+      .tab-label {
+        background: transparent !important;
+      }
+
+      .tab-count {
+        background: rgba(255, 255, 255, 0.22) !important;
+        color: #fff !important;
+      }
+    }
   }
-
-  .tab-label {
-    color: #ffffff !important;
-  }
-
-  .tab-count {
-    background: rgba(255, 255, 255, 0.22) !important;
-    color: #ffffff !important;
-    box-shadow: none !important;
-  }
-
-  // ALL - TEAL
-  &.badge-all {
-    background: #087b76 !important;
-    border-color: #087b76 !important;
-    box-shadow: 0 8px 22px rgba(8, 123, 118, 0.28) !important;
-  }
-
-  // COMPLETED - GREEN
-  &.badge-complete {
-    background: var(--success) !important;
-    border-color: var(--success) !important;
-  }
-
-  // PENDING - ORANGE
-  &.badge-pending {
-    background: var(--warning) !important;
-    border-color: var(--warning) !important;
-  }
-
-  // IN PROCESS - BLUE
-  &.badge-clinical {
-    background: var(--info) !important;
-    border-color: var(--info) !important;
-  }
-
-  // SNR - PURPLE
-  &.badge-snr {
-    background: var(--purple, #7856c9) !important;
-    border-color: var(--purple, #7856c9) !important;
-  }
-
-  // CANCEL - RED
-  &.badge-cancel {
-    background: var(--danger) !important;
-    border-color: var(--danger) !important;
-  }&.active-clinical {
-  background: #2470b9 !important;
-  border-color: #2470b9 !important;
-
-  .tab-dot, .tab-label {
-    color: #fff !important;
-    background: #fff !important;
-  }
-
-  .tab-label {
-    background: transparent !important;
-  }
-
-  .tab-count {
-    background: rgba(255, 255, 255, 0.22) !important;
-    color: #fff !important;
-  }
-}
-}
 }
 
 .booking-card-list {
   display: flex;
   flex-direction: column;
-  gap: var(--sp-3);
+  gap: var(--sp-4);
   margin-top: var(--sp-3);
+  padding-bottom: var(--sp-5);
 }
 
 .booking-card {
@@ -1950,7 +1966,8 @@
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-xs);
-  overflow: hidden;
+  overflow: visible;
+  box-sizing: border-box;
   transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
 
   &.expanded {
@@ -1974,8 +1991,8 @@
 
 .status-tab.active.active-all {
   background: #607d8b !important;
-      border-color: #607d8b !important;
-      box-shadow: 0 8px 22px rgba(96, 125, 139, 0.28);
+  border-color: #607d8b !important;
+  box-shadow: 0 8px 22px rgba(96, 125, 139, 0.28);
 }
 
 .status-tab.active.active-complete {
@@ -2151,11 +2168,13 @@
 }
 
 .bcard-details {
-  padding: var(--sp-4);
+  padding: var(--sp-4) var(--sp-4) var(--sp-2);
   background: var(--section-bg);
   animation: slideUpIn 0.18s ease;
+  overflow: visible;
+  box-sizing: border-box;
+  border-radius: 0 0 var(--r-lg) var(--r-lg);
 }
-
 .bcard-section-label {
   font-size: 10.5px;
   font-weight: 800;
@@ -2171,12 +2190,15 @@
 
 .bcard-test-table {
   width: 100%;
+  max-width: 100%;
+  table-layout: fixed;
   border-collapse: collapse;
   background: var(--card-bg, #fff);
   border-radius: var(--r-sm);
   overflow: hidden;
   border: 1px solid var(--border-color);
-  margin-bottom: var(--sp-2);
+  margin: 0 0 var(--sp-2) 0;
+  box-sizing: border-box;
 
   th {
     background: var(--card-bg-alt);
@@ -2190,17 +2212,39 @@
   }
 
   td {
-    padding: 9px 10px;
+    padding: 12px 10px;
     font-size: 12.5px;
     font-weight: 500;
     color: var(--text-dark);
     border-bottom: 1px solid var(--border-color);
+    word-break: break-word;
+    overflow-wrap: break-word;
+    vertical-align: middle;
+    text-align: left;
+    line-height: 1.4;
+  }
+
+  tr {
+    height: 1px;
   }
 
   tr:last-child td {
     border-bottom: none;
   }
+
+  th:first-child,
+  td:first-child {
+    width: 55%;
+  }
+
+  th:last-child,
+  td:last-child {
+    width: 45%;
+    text-align: right !important;
+    white-space: normal;
+  }
 }
+
 
 .bcard-barcode-inline {
   display: flex;
@@ -2305,7 +2349,8 @@
   justify-content: flex-end;
   gap: 4px;
   border-top: 1px solid var(--border-color);
-  padding-top: var(--sp-3);
+  padding: var(--sp-3) var(--sp-2) var(--sp-3);
+  margin: 0 calc(var(--sp-2) * -1);
 }
 
 .action-icon-btn {
@@ -2562,11 +2607,16 @@ ion-content.menu-open {
     background: var(--primary-light);
   }
 }
+
 .click-catcher {
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
-  z-index: 500;   // ⬅️ dropdown peksha kमी
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 500; // ⬅️ dropdown peksha kमी
 }
+
 @media (max-width: 480px) {
   .patient-form-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -2656,13 +2706,31 @@ ion-content.menu-open {
     align-items: flex-end;
     gap: var(--sp-4);
   }
-}.disabled-field { opacity: 0.5; pointer-events: none; }
-.badge-recheck { background: #6f42c1; color: #fff; }
-.badge-cancel { background: #dc3545; color: #fff; }
-.cancel-status { background: #dc3545; color: #fff; }
+}
+
+.disabled-field {
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.badge-recheck {
+  background: #6f42c1;
+  color: #fff;
+}
+
+.badge-cancel {
+  background: #dc3545;
+  color: #fff;
+}
+
+.cancel-status {
+  background: #dc3545;
+  color: #fff;
+}
+
 .franchise-field {
   position: relative;
-  z-index: 501;   // ⬅️ click-catcher peksha jास्त, tyामुळे field + dropdown वर rahतील
+  z-index: 501; // ⬅️ click-catcher peksha jास्त, tyामुळे field + dropdown वर rahतील
 }
 
 .franchise-dropdown {
@@ -2670,12 +2738,12 @@ ion-content.menu-open {
   top: 100%;
   left: 0;
   right: 0;
-  z-index: 1000;   // ⬅️ sगळ्यात वर
+  z-index: 1000; // ⬅️ sगळ्यात वर
   max-height: 240px;
   overflow-y: auto;
   background: #fff;
   border-radius: 8px;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .franchise-dropdown-item {
@@ -2702,8 +2770,8 @@ ion-content.menu-open {
 
 
 /* Remove old flex sizing */
-.patient-edit-body .form-section .field-row > .summary-field.narrow,
-.patient-edit-body .form-section .field-row > .summary-field.wide {
+.patient-edit-body .form-section .field-row>.summary-field.narrow,
+.patient-edit-body .form-section .field-row>.summary-field.wide {
   flex: none !important;
   width: auto !important;
   min-width: 0 !important;
@@ -2712,7 +2780,7 @@ ion-content.menu-open {
 
 
 /* Doctor search field */
-.patient-edit-body .form-section .field-row > .summary-field.wide {
+.patient-edit-body .form-section .field-row>.summary-field.wide {
   position: relative !important;
 }
 
@@ -2782,7 +2850,7 @@ ion-content.menu-open {
    LAB — FULL WIDTH
    ========================================================== */
 
-.patient-edit-body .form-section .patient-form-grid > .summary-field.span-3 {
+.patient-edit-body .form-section .patient-form-grid>.summary-field.span-3 {
   width: 100% !important;
   max-width: 100% !important;
 }
@@ -2799,7 +2867,9 @@ ion-content.menu-open {
     gap: 12px !important;
   }
 
-}/* ============================================================
+}
+
+/* ============================================================
    FINAL DOCTOR SEARCH DROPDOWN FIX
    ============================================================ */
 
@@ -2811,12 +2881,12 @@ ion-content.menu-open {
   align-items: flex-end !important;
 }
 
-.patient-edit-body .field-row > .summary-field.narrow {
+.patient-edit-body .field-row>.summary-field.narrow {
   width: 35% !important;
   flex: 0 0 35% !important;
 }
 
-.patient-edit-body .field-row > .summary-field.wide {
+.patient-edit-body .field-row>.summary-field.wide {
   position: relative !important;
   width: 65% !important;
   flex: 0 0 65% !important;
@@ -2824,7 +2894,7 @@ ion-content.menu-open {
 
 
 /* INPUT */
-.patient-edit-body .field-row > .summary-field.wide > input {
+.patient-edit-body .field-row>.summary-field.wide>input {
   width: 100% !important;
   display: block !important;
 }
@@ -2834,10 +2904,7 @@ ion-content.menu-open {
    THIS IS THE ACTUAL IMPORTANT FIX
    ============================================================ */
 
-.patient-edit-body
-.field-row
-.summary-field.wide
-> .test-suggestions.overlay-dropdown {
+.patient-edit-body .field-row .summary-field.wide>.test-suggestions.overlay-dropdown {
 
   position: absolute !important;
 
@@ -2875,11 +2942,7 @@ ion-content.menu-open {
 
 /* DROPDOWN ITEMS */
 
-.patient-edit-body
-.field-row
-.summary-field.wide
-> .test-suggestions.overlay-dropdown
-> .suggestion-item {
+.patient-edit-body .field-row .summary-field.wide>.test-suggestions.overlay-dropdown>.suggestion-item {
 
   display: block !important;
 
@@ -2901,11 +2964,7 @@ ion-content.menu-open {
   cursor: pointer !important;
 }
 
-.patient-edit-body
-.field-row
-.summary-field.wide
-> .test-suggestions.overlay-dropdown
-> .suggestion-item:hover {
+.patient-edit-body .field-row .summary-field.wide>.test-suggestions.overlay-dropdown>.suggestion-item:hover {
 
   background: #f1f8f7 !important;
 }
@@ -2929,9 +2988,7 @@ ion-content.menu-open {
    LAB
    ============================================================ */
 
-.patient-edit-body
-.patient-form-grid
-> .summary-field.span-3 {
+.patient-edit-body .patient-form-grid>.summary-field.span-3 {
 
   width: 100% !important;
   grid-column: 1 / -1 !important;
@@ -2948,17 +3005,19 @@ ion-content.menu-open {
     gap: 12px !important;
   }
 
-  .patient-edit-body .field-row > .summary-field.narrow {
+  .patient-edit-body .field-row>.summary-field.narrow {
     width: 38% !important;
     flex-basis: 38% !important;
   }
 
-  .patient-edit-body .field-row > .summary-field.wide {
+  .patient-edit-body .field-row>.summary-field.wide {
     width: 62% !important;
     flex-basis: 62% !important;
   }
 
-}.doctor-search-field,
+}
+
+.doctor-search-field,
 .lab-search-field {
   position: relative;
 }
@@ -2993,7 +3052,7 @@ ion-content.menu-open {
   background: #ffffff !important;
   border: 1px solid #dce7e7 !important;
   border-radius: 12px !important;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.14) !important;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.14) !important;
   z-index: 99999 !important;
   padding: 6px !important;
   box-sizing: border-box !important;
@@ -3015,7 +3074,9 @@ ion-content.menu-open {
 .patient-form-grid,
 .form-section {
   overflow: visible !important;
-}.doctor-lab-row {
+}
+
+.doctor-lab-row {
   grid-column: 1 / -1;
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -3023,15 +3084,72 @@ ion-content.menu-open {
   align-items: start;
   width: 100%;
 
-  .summary-field { width: 100%; min-width: 0; }
+  .summary-field {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 .doctor-input-wrapper input {
-  padding-right: 34px;   // clear icon sathi jaga
+  padding-right: 34px; // clear icon sathi jaga
 }
 
 @media (max-width: 600px) {
   .doctor-lab-row {
     grid-template-columns: 1fr;
   }
+}.bcard-details {
+  padding-bottom: 0;
+}
+
+.bcard-actions {
+  padding: 12px 8px 8px;
+  margin-bottom: 0;
+}
+
+.bcard-actions .action-icon-btn {
+  margin: 0;
+  height: 38px;
+  width: 38px;
+}/* =========================================================
+   BOOKING CARD BOTTOM CLIPPING FIX
+   ========================================================= */
+
+.booking-content {
+  --padding-bottom: 24px;
+  --padding-start: 0;
+  --padding-end: 0;
+
+  overflow: auto;
+}
+
+.booking-content::part(scroll) {
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-bottom: 24px;
+}
+
+.form-card {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 24px;
+}
+
+.booking-card-list {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 24px;
+}
+
+.booking-card {
+  height: auto;
+  min-height: 0;
+  max-height: none;
+  // overflow: visible;
+  overflow: hidden; 
+  box-sizing: border-box;
 }

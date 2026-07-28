@@ -180,7 +180,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   actionMenuPosition = { top: 0, left: 0 };
   expandedBookingId: number | null = null;
   role = '';
-readonly statusTabs: {
+  readonly statusTabs: {
     key: string;
     label: string;
     badgeClass: string;
@@ -219,7 +219,7 @@ readonly statusTabs: {
   //   return counts;
   // }
 
- get statusBucketCount(): Record<string, number> {
+  get statusBucketCount(): Record<string, number> {
     const counts: Record<string, number> = { all: 0, completed: 0, CLINICAL: 0, pending: 0, snr: 0, cancel: 0 };
 
     let source = [...this.bookings];
@@ -530,7 +530,7 @@ readonly statusTabs: {
 
     return list;
   }
-private testMatchesTab(status: string | undefined, tabKey: string): boolean {
+  private testMatchesTab(status: string | undefined, tabKey: string): boolean {
     const s = (status || 'snr').toLowerCase();
 
     switch (tabKey) {
@@ -1516,7 +1516,7 @@ private testMatchesTab(status: string | undefined, tabKey: string): boolean {
     }).length;
     return completedCount === testCount ? 'completed' : 'pending';
   }
-testStatusClass(status?: string): string {
+  testStatusClass(status?: string): string {
     const s = (status || 'snr').toLowerCase();
 
     if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
@@ -1537,7 +1537,7 @@ testStatusClass(status?: string): string {
     const s = (status || 'snr').toLowerCase();
 
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
-    if (s === 'snr') return 'SAMPLE NOT RECEIVED';
+    if (s === 'snr') return 'SNR';   // ⬅️ changed from 'SAMPLE NOT RECEIVED'
     if (s.includes('clinical')) return 'CLINICAL';
     if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
     if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
@@ -1664,383 +1664,383 @@ testStatusClass(status?: string): string {
     this.showToast(`${test.testName} added`, 'success');
   }
 
-// async removeTest(test: BookingTest) {
+  // async removeTest(test: BookingTest) {
 
-//   // =========================================================
-//   // CONFIRM DELETE POPUP
-//   // =========================================================
-//   const alert = await this.alertController.create({
-//     cssClass: 'premium-alert',
-//     header: 'Delete Test',
-//     message: `Are you sure you want to delete "${test.testName}"?`,
-//     buttons: [
-//       {
-//         text: 'No',
-//         role: 'cancel',
-//         cssClass: 'alert-btn-cancel'
-//       },
-//       {
-//         text: 'Yes, Delete',
-//         role: 'destructive',
-//         cssClass: 'alert-btn-danger',
+  //   // =========================================================
+  //   // CONFIRM DELETE POPUP
+  //   // =========================================================
+  //   const alert = await this.alertController.create({
+  //     cssClass: 'premium-alert',
+  //     header: 'Delete Test',
+  //     message: `Are you sure you want to delete "${test.testName}"?`,
+  //     buttons: [
+  //       {
+  //         text: 'No',
+  //         role: 'cancel',
+  //         cssClass: 'alert-btn-cancel'
+  //       },
+  //       {
+  //         text: 'Yes, Delete',
+  //         role: 'destructive',
+  //         cssClass: 'alert-btn-danger',
 
-//         handler: () => {
+  //         handler: () => {
 
-//           // =====================================================
-//           // NEWLY ADDED TEST
-//           // Database मध्ये save झालेला नाही.
-//           // फक्त UI मधून remove करायचा.
-//           // =====================================================
-//           if (test.isNewlyAdded) {
+  //           // =====================================================
+  //           // NEWLY ADDED TEST
+  //           // Database मध्ये save झालेला नाही.
+  //           // फक्त UI मधून remove करायचा.
+  //           // =====================================================
+  //           if (test.isNewlyAdded) {
 
-//             this.selectedTests = this.selectedTests.filter(
-//               t => t !== test
-//             );
+  //             this.selectedTests = this.selectedTests.filter(
+  //               t => t !== test
+  //             );
 
-//             this.showToast(
-//               `${test.testName} removed`,
-//               'warning'
-//             );
+  //             this.showToast(
+  //               `${test.testName} removed`,
+  //               'warning'
+  //             );
 
-//             this.cdr.detectChanges();
+  //             this.cdr.detectChanges();
 
-//             return;
-//           }
+  //             return;
+  //           }
 
-//           // =====================================================
-//           // EXISTING DATABASE TEST
-//           // =====================================================
-//           if (!test.testMappingId) {
+  //           // =====================================================
+  //           // EXISTING DATABASE TEST
+  //           // =====================================================
+  //           if (!test.testMappingId) {
 
-//             this.showToast(
-//               'Test ID missing. Cannot delete this test.',
-//               'error'
-//             );
+  //             this.showToast(
+  //               'Test ID missing. Cannot delete this test.',
+  //               'error'
+  //             );
 
-//             return;
-//           }
+  //             return;
+  //           }
 
-//           // =====================================================
-//           // GET LAB ID
-//           // =====================================================
-//           const labId = this.labApi.getCurrentLabId();
+  //           // =====================================================
+  //           // GET LAB ID
+  //           // =====================================================
+  //           const labId = this.labApi.getCurrentLabId();
 
-//           // =====================================================
-//           // GET BOOKING ID
-//           // =====================================================
-//           const bookingId = this.selectedBooking?.bookingId;
+  //           // =====================================================
+  //           // GET BOOKING ID
+  //           // =====================================================
+  //           const bookingId = this.selectedBooking?.bookingId;
 
-//           if (!bookingId) {
+  //           if (!bookingId) {
 
-//             this.showToast(
-//               'Booking ID missing. Cannot delete test.',
-//               'error'
-//             );
+  //             this.showToast(
+  //               'Booking ID missing. Cannot delete test.',
+  //               'error'
+  //             );
 
-//             return;
-//           }
+  //             return;
+  //           }
 
-//           // =====================================================
-//           // DELETE ONLY SELECTED TEST FROM DATABASE
-//           // =====================================================
-//           this.labApi
-//             .deleteTestFromBooking(
-//               labId,
-//               bookingId,
-//               test.testMappingId
-//             )
-//             .subscribe({
+  //           // =====================================================
+  //           // DELETE ONLY SELECTED TEST FROM DATABASE
+  //           // =====================================================
+  //           this.labApi
+  //             .deleteTestFromBooking(
+  //               labId,
+  //               bookingId,
+  //               test.testMappingId
+  //             )
+  //             .subscribe({
 
-//               // =================================================
-//               // SUCCESS
-//               // =================================================
-//               next: () => {
+  //               // =================================================
+  //               // SUCCESS
+  //               // =================================================
+  //               next: () => {
 
-//                 this.ngZone.run(() => {
+  //                 this.ngZone.run(() => {
 
-//                   // =================================================
-//                   // ONLY SELECTED TEST REMOVE FROM UI
-//                   // बाकीचे tests तसेच राहतील.
-//                   // शेवटचा test असेल तर selectedTests = [] होईल.
-//                   // =================================================
-//                   this.selectedTests =
-//                     this.selectedTests.filter(
-//                       t =>
-//                         t.testMappingId !==
-//                         test.testMappingId
-//                     );
+  //                   // =================================================
+  //                   // ONLY SELECTED TEST REMOVE FROM UI
+  //                   // बाकीचे tests तसेच राहतील.
+  //                   // शेवटचा test असेल तर selectedTests = [] होईल.
+  //                   // =================================================
+  //                   this.selectedTests =
+  //                     this.selectedTests.filter(
+  //                       t =>
+  //                         t.testMappingId !==
+  //                         test.testMappingId
+  //                     );
 
-//                   // =================================================
-//                   // UPDATE SELECTED BOOKING
-//                   // =================================================
-//                   if (this.selectedBooking?.tests) {
-//                     this.selectedBooking.tests =
-//                       this.selectedBooking.tests.filter(
-//                         (t: BookingTest) =>
-//                           t.testMappingId !==
-//                           test.testMappingId
-//                       );
-//                   }
+  //                   // =================================================
+  //                   // UPDATE SELECTED BOOKING
+  //                   // =================================================
+  //                   if (this.selectedBooking?.tests) {
+  //                     this.selectedBooking.tests =
+  //                       this.selectedBooking.tests.filter(
+  //                         (t: BookingTest) =>
+  //                           t.testMappingId !==
+  //                           test.testMappingId
+  //                       );
+  //                   }
 
-//                   // =================================================
-//                   // SUCCESS MESSAGE
-//                   // =================================================
-//                   this.showToast(
-//                     `${test.testName} deleted successfully`,
-//                     'success'
-//                   );
+  //                   // =================================================
+  //                   // SUCCESS MESSAGE
+  //                   // =================================================
+  //                   this.showToast(
+  //                     `${test.testName} deleted successfully`,
+  //                     'success'
+  //                   );
 
-//                   // =================================================
-//                   // REFRESH UI
-//                   // =================================================
-//                   this.cdr.detectChanges();
+  //                   // =================================================
+  //                   // REFRESH UI
+  //                   // =================================================
+  //                   this.cdr.detectChanges();
 
-//                   // =================================================
-//                   // REFRESH BOOKING LIST
-//                   // =================================================
-//                   this.loadBookings();
+  //                   // =================================================
+  //                   // REFRESH BOOKING LIST
+  //                   // =================================================
+  //                   this.loadBookings();
 
-//                 });
+  //                 });
 
-//               },
+  //               },
 
-//               // =================================================
-//               // ERROR
-//               // =================================================
-//               error: (err) => {
+  //               // =================================================
+  //               // ERROR
+  //               // =================================================
+  //               error: (err) => {
 
-//                 this.ngZone.run(() => {
+  //                 this.ngZone.run(() => {
 
-//                   console.error(
-//                     'DELETE TEST ERROR:',
-//                     err
-//                   );
+  //                   console.error(
+  //                     'DELETE TEST ERROR:',
+  //                     err
+  //                   );
 
-//                   this.showToast(
-//                     err?.error?.message ||
-//                     'Failed to delete test from database.',
-//                     'error'
-//                   );
+  //                   this.showToast(
+  //                     err?.error?.message ||
+  //                     'Failed to delete test from database.',
+  //                     'error'
+  //                   );
 
-//                 });
+  //                 });
 
-//               }
+  //               }
 
-//             });
+  //             });
 
-//         }
-//       }
-//     ]
-//   });
+  //         }
+  //       }
+  //     ]
+  //   });
 
-//   // =========================================================
-//   // SHOW CONFIRMATION POPUP
-//   // =========================================================
-//   await alert.present();
-// }
+  //   // =========================================================
+  //   // SHOW CONFIRMATION POPUP
+  //   // =========================================================
+  //   await alert.present();
+  // }
 
-async removeTest(test: BookingTest) {
+  async removeTest(test: BookingTest) {
 
-  // =========================================================
-  // CONFIRM DELETE POPUP
-  // =========================================================
-  const alert = await this.alertController.create({
-    cssClass: 'premium-alert',
-    header: 'Delete Test',
-    message: `Are you sure you want to delete "${test.testName}"?`,
-    buttons: [
-      {
-        text: 'No',
-        role: 'cancel',
-        cssClass: 'alert-btn-cancel'
-      },
-      {
-        text: 'Yes, Delete',
-        role: 'destructive',
-        cssClass: 'alert-btn-danger',
+    // =========================================================
+    // CONFIRM DELETE POPUP
+    // =========================================================
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Delete Test',
+      message: `Are you sure you want to delete "${test.testName}"?`,
+      buttons: [
+        {
+          text: 'No',
+          role: 'cancel',
+          cssClass: 'alert-btn-cancel'
+        },
+        {
+          text: 'Yes, Delete',
+          role: 'destructive',
+          cssClass: 'alert-btn-danger',
 
-        handler: () => {
+          handler: () => {
 
-          // =====================================================
-          // NEWLY ADDED TEST
-          // Database मध्ये अजून save झालेला नाही.
-          // फक्त UI मधून selected test remove करायचा.
-          // =====================================================
-          if (test.isNewlyAdded) {
+            // =====================================================
+            // NEWLY ADDED TEST
+            // Database मध्ये अजून save झालेला नाही.
+            // फक्त UI मधून selected test remove करायचा.
+            // =====================================================
+            if (test.isNewlyAdded) {
 
-            // Remove only selected test
-            this.selectedTests =
-              this.selectedTests.filter(
-                t => t !== test
+              // Remove only selected test
+              this.selectedTests =
+                this.selectedTests.filter(
+                  t => t !== test
+                );
+
+              // Update selected booking tests also
+              if (this.selectedBooking?.tests) {
+
+                this.selectedBooking.tests =
+                  this.selectedBooking.tests.filter(
+                    (t: BookingTest) =>
+                      t !== test
+                  );
+              }
+
+              // Allow empty booking
+              // selectedTests = [] allowed
+
+              this.showToast(
+                `${test.testName} removed`,
+                'warning'
               );
 
-            // Update selected booking tests also
-            if (this.selectedBooking?.tests) {
+              this.cdr.detectChanges();
 
-              this.selectedBooking.tests =
-                this.selectedBooking.tests.filter(
-                  (t: BookingTest) =>
-                    t !== test
-                );
+              return;
             }
 
-            // Allow empty booking
-            // selectedTests = [] allowed
+            // =====================================================
+            // EXISTING DATABASE TEST
+            // =====================================================
+            if (!test.testMappingId) {
 
-            this.showToast(
-              `${test.testName} removed`,
-              'warning'
-            );
+              this.showToast(
+                'Test ID missing. Cannot delete this test.',
+                'error'
+              );
 
-            this.cdr.detectChanges();
+              return;
+            }
 
-            return;
-          }
+            // =====================================================
+            // GET LAB ID
+            // =====================================================
+            const labId =
+              this.labApi.getCurrentLabId();
 
-          // =====================================================
-          // EXISTING DATABASE TEST
-          // =====================================================
-          if (!test.testMappingId) {
+            if (!labId) {
 
-            this.showToast(
-              'Test ID missing. Cannot delete this test.',
-              'error'
-            );
+              this.showToast(
+                'Lab ID missing. Cannot delete test.',
+                'error'
+              );
 
-            return;
-          }
+              return;
+            }
 
-          // =====================================================
-          // GET LAB ID
-          // =====================================================
-          const labId =
-            this.labApi.getCurrentLabId();
+            // =====================================================
+            // GET BOOKING ID
+            // =====================================================
+            const bookingId =
+              this.selectedBooking?.bookingId;
 
-          if (!labId) {
+            if (!bookingId) {
 
-            this.showToast(
-              'Lab ID missing. Cannot delete test.',
-              'error'
-            );
+              this.showToast(
+                'Booking ID missing. Cannot delete test.',
+                'error'
+              );
 
-            return;
-          }
+              return;
+            }
 
-          // =====================================================
-          // GET BOOKING ID
-          // =====================================================
-          const bookingId =
-            this.selectedBooking?.bookingId;
+            // =====================================================
+            // DELETE ONLY SELECTED TEST FROM DATABASE
+            // =====================================================
+            this.labApi
+              .deleteTestFromBooking(
+                labId,
+                bookingId,
+                test.testMappingId
+              )
+              .subscribe({
 
-          if (!bookingId) {
+                // =================================================
+                // DELETE SUCCESS
+                // =================================================
+                next: () => {
 
-            this.showToast(
-              'Booking ID missing. Cannot delete test.',
-              'error'
-            );
+                  this.ngZone.run(() => {
 
-            return;
-          }
-
-          // =====================================================
-          // DELETE ONLY SELECTED TEST FROM DATABASE
-          // =====================================================
-          this.labApi
-            .deleteTestFromBooking(
-              labId,
-              bookingId,
-              test.testMappingId
-            )
-            .subscribe({
-
-              // =================================================
-              // DELETE SUCCESS
-              // =================================================
-              next: () => {
-
-                this.ngZone.run(() => {
-
-                  // =================================================
-                  // REMOVE ONLY SELECTED TEST
-                  // बाकीचे tests तसेच राहतील.
-                  // शेवटचा test असेल तर [] होईल.
-                  // =================================================
-                  this.selectedTests =
-                    this.selectedTests.filter(
-                      t =>
-                        t.testMappingId !==
-                        test.testMappingId
-                    );
-
-                  // =================================================
-                  // UPDATE SELECTED BOOKING
-                  // =================================================
-                  if (this.selectedBooking?.tests) {
-
-                    this.selectedBooking.tests =
-                      this.selectedBooking.tests.filter(
-                        (t: BookingTest) =>
+                    // =================================================
+                    // REMOVE ONLY SELECTED TEST
+                    // बाकीचे tests तसेच राहतील.
+                    // शेवटचा test असेल तर [] होईल.
+                    // =================================================
+                    this.selectedTests =
+                      this.selectedTests.filter(
+                        t =>
                           t.testMappingId !==
                           test.testMappingId
                       );
-                  }
 
-                  // =================================================
-                  // SUCCESS MESSAGE
-                  // =================================================
-                  this.showToast(
-                    `${test.testName} deleted successfully`,
-                    'success'
-                  );
+                    // =================================================
+                    // UPDATE SELECTED BOOKING
+                    // =================================================
+                    if (this.selectedBooking?.tests) {
 
-                  // =================================================
-                  // REFRESH CURRENT UI
-                  // =================================================
-                  this.cdr.detectChanges();
+                      this.selectedBooking.tests =
+                        this.selectedBooking.tests.filter(
+                          (t: BookingTest) =>
+                            t.testMappingId !==
+                            test.testMappingId
+                        );
+                    }
 
-                  // =================================================
-                  // REFRESH BOOKING STATUS LIST
-                  // =================================================
-                  this.loadBookings();
+                    // =================================================
+                    // SUCCESS MESSAGE
+                    // =================================================
+                    this.showToast(
+                      `${test.testName} deleted successfully`,
+                      'success'
+                    );
 
-                });
+                    // =================================================
+                    // REFRESH CURRENT UI
+                    // =================================================
+                    this.cdr.detectChanges();
 
-              },
+                    // =================================================
+                    // REFRESH BOOKING STATUS LIST
+                    // =================================================
+                    this.loadBookings();
 
-              // =================================================
-              // DELETE ERROR
-              // =================================================
-              error: (err) => {
+                  });
 
-                this.ngZone.run(() => {
+                },
 
-                  console.error(
-                    'DELETE TEST ERROR:',
-                    err
-                  );
+                // =================================================
+                // DELETE ERROR
+                // =================================================
+                error: (err) => {
 
-                  this.showToast(
-                    err?.error?.message ||
-                    'Failed to delete test from database.',
-                    'error'
-                  );
+                  this.ngZone.run(() => {
 
-                });
+                    console.error(
+                      'DELETE TEST ERROR:',
+                      err
+                    );
 
-              }
+                    this.showToast(
+                      err?.error?.message ||
+                      'Failed to delete test from database.',
+                      'error'
+                    );
 
-            });
+                  });
 
+                }
+
+              });
+
+          }
         }
-      }
-    ]
-  });
+      ]
+    });
 
-  // =========================================================
-  // SHOW CONFIRMATION POPUP
-  // =========================================================
-  await alert.present();
-}
+    // =========================================================
+    // SHOW CONFIRMATION POPUP
+    // =========================================================
+    await alert.present();
+  }
   onDiscountChange() {
     if (!this.canEditBilling) { this.discount = 0; return; }
     if (this.discount < 0) this.discount = 0;
@@ -2056,256 +2056,256 @@ async removeTest(test: BookingTest) {
     this.paidAmount = this.basePaidAmount + this.payNowAmount;
   }
 
-updateTestBooking() {
-  if (!this.selectedBooking || this.isSavingTest) return;
+  updateTestBooking() {
+    if (!this.selectedBooking || this.isSavingTest) return;
 
-  // =========================================================
-  // EMPTY TESTS ARE ALLOWED
-  // User can delete all tests and save/update the booking.
-  // =========================================================
+    // =========================================================
+    // EMPTY TESTS ARE ALLOWED
+    // User can delete all tests and save/update the booking.
+    // =========================================================
 
-  this.isSavingTest = true;
+    this.isSavingTest = true;
 
-  const labId = this.labApi.getCurrentLabId();
-  const bookingId = this.selectedBooking.bookingId;
+    const labId = this.labApi.getCurrentLabId();
+    const bookingId = this.selectedBooking.bookingId;
 
-  const newTests = this.selectedTests.filter(
-    t => t.isNewlyAdded
-  );
+    const newTests = this.selectedTests.filter(
+      t => t.isNewlyAdded
+    );
 
-  const existingTests = this.selectedTests.filter(
-    t => !t.isNewlyAdded
-  );
+    const existingTests = this.selectedTests.filter(
+      t => !t.isNewlyAdded
+    );
 
-  // =========================================================
-  // UPDATE PATIENT / BOOKING BODY
-  // =========================================================
-  const patientBody: any = {
-    bookingId,
-
-    customerName: this.selectedBooking.customerName,
-    ageType: this.selectedBooking.ageType,
-    age: this.selectedBooking.age,
-    gender: this.selectedBooking.gender,
-
-    mobileNumber: this.selectedBooking.mobileNumber,
-    aadhaarNumber: this.selectedBooking.aadhaarNumber,
-
-    doctorid: this.selectedBooking.doctor?.doctorId,
-    franchiseId: this.selectedBooking.franchise?.franchiseId,
-
-    createdOn: this.selectedBooking.createdOn,
-
-    // =======================================================
-    // EXISTING TESTS
-    // If all tests are deleted, this will be []
-    // This is now allowed.
-    // =======================================================
-    tests: existingTests.map(t => ({
-      testId: t.testId,
-      profileId: 0
-    })),
-
-    // =======================================================
-    // BILLING
-    // =======================================================
-    subTotalAmount: this.subTotal,
-
-    discountAmount: this.canEditBilling
-      ? this.discount
-      : (this.selectedBooking.discountAmount || 0),
-
-    totalAmount: this.canEditBilling
-      ? this.totalAmount
-      : (this.selectedBooking.totalAmount || 0),
-
-    paidAmount: this.canEditBilling
-      ? this.paidAmount
-      : (this.selectedBooking.paidAmount || 0),
-
-    dueAmount: this.canEditBilling
-      ? this.dueAmount
-      : (this.selectedBooking.dueAmount || 0),
-
-    payNowAmount: this.canEditBilling
-      ? this.payNowAmount
-      : 0,
-
-    paymentMode: this.paymentMethod
-  };
-
-  // =========================================================
-  // UPDATE BOOKING / PATIENT
-  // =========================================================
-  this.labApi
-    .updatePatient(
-      labId,
+    // =========================================================
+    // UPDATE PATIENT / BOOKING BODY
+    // =========================================================
+    const patientBody: any = {
       bookingId,
-      patientBody
-    )
-    .subscribe({
+
+      customerName: this.selectedBooking.customerName,
+      ageType: this.selectedBooking.ageType,
+      age: this.selectedBooking.age,
+      gender: this.selectedBooking.gender,
+
+      mobileNumber: this.selectedBooking.mobileNumber,
+      aadhaarNumber: this.selectedBooking.aadhaarNumber,
+
+      doctorid: this.selectedBooking.doctor?.doctorId,
+      franchiseId: this.selectedBooking.franchise?.franchiseId,
+
+      createdOn: this.selectedBooking.createdOn,
 
       // =======================================================
-      // UPDATE PATIENT SUCCESS
+      // EXISTING TESTS
+      // If all tests are deleted, this will be []
+      // This is now allowed.
       // =======================================================
-      next: () => {
+      tests: existingTests.map(t => ({
+        testId: t.testId,
+        profileId: 0
+      })),
 
-        // =====================================================
-        // IF NEW TESTS ARE PRESENT
-        // ADD ONLY NEWLY ADDED TESTS
-        // =====================================================
-        if (newTests.length > 0) {
+      // =======================================================
+      // BILLING
+      // =======================================================
+      subTotalAmount: this.subTotal,
 
-          const addTestBody: any = {
+      discountAmount: this.canEditBilling
+        ? this.discount
+        : (this.selectedBooking.discountAmount || 0),
 
-            bookingId,
+      totalAmount: this.canEditBilling
+        ? this.totalAmount
+        : (this.selectedBooking.totalAmount || 0),
 
-            customerName:
-              this.selectedBooking!.customerName,
+      paidAmount: this.canEditBilling
+        ? this.paidAmount
+        : (this.selectedBooking.paidAmount || 0),
 
-            age:
-              this.selectedBooking!.age,
+      dueAmount: this.canEditBilling
+        ? this.dueAmount
+        : (this.selectedBooking.dueAmount || 0),
 
-            ageType:
-              this.selectedBooking!.ageType,
+      payNowAmount: this.canEditBilling
+        ? this.payNowAmount
+        : 0,
 
-            gender:
-              this.selectedBooking!.gender,
+      paymentMode: this.paymentMethod
+    };
 
-            aadhaarNumber:
-              this.selectedBooking!.aadhaarNumber || '',
+    // =========================================================
+    // UPDATE BOOKING / PATIENT
+    // =========================================================
+    this.labApi
+      .updatePatient(
+        labId,
+        bookingId,
+        patientBody
+      )
+      .subscribe({
 
-            tests: newTests.map(t => ({
+        // =======================================================
+        // UPDATE PATIENT SUCCESS
+        // =======================================================
+        next: () => {
 
-              testId:
-                t.testId,
+          // =====================================================
+          // IF NEW TESTS ARE PRESENT
+          // ADD ONLY NEWLY ADDED TESTS
+          // =====================================================
+          if (newTests.length > 0) {
 
-              testName:
-                t.testName,
+            const addTestBody: any = {
 
-              testPrice:
-                t.testMrp,
+              bookingId,
 
-              doctorTestDiscountPrice:
-                0,
+              customerName:
+                this.selectedBooking!.customerName,
 
-              doctorTestCommissionPrice:
-                0,
+              age:
+                this.selectedBooking!.age,
 
-              test_price:
-                t.testPrice ?? t.testMrp,
+              ageType:
+                this.selectedBooking!.ageType,
 
-              assignedPrice: [
-                t.testPrice ?? t.testMrp
-              ],
+              gender:
+                this.selectedBooking!.gender,
 
-              source:
-                t.method || 'RPL',
+              aadhaarNumber:
+                this.selectedBooking!.aadhaarNumber || '',
 
-              discount:
-                0,
+              tests: newTests.map(t => ({
 
-              newTest:
-                true
-            }))
-          };
+                testId:
+                  t.testId,
 
-          // ===================================================
-          // ADD NEW TESTS
-          // ===================================================
-          this.labApi
-            .addTestToBooking(addTestBody)
-            .subscribe({
+                testName:
+                  t.testName,
 
-              // =================================================
-              // ADD TEST SUCCESS
-              // =================================================
-              next: () => {
+                testPrice:
+                  t.testMrp,
 
-                this.verifyAndFinishSave(
-                  bookingId,
-                  newTests
-                );
+                doctorTestDiscountPrice:
+                  0,
 
-              },
+                doctorTestCommissionPrice:
+                  0,
 
-              // =================================================
-              // ADD TEST ERROR
-              // =================================================
-              error: (err) => {
+                test_price:
+                  t.testPrice ?? t.testMrp,
 
-                console.log(
-                  'ADD TEST ERROR:',
-                  err
-                );
+                assignedPrice: [
+                  t.testPrice ?? t.testMrp
+                ],
 
-                this.ngZone.run(() => {
+                source:
+                  t.method || 'RPL',
 
-                  this.isSavingTest = false;
+                discount:
+                  0,
 
-                  this.showToast(
-                    'Naveen test add nahi zala: ' +
-                    (
-                      err.error?.message ||
-                      'Unknown error'
-                    ),
-                    'error'
+                newTest:
+                  true
+              }))
+            };
+
+            // ===================================================
+            // ADD NEW TESTS
+            // ===================================================
+            this.labApi
+              .addTestToBooking(addTestBody)
+              .subscribe({
+
+                // =================================================
+                // ADD TEST SUCCESS
+                // =================================================
+                next: () => {
+
+                  this.verifyAndFinishSave(
+                    bookingId,
+                    newTests
                   );
 
-                });
+                },
 
-              }
+                // =================================================
+                // ADD TEST ERROR
+                // =================================================
+                error: (err) => {
 
-            });
+                  console.log(
+                    'ADD TEST ERROR:',
+                    err
+                  );
 
-        } else {
+                  this.ngZone.run(() => {
 
-          // ===================================================
-          // NO NEW TESTS
-          //
-          // This also handles:
-          // selectedTests = []
-          //
-          // Booking will still be saved/updated.
-          // ===================================================
-          this.verifyAndFinishSave(
-            bookingId,
-            []
+                    this.isSavingTest = false;
+
+                    this.showToast(
+                      'Naveen test add nahi zala: ' +
+                      (
+                        err.error?.message ||
+                        'Unknown error'
+                      ),
+                      'error'
+                    );
+
+                  });
+
+                }
+
+              });
+
+          } else {
+
+            // ===================================================
+            // NO NEW TESTS
+            //
+            // This also handles:
+            // selectedTests = []
+            //
+            // Booking will still be saved/updated.
+            // ===================================================
+            this.verifyAndFinishSave(
+              bookingId,
+              []
+            );
+
+          }
+
+        },
+
+        // =======================================================
+        // UPDATE PATIENT ERROR
+        // =======================================================
+        error: (err) => {
+
+          console.log(
+            'UPDATE PATIENT ERROR:',
+            err
           );
+
+          this.ngZone.run(() => {
+
+            this.isSavingTest = false;
+
+            this.showToast(
+              'Failed to update booking: ' +
+              (
+                err.error?.message ||
+                'Unknown error'
+              ),
+              'error'
+            );
+
+          });
 
         }
 
-      },
-
-      // =======================================================
-      // UPDATE PATIENT ERROR
-      // =======================================================
-      error: (err) => {
-
-        console.log(
-          'UPDATE PATIENT ERROR:',
-          err
-        );
-
-        this.ngZone.run(() => {
-
-          this.isSavingTest = false;
-
-          this.showToast(
-            'Failed to update booking: ' +
-            (
-              err.error?.message ||
-              'Unknown error'
-            ),
-            'error'
-          );
-
-        });
-
-      }
-
-    });
-}
+      });
+  }
 
   private verifyAndFinishSave(bookingId: number, newTests: BookingTest[]) {
     this.labApi.getSingleBooking(bookingId).subscribe({

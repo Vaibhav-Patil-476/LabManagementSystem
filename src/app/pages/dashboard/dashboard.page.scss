@@ -2275,7 +2275,6 @@ ion-content.menu-content {
 .sc-details {
   margin-top: 4px;
 }
-
 .sc-test-table {
   width: 100%;
   table-layout: fixed;
@@ -2286,6 +2285,10 @@ ion-content.menu-content {
   overflow: hidden;
   margin-bottom: 10px;
 
+  tr {
+    height: 1px;
+  }
+
   th:first-child,
   td:first-child {
     width: 45%;
@@ -2294,6 +2297,7 @@ ion-content.menu-content {
   th:last-child,
   td:last-child {
     width: 55%;
+   text-align: right !important;  // ⬅️ right align
   }
 
   th {
@@ -2309,7 +2313,7 @@ ion-content.menu-content {
   }
 
   td {
-    padding: 9px 12px;
+    padding: 12px 12px;
     font-size: 12.5px;
     font-weight: 600;
     color: var(--ink);
@@ -2318,6 +2322,7 @@ ion-content.menu-content {
     vertical-align: middle;
     word-wrap: break-word;
     overflow-wrap: break-word;
+    line-height: 1.4;
   }
 
   tr:last-child td {
@@ -2326,7 +2331,9 @@ ion-content.menu-content {
 }
 
 .sc-status-badge {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 11px;
   border-radius: 999px;
   font-size: 10.5px;
@@ -2334,32 +2341,16 @@ ion-content.menu-content {
   text-transform: uppercase;
   letter-spacing: .2px;
   color: #fff;
-  white-space: normal;
+  white-space: nowrap;
+  vertical-align: middle;
   box-shadow: 0 2px 6px rgba(6, 58, 56, .12);
 
-  &.badge-pending {
-    background: #f0ad4e;
-  }
-
-  &.badge-inprocess {
-    background: #2470b9;
-  }
-
-  &.badge-snr {
-    background: #6f42c1;
-  }
-
-  &.badge-recheck {
-    background: #6f42c1;
-  }
-
-  &.badge-cancel {
-    background: #dc3545;
-  }
-
-  &.badge-ready {
-    background: #16866e;
-  }
+  &.badge-pending { background: #f0ad4e; }
+  &.badge-inprocess { background: #2470b9; }
+  &.badge-snr { background: #6f42c1; }
+  &.badge-recheck { background: #6f42c1; }
+  &.badge-cancel { background: #dc3545; }
+  &.badge-ready { background: #16866e; }
 }
 
 .attach-btn {

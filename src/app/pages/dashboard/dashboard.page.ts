@@ -1652,10 +1652,11 @@ saveTestChanges() {
       franchiseName: raw.franchiseName || raw.customFranchiseLab || 'SELF'
     };
   }
-  private testStatusLabel(status?: string): string {
+  
+private testStatusLabel(status?: string): string {
     const s = (status || 'snr').toLowerCase();
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
-    if (s === 'snr') return 'SAMPLE NOT RECEIVED';
+    if (s === 'snr') return 'SNR';   // ⬅️ changed from 'SAMPLE NOT RECEIVED'
     if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
     if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
     if (s.includes('process') || s.includes('outsource') || s.includes('doctor approval')) return 'IN PROCESS';

@@ -96,8 +96,8 @@
     <div class="status-tabs-wrapper">
       <div class="status-tabs">
 
-<div *ngFor="let tab of statusTabs" class="status-tab" [class.active]="selectedReportStatus === tab.key"
-  [ngClass]="{
+        <div *ngFor="let tab of statusTabs" class="status-tab" [class.active]="selectedReportStatus === tab.key"
+          [ngClass]="{
     'active-all': tab.key === 'all',
     'active-complete': tab.key === 'completed',
     'active-pending': tab.key === 'pending',
