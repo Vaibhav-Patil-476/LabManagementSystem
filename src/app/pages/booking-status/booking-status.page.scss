@@ -30,23 +30,22 @@
     --color: #ffffff;
   }
 }
-
 .booking-content {
-  --background: var(--app-bg, #f2f7f7);
+  --background: #ffffff;
   --padding-start: 0;
   --padding-end: 0;
   --overflow-x: hidden;
 }
 
+// 1. form-card — side padding kadhun taak (children la deu)
 .form-card {
-  background: var(--card-bg, #ffffff);
-  border-radius: var(--r-lg);
-  margin: var(--sp-4);
-  padding: var(--sp-5);
-  box-shadow: var(--shadow-md);
-  border: 1px solid rgba(8, 123, 118, 0.06);
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+  padding: var(--sp-4) 0 var(--sp-5);
+  box-shadow: none;
+  border: none;
   box-sizing: border-box;
-  
 }
 
 .summary-bar {
@@ -54,7 +53,7 @@
   flex-wrap: wrap;
   align-items: center;
   gap: var(--sp-3);
-  padding: 2px 2px var(--sp-5);
+  padding: 2px var(--sp-3) var(--sp-5);
 }
 
 .total-badge {
@@ -106,7 +105,7 @@
   flex-wrap: wrap;
   align-items: stretch;
   gap: var(--sp-3);
-  padding: 0 2px var(--sp-5);
+  padding: 0 var(--sp-3) var(--sp-5);
 }
 
 .filter-field {
@@ -1765,7 +1764,7 @@
 }
 
 .status-tabs-wrapper {
-  padding: 4px 2px 8px;
+  padding: 4px var(--sp-3) 8px;
   -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
   mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
 }
@@ -1953,13 +1952,7 @@
   }
 }
 
-.booking-card-list {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-4);
-  margin-top: var(--sp-3);
-  padding-bottom: var(--sp-5);
-}
+
 
 .booking-card {
   background: var(--card-bg, #fff);
@@ -2131,6 +2124,12 @@
 .booking-card.expanded .expand-chevron {
   transform: rotate(180deg);
   color: var(--primary);
+}
+
+.booking-card.expanded {
+  border-color: rgba(8, 123, 118, 0.32);
+  box-shadow: var(--shadow-md);
+  margin-bottom: 80px; // ✅ ADD THIS
 }
 
 .bcard-stats {
@@ -2436,15 +2435,15 @@ ion-content.menu-open {
   }
 
   .form-card {
-    margin: var(--sp-3);
-    padding: var(--sp-3);
+    margin: 0;
+    padding: var(--sp-4) 0 var(--sp-5);
     box-sizing: border-box;
   }
 
   .summary-bar,
   .filter-bar {
-    padding-left: 2px;
-    padding-right: 2px;
+    padding-left: var(--sp-3);
+    padding-right: var(--sp-3);
   }
 
   .sheet-title-main {
@@ -3138,13 +3137,17 @@ ion-content.menu-open {
 }
 
 .booking-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3, 12px);
+  margin-top: var(--sp-3);
+  padding: 0 var(--sp-3) 30px;
+
   height: auto;
   min-height: 0;
   max-height: none;
   overflow: visible;
-  padding-bottom: 24px;
 }
-
 .booking-card {
   height: auto;
   min-height: 0;

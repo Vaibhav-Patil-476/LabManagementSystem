@@ -57,21 +57,35 @@
   }
 }
 
+// .report-content {
+//   --background: var(--app-bg, #f4f8f8);
+//   --padding-start: 0;
+//   --padding-end: 0;
+// }
+
+// 1. Content background white
 .report-content {
-  --background: var(--app-bg, #f4f8f8);
-  --padding-start: 0;
-  --padding-end: 0;
+  --background: #ffffff;
+  padding: 0;
+}
+
+.report-content::part(scroll) {
+  background: #ffffff;
 }
 
 // =========================
 // Top bar
 // =========================
+// 2. Top bar padding
 .top-bar {
   display: flex;
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
-  padding: 18px 16px 0;
+
+  padding: 18px 12px 0;
+
+  background: #ffffff;
 }
 
 .total-pill {
@@ -111,14 +125,19 @@
 // FILTER BAR — same pattern used on Booking Status page, so both
 // pages behave/look identical.
 // ==========================================================
+// 3. Filter bar padding
 .filter-bar {
   position: relative;
   z-index: 3;
+
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
   gap: 10px;
-  padding: 14px 16px 4px;
+
+  padding: 14px 12px 4px;
+
+  background: #ffffff;
 }
 
 .filter-field {
@@ -422,24 +441,9 @@
 // Status tabs
 // =========================
 .status-tabs-wrapper {
-  padding: 4px 16px 8px;
-
-  // Fade edges so a scrollable row doesn't look abruptly cut off
-  -webkit-mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 14px,
-    #000 calc(100% - 14px),
-    transparent 100%
-  );
-
-  mask-image: linear-gradient(
-    to right,
-    transparent 0,
-    #000 14px,
-    #000 calc(100% - 14px),
-    transparent 100%
-  );
+  padding: 4px 12px 8px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
 }
 
 .status-tabs {
@@ -448,7 +452,7 @@
   gap: 10px;
   overflow-x: auto;
   overflow-y: hidden;
-  padding: 4px 14px 10px;
+  padding: 4px 12px 10px;
   scroll-snap-type: x proximity;
   -webkit-overflow-scrolling: touch;
   scrollbar-width: none;
@@ -693,12 +697,13 @@
 // MOBILE
 // =========================
 @media (max-width: 480px) {
-  .status-tabs-wrapper {
-    padding: 4px 0 8px;
-  }
+.status-tabs-wrapper {
+  padding: 4px 12px 8px;
+  background: #ffffff;
+}
 
   .status-tabs {
-    padding: 4px 16px 10px;
+    padding: 4px 12px 10px;
   }
 
   .status-tab {
@@ -715,8 +720,9 @@
 // status-tabs treatment (small, gradient, tight shadow, crisp
 // press feedback) instead of the old full-width bulky button.
 // ==========================================================
+// 6. Download row padding
 .download-row {
-  padding: 4px 16px 4px;
+  padding: 4px 12px 4px;
   display: flex;
   justify-content: flex-end;
 }
@@ -935,20 +941,59 @@
   }
 }
 
+// .booking-card-list {
+//   display: flex;
+//   flex-direction: column;
+//   gap: var(--sp-3, 12px);
+//   margin: var(--sp-4, 16px);
+// }
+
+// 7. booking-card-list padding
 .booking-card-list {
   display: flex;
   flex-direction: column;
+
   gap: var(--sp-3, 12px);
-  margin: var(--sp-4, 16px);
+
+  margin: 0;
+
+  padding: 24px 12px 32px;
+
+  background: #ffffff;
+
+  min-height: 100%;
+
+  box-sizing: border-box;
 }
 
+
+// .booking-card {
+//   background: var(--card-bg, #fff);
+//   border: 1.5px solid var(--border-color);
+//   border-radius: var(--r-lg);
+//   box-shadow: var(--shadow-xs);
+//   overflow: hidden;
+//   transition: box-shadow 0.18s ease, border-color 0.18s ease;
+// }
+
 .booking-card {
-  background: var(--card-bg, #fff);
+  width: 100%;
+  box-sizing: border-box;
+  background: #ffffff;
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-lg);
   box-shadow: var(--shadow-xs);
   overflow: hidden;
-  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+
+@media (max-width: 480px) {
+  .booking-card-list {
+    margin: 0;
+    gap: 12px;
+    padding: 0 12px 32px;
+    background: #ffffff;
+  }
 }
 
 .booking-card.expanded {

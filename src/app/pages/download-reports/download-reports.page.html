@@ -3,202 +3,533 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/dashboard"></ion-back-button>
     </ion-buttons>
-    <ion-title>{{ roleService.canDownloadReports ? 'Report Download' : 'Download Reports' }}</ion-title>
+
+    <ion-title>
+      {{ roleService.canDownloadReports ? 'Report Download' : 'Download Reports' }}
+    </ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content class="report-content">
 
-  <!-- ===================== TOP BAR ===================== -->
-  <div class="top-bar">
-    <span class="total-pill">
-      <ion-icon name="calendar-clear-outline"></ion-icon>
-      Total Bookings: {{ totalBookings }}
-    </span>
-    <!-- ✅ Search-mode active nasel tenvhach normal date-refresh hint -->
-    <span class="refresh-hint" *ngIf="!isSearchMode">
-      <ion-icon name="information-circle-outline"></ion-icon>
-      "Please refresh to see the latest data."
-    </span>
-    <!-- ✅ Search active astana date-filter ignore hoto he user la spashta disave
-         mhanun ha hint — booking kितीही जुनी asли tarी ID/name/barcode search la
-         sapadel (date range cha barobar he independent). -->
-    <span class="refresh-hint search-mode-hint" *ngIf="isSearchMode">
-      <ion-icon name="search-outline"></ion-icon>
-      Searching all dates for "{{ quickSearch }}" (date filter ignored)
-    </span>
-  </div>
-<!-- ===================== FILTER BAR =====================
-       ✅ Booking Status page cha exact tach pattern — franchise ata
-       ion-select (interface="popover"), date range ata Material
-       date-range-picker (jुना native input[type=date] pair kadhla). -->
-  <div class="filter-bar">
-    <div class="filter-field search-field">
-      <span class="search-icon-badge">
+  <!-- =====================================================
+       MAIN WHITE CONTENT CONTAINER
+       Everything is inside this container.
+       Container height grows automatically with content.
+  ====================================================== -->
+  <div class="report-container">
+
+    <!-- ===================== TOP BAR ===================== -->
+    <div class="top-bar">
+
+      <span class="total-pill">
+        <ion-icon name="calendar-clear-outline"></ion-icon>
+        Total Bookings: {{ totalBookings }}
+      </span>
+
+      <!-- Normal refresh hint -->
+      <span class="refresh-hint" *ngIf="!isSearchMode">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        "Please refresh to see the latest data."
+      </span>
+
+      <!-- Search mode hint -->
+      <span class="refresh-hint search-mode-hint" *ngIf="isSearchMode">
         <ion-icon name="search-outline"></ion-icon>
+        Searching all dates for "{{ quickSearch }}" (date filter ignored)
       </span>
-      <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch" (ngModelChange)="onQuickSearchChange()" />
+
     </div>
 
-    <div class="filter-field search-field franchise-field">
-      <span class="search-icon-badge">
-        <ion-icon name="business-outline"></ion-icon>
-      </span>
-      <input type="text" placeholder="Type franchise name" [(ngModel)]="franchiseSearchTerm"
-        (ngModelChange)="onFranchiseSearch()" (focus)="showFranchiseDropdown = true" (blur)="onFranchiseBlur()">
-      <ion-icon *ngIf="franchiseSearchTerm" name="close-circle-outline" class="clear-franchise"
-        (click)="clearFranchise(); $event.stopPropagation()"></ion-icon>
 
-      <div class="franchise-dropdown" *ngIf="showFranchiseDropdown && filteredFranchiseList.length > 0">
-        <div class="franchise-dropdown-item" *ngFor="let f of filteredFranchiseList" (click)="selectFranchise(f)">
-          {{ f.franchiseName || f.name }}
-        </div>
-      </div>
-    </div>
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
 
-    <div class="filter-field date-field" (click)="openDateRangePicker()">
-      <span class="date-icon-badge">
-        <ion-icon name="calendar-outline"></ion-icon>
-      </span>
-      <span class="date-trigger-btn">
-        {{ fromDate ? (fromDate | date:'MM/dd/yyyy') : 'From' }} – {{ toDate ? (toDate | date:'MM/dd/yyyy') : 'To' }}
-      </span>
-    </div>
+      <!-- Quick Search -->
+      <div class="filter-field search-field">
 
-    <mat-form-field class="hidden-range-field" appearance="fill">
-      <mat-date-range-input [rangePicker]="rangePicker">
-        <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
-          (dateChange)="onRangeStartChange($event)" readonly>
-        <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
-          (dateChange)="onRangeEndChange($event)" readonly>
-      </mat-date-range-input>
-      <mat-date-range-picker #rangePicker></mat-date-range-picker>
-    </mat-form-field>
-
-    <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
-      <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
-    </ion-button>
-
-  </div>
-
-  <!-- ===================== STATUS TABS ===================== -->
-  <div class="status-tabs-wrapper" *ngIf="!isSearchMode">
-    <div class="status-tabs">
-
-      <div *ngFor="let tab of tabs" class="status-tab" [class.active]="activeTab === tab.key" [class.active-cancel]="
-        activeTab === tab.key && tab.badgeClass === 'badge-cancel'
-      " (click)="setTab(tab.key)">
-        <span class="tab-dot" [ngClass]="tab.badgeClass">
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
         </span>
 
-        <span class="tab-label">
-          {{ tab.label }}
+        <input
+          type="text"
+          placeholder="Quick search"
+          [(ngModel)]="quickSearch"
+          (ngModelChange)="onQuickSearchChange()"
+        />
+
+      </div>
+
+
+      <!-- Franchise Search -->
+      <div class="filter-field search-field franchise-field">
+
+        <span class="search-icon-badge">
+          <ion-icon name="business-outline"></ion-icon>
         </span>
 
-        <span class="tab-count" [ngClass]="tab.badgeClass">
-          {{ bucketCount[tab.key] }}
+        <input
+          type="text"
+          placeholder="Type franchise name"
+          [(ngModel)]="franchiseSearchTerm"
+          (ngModelChange)="onFranchiseSearch()"
+          (focus)="showFranchiseDropdown = true"
+          (blur)="onFranchiseBlur()"
+        />
+
+        <ion-icon
+          *ngIf="franchiseSearchTerm"
+          name="close-circle-outline"
+          class="clear-franchise"
+          (click)="clearFranchise(); $event.stopPropagation()"
+        ></ion-icon>
+
+
+        <!-- Franchise Dropdown -->
+        <div
+          class="franchise-dropdown"
+          *ngIf="showFranchiseDropdown && filteredFranchiseList.length > 0"
+        >
+
+          <div
+            class="franchise-dropdown-item"
+            *ngFor="let f of filteredFranchiseList"
+            (click)="selectFranchise(f)"
+          >
+            {{ f.franchiseName || f.name }}
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- Date Range -->
+      <div
+        class="filter-field date-field"
+        (click)="openDateRangePicker()"
+      >
+
+        <span class="date-icon-badge">
+          <ion-icon name="calendar-outline"></ion-icon>
         </span>
+
+        <span class="date-trigger-btn">
+          {{ fromDate ? (fromDate | date:'MM/dd/yyyy') : 'From' }}
+          –
+          {{ toDate ? (toDate | date:'MM/dd/yyyy') : 'To' }}
+        </span>
+
       </div>
 
-    </div>
-  </div>
 
-  <!-- ===================== DOWNLOAD ACTION BAR ===================== -->
-  <div class="download-action-bar" *ngIf="canShowDownloadControls && selectedIds.size > 0">
-    <span class="selected-count">{{ selectedIds.size }} selected</span>
-    <ion-button size="small" fill="solid" [disabled]="isGenerating" (click)="downloadSelected()">
-      <ion-icon slot="start" name="download-outline"></ion-icon>
-      {{ isGenerating ? 'Generating...' : 'Download' }}
-    </ion-button>
-  </div>
+      <!-- Hidden Material Date Range Picker -->
+      <mat-form-field
+        class="hidden-range-field"
+        appearance="fill"
+      >
 
-  <!-- ===================== BOOKING CARD LIST (no horizontal swipe) ===================== -->
-  <div class="booking-card-list">
+        <mat-date-range-input
+          [rangePicker]="rangePicker"
+        >
 
-    <div class="booking-card" *ngFor="let item of rowsForActiveTab" [class.expanded]="expandedId === item.bookingId"
-      [class.row-selected]="isSelected(item)">
+          <input
+            matStartDate
+            [(ngModel)]="rangeStart"
+            [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeStartChange($event)"
+            readonly
+          />
 
-      <!-- ===== Card header — always visible, tap to expand ===== -->
-      <div class="bcard-header" (click)="toggleExpand(item)">
-        <div class="bcard-header-left">
-          <div class="bcard-id-row">
-            <label class="bcard-checkbox-wrap" *ngIf="canShowDownloadControls" (click)="$event.stopPropagation()">
-              <input type="checkbox" class="bcard-checkbox" [checked]="isSelected(item)"
-                (change)="toggleSelect(item, $any($event.target).checked)">
-            </label>
-            <a class="id-link">#{{ item.bookingId }}</a>
-            <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
-          </div>
-          <div class="bcard-name-row">
-            <span class="bcard-name">{{ item.title | titlecase }} {{ item.name }}</span>
-            <span class="sub-text" *ngIf="item.genderAge">({{ item.genderAge }}) · {{ item.patientId }}</span>
-          </div>
-        </div>
-        <div class="bcard-header-right">
-          <div class="bcard-count-box">
-            <span class="count-line" [ngClass]="getTestCountStatusClass(item)">Test Count: {{ reportsFraction(item)
-              }}</span>
-            <span class="count-line">Sample Count: {{ item.sampleCount }}</span>
-          </div>
-          <ion-icon name="chevron-down-outline" class="expand-chevron"></ion-icon>
-        </div>
-      </div>
-      <div class="bcard-stats">
-        <div class="bcard-stat">
-          <span class="bcs-label">Client/Doctor</span>
-          <span class="bcs-value">{{ item.doctorName }}</span>
-        </div>
-        <div class="bcard-stat">
-          <div class="bcard-barcode-inline">
-            <div class="barcode-line" *ngFor="let b of item.barcodes">
-              <ion-icon name="qr-code-outline"></ion-icon>
-              <span>{{ b }}</span>
-            </div>
-            <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
-          </div>
-        </div>
-      </div>
+          <input
+            matEndDate
+            [(ngModel)]="rangeEnd"
+            [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeEndChange($event)"
+            readonly
+          />
 
-      <!-- ===== Expanded details — tests + barcode ===== -->
-      <div class="bcard-details" *ngIf="expandedId === item.bookingId">
+        </mat-date-range-input>
 
-        <table class="bcard-test-table">
-          <thead>
-            <tr>
-              <th>Test Name</th>
-              <th>Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr *ngFor="let t of item.tests">
-              <td>{{ t.name }}</td>
-              <td><span class="status-pill" [ngClass]="testStatusClass(t.status)">{{ testStatusLabel(t.status) }}</span>
-              </td>
-            </tr>
-            <tr *ngIf="!item.tests?.length">
-              <td colspan="2" class="empty-tests">No tests</td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
+        <mat-date-range-picker
+          #rangePicker
+        ></mat-date-range-picker>
 
-    <div class="loading-inline" *ngIf="isLoading">
-      <ion-spinner name="dots"></ion-spinner>
-      <span>Loading...</span>
-    </div>
+      </mat-form-field>
 
-    <div class="empty-state" *ngIf="!isLoading && rowsForActiveTab.length === 0">
-      <ion-icon name="document-text-outline"></ion-icon>
-      <span>No data available</span>
-      <p class="empty-sub">Try adjusting the date range or search term.</p>
-    </div>
 
-    <div class="load-more-row" *ngIf="hasMoreForActiveTab">
-      <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreActiveTab()">
-        {{ isLoadingMore ? 'Loading...' : 'Load More' }}
+      <!-- Refresh -->
+      <ion-button
+        class="refresh-btn"
+        fill="solid"
+        (click)="loadData()"
+        [disabled]="isLoading"
+      >
+        <ion-icon
+          slot="icon-only"
+          name="refresh-outline"
+        ></ion-icon>
       </ion-button>
+
     </div>
+
+
+    <!-- ===================== STATUS TABS ===================== -->
+    <div
+      class="status-tabs-wrapper"
+      *ngIf="!isSearchMode"
+    >
+
+      <div class="status-tabs">
+
+        <div
+          *ngFor="let tab of tabs"
+          class="status-tab"
+          [class.active]="activeTab === tab.key"
+          [class.active-cancel]="
+            activeTab === tab.key &&
+            tab.badgeClass === 'badge-cancel'
+          "
+          (click)="setTab(tab.key)"
+        >
+
+          <span
+            class="tab-dot"
+            [ngClass]="tab.badgeClass"
+          ></span>
+
+          <span class="tab-label">
+            {{ tab.label }}
+          </span>
+
+          <span
+            class="tab-count"
+            [ngClass]="tab.badgeClass"
+          >
+            {{ bucketCount[tab.key] }}
+          </span>
+
+        </div>
+
+      </div>
+
+    </div>
+
+
+    <!-- ===================== DOWNLOAD ACTION BAR ===================== -->
+    <div
+      class="download-action-bar"
+      *ngIf="canShowDownloadControls && selectedIds.size > 0"
+    >
+
+      <span class="selected-count">
+        {{ selectedIds.size }} selected
+      </span>
+
+      <ion-button
+        size="small"
+        fill="solid"
+        [disabled]="isGenerating"
+        (click)="downloadSelected()"
+      >
+
+        <ion-icon
+          slot="start"
+          name="download-outline"
+        ></ion-icon>
+
+        {{ isGenerating ? 'Generating...' : 'Download' }}
+
+      </ion-button>
+
+    </div>
+
+
+    <!-- ===================== BOOKING CARD LIST ===================== -->
+    <div class="booking-card-list">
+
+      <!-- Booking Card -->
+      <div
+        class="booking-card"
+        *ngFor="let item of rowsForActiveTab"
+        [class.expanded]="expandedId === item.bookingId"
+        [class.row-selected]="isSelected(item)"
+      >
+
+        <!-- Card Header -->
+        <div
+          class="bcard-header"
+          (click)="toggleExpand(item)"
+        >
+
+          <div class="bcard-header-left">
+
+            <div class="bcard-id-row">
+
+              <!-- Checkbox -->
+              <label
+                class="bcard-checkbox-wrap"
+                *ngIf="canShowDownloadControls"
+                (click)="$event.stopPropagation()"
+              >
+
+                <input
+                  type="checkbox"
+                  class="bcard-checkbox"
+                  [checked]="isSelected(item)"
+                  (change)="
+                    toggleSelect(
+                      item,
+                      $any($event.target).checked
+                    )
+                  "
+                />
+
+              </label>
+
+
+              <!-- Booking ID -->
+              <a class="id-link">
+                #{{ item.bookingId }}
+              </a>
+
+
+              <!-- Booking Date -->
+              <span class="bcard-date">
+                {{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}
+              </span>
+
+            </div>
+
+
+            <!-- Patient Name -->
+            <div class="bcard-name-row">
+
+              <span class="bcard-name">
+                {{ item.title | titlecase }} {{ item.name }}
+              </span>
+
+              <span
+                class="sub-text"
+                *ngIf="item.genderAge"
+              >
+                ({{ item.genderAge }}) · {{ item.patientId }}
+              </span>
+
+            </div>
+
+          </div>
+
+
+          <!-- Right Side -->
+          <div class="bcard-header-right">
+
+            <div class="bcard-count-box">
+
+              <span
+                class="count-line"
+                [ngClass]="getTestCountStatusClass(item)"
+              >
+                Test Count: {{ reportsFraction(item) }}
+              </span>
+
+              <span class="count-line">
+                Sample Count: {{ item.sampleCount }}
+              </span>
+
+            </div>
+
+            <ion-icon
+              name="chevron-down-outline"
+              class="expand-chevron"
+            ></ion-icon>
+
+          </div>
+
+        </div>
+
+
+        <!-- Card Stats -->
+        <div class="bcard-stats">
+
+          <!-- Client / Doctor -->
+          <div class="bcard-stat">
+
+            <span class="bcs-label">
+              Client / Doctor
+            </span>
+
+            <span class="bcs-value">
+              {{ item.doctorName }}
+            </span>
+
+          </div>
+
+
+          <!-- Barcode -->
+          <div class="bcard-stat">
+
+            <div class="bcard-barcode-inline">
+
+              <div
+                class="barcode-line"
+                *ngFor="let b of item.barcodes"
+              >
+
+                <ion-icon
+                  name="qr-code-outline"
+                ></ion-icon>
+
+                <span>
+                  {{ b }}
+                </span>
+
+              </div>
+
+
+              <div
+                class="barcode-line empty"
+                *ngIf="!item.barcodes?.length"
+              >
+                —
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- Expanded Details -->
+        <div
+          class="bcard-details"
+          *ngIf="expandedId === item.bookingId"
+        >
+
+          <table class="bcard-test-table">
+
+            <thead>
+
+              <tr>
+                <th>Test Name</th>
+                <th>Status</th>
+              </tr>
+
+            </thead>
+
+            <tbody>
+
+              <tr
+                *ngFor="let t of item.tests"
+              >
+
+                <td>
+                  {{ t.name }}
+                </td>
+
+                <td>
+
+                  <span
+                    class="status-pill"
+                    [ngClass]="testStatusClass(t.status)"
+                  >
+                    {{ testStatusLabel(t.status) }}
+                  </span>
+
+                </td>
+
+              </tr>
+
+
+              <tr
+                *ngIf="!item.tests?.length"
+              >
+
+                <td
+                  colspan="2"
+                  class="empty-tests"
+                >
+                  No tests
+                </td>
+
+              </tr>
+
+            </tbody>
+
+          </table>
+
+        </div>
+
+      </div>
+
+
+      <!-- Loading -->
+      <div
+        class="loading-inline"
+        *ngIf="isLoading"
+      >
+
+        <ion-spinner
+          name="dots"
+        ></ion-spinner>
+
+        <span>
+          Loading...
+        </span>
+
+      </div>
+
+
+      <!-- Empty -->
+      <div
+        class="empty-state"
+        *ngIf="
+          !isLoading &&
+          rowsForActiveTab.length === 0
+        "
+      >
+
+        <ion-icon
+          name="document-text-outline"
+        ></ion-icon>
+
+        <span>
+          No data available
+        </span>
+
+        <p class="empty-sub">
+          Try adjusting the date range or search term.
+        </p>
+
+      </div>
+
+
+      <!-- Load More -->
+      <div
+        class="load-more-row"
+        *ngIf="hasMoreForActiveTab"
+      >
+
+        <ion-button
+          fill="outline"
+          [disabled]="isLoadingMore"
+          (click)="loadMoreActiveTab()"
+        >
+
+          {{
+            isLoadingMore
+              ? 'Loading...'
+              : 'Load More'
+          }}
+
+        </ion-button>
+
+      </div>
+
+    </div>
+
   </div>
 
 </ion-content>

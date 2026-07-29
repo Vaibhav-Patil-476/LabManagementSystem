@@ -65,15 +65,15 @@ export interface ReportBookingRow {
 })
 export class DownloadReportsPage implements OnInit, OnDestroy {
 
-readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
-  { key: 'ALL', label: 'All', badgeClass: 'badge-all' },
-  { key: 'COMPLETE', label: 'Complete', badgeClass: 'badge-complete' },
-  { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
-  { key: 'PARTIALLY_COMPLETE', label: 'Partially Complete', badgeClass: 'badge-partial' },
-  { key: 'PENDING', label: 'Pending', badgeClass: 'badge-pending' },
-  { key: 'SNR', label: 'SNR', badgeClass: 'badge-snr' },
-  { key: 'CANCEL', label: 'Cancel', badgeClass: 'badge-cancel' },
-];
+  readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
+    { key: 'ALL', label: 'All', badgeClass: 'badge-all' },
+    { key: 'COMPLETE', label: 'Complete', badgeClass: 'badge-complete' },
+    { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
+    { key: 'PARTIALLY_COMPLETE', label: 'Partially Complete', badgeClass: 'badge-partial' },
+    { key: 'PENDING', label: 'Pending', badgeClass: 'badge-pending' },
+    { key: 'SNR', label: 'SNR', badgeClass: 'badge-snr' },
+    { key: 'CANCEL', label: 'Cancel', badgeClass: 'badge-cancel' },
+  ];
 
 
 
@@ -131,7 +131,7 @@ readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
     private toast: ToastService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-    
+
   ) {
     addIcons({
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
@@ -172,103 +172,103 @@ readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
     return new Date().toISOString().slice(0, 10);
   }
 
- private loadFilterFranchises(): void {
-  const currentRole = this.authService?.role;
-  const currentFranchiseId = this.authService?.franchiseId;
-  const currentFranchiseName = this.authService?.franchiseName;
+  private loadFilterFranchises(): void {
+    const currentRole = this.authService?.role;
+    const currentFranchiseId = this.authService?.franchiseId;
+    const currentFranchiseName = this.authService?.franchiseName;
 
-  const isFranchiseUser =
-    currentRole === 'ROLE_FRANCHISE' ||
-    currentRole === 'ROLE_FRANCHISE_STAFF';
+    const isFranchiseUser =
+      currentRole === 'ROLE_FRANCHISE' ||
+      currentRole === 'ROLE_FRANCHISE_STAFF';
 
-  const canSearchAllFranchises =
-    currentRole === 'ROLE_LAB_ADMIN' ||
-    currentRole === 'ROLE_STAFF';
+    const canSearchAllFranchises =
+      currentRole === 'ROLE_LAB_ADMIN' ||
+      currentRole === 'ROLE_STAFF';
 
-  this.labApi.getFranchises().subscribe({
-    next: (res: any) => this.ngZone.run(() => {
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => this.ngZone.run(() => {
 
-      this.franchises = Array.isArray(res?.content)
-        ? res.content
-        : (Array.isArray(res) ? res : []);
+        this.franchises = Array.isArray(res?.content)
+          ? res.content
+          : (Array.isArray(res) ? res : []);
 
-      /*
-       * =========================================================
-       * FRANCHISE / FRANCHISE STAFF
-       * =========================================================
-       * स्वतःच्या franchise वरच filter locked राहील.
-       */
-      if (isFranchiseUser) {
+        /*
+         * =========================================================
+         * FRANCHISE / FRANCHISE STAFF
+         * =========================================================
+         * स्वतःच्या franchise वरच filter locked राहील.
+         */
+        if (isFranchiseUser) {
 
-        const matched = this.franchises.find((f: any) =>
-          Number(f?.franchiseId) === Number(currentFranchiseId)
-        );
+          const matched = this.franchises.find((f: any) =>
+            Number(f?.franchiseId) === Number(currentFranchiseId)
+          );
 
-        if (matched) {
-          this.franchiseId = Number(matched.franchiseId);
-          this.franchiseSearchTerm =
-            matched.franchiseName ||
-            currentFranchiseName ||
-            '';
-        } else if (
+          if (matched) {
+            this.franchiseId = Number(matched.franchiseId);
+            this.franchiseSearchTerm =
+              matched.franchiseName ||
+              currentFranchiseName ||
+              '';
+          } else if (
+            currentFranchiseId !== null &&
+            currentFranchiseId !== undefined &&
+            Number(currentFranchiseId) > 0
+          ) {
+            this.franchiseId = Number(currentFranchiseId);
+            this.franchiseSearchTerm = currentFranchiseName || '';
+          } else {
+            this.franchiseId = null;
+            this.franchiseSearchTerm = '';
+          }
+
+          /*
+           * =========================================================
+           * LAB ADMIN / STAFF
+           * =========================================================
+           * All Franchises initially.
+           * User franchise search करून specific franchise select करू शकतो.
+           */
+        } else if (canSearchAllFranchises) {
+
+          this.franchiseId = null;
+          this.franchiseSearchTerm = '';
+          this.filteredFranchiseList = [];
+          this.showFranchiseDropdown = false;
+
+        } else {
+
+          this.franchiseId = null;
+          this.franchiseSearchTerm = '';
+
+        }
+
+        this.loadData();
+        this.cdr.detectChanges();
+      }),
+
+      error: () => this.ngZone.run(() => {
+
+        this.franchises = [];
+
+        if (
+          isFranchiseUser &&
           currentFranchiseId !== null &&
           currentFranchiseId !== undefined &&
           Number(currentFranchiseId) > 0
         ) {
           this.franchiseId = Number(currentFranchiseId);
           this.franchiseSearchTerm = currentFranchiseName || '';
+
         } else {
           this.franchiseId = null;
           this.franchiseSearchTerm = '';
         }
 
-      /*
-       * =========================================================
-       * LAB ADMIN / STAFF
-       * =========================================================
-       * All Franchises initially.
-       * User franchise search करून specific franchise select करू शकतो.
-       */
-      } else if (canSearchAllFranchises) {
-
-        this.franchiseId = null;
-        this.franchiseSearchTerm = '';
-        this.filteredFranchiseList = [];
-        this.showFranchiseDropdown = false;
-
-      } else {
-
-        this.franchiseId = null;
-        this.franchiseSearchTerm = '';
-
-      }
-
-      this.loadData();
-      this.cdr.detectChanges();
-    }),
-
-    error: () => this.ngZone.run(() => {
-
-      this.franchises = [];
-
-      if (
-        isFranchiseUser &&
-        currentFranchiseId !== null &&
-        currentFranchiseId !== undefined &&
-        Number(currentFranchiseId) > 0
-      ) {
-        this.franchiseId = Number(currentFranchiseId);
-        this.franchiseSearchTerm = currentFranchiseName || '';
-
-      } else {
-        this.franchiseId = null;
-        this.franchiseSearchTerm = '';
-      }
-
-      this.loadData();
-    })
-  });
-}
+        this.loadData();
+      })
+    });
+  }
   onFranchiseChange(id: any) {
     this.franchiseId = id;
     if (this.isSearchMode) this.runSearch();
@@ -394,32 +394,32 @@ readonly tabs: { key: ReportTabKey; label: string; badgeClass: string }[] = [
     this.autoSwitchTab();
   }
 
-private autoSwitchTab() {
-  if (this.autoTabSwitched) return;
+  private autoSwitchTab() {
+    if (this.autoTabSwitched) return;
 
-  const order: ReportTabKey[] = ['ALL', 'COMPLETE', 'CLINICAL', 'PENDING', 'SNR', 'CANCEL'];
-  const counts = this.bucketCount;
+    const order: ReportTabKey[] = ['ALL', 'COMPLETE', 'CLINICAL', 'PENDING', 'SNR', 'CANCEL'];
+    const counts = this.bucketCount;
 
-  if (counts[this.activeTab] === 0) {
-    const tab = order.find(x => counts[x] > 0);
-    if (tab) this.activeTab = tab;
+    if (counts[this.activeTab] === 0) {
+      const tab = order.find(x => counts[x] > 0);
+      if (tab) this.activeTab = tab;
+    }
+
+    this.autoTabSwitched = true;
   }
 
-  this.autoTabSwitched = true;
-}
-
   // ---------- data loading ----------
- loadData() {
-  this.hasSearchLoaded = false;
-  this.searchDataset = [];
-  this.filteredDataset = [];
-  this.autoTabSwitched = false;
-  this.selectedIds.clear();
-  this.bookings = [];
-  this.currentPage = 0;
-  this.hasMore = false;
-  this.fetchPage();
-}
+  loadData() {
+    this.hasSearchLoaded = false;
+    this.searchDataset = [];
+    this.filteredDataset = [];
+    this.autoTabSwitched = false;
+    this.selectedIds.clear();
+    this.bookings = [];
+    this.currentPage = 0;
+    this.hasMore = false;
+    this.fetchPage();
+  }
 
   loadMore() {
     if (!this.hasMore || this.isLoadingMore) return;
@@ -473,34 +473,34 @@ private autoSwitchTab() {
       }
     });
   }
-private testMatchesTab(status: string | undefined, tabKey: ReportTabKey): boolean {
-  const s = (status || 'snr').toLowerCase();
+  private testMatchesTab(status: string | undefined, tabKey: ReportTabKey): boolean {
+    const s = (status || 'snr').toLowerCase();
 
-  switch (tabKey) {
-    case 'COMPLETE':
-      return s.includes('complete') || s.includes('ready');
-    case 'SNR':
-      return s === 'snr';
-    case 'CANCEL':
-      return s === 'cancel' || s === 'cancelled';
-    case 'CLINICAL':
-      return s.includes('clinical');
-    case 'PARTIALLY_COMPLETE':
-      // "Partially complete" ha booking-level concept ahe (test-level nahi),
-      // tyामुळे ha tab आता egzакt match करत नाही — 'pending' madhe merge kela.
-      return false;
-    case 'PENDING':
-      return !(
-        s.includes('complete') || s.includes('ready') ||
-        s === 'snr' || s === 'cancel' || s === 'cancelled' ||
-        s.includes('clinical')
-      );
-    default:
-      return false;
+    switch (tabKey) {
+      case 'COMPLETE':
+        return s.includes('complete') || s.includes('ready');
+      case 'SNR':
+        return s === 'snr';
+      case 'CANCEL':
+        return s === 'cancel' || s === 'cancelled';
+      case 'CLINICAL':
+        return s.includes('clinical');
+      case 'PARTIALLY_COMPLETE':
+        // "Partially complete" ha booking-level concept ahe (test-level nahi),
+        // tyामुळे ha tab आता egzакt match करत नाही — 'pending' madhe merge kela.
+        return false;
+      case 'PENDING':
+        return !(
+          s.includes('complete') || s.includes('ready') ||
+          s === 'snr' || s === 'cancel' || s === 'cancelled' ||
+          s.includes('clinical')
+        );
+      default:
+        return false;
+    }
   }
-}
   // ---------- mapping ----------
-private mapToRow(raw: any): ReportBookingRow {
+  private mapToRow(raw: any): ReportBookingRow {
     const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
 
     const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
@@ -574,38 +574,38 @@ private mapToRow(raw: any): ReportBookingRow {
     this.expandedId = this.expandedId === item.bookingId ? null : item.bookingId;
   }
 
- get rowsForActiveTab(): ReportBookingRow[] {
-  const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+  get rowsForActiveTab(): ReportBookingRow[] {
+    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
 
-  if (this.activeTab === 'ALL') {
-    return source;
+    if (this.activeTab === 'ALL') {
+      return source;
+    }
+
+    return source.filter(r =>
+      (r.tests || []).some(t => this.testMatchesTab(t.status, this.activeTab))
+    );
   }
-
-  return source.filter(r =>
-    (r.tests || []).some(t => this.testMatchesTab(t.status, this.activeTab))
-  );
-}
 
   get totalBookings(): number {
     return this.isSearchMode ? this.filteredDataset.length : this.totalBookingsFromServer;
   }
 
- get bucketCount() {
-  const counts: Record<ReportTabKey, number> = {
-    ALL: 0, COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0, CANCEL: 0
-  };
-  const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+  get bucketCount() {
+    const counts: Record<ReportTabKey, number> = {
+      ALL: 0, COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0, CANCEL: 0
+    };
+    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
 
-  counts.ALL = source.length;
+    counts.ALL = source.length;
 
-  (['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR', 'CANCEL'] as ReportTabKey[]).forEach(key => {
-    counts[key] = source.filter(r =>
-      (r.tests || []).some(t => this.testMatchesTab(t.status, key))
-    ).length;
-  });
+    (['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR', 'CANCEL'] as ReportTabKey[]).forEach(key => {
+      counts[key] = source.filter(r =>
+        (r.tests || []).some(t => this.testMatchesTab(t.status, key))
+      ).length;
+    });
 
-  return counts;
-}
+    return counts;
+  }
 
   get hasMoreForActiveTab(): boolean {
     return this.hasMore;
@@ -622,7 +622,7 @@ private mapToRow(raw: any): ReportBookingRow {
   reportsComplete(item: ReportBookingRow): boolean {
     return item.bucket === 'COMPLETE';
   }
-testStatusClass(status?: string): string {
+  testStatusClass(status?: string): string {
     const s = (status || 'snr').toLowerCase();
 
     if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
@@ -643,7 +643,7 @@ testStatusClass(status?: string): string {
     const s = (status || 'snr').toLowerCase();
 
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
-    if (s === 'snr') return 'SAMPLE NOT RECEIVED';
+    if (s === 'snr') return 'SNR';
     if (s.includes('clinical')) return 'CLINICAL';
     if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
     if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
@@ -665,9 +665,9 @@ testStatusClass(status?: string): string {
   }
 
   // ---------- role gates ----------
-get canShowDownloadControls(): boolean {
-  return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
-}
+  get canShowDownloadControls(): boolean {
+    return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
+  }
 
   // ---------- selection ----------
   isSelected(item: ReportBookingRow): boolean {
@@ -722,13 +722,13 @@ get canShowDownloadControls(): boolean {
   }
 
   onFranchiseBlur() {
-  // ✅ Delay deऊन blur close kार — jेणेकरून dropdown item cha click
-  // (jो blur peksha थोडा नंतर fire होतो) आधी process होईल,
-  // ani मगच dropdown बंद होईल.
-  setTimeout(() => {
-    this.showFranchiseDropdown = false;
-  }, 200);
-}
+    // ✅ Delay deऊन blur close kार — jेणेकरून dropdown item cha click
+    // (jो blur peksha थोडा नंतर fire होतो) आधी process होईल,
+    // ani मगच dropdown बंद होईल.
+    setTimeout(() => {
+      this.showFranchiseDropdown = false;
+    }, 200);
+  }
 
   onFranchiseSearch() {
     const q = this.franchiseSearchTerm.trim().toLowerCase();
