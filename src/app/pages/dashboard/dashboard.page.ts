@@ -1,7 +1,9 @@
 import { CommonModule } from "@angular/common";
 import { Component, OnInit, OnDestroy, ViewChild, NgZone, ChangeDetectorRef } from "@angular/core";
-import { Router, ActivatedRoute } from "@angular/router";
+import { Router } from "@angular/router";
+import { Checkout } from 'capacitor-razorpay';
 
+import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
 
 import {
@@ -48,7 +50,7 @@ import {
   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, addOutline, attachOutline,
-  checkmarkOutline, walletOutline, cardOutline, removeCircleOutline, addCircleOutline, closeCircleOutline as closeCircleOutlineIcon, businessOutline, phonePortraitOutline, lockClosedOutline
+  checkmarkOutline, walletOutline, cardOutline, removeCircleOutline, addCircleOutline, businessOutline, phonePortraitOutline, lockClosedOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../services/auth";
@@ -114,15 +116,15 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   rawBookings: any[] = [];
   dailyBookings: any[] = [];
-
+doctors: any[] = []; labs: any[] = [];
   samplesCanceled = 0;
   globalSearchTerm = '';
   isSearchModalOpen = false;
   isSearching = false;
-
+  orderId: any;
   removedTestMappingIds: number[] = [];   // ✅ add
   searchResults: any[] = [];
-  private searchDebounce: any = null;
+ 
   private currentFranchiseId: any = undefined;
   downloadingReportId: any = null;
   printingId: any = null;
@@ -159,9 +161,9 @@ export class DashboardPage implements OnInit, OnDestroy {
   walletSize = 20;
 
   isAddFundsModalOpen = false;
-  addFundsMode: 'online' | 'offline' = 'online';
+
   addFundsAmount: any = null;
-  addFundsRemark = '';
+
   isAddFundsSaving = false;
 
   // Wallet modal filters
@@ -192,10 +194,6 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   activeDateTimeRow: any = null; tempDateTimeValue = '';
 
-  // ---------- doctor / lab pickers (Edit Patient) ----------
-  showDoctorPicker = false; showLabPicker = false;
-  doctors: any[] = []; labs: any[] = [];
-  selectedDoctorPick: any = null; selectedLabPick: any = null;
 
   doctorSearch = '';
   filteredDoctors: any[] = [];
@@ -226,12 +224,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
   get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
 
-  onGlobalSearchChange() {
-    if (this.searchDebounce) clearTimeout(this.searchDebounce);
-    const q = this.globalSearchTerm.trim();
-    if (!q) { this.isSearchModalOpen = false; this.searchResults = []; return; }
-    this.searchDebounce = setTimeout(() => this.performGlobalSearch(q), 400);
-  }
 
   clearGlobalSearch() {
     this.globalSearchTerm = '';
@@ -376,65 +368,65 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
   }
 
-private loadInProgress = false;
-private refreshSub?: Subscription;
-private pollSub?: Subscription;
-private walletPollSub?: Subscription;
-private refreshWalletSilently() {
-  const labId = this.authService.labId;
-  const franchiseId = this.authService.franchiseId;
+  private loadInProgress = false;
+  private refreshSub?: Subscription;
+  private pollSub?: Subscription;
+  private walletPollSub?: Subscription;
+  private refreshWalletSilently() {
+    const labId = this.authService.labId;
+    const franchiseId = this.authService.franchiseId;
 
-  if (!labId || !franchiseId) {
-    return;
-  }
+    if (!labId || !franchiseId) {
+      return;
+    }
 
-  // Balance silently update करा
-  this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
-    next: (res: any) => {
-      this.wallet = res?.content
-        ? {
+    // Balance silently update करा
+    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+      next: (res: any) => {
+        this.wallet = res?.content
+          ? {
             ...res,
             ...(res.content[0] || {})
           }
-        : res;
+          : res;
 
-      this.cdr.detectChanges();
-    },
-    error: (err) => {
-      console.error('SILENT WALLET REFRESH ERROR:', err);
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('SILENT WALLET REFRESH ERROR:', err);
+      }
+    });
+
+    // Modal open असेल तर transactions पण silently update करा
+    if (this.isWalletModalOpen) {
+      this.walletService
+        .getWallet(
+          labId,
+          franchiseId,
+          0,
+          this.walletSize,
+          true,
+          this.walletPaymentModeFilter
+        )
+        .subscribe({
+          next: (res: any) => {
+            const content = res?.transaction?.content || [];
+
+            // Loading false ठेवायचा — spinner दिसणार नाही
+            this.walletTransactions = content;
+
+            this.walletTotalRows =
+              res?.transaction?.totalElements ??
+              content.length;
+
+            this.cdr.detectChanges();
+          },
+          error: (err) => {
+            console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err);
+          }
+        });
     }
-  });
-
-  // Modal open असेल तर transactions पण silently update करा
-  if (this.isWalletModalOpen) {
-    this.walletService
-      .getWallet(
-        labId,
-        franchiseId,
-        0,
-        this.walletSize,
-        true,
-        this.walletPaymentModeFilter
-      )
-      .subscribe({
-        next: (res: any) => {
-          const content = res?.transaction?.content || [];
-
-          // Loading false ठेवायचा — spinner दिसणार नाही
-          this.walletTransactions = content;
-
-          this.walletTotalRows =
-            res?.transaction?.totalElements ??
-            content.length;
-
-          this.cdr.detectChanges();
-        },
-        error: (err) => {
-          console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err);
-        }
-      });
   }
-}
   get todayKey(): string {
     return this.toKey(new Date());
   }
@@ -520,59 +512,59 @@ private refreshWalletSilently() {
   }
 
   // ---------- lifecycle ----------
- ngOnInit() {
-  if (!this.authService.isLoggedIn()) {
-    this.router.navigate(['/login']);
-    return;
+  ngOnInit() {
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
+
+    this.loadAvailableTests();
+
+    if (this.canViewWallet) {
+      this.loadWallet();
+      this.startWalletPolling();
+    }
   }
 
-  this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
-
-  this.loadAvailableTests();
-
-if (this.canViewWallet) {
-  this.loadWallet();
-  this.startWalletPolling();
-}
-}
-
-ngOnDestroy() {
-  this.refreshSub?.unsubscribe();
-  this.pollSub?.unsubscribe();
-  this.walletPollSub?.unsubscribe();
-}
-
-ionViewWillEnter() {
-  this.initDashboard();
-  this.startPolling();
-
-  if (this.canViewWallet) {
-    this.startWalletPolling();
+  ngOnDestroy() {
+    this.refreshSub?.unsubscribe();
+    this.pollSub?.unsubscribe();
+    this.walletPollSub?.unsubscribe();
   }
-}
 
-ionViewWillLeave() {
-  this.pollSub?.unsubscribe();
-  this.walletPollSub?.unsubscribe();
-}
+  ionViewWillEnter() {
+    this.initDashboard();
+    this.startPolling();
+
+    if (this.canViewWallet) {
+      this.startWalletPolling();
+    }
+  }
+
+  ionViewWillLeave() {
+    this.pollSub?.unsubscribe();
+    this.walletPollSub?.unsubscribe();
+  }
 
   private startPolling() {
     this.pollSub?.unsubscribe();
     this.pollSub = interval(15000).subscribe(() => this.loadDashboard(true));
   }
 
-private startWalletPolling() {
-  this.walletPollSub?.unsubscribe();
+  private startWalletPolling() {
+    this.walletPollSub?.unsubscribe();
 
-  if (!this.canViewWallet) {
-    return;
+    if (!this.canViewWallet) {
+      return;
+    }
+
+    this.walletPollSub = interval(3000).subscribe(() => {
+      // कोणताही loading spinner नाही
+      this.refreshWalletSilently();
+    });
   }
-
-  this.walletPollSub = interval(3000).subscribe(() => {
-    // कोणताही loading spinner नाही
-    this.refreshWalletSilently();
-  });
-}
 
   // ---------- init ----------
   initDashboard() {
@@ -1138,39 +1130,7 @@ private startWalletPolling() {
       error: () => this.toastService.error('Error', 'Patient update fail zala')
     });
   }
-  // ---------- doctor / lab pickers ----------
-  openDoctorPicker() {
-    this.selectedDoctorPick = null;
-    this.showDoctorPicker = true;
-    this.labApi.getDoctors().subscribe({
-      next: (res: any) => { this.doctors = res?.content || res || []; },
-      error: () => { this.doctors = []; }
-    });
-  }
 
-  selectDoctorForEdit(doc: any) {
-    if (!doc || !this.editPatientData) return;
-    this.editPatientData.doctor = doc?.doctor_name;
-    this.editPatientData.doctorId = doc?.doctorId;
-    this.showDoctorPicker = false;
-  }
-
-  openLabPicker() {
-    if (this.isAdminRole) return;
-    this.selectedLabPick = null;
-    this.showLabPicker = true;
-    this.labApi.getFranchises().subscribe({
-      next: (res: any) => { this.labs = res?.content || res || []; },
-      error: () => { this.labs = []; }
-    });
-  }
-
-  selectLabForEdit(lab: any) {
-    if (this.isAdminRole || !lab || !this.editPatientData) return;
-    this.editPatientData.lab = lab?.franchiseName || lab?.name;
-    this.editPatientData.franchiseId = lab?.franchiseId;
-    this.showLabPicker = false;
-  }
   searchDoctorInput(): void {
     const searchTerm = String(this.doctorSearch || '').trim().toLowerCase();
     if (!this.editPatientData) return;
@@ -1805,7 +1765,7 @@ private startWalletPolling() {
   // ============================================================
   // FRANCHISE WALLET
   // ============================================================
- 
+
   loadWallet() {
     const labId = this.authService.labId;
     const franchiseId = this.authService.franchiseId;
@@ -1818,113 +1778,113 @@ private startWalletPolling() {
       }
     });
   }
- 
+
   openWalletModal() {
     this.isWalletModalOpen = true;
     this.walletPage = 0;
     this.walletTransactions = [];
     this.loadWalletTransactions();
   }
- 
+
   closeWalletModal() {
     this.isWalletModalOpen = false;
   }
- 
+
   onWalletFilterChange() {
     this.walletPage = 0;
     this.walletTransactions = [];
     this.loadWalletTransactions();
   }
- 
-// loadWalletTransactions() {
-//   const labId = this.authService.labId;
-//   const franchiseId = this.authService.franchiseId;
-//   this.isWalletLoading = true;
-//   this.walletService.getWallet(labId, franchiseId, this.walletPage, this.walletSize, true, this.walletPaymentModeFilter).subscribe({
-   
-//     next: (res: any) => {
-//       const content = res?.transaction?.content || [];
-//       this.walletTransactions = [...this.walletTransactions, ...content];
-//       this.walletTotalRows = res?.transaction?.totalElements ?? this.walletTransactions.length;
-//       this.isWalletLoading = false;
-      
-//     },
-//     error: (err) => {
-//       this.isWalletLoading = false;
-//       this.toastService.error('Error', 'Wallet transactions load fail zala');
-      
-//     }
-//   });
-// }
 
-loadWalletTransactions() {
-  const labId = this.authService.labId;
-  const franchiseId = this.authService.franchiseId;
+  // loadWalletTransactions() {
+  //   const labId = this.authService.labId;
+  //   const franchiseId = this.authService.franchiseId;
+  //   this.isWalletLoading = true;
+  //   this.walletService.getWallet(labId, franchiseId, this.walletPage, this.walletSize, true, this.walletPaymentModeFilter).subscribe({
 
-  console.log('========== WALLET TRANSACTIONS DEBUG ==========');
-  console.log('LOGIN DATA:', JSON.parse(localStorage.getItem('loginData') || '{}'));
-  console.log('LAB ID:', labId);
-  console.log('FRANCHISE ID:', franchiseId);
-  console.log('PAGE:', this.walletPage);
-  console.log('SIZE:', this.walletSize);
-  console.log('PAYMENT MODE FILTER:', this.walletPaymentModeFilter);
-  console.log('===============================================');
+  //     next: (res: any) => {
+  //       const content = res?.transaction?.content || [];
+  //       this.walletTransactions = [...this.walletTransactions, ...content];
+  //       this.walletTotalRows = res?.transaction?.totalElements ?? this.walletTransactions.length;
+  //       this.isWalletLoading = false;
 
-  this.isWalletLoading = true;
+  //     },
+  //     error: (err) => {
+  //       this.isWalletLoading = false;
+  //       this.toastService.error('Error', 'Wallet transactions load fail zala');
 
-  this.walletService
-    .getWallet(
-      labId,
-      franchiseId,
-      this.walletPage,
-      this.walletSize,
-      true,
-      this.walletPaymentModeFilter
-    )
-    .subscribe({
+  //     }
+  //   });
+  // }
 
-      next: (res: any) => {
+  loadWalletTransactions() {
+    const labId = this.authService.labId;
+    const franchiseId = this.authService.franchiseId;
 
-        console.log('WALLET API RESPONSE:', res);
-        console.log('TRANSACTION CONTENT:', res?.transaction?.content);
-        console.log('TOTAL ELEMENTS:', res?.transaction?.totalElements);
+    console.log('========== WALLET TRANSACTIONS DEBUG ==========');
+    console.log('LOGIN DATA:', JSON.parse(localStorage.getItem('loginData') || '{}'));
+    console.log('LAB ID:', labId);
+    console.log('FRANCHISE ID:', franchiseId);
+    console.log('PAGE:', this.walletPage);
+    console.log('SIZE:', this.walletSize);
+    console.log('PAYMENT MODE FILTER:', this.walletPaymentModeFilter);
+    console.log('===============================================');
 
-        const content = res?.transaction?.content || [];
+    this.isWalletLoading = true;
 
-        this.walletTransactions = [
-          ...this.walletTransactions,
-          ...content
-        ];
+    this.walletService
+      .getWallet(
+        labId,
+        franchiseId,
+        this.walletPage,
+        this.walletSize,
+        true,
+        this.walletPaymentModeFilter
+      )
+      .subscribe({
 
-        this.walletTotalRows =
-          res?.transaction?.totalElements ??
-          this.walletTransactions.length;
+        next: (res: any) => {
 
-        this.isWalletLoading = false;
-      },
+          console.log('WALLET API RESPONSE:', res);
+          console.log('TRANSACTION CONTENT:', res?.transaction?.content);
+          console.log('TOTAL ELEMENTS:', res?.transaction?.totalElements);
 
-      error: (err) => {
+          const content = res?.transaction?.content || [];
 
-        console.error('WALLET API ERROR:', err);
+          this.walletTransactions = [
+            ...this.walletTransactions,
+            ...content
+          ];
 
-        this.isWalletLoading = false;
+          this.walletTotalRows =
+            res?.transaction?.totalElements ??
+            this.walletTransactions.length;
 
-        this.toastService.error(
-          'Error',
-          'Wallet transactions load fail zala'
-        );
-      }
-    });
-}
- 
+          this.isWalletLoading = false;
+        },
+
+        error: (err) => {
+
+          console.error('WALLET API ERROR:', err);
+
+          this.isWalletLoading = false;
+
+          this.toastService.error(
+            'Error',
+            'Wallet transactions load fail zala'
+          );
+        }
+      });
+  }
+
   onWalletScroll() {
     if (this.walletTransactions.length >= this.walletTotalRows) return;
     this.walletPage++;
     this.loadWalletTransactions();
   }
- 
+
   // ---------- Add Funds Modal ----------
- 
+
   openAddFundsModal() {
     this.addFundsAmount = null;
     this.selectedPaymentMethod = 'razorpay';
@@ -1932,23 +1892,23 @@ loadWalletTransactions() {
     this.transactionIdError = '';
     this.isAddFundsModalOpen = true;
   }
- 
+
   closeAddFundsModal() {
     this.isAddFundsModalOpen = false;
   }
- 
+
   selectPaymentMethod(method: 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici') {
     this.selectedPaymentMethod = method;
     this.transactionId = '';
     this.transactionIdError = '';
   }
- 
+
   submitAddFunds() {
     if (!this.addFundsAmount || Number(this.addFundsAmount) <= 0) {
       this.toastService.warning('Warning', 'Please enter a valid amount');
       return;
     }
- 
+
     if (this.isManualPaymentMethod) {
       if (!this.transactionId?.trim()) {
         this.transactionIdError = 'Transaction Id is required';
@@ -1960,7 +1920,7 @@ loadWalletTransactions() {
       this.submitOnlineAddFunds();
     }
   }
- 
+
   // UPI / QR / Bank — manual submission, goes for admin approval via
   // approve-offline-order later.
   private submitManualAddFunds() {
@@ -1973,7 +1933,7 @@ loadWalletTransactions() {
       transactionId: this.transactionId.trim(),
       remark: `${this.selectedPaymentMethod.toUpperCase()} payment - Txn: ${this.transactionId.trim()}`
     };
- 
+
     this.walletService.addFundsToLabWallet(payload).subscribe({
       next: () => {
         this.isAddFundsSaving = false;
@@ -1987,68 +1947,117 @@ loadWalletTransactions() {
       }
     });
   }
- 
-  // Razorpay / ICICI — gateway based flow
-  private submitOnlineAddFunds() {
-    this.isAddFundsSaving = true;
-    const payload: any = {
-      labId: this.authService.labId,
-      franchiseId: this.authService.franchiseId,
-      amount: Number(this.addFundsAmount)
-    };
-    // ⚠️ 'gateway' key is an assumption to tell backend which gateway to use —
-    // confirm the actual key/value against your /order/create Postman body.
-    if (this.selectedPaymentMethod === 'icici') {
-      payload.gateway = 'icici';
-    }
- 
-    this.walletService.createRazorpayOrder(payload).subscribe({
-      next: (orderRes: any) => {
-        this.isAddFundsSaving = false;
+// private submitOnlineAddFunds() {
+//   this.isAddFundsSaving = true;
+//   const payload: any = {
+//     totalAmount: Number(this.addFundsAmount),
+//     type: 'FRANCHISE_WALLET_RECHARGE',
+//     pgName: 'razorpay',
+//     franchiseId: this.authService.franchiseId,
+//     remark: 'Wallet recharge'
+//   };
+//   if (this.selectedPaymentMethod === 'icici') {
+//     payload.pgName = 'icici';
+//   }
+
+// this.walletService.createRazorpayOrder(payload).subscribe({
+//   next: (orderRes: any) => {
+//     this.isAddFundsSaving = false;
+//     this.openRazorpayCheckout(orderRes);
+//   },
+//   error: (err) => {
+//     this.isAddFundsSaving = false;
+//     this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+//   }
+// });
+// }
+
+private submitOnlineAddFunds() {
+  this.isAddFundsSaving = true;
+  const payload: any = {
+    totalAmount: Number(this.addFundsAmount),
+    type: 'FRANCHISE_WALLET_RECHARGE',
+    pgName: 'razorpay',
+    franchiseId: this.authService.franchiseId,
+    remark: 'Wallet recharge'
+  };
+  if (this.selectedPaymentMethod === 'icici') {
+    payload.pgName = 'icici';
+  }
+
+  this.walletService.createRazorpayOrder(payload).subscribe({
+    next: (orderRes: any) => {
+      this.isAddFundsSaving = false;
+
+      if (Capacitor.isNativePlatform()) {
+        // Android/iOS — modal उघडाच ठेवायची गरज नाही, थेट checkout
         this.openRazorpayCheckout(orderRes);
-      },
-      error: (err) => {
-        this.isAddFundsSaving = false;
-        this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+      } else {
+        // Web — आधी Add Funds modal बंद कर (transform-अडथळा टाळण्यासाठी),
+        // मग थोडं थांबून checkout उघड (modal close animation पूर्ण होऊ दे)
+        this.isAddFundsModalOpen = false;
+        setTimeout(() => {
+          this.openRazorpayCheckout(orderRes);
+        }, 300);
       }
-    });
-  }
- 
-  private ensureRazorpayScriptLoaded(): Promise<void> {
-    return new Promise((resolve, reject) => {
-      if ((window as any).Razorpay) { resolve(); return; }
-      const script = document.createElement('script');
-      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-      script.onload = () => resolve();
-      script.onerror = () => reject('Razorpay script load fail zala');
-      document.body.appendChild(script);
-    });
-  }
- 
-  private async openRazorpayCheckout(orderRes: any) {
+    },
+    error: (err) => {
+      this.isAddFundsSaving = false;
+      this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+    }
+  });
+}
+
+private ensureRazorpayScriptLoaded(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    if ((window as any).Razorpay) { resolve(); return; }
+    const script = document.createElement('script');
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+    script.onload = () => resolve();
+    script.onerror = () => reject('Razorpay script load fail zala');
+    document.body.appendChild(script);
+  });
+}
+
+private async openRazorpayCheckout(orderRes: any) {
+  this.orderId = orderRes.orderId;
+
+  const options: any = {
+    key: orderRes.keyId,
+    amount: (orderRes.totalAmount * 100).toString(),
+    currency: 'INR',
+    order_id: orderRes.paymentDetails.razorpayOrderId,
+    name: 'Franchise Wallet Recharge',
+    description: 'Add funds to wallet',
+    theme: { color: '#087b76' }
+  };
+
+  if (Capacitor.isNativePlatform()) {
+    // ✅ Android/iOS — native Razorpay plugin
+    try {
+      const data: any = await Checkout.open(options);
+      this.ngZone.run(() => {
+        this.verifyWalletPayment(data.razorpay_payment_id, this.orderId);
+      });
+    } catch (error: any) {
+      this.ngZone.run(() => {
+        this.toastService.warning('Warning', 'Payment cancelled or failed');
+      });
+    }
+  } else {
+    // ✅ Browser/web — web checkout.js
     try {
       await this.ensureRazorpayScriptLoaded();
     } catch (e) {
       this.toastService.error('Error', 'Payment gateway load fail zale');
       return;
     }
- 
-    // Adjust keys below to match your /order/create response shape exactly.
-    const options: any = {
-      key: orderRes?.razorpayKey || orderRes?.key,
-      amount: orderRes?.amount,
-      currency: orderRes?.currency || 'INR',
-      order_id: orderRes?.razorpayOrderId || orderRes?.orderId || orderRes?.id,
-      name: 'Franchise Wallet Recharge',
-      description: 'Add funds to wallet',
+
+    const webOptions: any = {
+      ...options,
       handler: (response: any) => {
         this.ngZone.run(() => {
-          // ⚠️ BACKEND REQUIREMENT: no capture/verify endpoint was provided.
-          // Wire the actual verification API call here once available, e.g.:
-          // this.walletService.verifyPayment(response).subscribe(...)
-          this.toastService.success('Success', 'Payment completed. Awaiting verification.');
-          this.closeAddFundsModal();
-          this.loadWallet();
+          this.verifyWalletPayment(response.razorpay_payment_id, this.orderId);
         });
       },
       modal: {
@@ -2057,14 +2066,52 @@ loadWalletTransactions() {
             this.toastService.warning('Warning', 'Payment cancelled');
           });
         }
-      },
-      theme: { color: '#087b76' }
+      }
     };
- 
-    const rzp = new (window as any).Razorpay(options);
+
+    const rzp = new (window as any).Razorpay(webOptions);
     rzp.open();
   }
- 
+}
+  showVerificationDialog: boolean = false;
+
+  verifyWalletPayment(razorpayPaymentId: any, orderId: any, retryCount: number = 0) {
+    const maxRetries = 8;
+    this.showVerificationDialog = true;
+
+    const attempt = () => {
+      this.walletService.verifyWalletPayment(razorpayPaymentId, orderId).subscribe({
+        next: (data: any) => {
+          if (data?.status === 'PAID' || data?.paymentDetails?.paymentStatus === 'success') {
+            this.showVerificationDialog = false;
+            this.toastService.success('Success', 'Wallet recharge successful');
+            this.closeAddFundsModal();
+            this.loadWallet();
+            if (this.isWalletModalOpen) {
+              this.walletPage = 0;
+              this.walletTransactions = [];
+              this.loadWalletTransactions();
+            }
+          } else {
+            if (retryCount < maxRetries) {
+              retryCount++;
+              setTimeout(attempt, 5000);
+            } else {
+              this.showVerificationDialog = false;
+              this.toastService.error('Error', 'Payment verification failed, please contact support');
+            }
+          }
+        },
+        error: (err: any) => {
+          this.showVerificationDialog = false;
+          this.toastService.error('Error', err?.error?.message || 'Payment verification error');
+        }
+      });
+    };
+
+    setTimeout(attempt, 3000); // पहिला attempt 3 sec नंतर
+  }
+
   // ---------- Offline order approval (Lab Admin action) ----------
   approveOfflinePayment(paymentId: any) {
     this.walletService.approveOfflineOrder(paymentId).subscribe({
@@ -2081,4 +2128,5 @@ loadWalletTransactions() {
         this.toastService.error('Error', err?.error?.message || 'Approve fail zala');
       }
     });
-  }}
+  }
+}

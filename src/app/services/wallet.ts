@@ -115,4 +115,9 @@ export class WalletService {
   approveOfflineOrder(paymentId: any): Observable<any> {
     return this.http.post(`${this.BASE_URL}/api/v1/order/approve-offline-order/${paymentId}`, null);
   }
+
+  // PUT /api/v1/order/update/{razorpayPaymentId}/{orderId}  (Verify wallet recharge payment)
+verifyWalletPayment(razorpayPaymentId: any, orderId: any): Observable<any> {
+  return this.http.put(`${this.BASE_URL}/api/v1/order/update/${razorpayPaymentId}/${orderId}`, []);
+}
 }
