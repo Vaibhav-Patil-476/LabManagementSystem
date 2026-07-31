@@ -383,4 +383,33 @@ ion-alert.premium-alert {
   body {
   transform: none !important;
 }
+}/* ==========================================================
+   Admin "Add Funds" — centered popup, corner-leak fix
+========================================================== */
+ion-modal.admin-addfunds-popup {
+  --width: 340px;
+  --height: auto;
+  --max-height: 90vh;
+  --border-radius: 22px;
+  --box-shadow: 0 20px 60px rgba(10, 27, 23, 0.28);
+}
+
+ion-modal.admin-addfunds-popup::part(content) {
+  border-radius: 22px;
+  overflow: hidden;
+  transform: translateZ(0); // ✅ GPU compositing — corner pixel-leak fix
+  isolation: isolate;
+}
+
+ion-modal.admin-addfunds-popup .test-modal-wrapper {
+  border-radius: 22px !important;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+// ✅ sheet-top la vegla radius set karायचा nahi — parent (.test-modal-wrapper)
+// cha overflow:hidden आधीच tyala clip karतो, doubling clipping मुळेच
+// corner mismatch/leak yet hota
+ion-modal.admin-addfunds-popup .sheet-top {
+  border-radius: 0 !important;
 }

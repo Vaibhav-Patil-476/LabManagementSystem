@@ -3390,4 +3390,14 @@ ion-content.menu-content {
   padding: 24px 8px !important;
   color: var(--muted);
   font-size: 13px;
+}ion-modal.admin-addfunds-popup {
+  --width: 340px;
+  --height: auto;
+  --max-height: 90vh;
+  --border-radius: 20px;
+}
+
+ion-modal.admin-addfunds-popup::part(content) {
+  border-radius: 20px;
+  overflow: hidden;
 }

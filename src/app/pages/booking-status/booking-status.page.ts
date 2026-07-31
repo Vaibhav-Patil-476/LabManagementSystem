@@ -16,9 +16,9 @@ import {
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
   refreshOutline, searchOutline, closeCircleOutline
 } from 'ionicons/icons';
-import { ToastService } from '../../services/toast';
-import { LabApiService } from '../../services/lab-api';
-import { AuthService } from '../../services/auth';
+import { ToastService } from '../../core/services/toast';
+import { LabApiService } from '../../core/services/lab-api';
+import { AuthService } from '../../core/services/auth';
 
 export interface BookingSample {
   accessionId?: number;

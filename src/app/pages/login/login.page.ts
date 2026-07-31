@@ -19,8 +19,8 @@ import {
   scanOutline
 } from 'ionicons/icons';
 
-import { ToastService } from '../../services/toast';
-import { AuthService } from '../../services/auth';
+import { ToastService } from '../../core/services/toast';
+import { AuthService } from '../../core/services/auth';
 
 @Component({
   selector: 'app-login',

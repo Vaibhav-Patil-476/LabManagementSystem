@@ -2,47 +2,25 @@ import { CommonModule } from "@angular/common";
 import { Component, OnInit, OnDestroy, ViewChild, NgZone, ChangeDetectorRef } from "@angular/core";
 import { Router } from "@angular/router";
 import { Checkout } from 'capacitor-razorpay';
-
 import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
 
 import {
-  IonContent,
-  IonIcon,
-  IonItem,
-  IonLabel,
-  IonList,
-  IonMenu,
-  IonMenuButton,
-  IonProgressBar,
-  IonModal,
-  IonSpinner,
-  IonSelect,
-  IonSelectOption,
-  IonDatetime,
-  IonButton,
-  IonSearchbar,
-  MenuController,
-  AlertController
+  IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
+  IonProgressBar, IonModal, IonSpinner, IonSelect, IonSelectOption,
+  IonDatetime, IonButton, IonSearchbar, MenuController, AlertController
 } from "@ionic/angular/standalone";
 
 import { MatDatepickerModule } from "@angular/material/datepicker";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 
-import {
-  Subscription,
-  interval,
-  forkJoin,
-  Observable
-} from "rxjs";
-
+import { Subscription, interval, forkJoin, Observable } from "rxjs";
 import { map } from "rxjs/operators";
 import { firstValueFrom } from "rxjs";
-import { StackedBarComponent } from "../../components/stacked-bar/stacked-bar.component";
 
+import { StackedBarComponent } from "../../shared/components/stacked-bar/stacked-bar.component";
 import { addIcons } from "ionicons";
-
 import {
   beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
   logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
@@ -50,63 +28,66 @@ import {
   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, addOutline, attachOutline,
-  checkmarkOutline, walletOutline, cardOutline, removeCircleOutline, addCircleOutline, businessOutline, phonePortraitOutline, lockClosedOutline
+  checkmarkOutline, walletOutline, cardOutline, removeCircleOutline,
+  addCircleOutline, businessOutline, phonePortraitOutline, lockClosedOutline
 } from "ionicons/icons";
 
-import { AuthService } from "../../services/auth";
-import { LabApiService } from "../../services/lab-api";
-import { ToastService } from "../../services/toast";
-import { BookingRefreshService } from "../../services/booking-refresh";
-import { RoleService } from "../../services/role";
-import { WalletService } from "../../services/wallet";
-// ✅ dashboard cha barcode row type — BookingListItem cha
-// dashboard shi kahi sambandh nahi (to fakt booking-status.page.ts
-// madhe define ahe), tyамुळे ithe 'any' based shape vaparlay.
+import { AuthService } from "../../core/services/auth";
+import { LabApiService } from "../../core/services/lab-api";
+import { ToastService } from "../../core/services/toast";
+import { BookingRefreshService } from "../../core/services/booking-refresh";
+import { RoleService } from "../../core/services/role";
+import { WalletService } from "../../core/services/wallet";
+
+/** Barcode-edit row shape used only by this page's barcode modal. */
 type BarcodeRow = {
-  accessionId?: number; sampleTypeId?: number; sampleType: string;
-  oldBarcode: string; newBarcode: string; receiveDate: string;
-  status: string; canEditBarcode: boolean; saving: boolean;
+  accessionId?: number;
+  sampleTypeId?: number;
+  sampleType: string;
+  oldBarcode: string;
+  newBarcode: string;
+  receiveDate: string;
+  status: string;
+  canEditBarcode: boolean;
+  saving: boolean;
 };
+
+type PaymentMethod = 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici';
+
+const ROLE = {
+  LAB_ADMIN: 'ROLE_LAB_ADMIN',
+  STAFF: 'ROLE_STAFF',
+  FRANCHISE: 'ROLE_FRANCHISE',
+  FRANCHISE_STAFF: 'ROLE_FRANCHISE_STAFF'
+} as const;
+
+const WALLET_POLL_INTERVAL_MS = 3000;
+const DASHBOARD_POLL_INTERVAL_MS = 15000;
+const PAYMENT_VERIFY_INITIAL_DELAY_MS = 3000;
+const PAYMENT_VERIFY_RETRY_DELAY_MS = 5000;
+const PAYMENT_VERIFY_MAX_RETRIES = 8;
+const ADMIN_GST_RATE = 0.18;
 
 @Component({
   selector: "app-dashboard",
   templateUrl: "./dashboard.page.html",
   styleUrls: ["./dashboard.page.scss"],
   standalone: true,
-
   imports: [
-    // Angular
     CommonModule,
     FormsModule,
-
-    // Ionic
-    IonContent,
-    IonIcon,
-    IonItem,
-    IonLabel,
-    IonList,
-    IonMenu,
-    IonMenuButton,
-    IonProgressBar,
-    IonModal,
-    IonSpinner,
-    IonSelect,
-    IonSelectOption,
-    IonDatetime,
-    IonButton,
-    IonSearchbar,
-
-    // Angular Material
-    MatDatepickerModule,
-    MatFormFieldModule,
-    MatInputModule,
-
-    // Custom Components
+    IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
+    IonProgressBar, IonModal, IonSpinner, IonSelect, IonSelectOption,
+    IonDatetime, IonButton, IonSearchbar,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule,
     StackedBarComponent
   ]
 })
 export class DashboardPage implements OnInit, OnDestroy {
 
+  // ============================================================
+  // USER / SUMMARY STATE
+  // ============================================================
   user: any = {};
 
   totalPatients = 0;
@@ -116,20 +97,10 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   rawBookings: any[] = [];
   dailyBookings: any[] = [];
-doctors: any[] = []; labs: any[] = [];
+  doctors: any[] = [];
+  labs: any[] = [];
   samplesCanceled = 0;
-  globalSearchTerm = '';
-  isSearchModalOpen = false;
-  isSearching = false;
-  orderId: any;
-  removedTestMappingIds: number[] = [];   // ✅ add
-  searchResults: any[] = [];
- 
-  private currentFranchiseId: any = undefined;
-  downloadingReportId: any = null;
-  printingId: any = null;
-  fromDate: string = '';
-  toDate: string = '';
+
   patientsPending = 0;
   patientsCompleted = 0;
   samplesMissing = 0;
@@ -139,61 +110,50 @@ doctors: any[] = []; labs: any[] = [];
   totalCanceledAmount = 0;
   totalBusinessAmount = 0;
   loading = false;
+
+  fromDate = '';
+  toDate = '';
+
   @ViewChild('rangePicker') rangePicker!: any;
   rangeStart: Date | null = null;
   rangeEnd: Date | null = null;
-  isEditTestModalOpen = false; isTestLoading = false; selectedBooking: any = null;
-  testSearchTerm = ''; filteredTests: any[] = []; selectedTests: any[] = [];
-  discount = 0; basePaidAmount = 0; payNowAmount = 0; paidAmount = 0;
-  paymentMethod = 'cash'; isSavingTest = false; availableTests: any[] = [];
 
-  isEditPatientModalOpen = false; isPatientLoading = false; editPatientData: any = null;
+  // ============================================================
+  // GLOBAL SEARCH
+  // ============================================================
+  globalSearchTerm = '';
+  isSearchModalOpen = false;
+  isSearching = false;
+  searchResults: any[] = [];
+  expandedSearchId: any = null;
 
-  isBarcodeModalOpen = false; isBarcodeLoading = false; barcodeBooking: any = null;
-  barcodeRows: BarcodeRow[] = [];   // ✅ ekच declaration — duplicate kadhla
-  // ---------- Franchise Wallet ----------
-  wallet: any = null;
-  isWalletModalOpen = false;
-  isWalletLoading = false;
-  walletTransactions: any[] = [];
-  walletTotalRows = 0;
-  walletPage = 0;
-  walletSize = 20;
+  private currentFranchiseId: any = undefined;
 
-  isAddFundsModalOpen = false;
+  // ============================================================
+  // EDIT TEST MODAL
+  // ============================================================
+  isEditTestModalOpen = false;
+  isTestLoading = false;
+  selectedBooking: any = null;
+  testSearchTerm = '';
+  filteredTests: any[] = [];
+  selectedTests: any[] = [];
+  removedTestMappingIds: number[] = [];
+  availableTests: any[] = [];
 
-  addFundsAmount: any = null;
+  discount = 0;
+  basePaidAmount = 0;
+  payNowAmount = 0;
+  paidAmount = 0;
+  paymentMethod = 'cash';
+  isSavingTest = false;
 
-  isAddFundsSaving = false;
-
-  // Wallet modal filters
-  walletFilterScope: 'user' | 'lab' = 'user'; // ⚠️ UI-only for now — no backend param
-  // confirmed for this yet; wire once clarified. Does not affect API call below.
-  walletPaymentModeFilter: string = '';
-
-
-  selectedPaymentMethod: 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici' = 'razorpay';
-  transactionId = '';
-  transactionIdError = '';
-
-  // ⚠️ Static payment info — replace with real values, or fetch from a lab
-  // settings API if one exists (none was provided in the given endpoint list).
-  upiId = '7776008079@ybl';
-  qrImageUrl = 'assets/images/payment-qr.png';
-  bankDetails = { bankName: 'Bank of Maharashtra', accountNumber: '60117071950', ifsc: 'MAHB0000172' };
-  get canViewWallet(): boolean {
-    const role = this.authService.role;
-    return role === 'ROLE_FRANCHISE' || role === 'ROLE_FRANCHISE_STAFF' || role === 'ROLE_LAB_ADMIN';
-  }
-
-
-  get isManualPaymentMethod(): boolean {
-    return this.selectedPaymentMethod === 'upi' || this.selectedPaymentMethod === 'qr' || this.selectedPaymentMethod === 'bank';
-  }
-
-
-  activeDateTimeRow: any = null; tempDateTimeValue = '';
-
+  // ============================================================
+  // EDIT PATIENT MODAL
+  // ============================================================
+  isEditPatientModalOpen = false;
+  isPatientLoading = false;
+  editPatientData: any = null;
 
   doctorSearch = '';
   filteredDoctors: any[] = [];
@@ -205,34 +165,309 @@ doctors: any[] = []; labs: any[] = [];
   filteredCustomLabs: any[] = [];
   showCustomLabDropdown = false;
   showLabDropdown = false;
-  get canEditPatient(): boolean {
-    return this.authService.role === 'ROLE_LAB_ADMIN' ||
-      this.authService.role === 'ROLE_FRANCHISE';
+
+  // ============================================================
+  // BARCODE MODAL
+  // ============================================================
+  isBarcodeModalOpen = false;
+  isBarcodeLoading = false;
+  barcodeBooking: any = null;
+  barcodeRows: BarcodeRow[] = [];
+
+  activeDateTimeRow: any = null;
+  tempDateTimeValue = '';
+
+  // ============================================================
+  // WALLET
+  // ============================================================
+  wallet: any = null;
+  isWalletModalOpen = false;
+  isWalletLoading = false;
+  walletTransactions: any[] = [];
+  walletTotalRows = 0;
+  walletPage = 0;
+  walletSize = 20;
+
+  isAddFundsModalOpen = false;
+  addFundsAmount: any = null;
+  isAddFundsSaving = false;
+  showVerificationDialog = false;
+
+  // Wallet modal filters
+  walletFilterScope: 'user' | 'lab' = 'user'; // ⚠️ UI-only for now — no backend param wired for this yet
+  walletPaymentModeFilter = '';
+
+  selectedPaymentMethod: PaymentMethod = 'razorpay';
+  transactionId = '';
+  transactionIdError = '';
+
+  // ⚠️ Static payment info — replace with real values or fetch from a
+  // lab-settings API if one becomes available.
+  upiId = '7776008079@ybl';
+  qrImageUrl = 'assets/images/payment-qr.png';
+  bankDetails = {
+    bankName: 'Bank of Maharashtra',
+    accountNumber: '60117071950',
+    ifsc: 'MAHB0000172'
+  };
+
+  private downloadingReportId: any = null;
+  printingId: any = null;
+  get downloadingReportIdValue() { return this.downloadingReportId; }
+
+  // ============================================================
+  // ROLE CONSTANTS
+  // ============================================================
+  private readonly ROLE_STAFF = ROLE.STAFF;
+  private readonly ROLE_FRANCHISE = ROLE.FRANCHISE;
+  private readonly ROLE_FRANCHISE_STAFF = ROLE.FRANCHISE_STAFF;
+
+  // ============================================================
+  // SUBSCRIPTIONS
+  // ============================================================
+  private loadInProgress = false;
+  private refreshSub?: Subscription;
+  private pollSub?: Subscription;
+  private walletPollSub?: Subscription;
+
+  private orderId: any;
+
+  constructor(
+    private router: Router,
+    private menuCtrl: MenuController,
+    private authService: AuthService,
+    private labApi: LabApiService,
+    private toastService: ToastService,
+    private bookingRefresh: BookingRefreshService,
+    private roleService: RoleService,
+    private ngZone: NgZone,
+    private alertController: AlertController,
+    private walletService: WalletService,
+    private cdr: ChangeDetectorRef,
+  ) {
+    this.registerIcons();
+    this.fromDate = this.toKey(new Date());
+    this.toDate = this.toKey(new Date());
   }
+
+  private registerIcons(): void {
+    addIcons({
+      'people-outline': peopleOutline,
+      'flask-outline': flaskOutline,
+      'document-text-outline': documentTextOutline,
+      'calendar-outline': calendarOutline,
+      'person-add-outline': personAddOutline,
+      'share-social-outline': shareSocialOutline,
+      'notifications-outline': notificationsOutline,
+      'person-outline': personOutline,
+      'person-circle-outline': personCircleOutline,
+      'log-out-outline': logOutOutline,
+      'beaker-outline': beakerOutline,
+      'clipboard-outline': clipboardOutline,
+      'download-outline': downloadOutline,
+      'list-outline': listOutline,
+      'time-outline': timeOutline,
+      'search-outline': searchOutline,
+      'close-outline': closeOutline,
+      'close-circle-outline': closeCircleOutline,
+      'chevron-forward-outline': chevronForwardOutline,
+      'chevron-down-outline': chevronDownOutline,
+      'print-outline': printOutline,
+      'cash-outline': cashOutline,
+      'qr-code-outline': qrCodeOutline,
+      'add-outline': addOutline,
+      'attach-outline': attachOutline,
+      'checkmark-outline': checkmarkOutline,
+      'wallet-outline': walletOutline,
+      'card-outline': cardOutline,
+      'remove-circle-outline': removeCircleOutline,
+      'add-circle-outline': addCircleOutline,
+      'business-outline': businessOutline,
+      'phone-portrait-outline': phonePortraitOutline,
+      'lock-closed-outline': lockClosedOutline,
+    });
+  }
+
+  // ============================================================
+  // ROLE / PERMISSION GETTERS
+  // ============================================================
+  get canViewWallet(): boolean {
+    const role = this.authService.role;
+    if (role === this.ROLE_STAFF || role === this.ROLE_FRANCHISE_STAFF) return false;
+    return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
+  }
+
+  get isManualPaymentMethod(): boolean {
+    return this.selectedPaymentMethod === 'upi' ||
+      this.selectedPaymentMethod === 'qr' ||
+      this.selectedPaymentMethod === 'bank';
+  }
+
+  get canEditPatient(): boolean {
+    const role = this.authService.role;
+    return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
+  }
+
   get canViewAmount(): boolean {
     return this.roleService.isLabAdmin || this.isFranchiseOnlyRole;
   }
 
-  private readonly ROLE_STAFF = 'ROLE_STAFF';
-
   get isStaffRole(): boolean {
     return this.roleService.currentRole === this.ROLE_STAFF;
   }
-  get canEditBilling(): boolean { return this.roleService.isLabAdmin || this.isStaffRole; }
-  get isAdminRole(): boolean { return this.roleService.isLabAdmin; }
-  get subTotal(): number { return this.selectedTests.reduce((s, t) => s + Number(t.testMrp || 0), 0); }
-  get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
-  get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
 
-
-  clearGlobalSearch() {
-    this.globalSearchTerm = '';
-    this.isSearchModalOpen = false;
-    this.searchResults = [];
+  get canEditBilling(): boolean {
+    return this.roleService.isLabAdmin || this.isStaffRole;
   }
 
-  closeSearchModal() {
-    this.isSearchModalOpen = false;
+  get isAdminRole(): boolean {
+    return this.roleService.isLabAdmin;
+  }
+
+  get isFranchiseOnlyRole(): boolean {
+    return this.roleService.currentRole === this.ROLE_FRANCHISE;
+  }
+
+  get canViewPayment(): boolean {
+    return this.isAdminRole || this.isFranchiseOnlyRole;
+  }
+
+  get canViewCollection(): boolean {
+    return this.roleService.isLabAdmin || this.isFranchiseOnlyRole;
+  }
+
+  get canShowDownloadReport(): boolean {
+    const role = this.authService?.role;
+    // Download-reports page cha ekच rule — fakt LAB_ADMIN / FRANCHISE
+    // la download allow, STAFF la kधीच nahi.
+    return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
+  }
+
+  // ============================================================
+  // DERIVED BILLING VALUES
+  // ============================================================
+  get subTotal(): number {
+    return this.selectedTests.reduce((sum, t) => sum + Number(t.testMrp || 0), 0);
+  }
+
+  get totalAmount(): number {
+    return Math.max(0, this.subTotal - this.discount);
+  }
+
+  get dueAmount(): number {
+    return Math.max(0, this.totalAmount - this.paidAmount);
+  }
+
+  get todayKey(): string {
+    return this.toKey(new Date());
+  }
+
+  get todayBookingsCount(): number {
+    return this.dailyBookings.find(d => d.dateKey === this.todayKey)?.bookings ?? 0;
+  }
+
+  get todayAmount(): number {
+    return this.dailyBookings.find(d => d.dateKey === this.todayKey)?.amount ?? 0;
+  }
+
+  get todayKeyLabel(): string {
+    return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  }
+
+  get downloadingReportIdRef(): any {
+    return this.downloadingReportId;
+  }
+
+  // ============================================================
+  // LIFECYCLE
+  // ============================================================
+  ngOnInit(): void {
+    if (!this.authService.isLoggedIn()) {
+      this.router.navigate(['/login']);
+      return;
+    }
+
+    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
+    this.loadAvailableTests();
+
+    if (this.canViewWallet) {
+      this.loadWallet();
+      this.startWalletPolling();
+    }
+  }
+
+  ngOnDestroy(): void {
+    this.refreshSub?.unsubscribe();
+    this.pollSub?.unsubscribe();
+    this.walletPollSub?.unsubscribe();
+  }
+
+  ionViewWillEnter(): void {
+    this.initDashboard();
+    this.startPolling();
+
+    if (this.canViewWallet) {
+      this.startWalletPolling();
+    }
+  }
+
+  ionViewWillLeave(): void {
+    this.pollSub?.unsubscribe();
+    this.walletPollSub?.unsubscribe();
+  }
+
+  private startPolling(): void {
+    this.pollSub?.unsubscribe();
+    this.pollSub = interval(DASHBOARD_POLL_INTERVAL_MS).subscribe(() => this.loadDashboard(true));
+  }
+
+  private startWalletPolling(): void {
+    this.walletPollSub?.unsubscribe();
+    if (!this.canViewWallet) return;
+
+    this.walletPollSub = interval(WALLET_POLL_INTERVAL_MS).subscribe(() => {
+      this.refreshWalletSilently();
+    });
+  }
+
+  // ============================================================
+  // DASHBOARD INIT
+  // ============================================================
+  initDashboard(): void {
+    if (this.loadInProgress) return;
+    this.loadInProgress = true;
+    this.loading = true;
+
+    const existingUser = this.authService.currentUserValue;
+
+    if (existingUser) {
+      this.setUser(existingUser);
+      this.currentFranchiseId = this.resolveFranchiseId();
+      this.loadDashboard();
+      return;
+    }
+
+    this.authService.loadCurrentUser().subscribe({
+      next: () => {
+        this.setUser(this.authService.currentUserValue);
+        this.currentFranchiseId = this.resolveFranchiseId();
+        this.loadDashboard();
+      },
+      error: (err) => {
+        this.loading = false;
+        this.loadInProgress = false;
+        console.error('CURRENT USER ERROR:', err);
+        this.toastService.error('Error', 'Failed to load user info');
+      }
+    });
+  }
+
+  private setUser(currentUser: any): void {
+    this.user = {
+      name: currentUser?.raw?.username ?? '',
+      email: currentUser?.raw?.email ?? '',
+      role: this.roleService.currentRole
+    };
   }
 
   private resolveFranchiseId(): number | undefined {
@@ -241,49 +476,187 @@ doctors: any[] = []; labs: any[] = [];
     const franchiseId = this.authService?.currentUserValue?.raw?.franchiseId
       ?? (this.authService as any)?.franchiseId;
 
-    if (isFranchiseUser && franchiseId !== null && franchiseId !== undefined && Number(franchiseId) > 0) {
+    if (isFranchiseUser && franchiseId != null && Number(franchiseId) > 0) {
       return Number(franchiseId);
     }
     return undefined;
   }
 
-  private performGlobalSearch(q: string) {
-    this.isSearching = true;
-    this.isSearchModalOpen = true;
+  // ============================================================
+  // DATE HELPERS
+  // ============================================================
+  private formatDateParam(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  private nextDay(dateStr: string): string {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return this.formatDateParam(d);
+  }
+
+  private toDateObj(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    return new Date(dateStr + 'T00:00:00');
+  }
+
+  toKey(d: Date): string {
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  }
+
+  parseDate(dateStr: string): Date {
+    try {
+      const datePart = dateStr.split(',')[0].trim();
+      const parts = datePart.split('/');
+      if (parts.length === 3) {
+        const month = Number(parts[0]);
+        const day = Number(parts[1]);
+        const year = Number(parts[2]);
+        return new Date(year, month - 1, day);
+      }
+    } catch (e) {
+      console.error('Date parse error:', e);
+    }
+    return new Date(dateStr);
+  }
+
+  // ============================================================
+  // DATE RANGE PICKER
+  // ============================================================
+  openDateRangePicker(): void {
+    this.rangeStart = this.toDateObj(this.fromDate);
+    this.rangeEnd = this.toDateObj(this.toDate);
+    this.rangePicker?.open();
+  }
+
+  onRangeStartChange(event: any): void {
+    this.rangeStart = event?.value || null;
+  }
+
+  onRangeEndChange(event: any): void {
+    this.rangeEnd = event?.value || null;
+    if (this.rangeStart && this.rangeEnd) {
+      this.fromDate = this.toKey(this.rangeStart);
+      this.toDate = this.toKey(this.rangeEnd);
+      this.onDateChange();
+    }
+  }
+
+  onDateChange(): void {
+    this.loadDashboard();
+  }
+
+  resetToToday(): void {
+    this.fromDate = this.toKey(new Date());
+    this.toDate = this.toKey(new Date());
+    this.onDateChange();
+  }
+
+  // ============================================================
+  // TESTS MASTER LIST
+  // ============================================================
+  loadAvailableTests(): void {
+    this.labApi.getTests().subscribe({
+      next: (res: any) => {
+        this.availableTests = (Array.isArray(res) ? res : []).map((t: any) => ({
+          testId: t.test_id ?? t.testId,
+          testName: t.test_name || 'Unnamed Test',
+          testMrp: t.test_price ?? 0
+        }));
+      },
+      error: (err) => console.error('AVAILABLE TESTS LOAD ERROR:', err)
+    });
+  }
+
+  // ============================================================
+  // GLOBAL SEARCH
+  // ============================================================
+  clearGlobalSearch(): void {
+    this.globalSearchTerm = '';
+    this.isSearchModalOpen = false;
+    this.searchResults = [];
+  }
+
+  closeSearchModal(): void {
+    this.isSearchModalOpen = false;
+  }
+
+  onSearchButtonClick(): void {
+    const q = this.globalSearchTerm.trim();
+    if (!q) return;
+    this.performGlobalSearch(q);
+  }
+
+  onSearchKeyup(e: KeyboardEvent): void {
+    if (e.key === 'Enter') this.onSearchButtonClick();
+  }
+
+  toggleSearchExpand(item: any): void {
+    this.expandedSearchId = this.expandedSearchId === item.bookingId ? null : item.bookingId;
+  }
+
+  /** Shared role-based visibility filter: STAFF sees only their own bookings, everyone else sees all. */
+  private applyStaffOwnershipFilter(list: any[]): any[] {
+    if (!this.isStaffRole) return list || [];
+
     const currentUser = this.authService.currentUserValue;
-    const labId = currentUser?.raw?.labId;
     const currentUserId = currentUser?.raw?.id;
     const currentUsername = currentUser?.raw?.username;
+
+    return (list || []).filter((b: any) => {
+      const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
+      const idMatch = !!currentUserId && b.createdBy === currentUserId;
+      return usernameMatch || idMatch;
+    });
+  }
+
+  private filterBookingsByQuery(list: any[], query: string): any[] {
+    const ql = query.toLowerCase();
+    return list.filter((b: any) =>
+      String(b.bookingId).includes(ql) ||
+      (b.patientId || '').toLowerCase().includes(ql) ||
+      (b.customerName || '').toLowerCase().includes(ql) ||
+      (b.doctorName || '').toLowerCase().includes(ql)
+    );
+  }
+
+  private fetchAllBookingStatusForSearch(): Observable<any> {
+    const currentUser = this.authService.currentUserValue;
+    const labId = currentUser?.raw?.labId;
     const start = '2015-01-01';
     const end = this.nextDay(this.formatDateParam(new Date()));
+    return this.labApi.getBookingStatusNew(labId, 0, 500, start, end, this.currentFranchiseId);
+  }
 
-    this.labApi.getBookingStatusNew(labId, 0, 500, start, end, this.currentFranchiseId).subscribe({
+  private performGlobalSearch(q: string): void {
+    this.isSearching = true;
+    this.isSearchModalOpen = true;
+
+    this.fetchAllBookingStatusForSearch().subscribe({
       next: (res: any) => {
         const list = res?.content || res || [];
-
-        // Admin la ani Franchise/Franchise-Staff la tyanchya franchise cha
-        // sagla data disel (createdBy koni pan asel tari). Fakt ROLE_STAFF
-        // la swataha banवलेलेच bookings disले pahijet.
-        const roleFiltered = this.isStaffRole
-          ? list.filter((b: any) => {
-            const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
-            const idMatch = !!currentUserId && b.createdBy === currentUserId;
-            return usernameMatch || idMatch;
-          })
-          : list;
-
-        const ql = q.toLowerCase();
-        this.searchResults = roleFiltered
-          .filter((b: any) =>
-            String(b.bookingId).includes(ql) ||
-            (b.patientId || '').toLowerCase().includes(ql) ||
-            (b.customerName || '').toLowerCase().includes(ql) ||
-            (b.doctorName || '').toLowerCase().includes(ql)
-          )
-          .map((b: any) => this.mapSearchItem(b));
+        const roleFiltered = this.applyStaffOwnershipFilter(list);
+        this.searchResults = this.filterBookingsByQuery(roleFiltered, q).map((b: any) => this.mapSearchItem(b));
         this.isSearching = false;
       },
-      error: () => { this.isSearching = false; this.searchResults = []; }
+      error: () => {
+        this.isSearching = false;
+        this.searchResults = [];
+      }
+    });
+  }
+
+  private refreshSearchResultsSilently(): void {
+    const q = this.globalSearchTerm.trim();
+    if (!q) return;
+
+    this.fetchAllBookingStatusForSearch().subscribe({
+      next: (res: any) => {
+        const list = res?.content || res || [];
+        const roleFiltered = this.applyStaffOwnershipFilter(list);
+        this.searchResults = this.filterBookingsByQuery(roleFiltered, q).map((b: any) => this.mapSearchItem(b));
+      },
+      error: () => { /* silent refresh — ignore failures */ }
     });
   }
 
@@ -291,6 +664,7 @@ doctors: any[] = []; labs: any[] = [];
     const b = this.mapBooking(raw);
     const testCount = b.tests.length;
     const completedCount = b.tests.filter((t: any) => (t.status || '').toLowerCase().includes('complete')).length;
+
     return {
       ...b,
       title: raw.title,
@@ -302,20 +676,20 @@ doctors: any[] = []; labs: any[] = [];
       statusClass: testCount > 0 && completedCount === testCount ? 'completed' : 'pending',
       hasCompletedTest: completedCount > 0,
       testsDisplay: b.tests.map((t: any) => ({
-        name: t.testName, status: this.testStatusLabel(t.status), statusClass: this.testStatusClass(t.status)
+        name: t.testName,
+        status: this.testStatusLabel(t.status),
+        statusClass: this.testStatusClass(t.status)
       }))
     };
   }
 
-  expandedSearchId: any = null;
-
-  toggleSearchExpand(item: any) {
-    this.expandedSearchId = this.expandedSearchId === item.bookingId ? null : item.bookingId;
-  }
-
-  printBillInline(item: any) {
+  // ============================================================
+  // BILL PRINT / REPORT DOWNLOAD
+  // ============================================================
+  printBillInline(item: any): void {
     if (this.printingId === item.bookingId) return;
     this.printingId = item.bookingId;
+
     const payload = this.labApi.buildBillPayload(item.bookingId);
     this.labApi.printBill(payload).subscribe({
       next: (res: any) => {
@@ -325,20 +699,11 @@ doctors: any[] = []; labs: any[] = [];
       error: () => { this.printingId = null; }
     });
   }
-  get canShowDownloadReport(): boolean {
-    const role = this.authService?.role;
-    // ✅ download-reports page cha ekच rule — fakt LAB_ADMIN /
-    // FRANCHISE / FRANCHISE_STAFF la download allow, STAFF la kधीच nahi.
-    return (
-      role === 'ROLE_LAB_ADMIN' ||
-      role === 'ROLE_FRANCHISE'
-      // role === 'ROLE_FRANCHISE_STAFF'
-    );
-  }
 
-  async downloadReportInline(item: any) {
+  async downloadReportInline(item: any): Promise<void> {
     const role = this.authService?.role;
-    const allowed = role === 'ROLE_LAB_ADMIN' || role === 'ROLE_FRANCHISE' || role === 'ROLE_FRANCHISE_STAFF';
+    const allowed = role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE || role === this.ROLE_FRANCHISE_STAFF;
+
     if (!allowed) {
       this.toastService.error('Not allowed', 'Download फक्त Admin/Franchise ला उपलब्ध आहे');
       return;
@@ -368,626 +733,185 @@ doctors: any[] = []; labs: any[] = [];
     }
   }
 
-  private loadInProgress = false;
-  private refreshSub?: Subscription;
-  private pollSub?: Subscription;
-  private walletPollSub?: Subscription;
-  private refreshWalletSilently() {
-    const labId = this.authService.labId;
-    const franchiseId = this.authService.franchiseId;
-
-    if (!labId || !franchiseId) {
-      return;
-    }
-
-    // Balance silently update करा
-    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
-      next: (res: any) => {
-        this.wallet = res?.content
-          ? {
-            ...res,
-            ...(res.content[0] || {})
-          }
-          : res;
-
-        this.cdr.detectChanges();
-      },
-      error: (err) => {
-        console.error('SILENT WALLET REFRESH ERROR:', err);
-      }
-    });
-
-    // Modal open असेल तर transactions पण silently update करा
-    if (this.isWalletModalOpen) {
-      this.walletService
-        .getWallet(
-          labId,
-          franchiseId,
-          0,
-          this.walletSize,
-          true,
-          this.walletPaymentModeFilter
-        )
-        .subscribe({
-          next: (res: any) => {
-            const content = res?.transaction?.content || [];
-
-            // Loading false ठेवायचा — spinner दिसणार नाही
-            this.walletTransactions = content;
-
-            this.walletTotalRows =
-              res?.transaction?.totalElements ??
-              content.length;
-
-            this.cdr.detectChanges();
-          },
-          error: (err) => {
-            console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err);
-          }
-        });
-    }
-  }
-  get todayKey(): string {
-    return this.toKey(new Date());
-  }
-
-  get todayBookingsCount(): number {
-    return this.dailyBookings.find(d => d.dateKey === this.todayKey)?.bookings ?? 0;
-  }
-
-  get todayAmount(): number {
-    return this.dailyBookings.find(d => d.dateKey === this.todayKey)?.amount ?? 0;
-  }
-
-  get todayKeyLabel(): string {
-    return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-  }
-
-  get canViewCollection(): boolean {
-    return this.roleService.isLabAdmin || this.isFranchiseOnlyRole;
-  }
-  constructor(
-    private router: Router,
-    private menuCtrl: MenuController,
-    private authService: AuthService,
-    private labApi: LabApiService,
-    private toastService: ToastService,
-    private bookingRefresh: BookingRefreshService,
-    private roleService: RoleService,
-    private ngZone: NgZone,
-    private alertController: AlertController,
-    private walletService: WalletService,
-    private cdr: ChangeDetectorRef,
-  ) {
-    addIcons({
-      'people-outline': peopleOutline,
-      'flask-outline': flaskOutline,
-      'document-text-outline': documentTextOutline,
-      'calendar-outline': calendarOutline,
-      'person-add-outline': personAddOutline,
-      'share-social-outline': shareSocialOutline,
-      'notifications-outline': notificationsOutline,
-      'person-outline': personOutline,
-      'person-circle-outline': personCircleOutline,
-      'log-out-outline': logOutOutline,
-      'beaker-outline': beakerOutline,
-      'clipboard-outline': clipboardOutline,
-      'download-outline': downloadOutline,
-      'list-outline': listOutline,
-      'time-outline': timeOutline,
-      'search-outline': searchOutline,
-      'close-outline': closeOutline,
-      'close-circle-outline': closeCircleOutline,
-      'chevron-forward-outline': chevronForwardOutline, 'chevron-down-outline': chevronDownOutline,
-      'print-outline': printOutline,
-      'cash-outline': cashOutline,
-      'qr-code-outline': qrCodeOutline,
-      'add-outline': addOutline,
-      'attach-outline': attachOutline,
-      'checkmark-outline': checkmarkOutline,
-      'wallet-outline': walletOutline,
-      'card-outline': cardOutline,
-      'remove-circle-outline': removeCircleOutline,
-      'add-circle-outline': addCircleOutline,
-      'business-outline': businessOutline,
-      'phone-portrait-outline': phonePortraitOutline,
-      'lock-closed-outline': lockClosedOutline,
-
-
-    });
-
-    this.fromDate = this.toKey(new Date());
-    this.toDate = this.toKey(new Date());
-  }
-  // existing constants + add these
-  private readonly ROLE_FRANCHISE = 'ROLE_FRANCHISE';
-  private readonly ROLE_FRANCHISE_STAFF = 'ROLE_FRANCHISE_STAFF';
-
-  get isFranchiseOnlyRole(): boolean {
-    return this.roleService.currentRole === this.ROLE_FRANCHISE;
-  }
-
-  get canViewPayment(): boolean {
-    return this.isAdminRole || this.isFranchiseOnlyRole;
-  }
-
-  // ---------- lifecycle ----------
-  ngOnInit() {
-    if (!this.authService.isLoggedIn()) {
-      this.router.navigate(['/login']);
-      return;
-    }
-
-    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
-
-    this.loadAvailableTests();
-
-    if (this.canViewWallet) {
-      this.loadWallet();
-      this.startWalletPolling();
-    }
-  }
-
-  ngOnDestroy() {
-    this.refreshSub?.unsubscribe();
-    this.pollSub?.unsubscribe();
-    this.walletPollSub?.unsubscribe();
-  }
-
-  ionViewWillEnter() {
-    this.initDashboard();
-    this.startPolling();
-
-    if (this.canViewWallet) {
-      this.startWalletPolling();
-    }
-  }
-
-  ionViewWillLeave() {
-    this.pollSub?.unsubscribe();
-    this.walletPollSub?.unsubscribe();
-  }
-
-  private startPolling() {
-    this.pollSub?.unsubscribe();
-    this.pollSub = interval(15000).subscribe(() => this.loadDashboard(true));
-  }
-
-  private startWalletPolling() {
-    this.walletPollSub?.unsubscribe();
-
-    if (!this.canViewWallet) {
-      return;
-    }
-
-    this.walletPollSub = interval(3000).subscribe(() => {
-      // कोणताही loading spinner नाही
-      this.refreshWalletSilently();
-    });
-  }
-
-  // ---------- init ----------
-  initDashboard() {
-    if (this.loadInProgress) return;
-    this.loadInProgress = true;
-    this.loading = true;
-
-    const existingUser = this.authService.currentUserValue;
-
-    if (existingUser) {
-      this.setUser(existingUser);
-      this.currentFranchiseId = this.resolveFranchiseId();
-      this.loadDashboard();
-    } else {
-      this.authService.loadCurrentUser().subscribe({
-        next: () => {
-          this.setUser(this.authService.currentUserValue);
-          this.currentFranchiseId = this.resolveFranchiseId();
-          this.loadDashboard();
-        },
-        error: (err) => {
-          this.loading = false;
-          this.loadInProgress = false;
-          console.log('CURRENT USER ERROR:', err);
-          this.toastService.error('Error', 'Failed to load user info');
-        }
-      });
-    }
-  }
-
-  private setUser(currentUser: any) {
-    this.user = {
-      name: currentUser?.raw?.username ?? '',
-      email: currentUser?.raw?.email ?? '',
-      role: this.roleService.currentRole
-    };
-  }
-
-  // ---------- date helpers ----------
-  private formatDateParam(d: Date): string {
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-
-  private nextDay(dateStr: string): string {
-    const d = new Date(dateStr + 'T00:00:00');
-    d.setDate(d.getDate() + 1);
-    return this.formatDateParam(d);
-  }
-
-  private toDateObj(dateStr: string): Date | null {
-    if (!dateStr) return null;
-    return new Date(dateStr + 'T00:00:00');
-  }
-
-  toKey(d: Date): string {
-    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
-  }
-
-  parseDate(dateStr: string): Date {
-    try {
-      const datePart = dateStr.split(',')[0].trim();
-      const parts = datePart.split('/');
-      if (parts.length === 3) {
-        const month = Number(parts[0]);
-        const day = Number(parts[1]);
-        const year = Number(parts[2]);
-        return new Date(year, month - 1, day);
-      }
-    } catch (e) {
-      console.error('Date parse error:', e);
-    }
-    return new Date(dateStr);
-  }
-
-  // ---------- date picker ----------
-
-  openDateRangePicker() {
-    this.rangeStart = this.toDateObj(this.fromDate);
-    this.rangeEnd = this.toDateObj(this.toDate);
-    this.rangePicker?.open();
-  }
-
-  onRangeStartChange(event: any) {
-    this.rangeStart = event?.value || null;
-  }
-
-  onRangeEndChange(event: any) {
-    this.rangeEnd = event?.value || null;
-    if (this.rangeStart && this.rangeEnd) {
-      this.fromDate = this.toKey(this.rangeStart);
-      this.toDate = this.toKey(this.rangeEnd);
-      this.onDateChange();
-    }
-  }
-  onDateChange() {
-    this.loadDashboard();
-  }
-
-  loadAvailableTests() {
-    this.labApi.getTests().subscribe({
-      next: (res: any) => {
-        this.availableTests = (Array.isArray(res) ? res : []).map((t: any) => ({
-          testId: t.test_id ?? t.testId, testName: t.test_name || 'Unnamed Test', testMrp: t.test_price ?? 0
-        }));
-      },
-      error: (err) => { console.log('AVAILABLE TESTS LOAD ERROR:', err); }
-    });
-  }
-
-  onEditPatientClick(item: any) {
-    if (!this.canEditPatient) { return; }
+  // ============================================================
+  // EDIT TEST / BILLING MODAL
+  // ============================================================
+  onEditTestClick(item: any): void {
     this.isSearchModalOpen = false;
-    this.editPatientFromSearch(item);
+    this.editTestFromSearch(item);
   }
-  onEditTestClick(item: any) { this.isSearchModalOpen = false; this.editTestFromSearch(item); }
-  onEditBarcodeClick(item: any) { this.isSearchModalOpen = false; this.openBarcodeFromSearch(item); }
 
-  closeTestModal() {
-    this.isEditTestModalOpen = false; this.selectedBooking = null; this.selectedTests = [];
+  editTestFromSearch(item: any): void {
+    this.selectedBooking = item;
+    this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
+    this.removedTestMappingIds = [];
+    this.discount = item.discountAmount || 0;
+    this.basePaidAmount = item.paidAmount || 0;
+    this.payNowAmount = 0;
+    this.paidAmount = this.basePaidAmount;
+    this.paymentMethod = 'cash';
+    this.testSearchTerm = '';
+    this.filteredTests = [];
+    this.isTestLoading = true;
+    this.isEditTestModalOpen = true;
+
+    if (this.availableTests.length === 0) this.loadAvailableTests();
+
+    this.labApi.getSingleBooking(item.bookingId).subscribe({
+      next: (res: any) => {
+        const fresh = this.mapBooking(res);
+        this.selectedBooking = fresh;
+        this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
+        this.discount = fresh.discountAmount || 0;
+        this.basePaidAmount = fresh.paidAmount || 0;
+        this.paidAmount = this.basePaidAmount;
+        this.isTestLoading = false;
+      },
+      error: () => { this.isTestLoading = false; }
+    });
+  }
+
+  closeTestModal(): void {
+    this.isEditTestModalOpen = false;
+    this.selectedBooking = null;
+    this.selectedTests = [];
     if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true;
   }
 
-  searchTestsInline(val: string) {
+  searchTestsInline(val: string): void {
     this.testSearchTerm = val ?? '';
     const t = this.testSearchTerm.trim().toLowerCase();
     if (!t) { this.filteredTests = []; return; }
+
     this.filteredTests = this.availableTests.filter(x =>
-      x.testName.toLowerCase().includes(t) && !this.selectedTests.some(s => s.testName === x.testName));
+      x.testName.toLowerCase().includes(t) &&
+      !this.selectedTests.some(s => s.testName === x.testName)
+    );
   }
 
-  addTestInline(test: any) {
+  addTestInline(test: any): void {
     this.selectedTests.push({ ...test, isNewlyAdded: true });
-    this.testSearchTerm = ''; this.filteredTests = [];
+    this.testSearchTerm = '';
+    this.filteredTests = [];
   }
-  // async removeTestInline(test: any) {
 
-  //   // ✅ Booking la kimaan 1 test asayla hava — shevatcha test delete karायला allow nahi
-  //   if (this.selectedTests.length <= 1) {
-  //     const alert = await this.alertController.create({
-  //       cssClass: 'premium-alert',
-  //       header: 'Not Allowed',
-  //       message: 'Booking madhe kimaan 1 test asayla have. Shevatcha test delete karta yenar nahi.',
-  //       buttons: [
-  //         { text: 'OK', role: 'cancel', cssClass: 'alert-btn-cancel' }
-  //       ]
-  //     });
-  //     await alert.present();
-  //     return;
-  //   }
-
-  //   // Newly added (not yet saved) test — direct local removal, no API call needed
-  //   if (test.isNewlyAdded) {
-  //     this.selectedTests = this.selectedTests.filter(t => t !== test);
-  //     this.toastService.warning('Warning', `${test.testName} removed`);
-  //     return;
-  //   }
-
-  //   // Existing/saved test — must confirm + go through backend before touching UI list
-  //   const alert = await this.alertController.create({
-  //     cssClass: 'premium-alert',
-  //     header: 'Delete Test',
-  //     message: `Are you sure you want to delete "${test.testName}"?`,
-  //     buttons: [
-  //       { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
-  //       {
-  //         text: 'Yes, Delete',
-  //         cssClass: 'alert-btn-danger',
-  //         handler: () => {
-  //           if (!test.testMappingId) {
-  //             this.toastService.error('Error', 'Test ID missing');
-  //             return;
-  //           }
-
-  //           const labId = this.authService.currentUserValue?.raw?.labId;
-  //           const bookingId = this.selectedBooking.bookingId;
-
-  //           this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
-  //             next: () => {
-  //               this.selectedTests = this.selectedTests.filter(t => t !== test);
-  //               this.toastService.success('Success', `${test.testName} deleted from patient`);
-
-  //               this.labApi.getSingleBooking(bookingId).subscribe({
-  //                 next: (res: any) => {
-  //                   const fresh = this.mapBooking(res);
-  //                   this.selectedBooking = fresh;
-  //                   this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
-  //                   this.loadDashboard(true);
-  //                 },
-  //                 error: () => { /* silent */ }
-  //               });
-  //             },
-  //             error: (err) => {
-  //               this.toastService.error('Error', '' + (err.error?.message || 'Test delete karta yenar nahi'));
-  //             }
-  //           });
-  //         }
-  //       }
-  //     ]
-  //   });
-
-  //   await alert.present();
-  // }
-  async removeTestInline(test: any) {
-
-    // =========================================================
-    // CONFIRM DELETE POPUP
-    // =========================================================
+  async removeTestInline(test: any): Promise<void> {
     const alert = await this.alertController.create({
       cssClass: 'premium-alert',
       header: 'Delete Test',
       message: `Are you sure you want to delete "${test.testName}"?`,
       buttons: [
-        {
-          text: 'No',
-          role: 'cancel',
-          cssClass: 'alert-btn-cancel'
-        },
+        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
         {
           text: 'Yes, Delete',
           role: 'destructive',
           cssClass: 'alert-btn-danger',
-
-          handler: () => {
-
-            // =====================================================
-            // NEWLY ADDED TEST
-            // Database मध्ये अजून save झालेला नाही.
-            // फक्त selectedTests मधून हा specific test remove करायचा.
-            // =====================================================
-            if (test.isNewlyAdded) {
-
-              this.selectedTests = this.selectedTests.filter(
-                (t: any) => t !== test
-              );
-
-              // selectedBooking मधूनही फक्त हाच test remove करा
-              if (this.selectedBooking?.tests) {
-                this.selectedBooking.tests =
-                  this.selectedBooking.tests.filter(
-                    (t: any) => t !== test
-                  );
-              }
-
-              this.toastService.warning(
-                'Warning',
-                `${test.testName} removed`
-              );
-
-              this.cdr.detectChanges();
-
-              return;
-            }
-
-            // =====================================================
-            // EXISTING DATABASE TEST
-            // =====================================================
-            if (!test.testMappingId) {
-
-              this.toastService.error(
-                'Error',
-                'Test ID missing. Cannot delete this test.'
-              );
-
-              return;
-            }
-
-            // =====================================================
-            // GET LAB ID
-            // =====================================================
-            const labId = this.labApi.getCurrentLabId();
-
-            if (!labId) {
-
-              this.toastService.error(
-                'Error',
-                'Lab ID missing. Cannot delete test.'
-              );
-
-              return;
-            }
-
-            // =====================================================
-            // GET BOOKING ID
-            // =====================================================
-            const bookingId = this.selectedBooking?.bookingId;
-
-            if (!bookingId) {
-
-              this.toastService.error(
-                'Error',
-                'Booking ID missing. Cannot delete test.'
-              );
-
-              return;
-            }
-
-            // =====================================================
-            // DELETE ONLY SELECTED TEST FROM DATABASE
-            // =====================================================
-            this.labApi
-              .deleteTestFromBooking(
-                labId,
-                bookingId,
-                test.testMappingId
-              )
-              .subscribe({
-
-                // =================================================
-                // SUCCESS
-                // =================================================
-                next: () => {
-
-                  this.ngZone.run(() => {
-
-                    // =================================================
-                    // ONLY SELECTED TEST REMOVE FROM selectedTests
-                    // बाकीचे tests तसेच राहतील.
-                    // =================================================
-                    this.selectedTests =
-                      this.selectedTests.filter(
-                        (t: any) =>
-                          t.testMappingId !==
-                          test.testMappingId
-                      );
-
-                    // =================================================
-                    // ONLY SELECTED TEST REMOVE FROM selectedBooking
-                    // =================================================
-                    if (this.selectedBooking?.tests) {
-
-                      this.selectedBooking.tests =
-                        this.selectedBooking.tests.filter(
-                          (t: any) =>
-                            t.testMappingId !==
-                            test.testMappingId
-                        );
-                    }
-
-                    // =================================================
-                    // SUCCESS MESSAGE
-                    // =================================================
-                    this.toastService.success(
-                      'Success',
-                      `${test.testName} deleted successfully`
-                    );
-
-                    // =================================================
-                    // UPDATE UI
-                    // =================================================
-                    this.cdr.detectChanges();
-
-                    // =================================================
-                    // REFRESH DASHBOARD / BOOKING DATA
-                    // =================================================
-                    this.loadDashboard(true);
-
-                  });
-
-                },
-
-                // =================================================
-                // ERROR
-                // =================================================
-                error: (err) => {
-
-                  this.ngZone.run(() => {
-
-                    console.error(
-                      'DELETE TEST ERROR:',
-                      err
-                    );
-
-                    this.toastService.error(
-                      'Error',
-                      err?.error?.message ||
-                      'Failed to delete test from database.'
-                    );
-
-                  });
-
-                }
-
-              });
-
-          }
+          handler: () => this.handleRemoveTestConfirmed(test)
         }
       ]
     });
 
-    // =========================================================
-    // SHOW CONFIRMATION POPUP
-    // =========================================================
     await alert.present();
   }
-  onDiscountChangeInline() {
+
+  private handleRemoveTestConfirmed(test: any): void {
+    // Newly added (not yet saved to DB) — pure local removal.
+    if (test.isNewlyAdded) {
+      this.selectedTests = this.selectedTests.filter((t: any) => t !== test);
+      if (this.selectedBooking?.tests) {
+        this.selectedBooking.tests = this.selectedBooking.tests.filter((t: any) => t !== test);
+      }
+      this.toastService.warning('Warning', `${test.testName} removed`);
+      this.cdr.detectChanges();
+      return;
+    }
+
+    // Existing/saved test — must go through backend first.
+    if (!test.testMappingId) {
+      this.toastService.error('Error', 'Test ID missing. Cannot delete this test.');
+      return;
+    }
+
+    const labId = this.labApi.getCurrentLabId();
+    if (!labId) {
+      this.toastService.error('Error', 'Lab ID missing. Cannot delete test.');
+      return;
+    }
+
+    const bookingId = this.selectedBooking?.bookingId;
+    if (!bookingId) {
+      this.toastService.error('Error', 'Booking ID missing. Cannot delete test.');
+      return;
+    }
+
+    this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
+      next: () => {
+        this.ngZone.run(() => {
+          this.selectedTests = this.selectedTests.filter(
+            (t: any) => t.testMappingId !== test.testMappingId
+          );
+          if (this.selectedBooking?.tests) {
+            this.selectedBooking.tests = this.selectedBooking.tests.filter(
+              (t: any) => t.testMappingId !== test.testMappingId
+            );
+          }
+          this.toastService.success('Success', `${test.testName} deleted successfully`);
+          this.cdr.detectChanges();
+          this.loadDashboard(true);
+        });
+      },
+      error: (err) => {
+        this.ngZone.run(() => {
+          console.error('DELETE TEST ERROR:', err);
+          this.toastService.error(
+            'Error',
+            err?.error?.message || 'Failed to delete test from database.'
+          );
+        });
+      }
+    });
+  }
+
+  onDiscountChangeInline(): void {
     if (!this.canEditBilling) { this.discount = 0; return; }
     if (this.discount < 0) this.discount = 0;
     if (this.discount > this.subTotal) this.discount = this.subTotal;
     this.onPayNowChangeInline();
   }
 
-  onPayNowChangeInline() {
-    if (!this.canViewPayment) { this.payNowAmount = 0; this.paidAmount = this.basePaidAmount; return; }
+  onPayNowChangeInline(): void {
+    if (!this.canViewPayment) {
+      this.payNowAmount = 0;
+      this.paidAmount = this.basePaidAmount;
+      return;
+    }
     if (this.payNowAmount < 0) this.payNowAmount = 0;
+
     const maxPayable = Math.max(0, this.totalAmount - this.basePaidAmount);
     if (this.payNowAmount > maxPayable) this.payNowAmount = maxPayable;
     this.paidAmount = this.basePaidAmount + this.payNowAmount;
   }
 
-  saveTestChanges() {
+  saveTestChanges(): void {
     if (!this.selectedBooking || this.isSavingTest) return;
     this.isSavingTest = true;
+
     const labId = this.authService.currentUserValue?.raw?.labId;
     const bookingId = this.selectedBooking.bookingId;
     const newTests = this.selectedTests.filter(t => t.isNewlyAdded);
     const existingTests = this.selectedTests.filter(t => !t.isNewlyAdded);
 
     const patientBody: any = {
-      bookingId, customerName: this.selectedBooking.customerName,
-      ageType: this.selectedBooking.ageType, age: this.selectedBooking.age,
-      gender: this.selectedBooking.gender, mobileNumber: this.selectedBooking.mobileNumber,
-      aadhaarNumber: this.selectedBooking.aadhaarNumber, doctorid: this.selectedBooking.doctorId,
-      franchiseId: this.selectedBooking.franchiseId, createdOn: this.selectedBooking.createdOn,
+      bookingId,
+      customerName: this.selectedBooking.customerName,
+      ageType: this.selectedBooking.ageType,
+      age: this.selectedBooking.age,
+      gender: this.selectedBooking.gender,
+      mobileNumber: this.selectedBooking.mobileNumber,
+      aadhaarNumber: this.selectedBooking.aadhaarNumber,
+      doctorid: this.selectedBooking.doctorId,
+      franchiseId: this.selectedBooking.franchiseId,
+      createdOn: this.selectedBooking.createdOn,
       tests: existingTests.map(t => ({ testId: t.testId, profileId: 0 })),
       subTotalAmount: this.subTotal,
       discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
@@ -1001,28 +925,48 @@ doctors: any[] = []; labs: any[] = [];
     this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
       next: () => {
         if (newTests.length > 0) {
-          const addTestBody: any = {
-            bookingId, customerName: this.selectedBooking.customerName,
-            age: this.selectedBooking.age, ageType: this.selectedBooking.ageType,
-            gender: this.selectedBooking.gender, aadhaarNumber: this.selectedBooking.aadhaarNumber || '',
-            tests: newTests.map(t => ({
-              testId: t.testId, testName: t.testName, testPrice: t.testMrp,
-              test_price: t.testMrp, assignedPrice: [t.testMrp], source: 'RPL', discount: 0, newTest: true
-            }))
-          };
-          this.labApi.addTestToBooking(addTestBody).subscribe({
-            next: () => this.finishTestSave(),
-            error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Test add fail zala'); }
-          });
+          this.addNewTestsToBooking(bookingId, newTests);
         } else {
           this.finishTestSave();
         }
       },
-      error: () => { this.isSavingTest = false; this.toastService.error('Error', 'Update fail zala'); }
+      error: () => {
+        this.isSavingTest = false;
+        this.toastService.error('Error', 'Update fail zala');
+      }
     });
   }
 
-  private finishTestSave() {
+  private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
+    const addTestBody: any = {
+      bookingId,
+      customerName: this.selectedBooking.customerName,
+      age: this.selectedBooking.age,
+      ageType: this.selectedBooking.ageType,
+      gender: this.selectedBooking.gender,
+      aadhaarNumber: this.selectedBooking.aadhaarNumber || '',
+      tests: newTests.map(t => ({
+        testId: t.testId,
+        testName: t.testName,
+        testPrice: t.testMrp,
+        test_price: t.testMrp,
+        assignedPrice: [t.testMrp],
+        source: 'RPL',
+        discount: 0,
+        newTest: true
+      }))
+    };
+
+    this.labApi.addTestToBooking(addTestBody).subscribe({
+      next: () => this.finishTestSave(),
+      error: () => {
+        this.isSavingTest = false;
+        this.toastService.error('Error', 'Test add fail zala');
+      }
+    });
+  }
+
+  private finishTestSave(): void {
     this.isSavingTest = false;
     this.toastService.success('Success', 'Booking updated successfully');
     this.closeTestModal();
@@ -1030,10 +974,20 @@ doctors: any[] = []; labs: any[] = [];
     this.loadDashboard(true);
   }
 
-  editPatientFromSearch(item: any) {
+  // ============================================================
+  // EDIT PATIENT MODAL
+  // ============================================================
+  onEditPatientClick(item: any): void {
+    if (!this.canEditPatient) return;
+    this.isSearchModalOpen = false;
+    this.editPatientFromSearch(item);
+  }
+
+  editPatientFromSearch(item: any): void {
     this.editPatientData = null;
     this.isPatientLoading = true;
     this.isEditPatientModalOpen = true;
+
     this.labApi.getSingleBooking(item.bookingId).subscribe({
       next: (res: any) => {
         const fresh = this.mapBooking(res);
@@ -1047,17 +1001,21 @@ doctors: any[] = []; labs: any[] = [];
         data.customFranchiseLab = fresh.customFranchiseLab || '';
         data.doctorId = fresh.doctorId || null;
         data.franchiseId = fresh.franchiseId || null;
+
         this.editPatientData = data;
         this.doctorSearch = data.doctor;
         this.labSearch = data.lab;
         this.customLabSearch = data.customFranchiseLab || '';
         this.isPatientLoading = false;
       },
-      error: () => { this.isPatientLoading = false; this.isEditPatientModalOpen = false; }
+      error: () => {
+        this.isPatientLoading = false;
+        this.isEditPatientModalOpen = false;
+      }
     });
   }
 
-  closePatientModal() {
+  closePatientModal(): void {
     this.isEditPatientModalOpen = false;
     this.editPatientData = null;
     this.doctorSearch = '';
@@ -1072,10 +1030,10 @@ doctors: any[] = []; labs: any[] = [];
     if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true;
   }
 
-  savePatientChanges() {
+  savePatientChanges(): void {
     if (!this.editPatientData) return;
-    const labId = this.authService.currentUserValue?.raw?.labId;
 
+    const labId = this.authService.currentUserValue?.raw?.labId;
     const doctorId = Number(this.editPatientData.doctorId || 0);
     const doctorName = String(this.editPatientData.doctor || '').trim();
     const franchiseId = Number(this.editPatientData.franchiseId || 0);
@@ -1084,15 +1042,18 @@ doctors: any[] = []; labs: any[] = [];
     const customFranchiseLab = String(this.editPatientData.customFranchiseLab || '').trim();
 
     const body = {
-      bookingId: this.editPatientData.bookingId, customerName: this.editPatientData.name,
+      bookingId: this.editPatientData.bookingId,
+      customerName: this.editPatientData.name,
       title: this.editPatientData.title,
-      ageType: this.editPatientData.ageType, age: this.editPatientData.age,
-      gender: this.editPatientData.gender, mobileNumber: this.editPatientData.mobileNumber,
+      ageType: this.editPatientData.ageType,
+      age: this.editPatientData.age,
+      gender: this.editPatientData.gender,
+      mobileNumber: this.editPatientData.mobileNumber,
       aadhaarNumber: this.editPatientData.aadhaarNumber,
       doctorid: doctorId > 0 ? doctorId : 0,
-      customDoctorName: customDoctorName,
+      customDoctorName,
       franchiseId: franchiseId > 0 ? franchiseId : (this.editPatientData.franchiseId || 0),
-      customFranchiseLab: customFranchiseLab,
+      customFranchiseLab,
       createdOn: this.editPatientData.createdOn
     };
 
@@ -1101,34 +1062,41 @@ doctors: any[] = []; labs: any[] = [];
     this.labApi.updatePatient(labId, bookingId, body).subscribe({
       next: () => {
         this.toastService.success('Success', 'Patient updated successfully');
-
-        const idx = this.searchResults.findIndex((b: any) => b.bookingId === bookingId);
-        if (idx > -1) {
-          const updated = { ...this.searchResults[idx] };
-          updated.customerName = this.editPatientData.name;
-          updated.title = this.editPatientData.title;
-          updated.age = this.editPatientData.age;
-          updated.ageType = this.editPatientData.ageType;
-          updated.gender = this.editPatientData.gender;
-          updated.mobileNumber = this.editPatientData.mobileNumber;
-          updated.aadhaarNumber = this.editPatientData.aadhaarNumber;
-          updated.uhidNumber = this.editPatientData.uhidNumber;
-          updated.customDoctorName = customDoctorName;
-          updated.customFranchiseLab = customFranchiseLab;
-          updated.doctorName = customDoctorName || doctorName || 'self';
-          updated.franchiseName = customFranchiseLab || labName || 'SELF';
-
-          this.searchResults = [
-            ...this.searchResults.slice(0, idx),
-            updated,
-            ...this.searchResults.slice(idx + 1)
-          ];
-        }
-
+        this.patchSearchResultAfterPatientEdit(bookingId, {
+          customDoctorName, customFranchiseLab, doctorName, labName
+        });
         this.closePatientModal();
       },
       error: () => this.toastService.error('Error', 'Patient update fail zala')
     });
+  }
+
+  private patchSearchResultAfterPatientEdit(
+    bookingId: number,
+    ctx: { customDoctorName: string; customFranchiseLab: string; doctorName: string; labName: string }
+  ): void {
+    const idx = this.searchResults.findIndex((b: any) => b.bookingId === bookingId);
+    if (idx === -1) return;
+
+    const updated = { ...this.searchResults[idx] };
+    updated.customerName = this.editPatientData.name;
+    updated.title = this.editPatientData.title;
+    updated.age = this.editPatientData.age;
+    updated.ageType = this.editPatientData.ageType;
+    updated.gender = this.editPatientData.gender;
+    updated.mobileNumber = this.editPatientData.mobileNumber;
+    updated.aadhaarNumber = this.editPatientData.aadhaarNumber;
+    updated.uhidNumber = this.editPatientData.uhidNumber;
+    updated.customDoctorName = ctx.customDoctorName;
+    updated.customFranchiseLab = ctx.customFranchiseLab;
+    updated.doctorName = ctx.customDoctorName || ctx.doctorName || 'self';
+    updated.franchiseName = ctx.customFranchiseLab || ctx.labName || 'SELF';
+
+    this.searchResults = [
+      ...this.searchResults.slice(0, idx),
+      updated,
+      ...this.searchResults.slice(idx + 1)
+    ];
   }
 
   searchDoctorInput(): void {
@@ -1151,6 +1119,7 @@ doctors: any[] = []; labs: any[] = [];
           this.showDoctorSuggestions = false;
           return;
         }
+
         this.doctors = doctors;
         this.filteredDoctors = doctors.filter((doctor: any) => {
           const name = String(doctor?.doctor_name || doctor?.doctorName || doctor?.name || '').trim().toLowerCase();
@@ -1167,8 +1136,10 @@ doctors: any[] = []; labs: any[] = [];
 
   selectDoctorFromSearch(doc: any): void {
     if (!doc || !this.editPatientData) return;
+
     const doctorId = Number(doc?.doctorid ?? doc?.doctorId ?? doc?.id ?? 0);
     const doctorName = String(doc?.doctor_name || doc?.doctorName || doc?.name || '').trim();
+
     this.editPatientData.doctor = doctorName;
     this.editPatientData.doctorId = doctorId;
     this.doctorSearch = doctorName;
@@ -1203,6 +1174,7 @@ doctors: any[] = []; labs: any[] = [];
       }
     });
   }
+
   searchCustomLabInput(): void {
     const q = String(this.customLabSearch || '').trim().toLowerCase();
     if (!this.editPatientData) return;
@@ -1224,12 +1196,16 @@ doctors: any[] = []; labs: any[] = [];
         });
         this.showCustomLabDropdown = this.filteredCustomLabs.length > 0;
       },
-      error: () => { this.filteredCustomLabs = []; this.showCustomLabDropdown = false; }
+      error: () => {
+        this.filteredCustomLabs = [];
+        this.showCustomLabDropdown = false;
+      }
     });
   }
 
   selectCustomLabFromSearch(lab: any): void {
     if (!lab || !this.editPatientData) return;
+
     const name = String(lab?.labName || lab?.franchiseName || lab?.name || '').trim();
     this.editPatientData.customFranchiseLab = name;
     this.customLabSearch = name;
@@ -1238,17 +1214,20 @@ doctors: any[] = []; labs: any[] = [];
 
   selectLabFromSearch(lab: any): void {
     if (!lab || !this.editPatientData) return;
+
     const franchiseId = Number(lab?.franchiseId ?? lab?.id ?? 0);
     const franchiseName = String(lab?.franchiseName || lab?.name || '').trim();
+
     this.editPatientData.lab = franchiseName;
     this.editPatientData.franchiseId = franchiseId;
     this.labSearch = franchiseName;
     this.showLabDropdown = false;
   }
 
-  onPatientFileSelected(event: any) {
+  onPatientFileSelected(event: any): void {
     const file = event.target.files?.[0];
     if (!file) return;
+
     const reader = new FileReader();
     reader.onload = () => {
       this.editPatientData.attachment = reader.result;
@@ -1257,26 +1236,48 @@ doctors: any[] = []; labs: any[] = [];
     reader.readAsDataURL(file);
   }
 
-  // ---------- barcode ----------
-  // ✅ dashboard madhe barcode row nehmi fresh booking varunच banto —
-  // 'BookingListItem' cha vapar nahi (te fakt booking-status page cha type ahe).
+  // ============================================================
+  // BARCODE MODAL
+  // ============================================================
+  onEditBarcodeClick(item: any): void {
+    this.isSearchModalOpen = false;
+    this.openBarcodeFromSearch(item);
+  }
+
   private buildBarcodeRows(fresh: any): BarcodeRow[] {
     return (fresh.samples || []).map((s: any) => {
       const matchedTest = (fresh.tests || []).find((t: any) => Number(t.testId) === Number(s.testId));
       const testStatus = (matchedTest?.status || '').toLowerCase();
-      let displayStatus: string; let canEdit: boolean;
-      if (testStatus === 'cancel' || testStatus === 'cancelled') { displayStatus = 'CANCEL'; canEdit = false; }
-      else if (testStatus === 'snr') { displayStatus = 'PENDING'; canEdit = true; }
-      else { displayStatus = 'RECEIVED'; canEdit = false; }
+
+      let displayStatus: string;
+      let canEdit: boolean;
+
+      if (testStatus === 'cancel' || testStatus === 'cancelled') {
+        displayStatus = 'CANCEL';
+        canEdit = false;
+      } else if (testStatus === 'snr') {
+        displayStatus = 'PENDING';
+        canEdit = true;
+      } else {
+        displayStatus = 'RECEIVED';
+        canEdit = false;
+      }
+
       return {
-        accessionId: s.accessionId, sampleTypeId: s.sampleTypeId, sampleType: s.sampleType || '-',
-        oldBarcode: s.barcode, newBarcode: s.barcode, receiveDate: '',
-        status: displayStatus, canEditBarcode: canEdit, saving: false
+        accessionId: s.accessionId,
+        sampleTypeId: s.sampleTypeId,
+        sampleType: s.sampleType || '-',
+        oldBarcode: s.barcode,
+        newBarcode: s.barcode,
+        receiveDate: '',
+        status: displayStatus,
+        canEditBarcode: canEdit,
+        saving: false
       };
     });
   }
 
-  openBarcodeFromSearch(item: any) {
+  openBarcodeFromSearch(item: any): void {
     this.barcodeBooking = item;
     this.barcodeRows = [];
     this.isBarcodeLoading = true;
@@ -1297,34 +1298,59 @@ doctors: any[] = []; labs: any[] = [];
     });
   }
 
-  closeBarcodeModal() {
+  closeBarcodeModal(): void {
     this.isBarcodeModalOpen = false;
     this.barcodeBooking = null;
     this.barcodeRows = [];
     if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true;
   }
 
-  openDateTimePicker(row: any) { this.activeDateTimeRow = row; this.tempDateTimeValue = new Date().toISOString().slice(0, 19); }
-  closeDateTimePicker() { this.activeDateTimeRow = null; this.tempDateTimeValue = ''; }
-  confirmDateTime() {
-    if (this.activeDateTimeRow && this.tempDateTimeValue) this.activeDateTimeRow.receiveDate = this.tempDateTimeValue.slice(0, 16);
+  openDateTimePicker(row: any): void {
+    this.activeDateTimeRow = row;
+    this.tempDateTimeValue = new Date().toISOString().slice(0, 19);
+  }
+
+  closeDateTimePicker(): void {
+    this.activeDateTimeRow = null;
+    this.tempDateTimeValue = '';
+  }
+
+  confirmDateTime(): void {
+    if (this.activeDateTimeRow && this.tempDateTimeValue) {
+      this.activeDateTimeRow.receiveDate = this.tempDateTimeValue.slice(0, 16);
+    }
     this.closeDateTimePicker();
   }
 
-  updateBarcodeRow(row: BarcodeRow) {
-    if (!row.canEditBarcode) { this.toastService.warning('Warning', 'Ha barcode edit karayla allowed nahi (test in-process/complete ahe)'); return; }
-    if (!row.newBarcode?.trim()) { this.toastService.warning('Warning', 'Barcode rikama thevu naka'); return; }
+  updateBarcodeRow(row: BarcodeRow): void {
+    if (this.roleService.currentRole === this.ROLE_STAFF ||
+      this.roleService.currentRole === this.ROLE_FRANCHISE_STAFF) {
+      this.toastService.warning('Warning', 'You are not authorized to edit the barcode');
+      return;
+    }
+    if (!row.canEditBarcode) {
+      this.toastService.warning('Warning', 'This barcode cannot be edited (test is in-process/completed)');
+      return;
+    }
+    if (!row.newBarcode?.trim()) {
+      this.toastService.warning('Warning', 'Barcode cannot be empty');
+      return;
+    }
     if (!this.barcodeBooking) return;
 
     row.saving = true;
     const bookingId = this.barcodeBooking.bookingId;
-    const payload = [{ oldBarcode: row.oldBarcode, updatedBarcode: row.newBarcode.trim(), receiveDate: row.receiveDate || '', sampleTypeId: row.sampleTypeId, bookingId }];
+    const payload = [{
+      oldBarcode: row.oldBarcode,
+      updatedBarcode: row.newBarcode.trim(),
+      receiveDate: row.receiveDate || '',
+      sampleTypeId: row.sampleTypeId,
+      bookingId
+    }];
 
     this.labApi.updateBarcode(bookingId, payload).subscribe({
       next: () => {
         this.toastService.success('Success', 'Barcode updated successfully');
-        // ✅ hardcode status nahi — save झाल्यावर fresh booking परत fetch
-        // karun khara status dakhavतो (backend cha decision).
         this.labApi.getSingleBooking(bookingId).subscribe({
           next: (res: any) => {
             const fresh = this.mapBooking(res);
@@ -1336,81 +1362,16 @@ doctors: any[] = []; labs: any[] = [];
           error: () => { row.saving = false; }
         });
       },
-      error: () => { row.saving = false; this.toastService.error('Error', 'Barcode update fail zala'); }
+      error: () => {
+        row.saving = false;
+        this.toastService.error('Error', 'Failed to update barcode');
+      }
     });
   }
 
-  private refreshSearchResultsSilently() {
-    const q = this.globalSearchTerm.trim();
-    if (!q) return;
-    const currentUser = this.authService.currentUserValue;
-    const labId = currentUser?.raw?.labId;
-    const currentUserId = currentUser?.raw?.id;
-    const currentUsername = currentUser?.raw?.username;
-    const start = '2015-01-01';
-    const end = this.nextDay(this.formatDateParam(new Date()));
-
-    this.labApi.getBookingStatusNew(labId, 0, 500, start, end, this.currentFranchiseId).subscribe({
-      next: (res: any) => {
-        const list = res?.content || res || [];
-        const roleFiltered = this.isStaffRole
-          ? list.filter((b: any) => {
-            const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
-            const idMatch = !!currentUserId && b.createdBy === currentUserId;
-            return usernameMatch || idMatch;
-          })
-          : list;
-        const ql = q.toLowerCase();
-        this.searchResults = roleFiltered
-          .filter((b: any) =>
-            String(b.bookingId).includes(ql) ||
-            (b.patientId || '').toLowerCase().includes(ql) ||
-            (b.customerName || '').toLowerCase().includes(ql) ||
-            (b.doctorName || '').toLowerCase().includes(ql)
-          )
-          .map((b: any) => this.mapSearchItem(b));
-      },
-      error: () => { }
-    });
-  }
-
-  editTestFromSearch(item: any) {
-    this.selectedBooking = item;
-    this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
-    this.removedTestMappingIds = [];
-    this.discount = item.discountAmount || 0;
-    this.basePaidAmount = item.paidAmount || 0;
-    this.payNowAmount = 0;
-    this.paidAmount = this.basePaidAmount;
-    this.paymentMethod = 'cash';
-    this.testSearchTerm = '';
-    this.filteredTests = [];
-    this.isTestLoading = true;
-    this.isEditTestModalOpen = true;
-
-    if (this.availableTests.length === 0) this.loadAvailableTests();
-
-    this.labApi.getSingleBooking(item.bookingId).subscribe({
-      next: (res: any) => {
-        const fresh = this.mapBooking(res);
-        this.selectedBooking = fresh;
-        this.selectedTests = JSON.parse(JSON.stringify(fresh.tests || []));
-        this.discount = fresh.discountAmount || 0;
-        this.basePaidAmount = fresh.paidAmount || 0;
-        this.paidAmount = this.basePaidAmount;
-        this.isTestLoading = false;
-      },
-      error: () => { this.isTestLoading = false; }
-    });
-  }
-
-  resetToToday() {
-    this.fromDate = this.toKey(new Date());
-    this.toDate = this.toKey(new Date());
-    this.onDateChange();
-  }
-
-  // ---------- data fetch: rolling window (staff role) ----------
+  // ============================================================
+  // DASHBOARD DATA LOAD
+  // ============================================================
   private fetchBookingsForWindow(daysBack: number = 5): Observable<any[]> {
     const labId = this.authService.currentUserValue?.raw?.labId;
     const today = new Date();
@@ -1423,7 +1384,9 @@ doctors: any[] = []; labs: any[] = [];
     });
 
     const PAGE_SIZE = 200;
-    const calls = dayRanges.map(r => this.labApi.getBookingStatusNew(labId, 0, PAGE_SIZE, r.start, r.end, this.currentFranchiseId));
+    const calls = dayRanges.map(r =>
+      this.labApi.getBookingStatusNew(labId, 0, PAGE_SIZE, r.start, r.end, this.currentFranchiseId)
+    );
 
     return forkJoin(calls).pipe(
       map((pages: any[]) => {
@@ -1434,8 +1397,7 @@ doctors: any[] = []; labs: any[] = [];
     );
   }
 
-  // ---------- main load ----------
-  loadDashboard(silent: boolean = false) {
+  loadDashboard(silent: boolean = false): void {
     const currentUser = this.authService.currentUserValue;
     const labId = currentUser?.raw?.labId;
     const today = new Date();
@@ -1447,7 +1409,7 @@ doctors: any[] = []; labs: any[] = [];
     }
   }
 
-  private loadFullAccessDashboard(labId: any, today: Date, silent: boolean) {
+  private loadFullAccessDashboard(labId: any, today: Date, silent: boolean): void {
     const selectedStart = this.fromDate;
     const selectedEnd = this.nextDay(this.toDate);
 
@@ -1503,21 +1465,16 @@ doctors: any[] = []; labs: any[] = [];
         this.loading = false;
         this.loadInProgress = false;
         if (!silent) {
-          console.log('DASHBOARD SUMMARY ERROR:', err);
+          console.error('DASHBOARD SUMMARY ERROR:', err);
           this.toastService.error('Error', 'Failed to load dashboard data');
         }
       }
     });
   }
 
-  private loadStaffDashboard(currentUser: any, labId: any, silent: boolean) {
-    const currentUserId = currentUser?.raw?.id;
-    const currentUsername = currentUser?.raw?.username;
-
+  private loadStaffDashboard(currentUser: any, labId: any, silent: boolean): void {
     const selectedStart = this.fromDate;
     const selectedEnd = this.nextDay(this.toDate);
-
-    const shouldFilterByOwnUser = this.isStaffRole;
 
     forkJoin({
       selectedDayBookings: this.labApi.getBookingStatusNew(labId, 0, 500, selectedStart, selectedEnd, this.currentFranchiseId),
@@ -1527,83 +1484,75 @@ doctors: any[] = []; labs: any[] = [];
         this.loading = false;
         this.loadInProgress = false;
 
-        const applyOverrideFilter = (list: any[]) => {
-          if (!shouldFilterByOwnUser) return list || [];
-          return (list || []).filter((p: any) => {
-            const usernameMatch = !!currentUsername && p.user?.username === currentUsername;
-            const idMatch = !!currentUserId && p.createdBy === currentUserId;
-            return usernameMatch || idMatch;
-          });
-        };
-
         const selectedContent = selectedDayBookings?.content || selectedDayBookings || [];
-        const selectedFiltered = applyOverrideFilter(selectedContent);
+        const selectedFiltered = this.applyStaffOwnershipFilter(selectedContent);
         const mappedBookings = selectedFiltered.map((raw: any) => this.mapBooking(raw));
 
         this.totalPatients = selectedFiltered.length;
         this.totalBookings = selectedFiltered.length;
-        // ✅ Company-style dual stats — client-side, booking-status
-        // peksha vegla source nasल्याने ithun sagla derive kartoy.
-        let patientsCompleted = 0, patientsPending = 0;
-        let samplesReceived = 0, samplesMissing = 0, samplesCanceled = 0;
-        let reportsCompleted = 0, reportsPending = 0;
-        let businessAmount = 0;
 
-        mappedBookings.forEach((b: any) => {
-          const tests = b.tests || [];
-          const allComplete = tests.length > 0 && tests.every((t: any) => {
-            const st = (t.status || '').toLowerCase();
-            return st.includes('complete') || st.includes('ready');
-          });
-          if (allComplete) patientsCompleted++; else patientsPending++;
+        this.computeStaffDashboardStats(mappedBookings);
 
-          (b.samples || []).forEach((s: any) => {
-            const st = (s.status || '').toLowerCase();
-            if (st.includes('cancel')) {
-              samplesCanceled++;
-            } else if (st.includes('received') || st.includes('complete')) {
-              samplesReceived++;
-            } else {
-              samplesMissing++;
-            }
-          });
-
-          tests.forEach((t: any) => {
-            const st = (t.status || '').toLowerCase();
-            if (st.includes('complete') || st.includes('ready')) reportsCompleted++;
-            else reportsPending++;
-          });
-
-          businessAmount += Number(b.totalAmount || 0);
-        });
-
-        this.patientsPending = patientsPending;
-        this.patientsCompleted = patientsCompleted;
-        this.samplesMissing = samplesMissing;
-        this.totalSamples = samplesReceived + samplesMissing;
-        this.samplesCanceled = samplesCanceled;
-        this.samplesReceived = samplesReceived;
-        this.reportsPending = reportsPending;
-        this.reportsCompleted = reportsCompleted;
-        this.totalReports = reportsCompleted;
-        this.totalBusinessAmount = businessAmount;
-        this.totalCanceledAmount = 0;
-
-        this.rawBookings = applyOverrideFilter(rollingWindowBookings);
+        this.rawBookings = this.applyStaffOwnershipFilter(rollingWindowBookings);
         this.prepareDailyBookings();
       },
       error: (err) => {
         this.loading = false;
         this.loadInProgress = false;
         if (!silent) {
-          console.log('DASHBOARD STAFF ERROR:', err);
+          console.error('DASHBOARD STAFF ERROR:', err);
           this.toastService.error('Error', 'Failed to load dashboard data');
         }
       }
     });
   }
 
-  prepareDailyBookings() {
+  /** Company-style dual stats — derived client-side from booking-status
+   *  data since no dedicated aggregate endpoint exists for this role. */
+  private computeStaffDashboardStats(mappedBookings: any[]): void {
+    let patientsCompleted = 0, patientsPending = 0;
+    let samplesReceivedCount = 0, samplesMissingCount = 0, samplesCanceledCount = 0;
+    let reportsCompletedCount = 0, reportsPendingCount = 0;
+    let businessAmount = 0;
+
+    mappedBookings.forEach((b: any) => {
+      const tests = b.tests || [];
+      const allComplete = tests.length > 0 && tests.every((t: any) => {
+        const st = (t.status || '').toLowerCase();
+        return st.includes('complete') || st.includes('ready');
+      });
+      if (allComplete) patientsCompleted++; else patientsPending++;
+
+      (b.samples || []).forEach((s: any) => {
+        const st = (s.status || '').toLowerCase();
+        if (st.includes('cancel')) samplesCanceledCount++;
+        else if (st.includes('received') || st.includes('complete')) samplesReceivedCount++;
+        else samplesMissingCount++;
+      });
+
+      tests.forEach((t: any) => {
+        const st = (t.status || '').toLowerCase();
+        if (st.includes('complete') || st.includes('ready')) reportsCompletedCount++;
+        else reportsPendingCount++;
+      });
+
+      businessAmount += Number(b.totalAmount || 0);
+    });
+
+    this.patientsPending = patientsPending;
+    this.patientsCompleted = patientsCompleted;
+    this.samplesMissing = samplesMissingCount;
+    this.totalSamples = samplesReceivedCount + samplesMissingCount;
+    this.samplesCanceled = samplesCanceledCount;
+    this.samplesReceived = samplesReceivedCount;
+    this.reportsPending = reportsPendingCount;
+    this.reportsCompleted = reportsCompletedCount;
+    this.totalReports = reportsCompletedCount;
+    this.totalBusinessAmount = businessAmount;
+    this.totalCanceledAmount = 0;
+  }
+
+  prepareDailyBookings(): void {
     const grouped: any = {};
 
     this.rawBookings.forEach((p: any) => {
@@ -1657,38 +1606,9 @@ doctors: any[] = []; labs: any[] = [];
       .slice(0, 5);
   }
 
-  // ---------- navigation ----------
-  goToPage(page: string) {
-    this.menuCtrl.close();
-    this.router.navigate(['/' + page]);
-  }
-
-  goToProfile() {
-    this.menuCtrl.close();
-    this.router.navigate(['/profile']);
-  }
-
-  goToNotifications() {
-    this.router.navigate(['/notification']);
-  }
-
-  logout() {
-    this.menuCtrl.close();
-    this.pollSub?.unsubscribe();
-    this.authService.logout();
-    window.location.href = '/login';
-  }
-
-  onSearchButtonClick() {
-    const q = this.globalSearchTerm.trim();
-    if (!q) return;
-    this.performGlobalSearch(q);
-  }
-
-  onSearchKeyup(e: KeyboardEvent) {
-    if (e.key === 'Enter') this.onSearchButtonClick();
-  }
-
+  // ============================================================
+  // BOOKING MAPPING / STATUS LABELS
+  // ============================================================
   private mapBooking(raw: any): any {
     const rawTests = (raw.bookingWithTestMappings || raw.tests || []).filter((t: any) => !!t.testName);
     const reportsRaw = raw.reports || [];
@@ -1722,6 +1642,7 @@ doctors: any[] = []; labs: any[] = [];
       const barcode = s.barCode || s.barcode;
       if (!barcode || seen.has(barcode)) return;
       seen.add(barcode);
+
       samples.push({
         accessionId: s.accessionId || s.sampleAccessionId,
         barcode,
@@ -1744,7 +1665,7 @@ doctors: any[] = []; labs: any[] = [];
   private testStatusLabel(status?: string): string {
     const s = (status || 'snr').toLowerCase();
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
-    if (s === 'snr') return 'SNR';   // ⬅️ changed from 'SAMPLE NOT RECEIVED'
+    if (s === 'snr') return 'SNR';
     if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
     if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
     if (s.includes('process') || s.includes('outsource') || s.includes('doctor approval')) return 'IN PROCESS';
@@ -1761,131 +1682,130 @@ doctors: any[] = []; labs: any[] = [];
     return 'badge-pending';
   }
 
+  // ============================================================
+  // NAVIGATION
+  // ============================================================
+  goToPage(page: string): void {
+    this.menuCtrl.close();
+    this.router.navigate(['/' + page]);
+  }
+
+  goToProfile(): void {
+    this.menuCtrl.close();
+    this.router.navigate(['/profile']);
+  }
+
+  goToNotifications(): void {
+    this.router.navigate(['/notification']);
+  }
+
+  logout(): void {
+    this.menuCtrl.close();
+    this.pollSub?.unsubscribe();
+    this.authService.logout();
+    window.location.href = '/login';
+  }
 
   // ============================================================
-  // FRANCHISE WALLET
+  // WALLET — LOAD / POLL
   // ============================================================
-
-  loadWallet() {
+  loadWallet(): void {
     const labId = this.authService.labId;
     const franchiseId = this.authService.franchiseId;
+
     this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
       next: (res: any) => {
         this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+        this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.log('WALLET LOAD ERROR:', err);
-      }
+      error: (err) => console.error('WALLET LOAD ERROR:', err)
     });
   }
 
-  openWalletModal() {
+  private refreshWalletSilently(): void {
+    const labId = this.authService.labId;
+    const franchiseId = this.authService.franchiseId;
+    if (!labId || !franchiseId) return;
+
+    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+      next: (res: any) => {
+        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('SILENT WALLET REFRESH ERROR:', err)
+    });
+
+    if (this.isWalletModalOpen) {
+      this.walletService.getWallet(labId, franchiseId, 0, this.walletSize, true, this.walletPaymentModeFilter)
+        .subscribe({
+          next: (res: any) => {
+            const content = res?.transaction?.content || [];
+            this.walletTransactions = content; // no spinner — silent refresh
+            this.walletTotalRows = res?.transaction?.totalElements ?? content.length;
+            this.cdr.detectChanges();
+          },
+          error: (err) => console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err)
+        });
+    }
+  }
+
+  // ============================================================
+  // WALLET MODAL / TRANSACTIONS
+  // ============================================================
+  openWalletModal(): void {
     this.isWalletModalOpen = true;
     this.walletPage = 0;
     this.walletTransactions = [];
     this.loadWalletTransactions();
   }
 
-  closeWalletModal() {
+  closeWalletModal(): void {
     this.isWalletModalOpen = false;
   }
 
-  onWalletFilterChange() {
+  onWalletFilterChange(): void {
     this.walletPage = 0;
     this.walletTransactions = [];
     this.loadWalletTransactions();
   }
 
-  // loadWalletTransactions() {
-  //   const labId = this.authService.labId;
-  //   const franchiseId = this.authService.franchiseId;
-  //   this.isWalletLoading = true;
-  //   this.walletService.getWallet(labId, franchiseId, this.walletPage, this.walletSize, true, this.walletPaymentModeFilter).subscribe({
-
-  //     next: (res: any) => {
-  //       const content = res?.transaction?.content || [];
-  //       this.walletTransactions = [...this.walletTransactions, ...content];
-  //       this.walletTotalRows = res?.transaction?.totalElements ?? this.walletTransactions.length;
-  //       this.isWalletLoading = false;
-
-  //     },
-  //     error: (err) => {
-  //       this.isWalletLoading = false;
-  //       this.toastService.error('Error', 'Wallet transactions load fail zala');
-
-  //     }
-  //   });
-  // }
-
-  loadWalletTransactions() {
+  loadWalletTransactions(): void {
     const labId = this.authService.labId;
     const franchiseId = this.authService.franchiseId;
 
-    console.log('========== WALLET TRANSACTIONS DEBUG ==========');
-    console.log('LOGIN DATA:', JSON.parse(localStorage.getItem('loginData') || '{}'));
-    console.log('LAB ID:', labId);
-    console.log('FRANCHISE ID:', franchiseId);
-    console.log('PAGE:', this.walletPage);
-    console.log('SIZE:', this.walletSize);
-    console.log('PAYMENT MODE FILTER:', this.walletPaymentModeFilter);
-    console.log('===============================================');
-
     this.isWalletLoading = true;
 
-    this.walletService
-      .getWallet(
-        labId,
-        franchiseId,
-        this.walletPage,
-        this.walletSize,
-        true,
-        this.walletPaymentModeFilter
-      )
-      .subscribe({
+    this.walletService.getWallet(
+      labId, franchiseId, this.walletPage, this.walletSize, true, this.walletPaymentModeFilter
+    ).subscribe({
+      next: (res: any) => {
+        const content = res?.transaction?.content || [];
+        this.walletTransactions = [...this.walletTransactions, ...content];
+        this.walletTotalRows = res?.transaction?.totalElements ?? this.walletTransactions.length;
+        this.isWalletLoading = false;
 
-        next: (res: any) => {
-
-          console.log('WALLET API RESPONSE:', res);
-          console.log('TRANSACTION CONTENT:', res?.transaction?.content);
-          console.log('TOTAL ELEMENTS:', res?.transaction?.totalElements);
-
-          const content = res?.transaction?.content || [];
-
-          this.walletTransactions = [
-            ...this.walletTransactions,
-            ...content
-          ];
-
-          this.walletTotalRows =
-            res?.transaction?.totalElements ??
-            this.walletTransactions.length;
-
-          this.isWalletLoading = false;
-        },
-
-        error: (err) => {
-
-          console.error('WALLET API ERROR:', err);
-
-          this.isWalletLoading = false;
-
-          this.toastService.error(
-            'Error',
-            'Wallet transactions load fail zala'
-          );
-        }
-      });
+        // Change detection नाहीतर verify झाल्यावर लगेच call झाला की UI update होत नाही.
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('WALLET TRANSACTIONS ERROR:', err);
+        this.isWalletLoading = false;
+        this.toastService.error('Error', 'Wallet transactions load fail zala');
+        this.cdr.detectChanges();
+      }
+    });
   }
 
-  onWalletScroll() {
+  onWalletScroll(): void {
     if (this.walletTransactions.length >= this.walletTotalRows) return;
     this.walletPage++;
     this.loadWalletTransactions();
   }
 
-  // ---------- Add Funds Modal ----------
-
-  openAddFundsModal() {
+  // ============================================================
+  // ADD FUNDS MODAL
+  // ============================================================
+  openAddFundsModal(): void {
     this.addFundsAmount = null;
     this.selectedPaymentMethod = 'razorpay';
     this.transactionId = '';
@@ -1893,17 +1813,17 @@ doctors: any[] = []; labs: any[] = [];
     this.isAddFundsModalOpen = true;
   }
 
-  closeAddFundsModal() {
+  closeAddFundsModal(): void {
     this.isAddFundsModalOpen = false;
   }
 
-  selectPaymentMethod(method: 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici') {
+  selectPaymentMethod(method: PaymentMethod): void {
     this.selectedPaymentMethod = method;
     this.transactionId = '';
     this.transactionIdError = '';
   }
 
-  submitAddFunds() {
+  submitAddFunds(): void {
     if (!this.addFundsAmount || Number(this.addFundsAmount) <= 0) {
       this.toastService.warning('Warning', 'Please enter a valid amount');
       return;
@@ -1921,10 +1841,10 @@ doctors: any[] = []; labs: any[] = [];
     }
   }
 
-  // UPI / QR / Bank — manual submission, goes for admin approval via
-  // approve-offline-order later.
-  private submitManualAddFunds() {
+  /** UPI / QR / Bank — manual submission, goes for admin approval via approve-offline-order later. */
+  private submitManualAddFunds(): void {
     this.isAddFundsSaving = true;
+
     const payload = {
       labId: this.authService.labId,
       franchiseId: this.authService.franchiseId,
@@ -1947,108 +1867,120 @@ doctors: any[] = []; labs: any[] = [];
       }
     });
   }
-// private submitOnlineAddFunds() {
-//   this.isAddFundsSaving = true;
-//   const payload: any = {
-//     totalAmount: Number(this.addFundsAmount),
-//     type: 'FRANCHISE_WALLET_RECHARGE',
-//     pgName: 'razorpay',
-//     franchiseId: this.authService.franchiseId,
-//     remark: 'Wallet recharge'
-//   };
-//   if (this.selectedPaymentMethod === 'icici') {
-//     payload.pgName = 'icici';
-//   }
 
-// this.walletService.createRazorpayOrder(payload).subscribe({
-//   next: (orderRes: any) => {
-//     this.isAddFundsSaving = false;
-//     this.openRazorpayCheckout(orderRes);
-//   },
-//   error: (err) => {
-//     this.isAddFundsSaving = false;
-//     this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
-//   }
-// });
-// }
+  /** Razorpay / ICICI online recharge. Admin uses the dedicated
+   *  lab-recharge endpoint; Franchise uses the franchise order endpoint. */
+  private submitOnlineAddFunds(): void {
+    this.isAddFundsSaving = true;
 
-private submitOnlineAddFunds() {
-  this.isAddFundsSaving = true;
-  const payload: any = {
-    totalAmount: Number(this.addFundsAmount),
-    type: 'FRANCHISE_WALLET_RECHARGE',
-    pgName: 'razorpay',
-    franchiseId: this.authService.franchiseId,
-    remark: 'Wallet recharge'
-  };
-  if (this.selectedPaymentMethod === 'icici') {
-    payload.pgName = 'icici';
+    const baseAmount = Number(this.addFundsAmount);
+    const gstAmount = this.isAdminRole ? +(baseAmount * ADMIN_GST_RATE).toFixed(2) : 0;
+    const finalAmount = this.isAdminRole ? +(baseAmount + gstAmount).toFixed(2) : baseAmount;
+
+    const buildAndSendOrder = () => {
+      const payload: any = {
+        totalAmount: finalAmount,
+        gst: gstAmount,
+        pgName: this.selectedPaymentMethod === 'icici' ? 'icici' : 'razorpay',
+        type: 'walletRecharge',
+        walletId: this.wallet?.walletId,
+        remark: 'Wallet recharge',
+        returnUrl: window.location.origin + '/'
+      };
+
+      if (!payload.walletId) {
+        this.isAddFundsSaving = false;
+        this.toastService.error('Error', 'Wallet not loaded yet, please try again');
+        return;
+      }
+
+      const orderCall$ = this.isAdminRole
+        ? this.walletService.createLabRechargeOrder(payload)
+        : this.walletService.createRazorpayOrder(payload);
+
+      orderCall$.subscribe({
+        next: (orderRes: any) => {
+          this.isAddFundsSaving = false;
+
+          if (!orderRes?.paymentDetails?.razorpayOrderId) {
+            this.toastService.error('Error', 'Order create झाला पण payment details missing आहेत');
+            return;
+          }
+
+          if (Capacitor.isNativePlatform()) {
+            this.openRazorpayCheckout(orderRes);
+          } else {
+            this.isAddFundsModalOpen = false;
+            setTimeout(() => this.openRazorpayCheckout(orderRes), 300);
+          }
+        },
+        error: (err) => {
+          this.isAddFundsSaving = false;
+          this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+        }
+      });
+    };
+
+    if (!this.wallet?.walletId) {
+      const labId = this.authService.labId;
+      const franchiseId = this.authService.franchiseId;
+      this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+        next: (res: any) => {
+          this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+          this.cdr.detectChanges();
+          buildAndSendOrder();
+        },
+        error: () => {
+          this.isAddFundsSaving = false;
+          this.toastService.error('Error', 'Wallet load fail zala');
+        }
+      });
+    } else {
+      buildAndSendOrder();
+    }
   }
 
-  this.walletService.createRazorpayOrder(payload).subscribe({
-    next: (orderRes: any) => {
-      this.isAddFundsSaving = false;
+  // ============================================================
+  // RAZORPAY CHECKOUT
+  // ============================================================
+  private ensureRazorpayScriptLoaded(): Promise<void> {
+    return new Promise((resolve, reject) => {
+      if ((window as any).Razorpay) { resolve(); return; }
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve();
+      script.onerror = () => reject('Razorpay script load fail zala');
+      document.body.appendChild(script);
+    });
+  }
 
-      if (Capacitor.isNativePlatform()) {
-        // Android/iOS — modal उघडाच ठेवायची गरज नाही, थेट checkout
-        this.openRazorpayCheckout(orderRes);
-      } else {
-        // Web — आधी Add Funds modal बंद कर (transform-अडथळा टाळण्यासाठी),
-        // मग थोडं थांबून checkout उघड (modal close animation पूर्ण होऊ दे)
-        this.isAddFundsModalOpen = false;
-        setTimeout(() => {
-          this.openRazorpayCheckout(orderRes);
-        }, 300);
+  private async openRazorpayCheckout(orderRes: any): Promise<void> {
+    this.orderId = orderRes.orderId;
+
+    const options: any = {
+      key: orderRes.keyId,
+      amount: (orderRes.totalAmount * 100).toString(),
+      currency: 'INR',
+      order_id: orderRes.paymentDetails.razorpayOrderId,
+      name: 'Franchise Wallet Recharge',
+      description: 'Add funds to wallet',
+      theme: { color: '#087b76' }
+    };
+
+    if (Capacitor.isNativePlatform()) {
+      try {
+        const data: any = await Checkout.open(options);
+        this.ngZone.run(() => this.verifyWalletPayment(data.razorpay_payment_id, this.orderId));
+      } catch {
+        this.ngZone.run(() => this.toastService.warning('Warning', 'Payment cancelled or failed'));
       }
-    },
-    error: (err) => {
-      this.isAddFundsSaving = false;
-      this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+      return;
     }
-  });
-}
 
-private ensureRazorpayScriptLoaded(): Promise<void> {
-  return new Promise((resolve, reject) => {
-    if ((window as any).Razorpay) { resolve(); return; }
-    const script = document.createElement('script');
-    script.src = 'https://checkout.razorpay.com/v1/checkout.js';
-    script.onload = () => resolve();
-    script.onerror = () => reject('Razorpay script load fail zala');
-    document.body.appendChild(script);
-  });
-}
-
-private async openRazorpayCheckout(orderRes: any) {
-  this.orderId = orderRes.orderId;
-
-  const options: any = {
-    key: orderRes.keyId,
-    amount: (orderRes.totalAmount * 100).toString(),
-    currency: 'INR',
-    order_id: orderRes.paymentDetails.razorpayOrderId,
-    name: 'Franchise Wallet Recharge',
-    description: 'Add funds to wallet',
-    theme: { color: '#087b76' }
-  };
-
-  if (Capacitor.isNativePlatform()) {
-    // ✅ Android/iOS — native Razorpay plugin
-    try {
-      const data: any = await Checkout.open(options);
-      this.ngZone.run(() => {
-        this.verifyWalletPayment(data.razorpay_payment_id, this.orderId);
-      });
-    } catch (error: any) {
-      this.ngZone.run(() => {
-        this.toastService.warning('Warning', 'Payment cancelled or failed');
-      });
-    }
-  } else {
-    // ✅ Browser/web — web checkout.js
+    // Web checkout.js flow
     try {
       await this.ensureRazorpayScriptLoaded();
-    } catch (e) {
+    } catch {
       this.toastService.error('Error', 'Payment gateway load fail zale');
       return;
     }
@@ -2056,15 +1988,11 @@ private async openRazorpayCheckout(orderRes: any) {
     const webOptions: any = {
       ...options,
       handler: (response: any) => {
-        this.ngZone.run(() => {
-          this.verifyWalletPayment(response.razorpay_payment_id, this.orderId);
-        });
+        this.ngZone.run(() => this.verifyWalletPayment(response.razorpay_payment_id, this.orderId));
       },
       modal: {
         ondismiss: () => {
-          this.ngZone.run(() => {
-            this.toastService.warning('Warning', 'Payment cancelled');
-          });
+          this.ngZone.run(() => this.toastService.warning('Warning', 'Payment cancelled'));
         }
       }
     };
@@ -2072,48 +2000,97 @@ private async openRazorpayCheckout(orderRes: any) {
     const rzp = new (window as any).Razorpay(webOptions);
     rzp.open();
   }
-}
-  showVerificationDialog: boolean = false;
 
-  verifyWalletPayment(razorpayPaymentId: any, orderId: any, retryCount: number = 0) {
-    const maxRetries = 8;
+  // ============================================================
+  // PAYMENT VERIFICATION
+  // ============================================================
+  verifyWalletPayment(razorpayPaymentId: any, orderId: any, retryCount: number = 0): void {
+    const walletId = this.wallet?.walletId;
     this.showVerificationDialog = true;
 
     const attempt = () => {
-      this.walletService.verifyWalletPayment(razorpayPaymentId, orderId).subscribe({
-        next: (data: any) => {
-          if (data?.status === 'PAID' || data?.paymentDetails?.paymentStatus === 'success') {
-            this.showVerificationDialog = false;
-            this.toastService.success('Success', 'Wallet recharge successful');
-            this.closeAddFundsModal();
-            this.loadWallet();
-            if (this.isWalletModalOpen) {
-              this.walletPage = 0;
-              this.walletTransactions = [];
-              this.loadWalletTransactions();
-            }
-          } else {
-            if (retryCount < maxRetries) {
-              retryCount++;
-              setTimeout(attempt, 5000);
-            } else {
-              this.showVerificationDialog = false;
-              this.toastService.error('Error', 'Payment verification failed, please contact support');
-            }
-          }
-        },
-        error: (err: any) => {
-          this.showVerificationDialog = false;
-          this.toastService.error('Error', err?.error?.message || 'Payment verification error');
-        }
+      this.walletService.verifyWalletPayment(
+        razorpayPaymentId, orderId, this.authService.labId, walletId
+      ).subscribe({
+        next: (data: any) => this.handleVerifyResponse(data, razorpayPaymentId, orderId, retryCount, attempt),
+        error: (err: any) => this.handleVerifyError(err, razorpayPaymentId)
       });
     };
 
-    setTimeout(attempt, 3000); // पहिला attempt 3 sec नंतर
+    setTimeout(attempt, PAYMENT_VERIFY_INITIAL_DELAY_MS);
   }
 
-  // ---------- Offline order approval (Lab Admin action) ----------
-  approveOfflinePayment(paymentId: any) {
+  private handleVerifyResponse(
+    data: any, razorpayPaymentId: any, orderId: any, retryCount: number, retryFn: () => void
+  ): void {
+    const isPaid = data?.status === 'PAID' || data?.paymentDetails?.paymentStatus === 'success';
+
+    if (!isPaid) {
+      if (retryCount < PAYMENT_VERIFY_MAX_RETRIES) {
+        setTimeout(() => this.verifyWalletPayment(razorpayPaymentId, orderId, retryCount + 1), PAYMENT_VERIFY_RETRY_DELAY_MS);
+      } else {
+        this.showVerificationDialog = false;
+        this.toastService.error('Error', 'Payment verification failed, please contact support');
+      }
+      return;
+    }
+
+    const balanceBefore = this.wallet?.balance ?? 0;
+
+    this.walletService.getWallet(this.authService.labId, this.authService.franchiseId, 0, 1).subscribe({
+      next: (walletRes: any) => {
+        const newBalance = walletRes?.balance ?? balanceBefore;
+
+        if (newBalance > balanceBefore) {
+          this.showVerificationDialog = false;
+          this.toastService.success('Success', 'Wallet recharge successful');
+          this.closeAddFundsModal();
+          this.wallet = walletRes;
+          this.cdr.detectChanges();
+
+          if (this.isWalletModalOpen) {
+            this.walletPage = 0;
+            this.walletTransactions = [];
+            this.loadWalletTransactions();
+          }
+        } else {
+          this.showVerificationDialog = false;
+          this.toastService.error(
+            'Error',
+            'Payment received but wallet not credited. Please contact support with Payment ID: ' + razorpayPaymentId
+          );
+          this.cdr.detectChanges();
+        }
+      },
+      error: () => {
+        this.showVerificationDialog = false;
+        this.toastService.error(
+          'Error',
+          'Could not verify wallet balance. Please contact support with Payment ID: ' + razorpayPaymentId
+        );
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  private handleVerifyError(err: any, razorpayPaymentId: any): void {
+    this.showVerificationDialog = false;
+
+    if (err?.status === 401 || err?.status === 400) {
+      this.toastService.error(
+        'Session Expired',
+        'Payment झाला आहे, पण session expire झाल्याने verify करता आला नाही. ' +
+        'Krupya पुन्हा login करून Wallet cha balance check kara. Payment ID: ' + razorpayPaymentId
+      );
+    } else {
+      this.toastService.error('Error', err?.error?.message || 'Payment verification error');
+    }
+  }
+
+  // ============================================================
+  // OFFLINE ORDER APPROVAL (LAB ADMIN ACTION)
+  // ============================================================
+  approveOfflinePayment(paymentId: any): void {
     this.walletService.approveOfflineOrder(paymentId).subscribe({
       next: () => {
         this.toastService.success('Success', 'Offline payment approved');

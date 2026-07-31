@@ -1,5 +1,5 @@
 import { Routes } from '@angular/router';
-import { authGuard } from './guards/auth-guard'; // ✅ ADDED — tumcha actual path check kara
+import { authGuard } from './core/guards/auth-guard';
 
 export const routes: Routes = [
 

@@ -17,10 +17,10 @@ import {
 } from 'ionicons/icons';
 import { firstValueFrom } from 'rxjs';
 
-import { LabApiService } from '../../services/lab-api';
-import { AuthService } from '../../services/auth';
-import { RoleService } from '../../services/role';
-import { ToastService } from '../../services/toast';
+import { LabApiService } from '../../core/services/lab-api';
+import { AuthService } from '../../core/services/auth';
+import { RoleService } from '../../core/services/role';
+import { ToastService } from '../../core/services/toast';
 
 export type ReportTabKey = 'ALL' | 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR' | 'CANCEL';
 

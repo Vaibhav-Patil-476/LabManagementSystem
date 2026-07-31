@@ -44,12 +44,12 @@ import {
   chevronDownOutline
 } from 'ionicons/icons';
 
-import { RoleService } from '../../services/role';
-import { ToastService } from '../../services/toast';
-import { BookingService } from '../../services/booking-status';
-import { LabApiService } from '../../services/lab-api';
-import { AuthService } from '../../services/auth';
-import { BookingRefreshService } from '../../services/booking-refresh';
+import { RoleService } from '../../core/services/role';
+import { ToastService } from '../../core/services/toast';
+import { BookingService } from '../../core/services/booking-status';
+import { LabApiService } from '../../core/services/lab-api';
+import { AuthService } from '../../core/services/auth';
+import { BookingRefreshService } from '../../core/services/booking-refresh';
 
 @Component({
   selector: 'app-add-patient',

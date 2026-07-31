@@ -1,1487 +1,1499 @@
-<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
-  <ion-content class="menu-content">
-    <div class="menu-shell">
-      <div class="menu-brand">
-        <div class="brand-mark"><ion-icon name="flask-outline"></ion-icon></div>
-        <span>Lab workspace</span>
-      </div>
-
-      <div class="menu-profile">
-        <div class="profile-avatar"><ion-icon name="person-outline"></ion-icon></div>
-        <div>
-          <p class="menu-overline">Signed in as</p>
-          <h2>{{ user.name }}</h2>
-          <p>{{ user.email }}</p>
+  <ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
+    <ion-content class="menu-content">
+      <div class="menu-shell">
+        <div class="menu-brand">
+          <div class="brand-mark"><ion-icon name="flask-outline"></ion-icon></div>
+          <span>Lab workspace</span>
         </div>
-      </div>
 
-      <ion-list lines="none" class="menu-list">
-        <ion-item button detail="false" (click)="goToProfile()">
-          <span class="menu-item-icon" slot="start"><ion-icon name="person-outline"></ion-icon></span>
-          <ion-label>My profile</ion-label>
-          <span slot="end" class="menu-arrow" aria-hidden="true">›</span>
-        </ion-item>
-
-        <ion-item button detail="false" class="logout-item" (click)="logout()">
-          <span class="menu-item-icon" slot="start"><ion-icon name="log-out-outline"></ion-icon></span>
-          <ion-label>Log out</ion-label>
-        </ion-item>
-      </ion-list>
-
-      <p class="menu-footer">Secure healthcare operations</p>
-    </div>
-  </ion-content>
-</ion-menu>
-
-<div class="ion-page" id="main-content">
-  <ion-modal class="search-modal" [isOpen]="isSearchModalOpen" (didDismiss)="closeSearchModal()">
-    <ng-template>
-      <div class="search-modal-wrapper">
-        <div class="search-modal-top">
-          <div class="modal-handle"></div>
-          <div class="search-modal-top-row">
-            <div>
-              <div class="sm-eyebrow">Searched Data</div>
-              <div class="sm-title">Total Records: {{ searchResults.length }}</div>
-            </div>
-            <button class="sm-close-btn" (click)="closeSearchModal()">
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
+        <div class="menu-profile">
+          <div class="profile-avatar"><ion-icon name="person-outline"></ion-icon></div>
+          <div>
+            <p class="menu-overline">Signed in as</p>
+            <h2>{{ user.name }}</h2>
+            <p>{{ user.email }}</p>
           </div>
         </div>
 
-        <div class="search-modal-body">
-          <div class="sm-loading" *ngIf="isSearching">
-            <ion-spinner name="dots"></ion-spinner><span>Searching...</span>
-          </div>
-          <div class="search-card" *ngFor="let item of searchResults"
-            [class.expanded]="expandedSearchId === item.bookingId">
-            <div class="sc-header" (click)="toggleSearchExpand(item)">
-              <div class="sc-header-left">
-                <div class="sc-id-row">
-                  <span class="sc-id">#{{ item.bookingId }}</span>
-                  <span class="sc-date">{{ item.bookingDate }}</span>
-                </div>
-                <div class="sc-name">{{ item.title | titlecase }} {{ item.customerName }}</div>
-                <div class="sc-sub">({{ item.gender | titlecase }}/{{ item.age }}) · {{ item.patientId }}</div>
-              </div>
-              <div class="sc-header-right">
-                <div class="sc-count-box">
-                  <ion-icon name="chevron-down-outline" class="sc-chevron"></ion-icon>
-                  <span class="sc-count" [ngClass]="item.statusClass">Test Count: {{ item.progress }}</span>
-                  <span class="sc-count">Sample Count: {{ item.samples?.length || 0 }}</span>
-                </div>
-              </div>
-            </div>
+        <ion-list lines="none" class="menu-list">
+          <ion-item button detail="false" (click)="goToProfile()">
+            <span class="menu-item-icon" slot="start"><ion-icon name="person-outline"></ion-icon></span>
+            <ion-label>My profile</ion-label>
+            <span slot="end" class="menu-arrow" aria-hidden="true">›</span>
+          </ion-item>
 
-            <div class="sc-stats">
-              <div class="sc-stat">
-                <span class="sc-stat-label">Client / Doctor</span>
-                <span class="sc-stat-value">({{ item.franchiseName }}) Dr. {{ item.doctorName }}</span>
+          <ion-item button detail="false" class="logout-item" (click)="logout()">
+            <span class="menu-item-icon" slot="start"><ion-icon name="log-out-outline"></ion-icon></span>
+            <ion-label>Log out</ion-label>
+          </ion-item>
+        </ion-list>
+
+        <p class="menu-footer">Secure healthcare operations</p>
+      </div>
+    </ion-content>
+  </ion-menu>
+
+  <div class="ion-page" id="main-content">
+    <ion-modal class="search-modal" [isOpen]="isSearchModalOpen" (didDismiss)="closeSearchModal()">
+      <ng-template>
+        <div class="search-modal-wrapper">
+          <div class="search-modal-top">
+            <div class="modal-handle"></div>
+            <div class="search-modal-top-row">
+              <div>
+                <div class="sm-eyebrow">Searched Data</div>
+                <div class="sm-title">Total Records: {{ searchResults.length }}</div>
               </div>
-              <div class="sc-stat">
-                <div class="sc-barcode-inline">
-                  <div class="sc-barcode-row" *ngFor="let s of item.samples">
-                    <ion-icon name="qr-code-outline"></ion-icon>
-                    <span>{{ s.barcode }}</span>
-                    <small *ngIf="s.sampleType" class="sc-sample-badge">{{ s.sampleType }}</small>
+              <button class="sm-close-btn" (click)="closeSearchModal()">
+                <ion-icon name="close-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="search-modal-body">
+            <div class="sm-loading" *ngIf="isSearching">
+              <ion-spinner name="dots"></ion-spinner><span>Searching...</span>
+            </div>
+            <div class="search-card" *ngFor="let item of searchResults"
+              [class.expanded]="expandedSearchId === item.bookingId">
+              <div class="sc-header" (click)="toggleSearchExpand(item)">
+                <div class="sc-header-left">
+                  <div class="sc-id-row">
+                    <span class="sc-id">#{{ item.bookingId }}</span>
+                    <span class="sc-date">{{ item.bookingDate }}</span>
                   </div>
-                  <div class="sc-barcode-row empty" *ngIf="!item.samples?.length">—</div>
+                  <div class="sc-name">{{ item.title | titlecase }} {{ item.customerName }}</div>
+                  <div class="sc-sub">({{ item.gender | titlecase }}/{{ item.age }}) · {{ item.patientId }}</div>
+                </div>
+                <div class="sc-header-right">
+                  <div class="sc-count-box">
+                    <ion-icon name="chevron-down-outline" class="sc-chevron"></ion-icon>
+                    <span class="sc-count" [ngClass]="item.statusClass">Test Count: {{ item.progress }}</span>
+                    <span class="sc-count">Sample Count: {{ item.samples?.length || 0 }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sc-stats">
+                <div class="sc-stat">
+                  <span class="sc-stat-label">Client / Doctor</span>
+                  <span class="sc-stat-value">({{ item.franchiseName }}) Dr. {{ item.doctorName }}</span>
+                </div>
+                <div class="sc-stat">
+                  <div class="sc-barcode-inline">
+                    <div class="sc-barcode-row" *ngFor="let s of item.samples">
+                      <ion-icon name="qr-code-outline"></ion-icon>
+                      <span>{{ s.barcode }}</span>
+                      <small *ngIf="s.sampleType" class="sc-sample-badge">{{ s.sampleType }}</small>
+                    </div>
+                    <div class="sc-barcode-row empty" *ngIf="!item.samples?.length">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="sc-details" *ngIf="expandedSearchId === item.bookingId">
+                <div class="sc-section-label">Tests</div>
+                <table class="sc-test-table">
+                  <thead>
+                    <tr>
+                      <th>Test Name</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let t of item.testsDisplay">
+                      <td>{{ t.name }}</td>
+                      <td><span class="sc-status-badge" [ngClass]="t.statusClass">{{ t.status }}</span></td>
+                    </tr>
+                    <tr *ngIf="!item.testsDisplay?.length">
+                      <td colspan="2" class="sc-empty">No tests</td>
+                    </tr>
+                  </tbody>
+                </table>
+
+                <div class="sc-actions-list">
+                  <div class="sc-action-item" (click)="onEditTestClick(item)">
+                    <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
+                    <span>Edit Tests</span>
+                  </div>
+                  <div class="sc-action-item" *ngIf="canEditPatient" (click)="onEditPatientClick(item)">
+                    <span class="sc-action-icon"><ion-icon name="person-outline"></ion-icon></span>
+                    <span>Edit Patient</span>
+                  </div>
+                  <div class="sc-action-item" (click)="onEditBarcodeClick(item)">
+                    <span class="sc-action-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
+                    <span>Edit Barcode</span>
+                  </div>
+                  <div class="sc-action-item" [class.item-loading]="printingId === item.bookingId"
+                    (click)="printBillInline(item)">
+                    <span class="sc-action-icon">
+                      <ion-spinner name="crescent" *ngIf="printingId === item.bookingId"></ion-spinner>
+                      <ion-icon name="print-outline" *ngIf="printingId !== item.bookingId"></ion-icon>
+                    </span>
+                    <span>{{ printingId === item.bookingId ? 'Generating...' : 'Print Bill' }}</span>
+                  </div>
+                  <div class="sc-action-item" *ngIf="canShowDownloadReport && item.hasCompletedTest"
+                    [class.item-loading]="downloadingReportId === item.bookingId" (click)="downloadReportInline(item)">
+                    <span class="sc-action-icon">
+                      <ion-spinner name="crescent" *ngIf="downloadingReportId === item.bookingId"></ion-spinner>
+                      <ion-icon name="download-outline" *ngIf="downloadingReportId !== item.bookingId"></ion-icon>
+                    </span>
+                    <span>{{ downloadingReportId === item.bookingId ? 'Generating...' : 'Download Report' }}</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <div class="sc-details" *ngIf="expandedSearchId === item.bookingId">
-              <div class="sc-section-label">Tests</div>
-              <table class="sc-test-table">
+            <div class="sm-empty" *ngIf="!isSearching && searchResults.length === 0 && globalSearchTerm">
+              <ion-icon name="search-outline"></ion-icon>
+              <span>No results found</span>
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </ion-modal>
+    <!-- ===================== EDIT TEST MODAL ===================== -->
+    <ion-modal class="test-modal sheet-modal" [isOpen]="isEditTestModalOpen" (didDismiss)="closeTestModal()"
+      [breakpoints]="[0, 1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+
+      <ng-template>
+
+        <div class="test-modal-wrapper">
+
+          <!-- ======================================================
+            SHEET HEADER
+            ====================================================== -->
+
+          <div class="sheet-top">
+
+            <div class="modal-handle"></div>
+
+            <div class="sheet-top-row">
+
+              <div class="sheet-top-title">
+
+                <div class="sheet-title-eyebrow">
+                  Booking #{{ selectedBooking?.bookingId }}
+                </div>
+
+                <div class="sheet-title-main">
+                  Edit Test
+                </div>
+
+              </div>
+
+              <button type="button" class="close-modal-btn" (click)="closeTestModal()">
+
+                <ion-icon name="close-outline"></ion-icon>
+
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- ======================================================
+            MODAL BODY
+            ====================================================== -->
+
+          <div class="test-modal-body-pad test-modal-scroll">
+
+            <!-- ====================================================
+              LOADING STATE
+              ==================================================== -->
+
+            <div class="skeleton-block" *ngIf="isTestLoading">
+
+              <div class="skeleton-line" style="width:60%">
+              </div>
+
+              <div class="skeleton-line" style="width:90%">
+              </div>
+
+            </div>
+
+
+            <!-- ====================================================
+              MAIN CONTENT
+              ==================================================== -->
+
+            <ng-container *ngIf="!isTestLoading">
+
+              <!-- ================================================
+                UPDATE TEST HEADER
+                ================================================= -->
+
+              <div class="section-label-row">
+
+                <span class="section-label-title">
+                  Update Test
+                </span>
+
+                <span class="section-label-count">
+                  {{ selectedTests.length }} test(s)
+                </span>
+
+              </div>
+
+
+              <!-- ================================================
+                TEST SEARCH
+                ================================================= -->
+
+              <div class="search-bar-row">
+
+                <ion-searchbar placeholder="Search test to add into bill" [(ngModel)]="testSearchTerm"
+                  (ngModelChange)="searchTestsInline($event)" debounce="200">
+                </ion-searchbar>
+
+
+                <!-- Search suggestions -->
+
+                <div class="search-dropdown" *ngIf="testSearchTerm && filteredTests.length > 0">
+
+                  <div class="search-dropdown-item" *ngFor="let test of filteredTests" (click)="addTestInline(test)">
+
+                    <span>
+                      {{ test.testName }}
+                    </span>
+
+                    <span class="price">
+                      {{
+                      canViewAmount
+                      ? ('₹' + test.testMrp)
+                      : '...'
+                      }}
+                    </span>
+
+                  </div>
+
+                </div>
+
+              </div>
+
+
+              <!-- ================================================
+                TEST TABLE + PAYMENT SUMMARY
+                ================================================= -->
+
+              <div class="modal-body-grid">
+
+
+                <!-- ==============================================
+                  TEST TABLE
+                  ============================================== -->
+
+                <div class="test-table-panel">
+
+                  <table class="test-line-table">
+
+                    <thead>
+
+                      <tr>
+
+                        <th>
+                          Test Name
+                        </th>
+
+                        <th *ngIf="canViewAmount">
+                          Amount
+                        </th>
+
+                        <th *ngIf="canViewAmount">
+                          Discount
+                        </th>
+
+                        <th></th>
+
+                      </tr>
+
+                    </thead>
+
+
+                    <tbody>
+
+                      <!-- Selected Tests -->
+
+                      <tr *ngFor="let test of selectedTests">
+
+                        <td class="test-name-cell">
+
+                          {{ test.testName }}
+
+                          <span class="franchise-tag" *ngIf="test.method">
+
+                            Method:
+                            {{ test.method }}
+
+                          </span>
+
+                          <span class="new-tag" *ngIf="test.isNewlyAdded">
+
+                            Not saved yet
+
+                          </span>
+
+                        </td>
+
+
+                        <td *ngIf="canViewAmount">
+
+                          ₹{{ test.testMrp }}
+
+                        </td>
+
+
+                        <td *ngIf="canViewAmount">
+
+                          {{ test.discount || 0 }}
+
+                        </td>
+
+
+                        <td>
+                          <ion-icon name="trash-outline" class="delete-icon"
+                            [class.disabled-icon]="!(test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr')"
+                            (click)="(test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr') && removeTestInline(test)">
+                          </ion-icon>
+                        </td>
+
+                      </tr>
+
+
+                      <!-- Empty -->
+
+                      <tr *ngIf="selectedTests.length === 0">
+
+                        <td [attr.colspan]="canViewAmount ? 4 : 2" class="empty-tests">
+
+                          No tests added
+
+                        </td>
+
+                      </tr>
+
+                    </tbody>
+
+                  </table>
+
+                </div>
+
+
+                <!-- ==============================================
+                  PAYMENT SUMMARY
+                  SAME AS BOOKING STATUS
+                  ============================================== -->
+
+                <div class="summary-side-panel" [class.locked]="!canEditBilling" *ngIf="canViewAmount">
+
+
+                  <!-- ============================================
+                    TITLE
+                    ============================================= -->
+
+                  <div class="summary-panel-title">
+
+                    Payment Summary
+
+                  </div>
+
+
+                  <!-- ============================================
+                    SUB TOTAL
+                    ============================================= -->
+
+                  <div class="summary-field">
+
+                    <label>
+                      Sub Total
+                    </label>
+
+                    <input type="text" [value]="
+                      canViewAmount
+                        ? subTotal
+                        : '...'
+                    " readonly>
+
+                  </div>
+
+
+                  <!-- ============================================
+                    DISCOUNT
+                    ============================================= -->
+
+                  <div class="summary-field">
+
+                    <label>
+                      Discount
+                    </label>
+
+                    <ng-container *ngIf="canEditBilling; else discountLocked">
+
+                      <input type="number" [(ngModel)]="discount" (ngModelChange)="onDiscountChangeInline()"
+                        placeholder="0">
+
+                    </ng-container>
+
+
+                    <ng-template #discountLocked>
+
+                      <input type="text" value="." readonly disabled class="locked-field">
+
+                    </ng-template>
+
+                  </div>
+
+
+                  <!-- ============================================
+                    TOTAL
+                    ============================================= -->
+
+                  <div class="summary-field">
+
+                    <label>
+                      Total
+                    </label>
+
+                    <input type="text" [value]="
+                      canViewAmount
+                        ? totalAmount
+                        : '.'
+                    " readonly>
+
+                  </div>
+
+
+                  <!-- ============================================
+                    ALREADY PAID
+                    ============================================= -->
+
+                  <div class="summary-field">
+
+                    <label>
+                      Already Paid
+                    </label>
+
+                    <input type="text" [value]="
+                      canViewAmount
+                        ? basePaidAmount
+                        : '.'
+                    " readonly>
+
+                  </div>
+
+
+                  <!-- ============================================
+                    PAY NOW
+                    ============================================= -->
+                  <div class="summary-field" *ngIf="canViewPayment">
+                    <label>Pay Now</label>
+                    <input type="number" [(ngModel)]="payNowAmount" (ngModelChange)="onPayNowChangeInline()"
+                      placeholder="0">
+                  </div>
+
+                  <!-- ============================================
+                    TOTAL PAID
+                    ============================================= -->
+
+                  <div class="summary-field">
+
+                    <label>
+                      Total Paid
+                    </label>
+
+                    <input type="text" [value]="
+                      canViewAmount
+                        ? paidAmount
+                        : '.'
+                    " readonly>
+
+                  </div>
+
+
+                  <!-- ============================================
+                    DUE
+                    ============================================= -->
+
+                  <div class="summary-field" *ngIf="canViewPayment">
+                    <label>Due</label>
+                    <input type="text" [value]="dueAmount" readonly [class.zero]="dueAmount === 0">
+                  </div>
+
+                  <!-- ============================================
+                    PAYMENT METHOD
+                    ============================================= -->
+
+                  <div class="summary-field payment-method-field" *ngIf="canViewPayment">
+                    <label>Payment Method</label>
+                    <ion-select [(ngModel)]="paymentMethod" interface="popover" [disabled]="!canViewPayment"
+                      class="premium-select">
+                      <ion-select-option value="cash">Cash</ion-select-option>
+                      <ion-select-option value="upi">UPI</ion-select-option>
+                      <ion-select-option value="online">Online</ion-select-option>
+                    </ion-select>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </ng-container>
+
+          </div>
+
+
+          <!-- ======================================================
+            FOOTER
+            ====================================================== -->
+
+          <div class="sheet-footer">
+
+            <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="saveTestChanges()"
+              [disabled]="isSavingTest">
+
+              {{
+              isSavingTest
+              ? 'Saving...'
+              : 'Save Changes'
+              }}
+
+            </ion-button>
+
+          </div>
+
+        </div>
+
+      </ng-template>
+
+    </ion-modal>
+
+    <!-- EDIT PATIENT -->
+    <ion-modal class="test-modal sheet-modal" [isOpen]="isEditPatientModalOpen" (didDismiss)="closePatientModal()"
+      [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+      <ng-template>
+        <div class="test-modal-wrapper">
+          <div class="sheet-top">
+            <div class="modal-handle"></div>
+            <div class="sheet-top-row">
+              <div class="sheet-top-title">
+                <div class="sheet-title-eyebrow">Booking #{{ editPatientData?.bookingId }}</div>
+                <div class="sheet-title-main">Edit Patient</div>
+              </div>
+              <button class="close-modal-btn" (click)="closePatientModal()"><ion-icon
+                  name="close-outline"></ion-icon></button>
+            </div>
+          </div>
+          <div class="test-modal-body-pad test-modal-scroll">
+            <div class="skeleton-block" *ngIf="isPatientLoading">
+              <div class="skeleton-line" style="width:50%"></div>
+            </div>
+            <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
+
+              <div class="form-section">
+                <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
+                <div class="patient-form-grid">
+                  <div class="field-row">
+                    <div class="summary-field narrow">
+                      <label>Title</label>
+                      <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
+                        class="premium-select">
+                        <ion-select-option value="mr">Mr</ion-select-option>
+                        <ion-select-option value="mrs">Mrs</ion-select-option>
+                        <ion-select-option value="ms">Ms</ion-select-option>
+                        <ion-select-option value="dr">Dr</ion-select-option>
+                        <ion-select-option value="master">Master</ion-select-option>
+                        <ion-select-option value="baby">Baby</ion-select-option>
+                      </ion-select>
+                    </div>
+                    <div class="summary-field wide">
+                      <label>Patient Name</label>
+                      <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
+                    </div>
+                  </div>
+
+                  <div class="summary-field pair-field">
+                    <label>Age</label>
+                    <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
+                  </div>
+                  <div class="summary-field pair-field">
+                    <label>Age Type</label>
+                    <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="premium-select">
+                      <ion-select-option value="years">Years</ion-select-option>
+                      <ion-select-option value="months">Months</ion-select-option>
+                      <ion-select-option value="days">Days</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="summary-field pair-field">
+                    <label>Gender</label>
+                    <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="premium-select">
+                      <ion-select-option value="male">Male</ion-select-option>
+                      <ion-select-option value="female">Female</ion-select-option>
+                      <ion-select-option value="other">Other</ion-select-option>
+                    </ion-select>
+                  </div>
+                </div>
+              </div>
+              <div class="form-section">
+                <div class="form-section-title">
+                  <ion-icon name="medkit-outline"></ion-icon>
+                  Doctor &amp; Lab
+                </div>
+
+                <div class="doctor-lab-stack">
+
+                  <div class="summary-field doctor-search-field" style="position: relative;">
+                    <label>Ref. Doctor</label>
+
+                    <div class="doctor-input-wrapper">
+                      <input type="text" [(ngModel)]="doctorSearch" (ngModelChange)="searchDoctorInput()"
+                        placeholder="Search doctor name" autocomplete="off" name="refDoctorSearch">
+
+                      <ion-icon *ngIf="doctorSearch" name="close-circle-outline" class="clear-doctor-search"
+                        (click)="doctorSearch = ''; searchDoctorInput()">
+                      </ion-icon>
+                    </div>
+
+                    <div class="test-suggestions overlay-dropdown doctor-dropdown" *ngIf="showDoctorSuggestions">
+                      <div class="suggestion-item" *ngFor="let doc of filteredDoctors"
+                        (mousedown)="$event.preventDefault()" (click)="selectDoctorFromSearch(doc)">
+                        {{ doc.doctor_name || doc.doctorName || doc.name }}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div class="summary-field">
+                    <label>Custom Doctor Name</label>
+                    <input type="text" [(ngModel)]="editPatientData.customDoctorName"
+                      placeholder="Enter custom doctor name">
+                  </div>
+
+                  <div class="summary-field lab-search-field" style="position: relative;">
+                    <label>Custom Lab Name</label>
+                    <input type="text" [(ngModel)]="customLabSearch" (ngModelChange)="searchCustomLabInput()"
+                      placeholder="Enter custom lab name" autocomplete="off">
+
+                    <div class="test-suggestions overlay-dropdown"
+                      *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
+                      <div class="suggestion-item" *ngFor="let lab of filteredCustomLabs"
+                        (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
+                        <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
+                            *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
+                      </div>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+
+              <div class="form-section">
+                <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
+                </div>
+                <div class="patient-form-grid">
+                  <div class="summary-field pair-field">
+                    <label>Mobile</label>
+                    <input type="tel" [(ngModel)]="editPatientData.mobileNumber" placeholder="10 digit mobile"
+                      maxlength="10">
+                  </div>
+                  <div class="summary-field pair-field">
+                    <label>Aadhaar</label>
+                    <input type="text" [(ngModel)]="editPatientData.aadhaarNumber" placeholder="Aadhaar number"
+                      maxlength="12">
+                  </div>
+                  <div class="summary-field pair-field">
+                    <label>UHID</label>
+                    <input type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
+                  </div>
+                  <div class="summary-field span-3">
+                    <label>Address</label>
+                    <input type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-section">
+                <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
+                  Attachment</div>
+                <div class="patient-form-grid">
+                  <div class="summary-field span-3">
+                    <label>Clinical History</label>
+                    <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
+                  </div>
+                  <div class="summary-field span-3">
+                    <label>Attachment</label>
+                    <input #patientFile type="file" hidden (change)="onPatientFileSelected($event)">
+                    <button class="attach-btn" (click)="patientFile.click()">
+                      <ion-icon name="attach-outline"></ion-icon>
+                      {{ editPatientData?.attachmentName || 'Choose File' }}
+                    </button>
+                    <div class="selected-file" *ngIf="editPatientData?.attachmentName">
+                      <ion-icon name="checkmark-outline"></ion-icon> {{ editPatientData.attachmentName }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+          </div>
+          <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
+            <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="savePatientChanges()">Save
+              Changes</ion-button>
+          </div>
+        </div>
+      </ng-template>
+    </ion-modal>
+
+    <!-- WALLET MODAL -->
+    <ion-modal class="test-modal sheet-modal" [isOpen]="isWalletModalOpen" (didDismiss)="closeWalletModal()"
+      [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+      <ng-template>
+        <div class="test-modal-wrapper">
+          <div class="sheet-top">
+            <div class="modal-handle"></div>
+            <div class="sheet-top-row">
+              <div class="sheet-top-title">
+                <div class="sheet-title-eyebrow">Wallet</div>
+                <div class="sheet-title-main">Wallet Details</div>
+              </div>
+              <button type="button" class="close-modal-btn" (click)="closeWalletModal()">
+                <ion-icon name="close-outline"></ion-icon>
+              </button>
+            </div>
+          </div>
+
+          <div class="test-modal-body-pad test-modal-scroll">
+
+            <div class="wallet-stats-grid">
+              <div class="ws-box ws-accent-green">
+                <span class="ws-label">Your Balance</span>
+                <strong class="ws-value ws-text-green">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+              </div>
+              <div class="ws-box ws-accent-blue">
+                <span class="ws-label">Total Limit</span>
+                <strong class="ws-value">₹{{ (wallet?.totalLimit ?? 0) | number:'1.2-2' }}</strong>
+              </div>
+              <div class="ws-box ws-accent-red">
+                <span class="ws-label">Used Limit</span>
+                <strong class="ws-value">₹{{ (wallet?.usedLimit ?? 0) | number:'1.2-2' }}</strong>
+              </div>
+              <div class="ws-box ws-accent-yellow">
+                <span class="ws-label">Remaining Limit</span>
+                <strong class="ws-value">₹{{ (wallet?.remainingLimit ?? 0) | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+
+            <div class="wallet-filter-row">
+              <ion-select [(ngModel)]="walletFilterScope" (ionChange)="onWalletFilterChange()" interface="popover"
+                placeholder="Select filter" class="premium-select wallet-filter-select">
+                <ion-select-option value="user">User</ion-select-option>
+                <ion-select-option value="lab">Lab</ion-select-option>
+              </ion-select>
+
+              <ion-select [(ngModel)]="walletPaymentModeFilter" (ionChange)="onWalletFilterChange()" interface="popover"
+                placeholder="Select Payment Mode" class="premium-select wallet-filter-select"
+                [interfaceOptions]="{ cssClass: 'premium-select-popover' }">
+                <ion-select-option value="">All Modes</ion-select-option>
+                <ion-select-option value="franchise_wallet">Franchise Wallet</ion-select-option>
+                <ion-select-option value="online">Online</ion-select-option>
+                <ion-select-option value="razorpay_online_payment">Razorpay online payment</ion-select-option>
+                <ion-select-option value="from_lab">From Lab</ion-select-option>
+              </ion-select>
+            </div>
+
+            <ion-button expand="block" fill="solid" class="save-changes-btn wallet-addfunds-btn"
+              (click)="openAddFundsModal()">
+              Add Funds
+            </ion-button>
+
+            <div class="section-label-row wallet-tx-heading">
+              <span class="section-label-title">Transactions</span>
+              <span class="section-label-count">{{ walletTotalRows }} total</span>
+            </div>
+
+            <div class="wallet-table-wrapper">
+              <table class="wallet-tx-table">
                 <thead>
                   <tr>
-                    <th>Test Name</th>
-                    <th>Status</th>
+                    <th>Amount</th>
+                    <th>Type</th>
+                    <th>Date</th>
+                    <th>Description</th>
                   </tr>
                 </thead>
                 <tbody>
-                  <tr *ngFor="let t of item.testsDisplay">
-                    <td>{{ t.name }}</td>
-                    <td><span class="sc-status-badge" [ngClass]="t.statusClass">{{ t.status }}</span></td>
+                  <tr *ngFor="let tx of walletTransactions">
+                    <td class="wtx-amount"
+                      [ngClass]="(tx.closingBalance - tx.openingBalance) < 0 ? 'wtx-debit' : 'wtx-credit'">
+                      ₹{{ (tx.closingBalance - tx.openingBalance) | number:'1.2-2' }} /-
+                    </td>
+                    <td>
+                      <span class="wtx-type-badge"
+                        [ngClass]="tx.transactionType === 'CREDIT' ? 'wtx-badge-credit' : 'wtx-badge-debit'">
+                        {{ tx.transactionType }}
+                      </span>
+                    </td>
+                    <td class="wtx-date">{{ tx?.createdOn | date:'dd-MM-yyyy hh:mm a' }}</td>
+                    <td class="wtx-desc">{{ tx?.description || 'N/A' }}</td>
                   </tr>
-                  <tr *ngIf="!item.testsDisplay?.length">
-                    <td colspan="2" class="sc-empty">No tests</td>
+                  <tr *ngIf="walletTransactions.length === 0 && !isWalletLoading">
+                    <td colspan="4" class="empty-tests">No transactions found</td>
                   </tr>
                 </tbody>
               </table>
-
-              <div class="sc-actions-list">
-                <div class="sc-action-item" (click)="onEditTestClick(item)">
-                  <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
-                  <span>Edit Tests</span>
-                </div>
-                <div class="sc-action-item" *ngIf="canEditPatient" (click)="onEditPatientClick(item)">
-                  <span class="sc-action-icon"><ion-icon name="person-outline"></ion-icon></span>
-                  <span>Edit Patient</span>
-                </div>
-                <div class="sc-action-item" (click)="onEditBarcodeClick(item)">
-                  <span class="sc-action-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
-                  <span>Edit Barcode</span>
-                </div>
-                <div class="sc-action-item" [class.item-loading]="printingId === item.bookingId"
-                  (click)="printBillInline(item)">
-                  <span class="sc-action-icon">
-                    <ion-spinner name="crescent" *ngIf="printingId === item.bookingId"></ion-spinner>
-                    <ion-icon name="print-outline" *ngIf="printingId !== item.bookingId"></ion-icon>
-                  </span>
-                  <span>{{ printingId === item.bookingId ? 'Generating...' : 'Print Bill' }}</span>
-                </div>
-                <div class="sc-action-item" *ngIf="canShowDownloadReport && item.hasCompletedTest"
-                  [class.item-loading]="downloadingReportId === item.bookingId" (click)="downloadReportInline(item)">
-                  <span class="sc-action-icon">
-                    <ion-spinner name="crescent" *ngIf="downloadingReportId === item.bookingId"></ion-spinner>
-                    <ion-icon name="download-outline" *ngIf="downloadingReportId !== item.bookingId"></ion-icon>
-                  </span>
-                  <span>{{ downloadingReportId === item.bookingId ? 'Generating...' : 'Download Report' }}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          <div class="sm-empty" *ngIf="!isSearching && searchResults.length === 0 && globalSearchTerm">
-            <ion-icon name="search-outline"></ion-icon>
-            <span>No results found</span>
-          </div>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-  <!-- ===================== EDIT TEST MODAL ===================== -->
-  <ion-modal class="test-modal sheet-modal" [isOpen]="isEditTestModalOpen" (didDismiss)="closeTestModal()"
-    [breakpoints]="[0, 1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
-
-    <ng-template>
-
-      <div class="test-modal-wrapper">
-
-        <!-- ======================================================
-           SHEET HEADER
-           ====================================================== -->
-
-        <div class="sheet-top">
-
-          <div class="modal-handle"></div>
-
-          <div class="sheet-top-row">
-
-            <div class="sheet-top-title">
-
-              <div class="sheet-title-eyebrow">
-                Booking #{{ selectedBooking?.bookingId }}
-              </div>
-
-              <div class="sheet-title-main">
-                Edit Test
-              </div>
-
             </div>
 
-            <button type="button" class="close-modal-btn" (click)="closeTestModal()">
-
-              <ion-icon name="close-outline"></ion-icon>
-
-            </button>
-
-          </div>
-
-        </div>
-
-
-        <!-- ======================================================
-           MODAL BODY
-           ====================================================== -->
-
-        <div class="test-modal-body-pad test-modal-scroll">
-
-          <!-- ====================================================
-             LOADING STATE
-             ==================================================== -->
-
-          <div class="skeleton-block" *ngIf="isTestLoading">
-
-            <div class="skeleton-line" style="width:60%">
+            <div class="sm-loading" *ngIf="isWalletLoading">
+              <ion-spinner name="dots"></ion-spinner><span>Loading...</span>
             </div>
 
-            <div class="skeleton-line" style="width:90%">
-            </div>
-
-          </div>
-
-
-          <!-- ====================================================
-             MAIN CONTENT
-             ==================================================== -->
-
-          <ng-container *ngIf="!isTestLoading">
-
-            <!-- ================================================
-               UPDATE TEST HEADER
-               ================================================= -->
-
-            <div class="section-label-row">
-
-              <span class="section-label-title">
-                Update Test
-              </span>
-
-              <span class="section-label-count">
-                {{ selectedTests.length }} test(s)
-              </span>
-
-            </div>
-
-
-            <!-- ================================================
-               TEST SEARCH
-               ================================================= -->
-
-            <div class="search-bar-row">
-
-              <ion-searchbar placeholder="Search test to add into bill" [(ngModel)]="testSearchTerm"
-                (ngModelChange)="searchTestsInline($event)" debounce="200">
-              </ion-searchbar>
-
-
-              <!-- Search suggestions -->
-
-              <div class="search-dropdown" *ngIf="testSearchTerm && filteredTests.length > 0">
-
-                <div class="search-dropdown-item" *ngFor="let test of filteredTests" (click)="addTestInline(test)">
-
-                  <span>
-                    {{ test.testName }}
-                  </span>
-
-                  <span class="price">
-                    {{
-                    canViewAmount
-                    ? ('₹' + test.testMrp)
-                    : '...'
-                    }}
-                  </span>
-
-                </div>
-
-              </div>
-
-            </div>
-
-
-            <!-- ================================================
-               TEST TABLE + PAYMENT SUMMARY
-               ================================================= -->
-
-            <div class="modal-body-grid">
-
-
-              <!-- ==============================================
-                 TEST TABLE
-                 ============================================== -->
-
-              <div class="test-table-panel">
-
-                <table class="test-line-table">
-
-                  <thead>
-
-                    <tr>
-
-                      <th>
-                        Test Name
-                      </th>
-
-                      <th *ngIf="canViewAmount">
-                        Amount
-                      </th>
-
-                      <th *ngIf="canViewAmount">
-                        Discount
-                      </th>
-
-                      <th></th>
-
-                    </tr>
-
-                  </thead>
-
-
-                  <tbody>
-
-                    <!-- Selected Tests -->
-
-                    <tr *ngFor="let test of selectedTests">
-
-                      <td class="test-name-cell">
-
-                        {{ test.testName }}
-
-                        <span class="franchise-tag" *ngIf="test.method">
-
-                          Method:
-                          {{ test.method }}
-
-                        </span>
-
-                        <span class="new-tag" *ngIf="test.isNewlyAdded">
-
-                          Not saved yet
-
-                        </span>
-
-                      </td>
-
-
-                      <td *ngIf="canViewAmount">
-
-                        ₹{{ test.testMrp }}
-
-                      </td>
-
-
-                      <td *ngIf="canViewAmount">
-
-                        {{ test.discount || 0 }}
-
-                      </td>
-
-
-                      <td>
-                        <ion-icon name="trash-outline" class="delete-icon"
-                          [class.disabled-icon]="!(test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr')"
-                          (click)="(test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr') && removeTestInline(test)">
-                        </ion-icon>
-                      </td>
-
-                    </tr>
-
-
-                    <!-- Empty -->
-
-                    <tr *ngIf="selectedTests.length === 0">
-
-                      <td [attr.colspan]="canViewAmount ? 4 : 2" class="empty-tests">
-
-                        No tests added
-
-                      </td>
-
-                    </tr>
-
-                  </tbody>
-
-                </table>
-
-              </div>
-
-
-              <!-- ==============================================
-                 PAYMENT SUMMARY
-                 SAME AS BOOKING STATUS
-                 ============================================== -->
-
-              <div class="summary-side-panel" [class.locked]="!canEditBilling" *ngIf="canViewAmount">
-
-
-                <!-- ============================================
-                   TITLE
-                   ============================================= -->
-
-                <div class="summary-panel-title">
-
-                  Payment Summary
-
-                </div>
-
-
-                <!-- ============================================
-                   SUB TOTAL
-                   ============================================= -->
-
-                <div class="summary-field">
-
-                  <label>
-                    Sub Total
-                  </label>
-
-                  <input type="text" [value]="
-                    canViewAmount
-                      ? subTotal
-                      : '...'
-                  " readonly>
-
-                </div>
-
-
-                <!-- ============================================
-                   DISCOUNT
-                   ============================================= -->
-
-                <div class="summary-field">
-
-                  <label>
-                    Discount
-                  </label>
-
-                  <ng-container *ngIf="canEditBilling; else discountLocked">
-
-                    <input type="number" [(ngModel)]="discount" (ngModelChange)="onDiscountChangeInline()"
-                      placeholder="0">
-
-                  </ng-container>
-
-
-                  <ng-template #discountLocked>
-
-                    <input type="text" value="." readonly disabled class="locked-field">
-
-                  </ng-template>
-
-                </div>
-
-
-                <!-- ============================================
-                   TOTAL
-                   ============================================= -->
-
-                <div class="summary-field">
-
-                  <label>
-                    Total
-                  </label>
-
-                  <input type="text" [value]="
-                    canViewAmount
-                      ? totalAmount
-                      : '.'
-                  " readonly>
-
-                </div>
-
-
-                <!-- ============================================
-                   ALREADY PAID
-                   ============================================= -->
-
-                <div class="summary-field">
-
-                  <label>
-                    Already Paid
-                  </label>
-
-                  <input type="text" [value]="
-                    canViewAmount
-                      ? basePaidAmount
-                      : '.'
-                  " readonly>
-
-                </div>
-
-
-                <!-- ============================================
-                   PAY NOW
-                   ============================================= -->
-                <div class="summary-field" *ngIf="canViewPayment">
-                  <label>Pay Now</label>
-                  <input type="number" [(ngModel)]="payNowAmount" (ngModelChange)="onPayNowChangeInline()"
-                    placeholder="0">
-                </div>
-
-                <!-- ============================================
-                   TOTAL PAID
-                   ============================================= -->
-
-                <div class="summary-field">
-
-                  <label>
-                    Total Paid
-                  </label>
-
-                  <input type="text" [value]="
-                    canViewAmount
-                      ? paidAmount
-                      : '.'
-                  " readonly>
-
-                </div>
-
-
-                <!-- ============================================
-                   DUE
-                   ============================================= -->
-
-                <div class="summary-field" *ngIf="canViewPayment">
-                  <label>Due</label>
-                  <input type="text" [value]="dueAmount" readonly [class.zero]="dueAmount === 0">
-                </div>
-
-                <!-- ============================================
-                   PAYMENT METHOD
-                   ============================================= -->
-
-                <div class="summary-field payment-method-field" *ngIf="canViewPayment">
-                  <label>Payment Method</label>
-                  <ion-select [(ngModel)]="paymentMethod" interface="popover" [disabled]="!canViewPayment"
-                    class="premium-select">
-                    <ion-select-option value="cash">Cash</ion-select-option>
-                    <ion-select-option value="upi">UPI</ion-select-option>
-                    <ion-select-option value="online">Online</ion-select-option>
-                  </ion-select>
-                </div>
-
-              </div>
-
-            </div>
-
-          </ng-container>
-
-        </div>
-
-
-        <!-- ======================================================
-           FOOTER
-           ====================================================== -->
-
-        <div class="sheet-footer">
-
-          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="saveTestChanges()"
-            [disabled]="isSavingTest">
-
-            {{
-            isSavingTest
-            ? 'Saving...'
-            : 'Save Changes'
-            }}
-
-          </ion-button>
-
-        </div>
-
-      </div>
-
-    </ng-template>
-
-  </ion-modal>
-
-  <!-- EDIT PATIENT -->
-  <ion-modal class="test-modal sheet-modal" [isOpen]="isEditPatientModalOpen" (didDismiss)="closePatientModal()"
-    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
-    <ng-template>
-      <div class="test-modal-wrapper">
-        <div class="sheet-top">
-          <div class="modal-handle"></div>
-          <div class="sheet-top-row">
-            <div class="sheet-top-title">
-              <div class="sheet-title-eyebrow">Booking #{{ editPatientData?.bookingId }}</div>
-              <div class="sheet-title-main">Edit Patient</div>
-            </div>
-            <button class="close-modal-btn" (click)="closePatientModal()"><ion-icon
-                name="close-outline"></ion-icon></button>
-          </div>
-        </div>
-        <div class="test-modal-body-pad test-modal-scroll">
-          <div class="skeleton-block" *ngIf="isPatientLoading">
-            <div class="skeleton-line" style="width:50%"></div>
-          </div>
-          <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
-
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
-              <div class="patient-form-grid">
-                <div class="field-row">
-                  <div class="summary-field narrow">
-                    <label>Title</label>
-                    <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
-                      class="premium-select">
-                      <ion-select-option value="mr">Mr</ion-select-option>
-                      <ion-select-option value="mrs">Mrs</ion-select-option>
-                      <ion-select-option value="ms">Ms</ion-select-option>
-                      <ion-select-option value="dr">Dr</ion-select-option>
-                      <ion-select-option value="master">Master</ion-select-option>
-                      <ion-select-option value="baby">Baby</ion-select-option>
-                    </ion-select>
-                  </div>
-                  <div class="summary-field wide">
-                    <label>Patient Name</label>
-                    <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
-                  </div>
-                </div>
-
-                <div class="summary-field pair-field">
-                  <label>Age</label>
-                  <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Age Type</label>
-                  <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="premium-select">
-                    <ion-select-option value="years">Years</ion-select-option>
-                    <ion-select-option value="months">Months</ion-select-option>
-                    <ion-select-option value="days">Days</ion-select-option>
-                  </ion-select>
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Gender</label>
-                  <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="premium-select">
-                    <ion-select-option value="male">Male</ion-select-option>
-                    <ion-select-option value="female">Female</ion-select-option>
-                    <ion-select-option value="other">Other</ion-select-option>
-                  </ion-select>
-                </div>
-              </div>
-            </div>
-            <div class="form-section">
-              <div class="form-section-title">
-                <ion-icon name="medkit-outline"></ion-icon>
-                Doctor &amp; Lab
-              </div>
-
-              <div class="doctor-lab-stack">
-
-                <div class="summary-field doctor-search-field" style="position: relative;">
-                  <label>Ref. Doctor</label>
-
-                  <div class="doctor-input-wrapper">
-                    <input type="text" [(ngModel)]="doctorSearch" (ngModelChange)="searchDoctorInput()"
-                      placeholder="Search doctor name" autocomplete="off" name="refDoctorSearch">
-
-                    <ion-icon *ngIf="doctorSearch" name="close-circle-outline" class="clear-doctor-search"
-                      (click)="doctorSearch = ''; searchDoctorInput()">
-                    </ion-icon>
-                  </div>
-
-                  <div class="test-suggestions overlay-dropdown doctor-dropdown" *ngIf="showDoctorSuggestions">
-                    <div class="suggestion-item" *ngFor="let doc of filteredDoctors"
-                      (mousedown)="$event.preventDefault()" (click)="selectDoctorFromSearch(doc)">
-                      {{ doc.doctor_name || doc.doctorName || doc.name }}
-                    </div>
-                  </div>
-                </div>
-
-                <div class="summary-field">
-                  <label>Custom Doctor Name</label>
-                  <input type="text" [(ngModel)]="editPatientData.customDoctorName"
-                    placeholder="Enter custom doctor name">
-                </div>
-
-                <div class="summary-field lab-search-field" style="position: relative;">
-                  <label>Custom Lab Name</label>
-                  <input type="text" [(ngModel)]="customLabSearch" (ngModelChange)="searchCustomLabInput()"
-                    placeholder="Enter custom lab name" autocomplete="off">
-
-                  <div class="test-suggestions overlay-dropdown"
-                    *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
-                    <div class="suggestion-item" *ngFor="let lab of filteredCustomLabs"
-                      (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
-                      <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
-                          *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-            </div>
-
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
-              </div>
-              <div class="patient-form-grid">
-                <div class="summary-field pair-field">
-                  <label>Mobile</label>
-                  <input type="tel" [(ngModel)]="editPatientData.mobileNumber" placeholder="10 digit mobile"
-                    maxlength="10">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Aadhaar</label>
-                  <input type="text" [(ngModel)]="editPatientData.aadhaarNumber" placeholder="Aadhaar number"
-                    maxlength="12">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>UHID</label>
-                  <input type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
-                </div>
-                <div class="summary-field span-3">
-                  <label>Address</label>
-                  <input type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
-                </div>
-              </div>
-            </div>
-
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
-                Attachment</div>
-              <div class="patient-form-grid">
-                <div class="summary-field span-3">
-                  <label>Clinical History</label>
-                  <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
-                </div>
-                <div class="summary-field span-3">
-                  <label>Attachment</label>
-                  <input #patientFile type="file" hidden (change)="onPatientFileSelected($event)">
-                  <button class="attach-btn" (click)="patientFile.click()">
-                    <ion-icon name="attach-outline"></ion-icon>
-                    {{ editPatientData?.attachmentName || 'Choose File' }}
-                  </button>
-                  <div class="selected-file" *ngIf="editPatientData?.attachmentName">
-                    <ion-icon name="checkmark-outline"></ion-icon> {{ editPatientData.attachmentName }}
-                  </div>
-                </div>
-              </div>
-            </div>
+            <ion-button fill="clear" expand="block"
+              *ngIf="walletTransactions.length < walletTotalRows && !isWalletLoading" (click)="onWalletScroll()">
+              Load more
+            </ion-button>
 
           </div>
         </div>
-        <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="savePatientChanges()">Save
-            Changes</ion-button>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-
-  <!-- WALLET MODAL -->
-  <ion-modal class="test-modal sheet-modal" [isOpen]="isWalletModalOpen" (didDismiss)="closeWalletModal()"
-    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
-    <ng-template>
-      <div class="test-modal-wrapper">
-        <div class="sheet-top">
-          <div class="modal-handle"></div>
-          <div class="sheet-top-row">
-            <div class="sheet-top-title">
-              <div class="sheet-title-eyebrow">Wallet</div>
-              <div class="sheet-title-main">Wallet Details</div>
-            </div>
-            <button type="button" class="close-modal-btn" (click)="closeWalletModal()">
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
-          </div>
-        </div>
-
-        <div class="test-modal-body-pad test-modal-scroll">
-
-          <div class="wallet-stats-grid">
-            <div class="ws-box ws-accent-green">
-              <span class="ws-label">Your Balance</span>
-              <strong class="ws-value ws-text-green">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
-            </div>
-            <div class="ws-box ws-accent-blue">
-              <span class="ws-label">Total Limit</span>
-              <strong class="ws-value">₹{{ (wallet?.totalLimit ?? 0) | number:'1.2-2' }}</strong>
-            </div>
-            <div class="ws-box ws-accent-red">
-              <span class="ws-label">Used Limit</span>
-              <strong class="ws-value">₹{{ (wallet?.usedLimit ?? 0) | number:'1.2-2' }}</strong>
-            </div>
-            <div class="ws-box ws-accent-yellow">
-              <span class="ws-label">Remaining Limit</span>
-              <strong class="ws-value">₹{{ (wallet?.remainingLimit ?? 0) | number:'1.2-2' }}</strong>
-            </div>
-          </div>
-
-          <div class="wallet-filter-row">
-            <ion-select [(ngModel)]="walletFilterScope" (ionChange)="onWalletFilterChange()" interface="popover"
-              placeholder="Select filter" class="premium-select wallet-filter-select">
-              <ion-select-option value="user">User</ion-select-option>
-              <ion-select-option value="lab">Lab</ion-select-option>
-            </ion-select>
-
-            <ion-select [(ngModel)]="walletPaymentModeFilter" (ionChange)="onWalletFilterChange()" interface="popover"
-              placeholder="Select Payment Mode" class="premium-select wallet-filter-select"
-              [interfaceOptions]="{ cssClass: 'premium-select-popover' }">
-              <ion-select-option value="">All Modes</ion-select-option>
-              <ion-select-option value="franchise_wallet">Franchise Wallet</ion-select-option>
-              <ion-select-option value="online">Online</ion-select-option>
-              <ion-select-option value="razorpay_online_payment">Razorpay online payment</ion-select-option>
-              <ion-select-option value="from_lab">From Lab</ion-select-option>
-            </ion-select>
-          </div>
-
-          <ion-button expand="block" fill="solid" class="save-changes-btn wallet-addfunds-btn"
-            (click)="openAddFundsModal()">
-            Add Funds
-          </ion-button>
-
-          <div class="section-label-row wallet-tx-heading">
-            <span class="section-label-title">Transactions</span>
-            <span class="section-label-count">{{ walletTotalRows }} total</span>
-          </div>
-
-          <div class="wallet-table-wrapper">
-            <table class="wallet-tx-table">
-              <thead>
-                <tr>
-                  <th>Amount</th>
-                  <th>Type</th>
-                  <th>Date</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let tx of walletTransactions">
-                  <td class="wtx-amount"
-                    [ngClass]="(tx.closingBalance - tx.openingBalance) < 0 ? 'wtx-debit' : 'wtx-credit'">
-                    ₹{{ (tx.closingBalance - tx.openingBalance) | number:'1.2-2' }} /-
-                  </td>
-                  <td>
-                    <span class="wtx-type-badge"
-                      [ngClass]="tx.transactionType === 'CREDIT' ? 'wtx-badge-credit' : 'wtx-badge-debit'">
-                      {{ tx.transactionType }}
-                    </span>
-                  </td>
-                  <td class="wtx-date">{{ tx?.createdOn | date:'dd-MM-yyyy hh:mm a' }}</td>
-                  <td class="wtx-desc">{{ tx?.description || 'N/A' }}</td>
-                </tr>
-                <tr *ngIf="walletTransactions.length === 0 && !isWalletLoading">
-                  <td colspan="4" class="empty-tests">No transactions found</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <div class="sm-loading" *ngIf="isWalletLoading">
-            <ion-spinner name="dots"></ion-spinner><span>Loading...</span>
-          </div>
-
-          <ion-button fill="clear" expand="block"
-            *ngIf="walletTransactions.length < walletTotalRows && !isWalletLoading" (click)="onWalletScroll()">
-            Load more
-          </ion-button>
-
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
+      </ng-template>
+    </ion-modal>
 
   <!-- ADD FUNDS MODAL -->
-  <ion-modal class="test-modal sheet-modal" [isOpen]="isAddFundsModalOpen" (didDismiss)="closeAddFundsModal()"
-    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
-    <ng-template>
-      <div class="test-modal-wrapper">
-        <div class="sheet-top">
-          <div class="modal-handle"></div>
-          <div class="sheet-top-row">
-            <div class="sheet-top-title">
-              <div class="sheet-title-eyebrow">Wallet</div>
-              <div class="sheet-title-main">Add Funds</div>
-            </div>
-            <button type="button" class="close-modal-btn" (click)="closeAddFundsModal()">
-              <ion-icon name="close-outline"></ion-icon>
-            </button>
-          </div>
-        </div>
-
-        <div class="test-modal-body-pad test-modal-scroll">
-
-          <!-- AMOUNT -->
-          <div class="summary-field">
-            <label>Amount</label>
-            <input type="number" [(ngModel)]="addFundsAmount" placeholder="Enter amount" min="1">
-          </div>
-
-          <!-- PAYMENT METHOD SELECTOR -->
-          <div class="section-label-row">
-            <span class="section-label-title">Payment Method</span>
-          </div>
-
-          <div class="services-grid">
-            <div class="service-card" (click)="selectPaymentMethod('razorpay')"
-              [style.border]="selectedPaymentMethod === 'razorpay' ? '2px solid #087b76' : '1px solid transparent'"
-              [style.background]="selectedPaymentMethod === 'razorpay' ? '#e6f5f4' : ''" style="position: relative;">
-              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'razorpay'"
-                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
-              <span class="service-icon teal"><ion-icon name="card-outline"></ion-icon></span>
-              <span class="service-name">Razorpay</span>
-            </div>
-
-            <div class="service-card" (click)="selectPaymentMethod('icici')"
-              [style.border]="selectedPaymentMethod === 'icici' ? '2px solid #087b76' : '1px solid transparent'"
-              [style.background]="selectedPaymentMethod === 'icici' ? '#e6f5f4' : ''" style="position: relative;">
-              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'icici'"
-                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
-              <span class="service-icon blue"><ion-icon name="business-outline"></ion-icon></span>
-              <span class="service-name">ICICI</span>
-            </div>
-
-            <div class="service-card" (click)="selectPaymentMethod('upi')"
-              [style.border]="selectedPaymentMethod === 'upi' ? '2px solid #087b76' : '1px solid transparent'"
-              [style.background]="selectedPaymentMethod === 'upi' ? '#e6f5f4' : ''" style="position: relative;">
-              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'upi'"
-                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
-              <span class="service-icon violet"><ion-icon name="phone-portrait-outline"></ion-icon></span>
-              <span class="service-name">UPI</span>
-            </div>
-
-            <div class="service-card" (click)="selectPaymentMethod('qr')"
-              [style.border]="selectedPaymentMethod === 'qr' ? '2px solid #087b76' : '1px solid transparent'"
-              [style.background]="selectedPaymentMethod === 'qr' ? '#e6f5f4' : ''" style="position: relative;">
-              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'qr'"
-                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
-              <span class="service-icon amber"><ion-icon name="qr-code-outline"></ion-icon></span>
-              <span class="service-name">QR Code</span>
-            </div>
-
-            <div class="service-card" (click)="selectPaymentMethod('bank')"
-              [style.border]="selectedPaymentMethod === 'bank' ? '2px solid #087b76' : '1px solid transparent'"
-              [style.background]="selectedPaymentMethod === 'bank' ? '#e6f5f4' : ''" style="position: relative;">
-              <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'bank'"
-                style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
-              <span class="service-icon rose"><ion-icon name="lock-closed-outline"></ion-icon></span>
-              <span class="service-name">Bank Transfer</span>
+    <ion-modal [cssClass]="isAdminRole ? 'admin-addfunds-popup' : 'test-modal sheet-modal'"
+      [isOpen]="isAddFundsModalOpen" (didDismiss)="closeAddFundsModal()"
+      [breakpoints]="isAdminRole ? undefined : [0,1]"
+      [initialBreakpoint]="isAdminRole ? undefined : 1"
+      [backdropBreakpoint]="isAdminRole ? undefined : 0.15">
+      <ng-template>
+        <div class="test-modal-wrapper">
+          <div class="sheet-top">
+            <div class="modal-handle"></div>
+            <div class="sheet-top-row">
+              <div class="sheet-top-title">
+                <div class="sheet-title-eyebrow">Wallet</div>
+                <div class="sheet-title-main">Add Funds</div>
+              </div>
+              <button type="button" class="close-modal-btn" (click)="closeAddFundsModal()">
+                <ion-icon name="close-outline"></ion-icon>
+              </button>
             </div>
           </div>
+          <div class="test-modal-body-pad test-modal-scroll">
 
-          <!-- UPI DETAILS -->
-          <div class="form-section" *ngIf="selectedPaymentMethod === 'upi'">
-            <div class="form-section-title"><ion-icon name="phone-portrait-outline"></ion-icon> UPI Payment</div>
+            <!-- AMOUNT -->
             <div class="summary-field">
-              <label>UPI ID</label>
-              <input type="text" [value]="upiId" readonly>
+              <label>Amount</label>
+              <input type="number" [(ngModel)]="addFundsAmount" placeholder="Enter amount" min="1">
             </div>
-          </div>
 
-          <!-- QR DETAILS -->
-          <div class="form-section" *ngIf="selectedPaymentMethod === 'qr'">
-            <div class="form-section-title"><ion-icon name="qr-code-outline"></ion-icon> Scan QR to Pay</div>
-            <img [src]="qrImageUrl" alt="Payment QR" style="max-width:220px; display:block; margin:0 auto;">
-          </div>
-
-          <!-- BANK DETAILS -->
-          <div class="form-section" *ngIf="selectedPaymentMethod === 'bank'">
-            <div class="form-section-title"><ion-icon name="business-outline"></ion-icon> Bank Details</div>
-            <div class="patient-form-grid">
-              <div class="summary-field span-3">
-                <label>Bank Name</label>
-                <input type="text" [value]="bankDetails.bankName" readonly>
-              </div>
-              <div class="summary-field pair-field">
-                <label>Account Number</label>
-                <input type="text" [value]="bankDetails.accountNumber" readonly>
-              </div>
-              <div class="summary-field pair-field">
-                <label>IFSC</label>
-                <input type="text" [value]="bankDetails.ifsc" readonly>
-              </div>
+            <!-- ✅ Admin la GST note, fakt amount takल्यावरच dakhavायचा -->
+            <div class="sc-empty" *ngIf="isAdminRole && addFundsAmount"
+              style="color:#e74c3c; margin-top:6px; margin-bottom:12px;">
+              18% GST will be included
             </div>
-          </div>
 
-          <!-- TRANSACTION ID (manual methods only) -->
-          <div class="summary-field" *ngIf="isManualPaymentMethod">
-            <label>Transaction Id</label>
-            <input type="text" [(ngModel)]="transactionId" placeholder="Enter transaction ID">
-            <span class="sc-empty" *ngIf="transactionIdError" style="color:#e74c3c;">{{ transactionIdError }}</span>
-          </div>
+            <!-- PAYMENT METHOD SELECTOR — franchise/others sathi, admin la nako -->
+            <ng-container *ngIf="!isAdminRole">
 
-        </div>
-
-        <div class="sheet-footer">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="submitAddFunds()"
-            [disabled]="isAddFundsSaving">
-            {{ isAddFundsSaving ? 'Processing...' : (isManualPaymentMethod ? 'Submit for Approval' : 'Pay Now') }}
-          </ion-button>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-
-  <!-- EDIT BARCODE -->
-  <ion-modal class="test-modal sheet-modal" [isOpen]="isBarcodeModalOpen" (didDismiss)="closeBarcodeModal()"
-    [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
-    <ng-template>
-      <div class="test-modal-wrapper">
-        <div class="sheet-top">
-          <div class="modal-handle"></div>
-          <div class="sheet-top-row">
-            <div class="sheet-top-title">
-              <div class="sheet-title-main">Barcode Update</div>
-            </div>
-            <button class="close-modal-btn" (click)="closeBarcodeModal()"><ion-icon
-                name="close-outline"></ion-icon></button>
-          </div>
-        </div>
-        <div class="test-modal-body-pad test-modal-scroll" *ngIf="barcodeBooking">
-
-          <!-- ✅ NEW — loading skeleton -->
-          <div class="skeleton-block" *ngIf="isBarcodeLoading">
-
-            <div class="skeleton-barcode-card">
-
-              <div class="skeleton-top-row">
-                <div class="skeleton-box skeleton-badge"></div>
-                <div class="skeleton-box skeleton-status"></div>
+              <div class="section-label-row">
+                <span class="section-label-title">Payment Method</span>
               </div>
 
-              <div class="skeleton-fields">
-
-                <div class="skeleton-field">
-                  <div class="skeleton-label"></div>
-                  <div class="skeleton-input"></div>
+              <div class="services-grid">
+                <div class="service-card" (click)="selectPaymentMethod('razorpay')"
+                  [style.border]="selectedPaymentMethod === 'razorpay' ? '2px solid #087b76' : '1px solid transparent'"
+                  [style.background]="selectedPaymentMethod === 'razorpay' ? '#e6f5f4' : ''" style="position: relative;">
+                  <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'razorpay'"
+                    style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+                  <span class="service-icon teal"><ion-icon name="card-outline"></ion-icon></span>
+                  <span class="service-name">Razorpay</span>
                 </div>
 
-                <div class="skeleton-field">
-                  <div class="skeleton-label"></div>
-                  <div class="skeleton-input"></div>
+                <div class="service-card" (click)="selectPaymentMethod('icici')"
+                  [style.border]="selectedPaymentMethod === 'icici' ? '2px solid #087b76' : '1px solid transparent'"
+                  [style.background]="selectedPaymentMethod === 'icici' ? '#e6f5f4' : ''" style="position: relative;">
+                  <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'icici'"
+                    style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+                  <span class="service-icon blue"><ion-icon name="business-outline"></ion-icon></span>
+                  <span class="service-name">ICICI</span>
                 </div>
 
-                <div class="skeleton-field">
-                  <div class="skeleton-label"></div>
-                  <div class="skeleton-input"></div>
+                <div class="service-card" (click)="selectPaymentMethod('upi')"
+                  [style.border]="selectedPaymentMethod === 'upi' ? '2px solid #087b76' : '1px solid transparent'"
+                  [style.background]="selectedPaymentMethod === 'upi' ? '#e6f5f4' : ''" style="position: relative;">
+                  <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'upi'"
+                    style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+                  <span class="service-icon violet"><ion-icon name="phone-portrait-outline"></ion-icon></span>
+                  <span class="service-name">UPI</span>
                 </div>
 
+                <div class="service-card" (click)="selectPaymentMethod('qr')"
+                  [style.border]="selectedPaymentMethod === 'qr' ? '2px solid #087b76' : '1px solid transparent'"
+                  [style.background]="selectedPaymentMethod === 'qr' ? '#e6f5f4' : ''" style="position: relative;">
+                  <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'qr'"
+                    style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+                  <span class="service-icon amber"><ion-icon name="qr-code-outline"></ion-icon></span>
+                  <span class="service-name">QR Code</span>
+                </div>
+
+                <div class="service-card" (click)="selectPaymentMethod('bank')"
+                  [style.border]="selectedPaymentMethod === 'bank' ? '2px solid #087b76' : '1px solid transparent'"
+                  [style.background]="selectedPaymentMethod === 'bank' ? '#e6f5f4' : ''" style="position: relative;">
+                  <ion-icon name="checkmark-outline" *ngIf="selectedPaymentMethod === 'bank'"
+                    style="position:absolute; top:8px; right:8px; color:#087b76; font-size:18px;"></ion-icon>
+                  <span class="service-icon rose"><ion-icon name="lock-closed-outline"></ion-icon></span>
+                  <span class="service-name">Bank Transfer</span>
+                </div>
               </div>
 
-              <div class="skeleton-button"></div>
-
-            </div>
-
-          </div>
-
-          <ng-container *ngIf="!isBarcodeLoading">
-            <div class="barcode-row-card" *ngFor="let row of barcodeRows">
-              <div class="brc-top">
-                <span class="brc-sample-badge">{{ row.sampleType }}</span>
-                <span class="status brc-status"
-                  [ngClass]="row.status === 'RECEIVED' ? 'completed' : (row.status === 'CANCEL' ? 'cancel-status' : 'pending')">{{
-                  row.status }}</span>
+              <!-- UPI DETAILS -->
+              <div class="form-section" *ngIf="selectedPaymentMethod === 'upi'">
+                <div class="form-section-title"><ion-icon name="phone-portrait-outline"></ion-icon> UPI Payment</div>
+                <div class="summary-field">
+                  <label>UPI ID</label>
+                  <input type="text" [value]="upiId" readonly>
+                </div>
               </div>
-              <div class="brc-fields">
-                <div class="brc-field"><label>Old Barcode</label><input type="text" [value]="row.oldBarcode" readonly
-                    class="brc-input readonly"></div>
-                <div class="brc-field"><label>New Barcode</label><input type="text" [(ngModel)]="row.newBarcode"
-                    class="brc-input" [readonly]="!row.canEditBarcode" [disabled]="!row.canEditBarcode"></div>
-                <div class="brc-field">
-                  <label>Receive Date &amp; Time</label>
-                  <div class="brc-input brc-datetime-trigger" [class.disabled-field]="!row.canEditBarcode"
-                    (click)="row.canEditBarcode && openDateTimePicker(row)">
-                    <ion-icon name="calendar-outline"></ion-icon>
-                    <span>{{ row.receiveDate ? (row.receiveDate | date:'MMM d, y, h:mm a') : 'Select date & time'
-                      }}</span>
+
+              <!-- QR DETAILS -->
+              <div class="form-section" *ngIf="selectedPaymentMethod === 'qr'">
+                <div class="form-section-title"><ion-icon name="qr-code-outline"></ion-icon> Scan QR to Pay</div>
+                <img [src]="qrImageUrl" alt="Payment QR" style="max-width:220px; display:block; margin:0 auto;">
+              </div>
+
+              <!-- BANK DETAILS -->
+              <div class="form-section" *ngIf="selectedPaymentMethod === 'bank'">
+                <div class="form-section-title"><ion-icon name="business-outline"></ion-icon> Bank Details</div>
+                <div class="patient-form-grid">
+                  <div class="summary-field span-3">
+                    <label>Bank Name</label>
+                    <input type="text" [value]="bankDetails.bankName" readonly>
+                  </div>
+                  <div class="summary-field pair-field">
+                    <label>Account Number</label>
+                    <input type="text" [value]="bankDetails.accountNumber" readonly>
+                  </div>
+                  <div class="summary-field pair-field">
+                    <label>IFSC</label>
+                    <input type="text" [value]="bankDetails.ifsc" readonly>
                   </div>
                 </div>
               </div>
-              <ion-button expand="block" fill="solid" class="update-barcode-btn"
-                [disabled]="row.saving || !row.canEditBarcode" (click)="updateBarcodeRow(row)">
-                {{ row.saving ? 'Saving...' : (row.canEditBarcode ? 'Update Barcode' : 'Not Allowed') }}
-              </ion-button>
+
+            </ng-container>
+
+            <!-- TRANSACTION ID (manual methods only, franchise flow) -->
+            <div class="summary-field" *ngIf="!isAdminRole && isManualPaymentMethod">
+              <label>Transaction Id</label>
+              <input type="text" [(ngModel)]="transactionId" placeholder="Enter transaction ID">
+              <span class="sc-empty" *ngIf="transactionIdError" style="color:#e74c3c;">{{ transactionIdError }}</span>
             </div>
-            <div *ngIf="barcodeRows.length === 0" class="empty-tests">No samples found</div>
-          </ng-container>
 
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
+          </div>
 
-  <ion-modal [isOpen]="activeDateTimeRow !== null" cssClass="datetime-popup compact-popup"
-    (didDismiss)="closeDateTimePicker()">
-    <ng-template>
-      <div class="compact-popup-page">
-        <div class="compact-popup-header">
-          <h2>Receive Date &amp; Time</h2>
-          <button class="close-modal-btn" (click)="closeDateTimePicker()"><ion-icon
-              name="close-outline"></ion-icon></button>
-        </div>
-        <div class="compact-popup-body">
-          <ion-datetime presentation="date-time" [(ngModel)]="tempDateTimeValue" [preferWheel]="true"
-            class="premium-datetime"></ion-datetime>
-        </div>
-        <div class="compact-popup-footer">
-          <ion-button fill="clear" (click)="closeDateTimePicker()">Cancel</ion-button>
-          <ion-button fill="solid" (click)="confirmDateTime()">OK</ion-button>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
-
-
-
-  <ion-content class="dashboard-content" [fullscreen]="true">
-    <main class="dashboard-shell">
-      <header class="app-header">
-        <div class="header-intro">
-          <p class="eyebrow">Operations overview</p>
-          <h1>Good day, {{ user.name }} <span aria-hidden="true">👋</span></h1>
-          <p class="header-email">{{ user.email }}</p>
-        </div>
-
-        <div class="header-actions">
-          <button type="button" class="icon-button notification-button" aria-label="Open notifications"
-            (click)="goToNotifications()">
-            <ion-icon name="notifications-outline"></ion-icon>
-            <span class="notification-pulse"></span>
-          </button>
-
-          <ion-menu-button menu="main-menu" class="menu-trigger" aria-label="Open account menu">
-            <span class="menu-trigger-avatar"><ion-icon name="person-outline"></ion-icon></span>
-          </ion-menu-button>
-        </div>
-      </header>
-
-      <section class="global-search-bar">
-        <span class="gs-icon-badge"><ion-icon name="search-outline"></ion-icon></span>
-        <input type="text" placeholder="Search booking ID, patient, doctor..." [(ngModel)]="globalSearchTerm"
-          (keyup)="onSearchKeyup($event)">
-        <ion-icon *ngIf="globalSearchTerm" name="close-circle-outline" class="gs-clear"
-          (click)="clearGlobalSearch()"></ion-icon>
-        <button class="gs-search-btn" (click)="onSearchButtonClick()">
-          <ion-icon name="search-outline"></ion-icon>
-        </button>
-      </section>
-      <section class="filter-panel" aria-label="Dashboard date filter">
-        <div class="filter-copy">
-          <span class="filter-icon"><ion-icon name="calendar-outline"></ion-icon></span>
-          <div>
-            <p>Viewing activity for</p>
-            <strong>{{ (fromDate === todayKey && toDate === todayKey) ? 'Today' : '' }}</strong>
+          <div class="sheet-footer">
+            <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="submitAddFunds()"
+              [disabled]="isAddFundsSaving">
+              {{ isAddFundsSaving ? 'Processing...' : (isManualPaymentMethod ? 'Submit for Approval' : 'Pay Now') }}
+            </ion-button>
           </div>
         </div>
+      </ng-template>
+    </ion-modal>
 
-        <div class="filter-controls">
-          <button type="button" class="date-trigger" (click)="openDateRangePicker()"
-            aria-label="Select dashboard date range">
-            <ion-icon name="calendar-outline"></ion-icon>
-            <span>{{ fromDate | date:'MM/dd/yyyy' }} – {{ toDate | date:'MM/dd/yyyy' }}</span>
-          </button>
+    <!-- EDIT BARCODE -->
+    <ion-modal class="test-modal sheet-modal" [isOpen]="isBarcodeModalOpen" (didDismiss)="closeBarcodeModal()"
+      [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
+      <ng-template>
+        <div class="test-modal-wrapper">
+          <div class="sheet-top">
+            <div class="modal-handle"></div>
+            <div class="sheet-top-row">
+              <div class="sheet-top-title">
+                <div class="sheet-title-main">Barcode Update</div>
+              </div>
+              <button class="close-modal-btn" (click)="closeBarcodeModal()"><ion-icon
+                  name="close-outline"></ion-icon></button>
+            </div>
+          </div>
+          <div class="test-modal-body-pad test-modal-scroll" *ngIf="barcodeBooking">
 
-          <mat-form-field class="hidden-date-field" appearance="fill">
-            <mat-date-range-input [rangePicker]="rangePicker">
-              <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
-                (dateChange)="onRangeStartChange($event)" readonly>
-              <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
-                (dateChange)="onRangeEndChange($event)" readonly>
-            </mat-date-range-input>
-            <mat-date-range-picker #rangePicker></mat-date-range-picker>
-          </mat-form-field>
+            <!-- ✅ NEW — loading skeleton -->
+            <div class="skeleton-block" *ngIf="isBarcodeLoading">
 
-          <button type="button" *ngIf="!(fromDate === todayKey && toDate === todayKey)" class="today-button"
-            (click)="resetToToday()">
-            Today
-          </button>
+              <div class="skeleton-barcode-card">
+
+                <div class="skeleton-top-row">
+                  <div class="skeleton-box skeleton-badge"></div>
+                  <div class="skeleton-box skeleton-status"></div>
+                </div>
+
+                <div class="skeleton-fields">
+
+                  <div class="skeleton-field">
+                    <div class="skeleton-label"></div>
+                    <div class="skeleton-input"></div>
+                  </div>
+
+                  <div class="skeleton-field">
+                    <div class="skeleton-label"></div>
+                    <div class="skeleton-input"></div>
+                  </div>
+
+                  <div class="skeleton-field">
+                    <div class="skeleton-label"></div>
+                    <div class="skeleton-input"></div>
+                  </div>
+
+                </div>
+
+                <div class="skeleton-button"></div>
+
+              </div>
+
+            </div>
+
+            <ng-container *ngIf="!isBarcodeLoading">
+              <div class="barcode-row-card" *ngFor="let row of barcodeRows">
+                <div class="brc-top">
+                  <span class="brc-sample-badge">{{ row.sampleType }}</span>
+                  <span class="status brc-status"
+                    [ngClass]="row.status === 'RECEIVED' ? 'completed' : (row.status === 'CANCEL' ? 'cancel-status' : 'pending')">{{
+                    row.status }}</span>
+                </div>
+                <div class="brc-fields">
+                  <div class="brc-field"><label>Old Barcode</label><input type="text" [value]="row.oldBarcode" readonly
+                      class="brc-input readonly"></div>
+                  <div class="brc-field"><label>New Barcode</label><input type="text" [(ngModel)]="row.newBarcode"
+                      class="brc-input" [readonly]="!row.canEditBarcode" [disabled]="!row.canEditBarcode"></div>
+                  <div class="brc-field">
+                    <label>Receive Date &amp; Time</label>
+                    <div class="brc-input brc-datetime-trigger" [class.disabled-field]="!row.canEditBarcode"
+                      (click)="row.canEditBarcode && openDateTimePicker(row)">
+                      <ion-icon name="calendar-outline"></ion-icon>
+                      <span>{{ row.receiveDate ? (row.receiveDate | date:'MMM d, y, h:mm a') : 'Select date & time'
+                        }}</span>
+                    </div>
+                  </div>
+                </div>
+                <ion-button expand="block" fill="solid" class="update-barcode-btn"
+                  [disabled]="row.saving || !row.canEditBarcode" (click)="updateBarcodeRow(row)">
+                  {{ row.saving ? 'Saving...' : (row.canEditBarcode ? 'Update Barcode' : 'Not Allowed') }}
+                </ion-button>
+              </div>
+              <div *ngIf="barcodeRows.length === 0" class="empty-tests">No samples found</div>
+            </ng-container>
+
+          </div>
         </div>
-      </section>
+      </ng-template>
+    </ion-modal>
 
-      <ng-container *ngIf="loading; else loadedContent">
-        <section class="stats-grid" aria-label="Loading dashboard statistics">
-          <article class="metric-card dual-metric skeleton-card" *ngFor="let i of [1,2,3]">
-            <span class="skeleton shimmer metric-icon-placeholder"></span>
-            <div class="dual-metric-body">
-              <span class="skeleton shimmer line-sm" style="width:50%"></span>
-              <div class="dual-metric-row">
-                <div>
-                  <span class="skeleton shimmer line-md"></span>
-                  <span class="skeleton shimmer line-sm"></span>
+    <ion-modal [isOpen]="activeDateTimeRow !== null" cssClass="datetime-popup compact-popup"
+      (didDismiss)="closeDateTimePicker()">
+      <ng-template>
+        <div class="compact-popup-page">
+          <div class="compact-popup-header">
+            <h2>Receive Date &amp; Time</h2>
+            <button class="close-modal-btn" (click)="closeDateTimePicker()"><ion-icon
+                name="close-outline"></ion-icon></button>
+          </div>
+          <div class="compact-popup-body">
+            <ion-datetime presentation="date-time" [(ngModel)]="tempDateTimeValue" [preferWheel]="true"
+              class="premium-datetime"></ion-datetime>
+          </div>
+          <div class="compact-popup-footer">
+            <ion-button fill="clear" (click)="closeDateTimePicker()">Cancel</ion-button>
+            <ion-button fill="solid" (click)="confirmDateTime()">OK</ion-button>
+          </div>
+        </div>
+      </ng-template>
+    </ion-modal>
+
+
+
+    <ion-content class="dashboard-content" [fullscreen]="true">
+      <main class="dashboard-shell">
+        <header class="app-header">
+          <div class="header-intro">
+            <p class="eyebrow">Operations overview</p>
+            <h1>Good day, {{ user.name }} <span aria-hidden="true">👋</span></h1>
+            <p class="header-email">{{ user.email }}</p>
+          </div>
+
+          <div class="header-actions">
+            <button type="button" class="icon-button notification-button" aria-label="Open notifications"
+              (click)="goToNotifications()">
+              <ion-icon name="notifications-outline"></ion-icon>
+              <span class="notification-pulse"></span>
+            </button>
+
+            <ion-menu-button menu="main-menu" class="menu-trigger" aria-label="Open account menu">
+              <span class="menu-trigger-avatar"><ion-icon name="person-outline"></ion-icon></span>
+            </ion-menu-button>
+          </div>
+        </header>
+
+        <section class="global-search-bar">
+          <span class="gs-icon-badge"><ion-icon name="search-outline"></ion-icon></span>
+          <input type="text" placeholder="Search booking ID, patient, doctor..." [(ngModel)]="globalSearchTerm"
+            (keyup)="onSearchKeyup($event)">
+          <ion-icon *ngIf="globalSearchTerm" name="close-circle-outline" class="gs-clear"
+            (click)="clearGlobalSearch()"></ion-icon>
+          <button class="gs-search-btn" (click)="onSearchButtonClick()">
+            <ion-icon name="search-outline"></ion-icon>
+          </button>
+        </section>
+        <section class="filter-panel" aria-label="Dashboard date filter">
+          <div class="filter-copy">
+            <span class="filter-icon"><ion-icon name="calendar-outline"></ion-icon></span>
+            <div>
+              <p>Viewing activity for</p>
+              <strong>{{ (fromDate === todayKey && toDate === todayKey) ? 'Today' : '' }}</strong>
+            </div>
+          </div>
+
+          <div class="filter-controls">
+            <button type="button" class="date-trigger" (click)="openDateRangePicker()"
+              aria-label="Select dashboard date range">
+              <ion-icon name="calendar-outline"></ion-icon>
+              <span>{{ fromDate | date:'MM/dd/yyyy' }} – {{ toDate | date:'MM/dd/yyyy' }}</span>
+            </button>
+
+            <mat-form-field class="hidden-date-field" appearance="fill">
+              <mat-date-range-input [rangePicker]="rangePicker">
+                <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+                  (dateChange)="onRangeStartChange($event)" readonly>
+                <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+                  (dateChange)="onRangeEndChange($event)" readonly>
+              </mat-date-range-input>
+              <mat-date-range-picker #rangePicker></mat-date-range-picker>
+            </mat-form-field>
+
+            <button type="button" *ngIf="!(fromDate === todayKey && toDate === todayKey)" class="today-button"
+              (click)="resetToToday()">
+              Today
+            </button>
+          </div>
+        </section>
+
+        <ng-container *ngIf="loading; else loadedContent">
+          <section class="stats-grid" aria-label="Loading dashboard statistics">
+            <article class="metric-card dual-metric skeleton-card" *ngFor="let i of [1,2,3]">
+              <span class="skeleton shimmer metric-icon-placeholder"></span>
+              <div class="dual-metric-body">
+                <span class="skeleton shimmer line-sm" style="width:50%"></span>
+                <div class="dual-metric-row">
+                  <div>
+                    <span class="skeleton shimmer line-md"></span>
+                    <span class="skeleton shimmer line-sm"></span>
+                  </div>
                 </div>
               </div>
-            </div>
-          </article>
+            </article>
 
-          <article class="metric-card skeleton-card">
-            <span class="skeleton shimmer metric-icon-placeholder"></span>
-            <div>
-              <span class="skeleton shimmer line-lg"></span>
-              <span class="skeleton shimmer line-sm"></span>
-            </div>
-          </article>
-        </section>
-
-        <section class="focus-card skeleton-focus" aria-label="Loading today's overview">
-          <div>
-            <span class="skeleton shimmer line-sm"></span>
-            <span class="skeleton shimmer line-xl"></span>
-          </div>
-          <div>
-            <span class="skeleton shimmer line-sm"></span>
-            <span class="skeleton shimmer line-lg"></span>
-          </div>
-        </section>
-
-        <section class="content-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Shortcuts</p>
-              <h2>Services</h2>
-            </div>
-          </div>
-
-          <div class="services-grid">
-            <div class="service-card" (click)="goToPage('add-patient')">
-              <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
-              <span class="service-name">Add patient</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('booking-status')">
-              <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
-              <span class="service-name">Booking status</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('reports')">
-              <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
-              <span class="service-name">Download reports</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('bookings')">
-              <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
-              <span class="service-name">Test list</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('samples')">
-              <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
-              <span class="service-name">Profile list</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('outsource')">
-              <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
-              <span class="service-name">Client history</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="content-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Recent activity</p>
-              <h2>Daily bookings</h2>
-            </div>
-            <p class="section-note">Last 5 days</p>
-          </div>
-
-          <div class="daily-list">
-            <article class="booking-card skeleton-card" *ngFor="let i of [1,2,3]">
-              <span class="skeleton shimmer line-md"></span>
-              <div class="booking-skeleton-main">
+            <article class="metric-card skeleton-card">
+              <span class="skeleton shimmer metric-icon-placeholder"></span>
+              <div>
                 <span class="skeleton shimmer line-lg"></span>
-
-              </div>
-              <div class="booking-skeleton-stats">
-                <span class="skeleton shimmer"></span>
-
-
+                <span class="skeleton shimmer line-sm"></span>
               </div>
             </article>
-          </div>
-        </section>
-      </ng-container>
+          </section>
 
-      <ng-template #loadedContent>
-        <section class="stats-grid" aria-label="Selected date statistics">
-          <article class="metric-card">
-            <span class="metric-icon patients"><ion-icon name="people-outline"></ion-icon></span>
+          <section class="focus-card skeleton-focus" aria-label="Loading today's overview">
             <div>
-              <strong>{{ totalPatients }}</strong>
-              <span>Patients</span>
+              <span class="skeleton shimmer line-sm"></span>
+              <span class="skeleton shimmer line-xl"></span>
             </div>
-          </article>
-
-          <article class="metric-card">
-            <span class="metric-icon samples"><ion-icon name="beaker-outline"></ion-icon></span>
             <div>
-              <strong>{{ totalSamples }}</strong>
-              <span>Samples</span>
+              <span class="skeleton shimmer line-sm"></span>
+              <span class="skeleton shimmer line-lg"></span>
             </div>
-          </article>
+          </section>
 
-          <article class="metric-card">
-            <span class="metric-icon reports"><ion-icon name="document-text-outline"></ion-icon></span>
-            <div>
-              <strong>{{ totalReports }}</strong>
-              <span>Reports</span>
+          <section class="content-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Shortcuts</p>
+                <h2>Services</h2>
+              </div>
             </div>
-          </article>
 
-          <article class="metric-card">
-            <span class="metric-icon bookings"><ion-icon name="calendar-outline"></ion-icon></span>
-            <div>
-              <strong>{{ totalBookings }}</strong>
-              <span>Bookings</span>
+            <div class="services-grid">
+              <div class="service-card" (click)="goToPage('add-patient')">
+                <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
+                <span class="service-name">Add patient</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('booking-status')">
+                <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
+                <span class="service-name">Booking status</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('reports')">
+                <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
+                <span class="service-name">Download reports</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('bookings')">
+                <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
+                <span class="service-name">Test list</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('samples')">
+                <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
+                <span class="service-name">Profile list</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('outsource')">
+                <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
+                <span class="service-name">Client history</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
             </div>
-          </article>
-        </section>
+          </section>
 
-        <!-- <section class="focus-card" aria-label="Today's booking highlight">
-          <div class="focus-primary">
-            <p>Today · {{ todayKeyLabel }}</p>
-            <div>
-              <strong>{{ todayBookingsCount }}</strong>
-              <span>Bookings today</span>
+          <section class="content-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Recent activity</p>
+                <h2>Daily bookings</h2>
+              </div>
+              <p class="section-note">Last 5 days</p>
             </div>
-          </div>
 
-          <div class="focus-divider" *ngIf="canViewCollection"></div>
+            <div class="daily-list">
+              <article class="booking-card skeleton-card" *ngFor="let i of [1,2,3]">
+                <span class="skeleton shimmer line-md"></span>
+                <div class="booking-skeleton-main">
+                  <span class="skeleton shimmer line-lg"></span>
 
-          <div class="focus-amount" *ngIf="canViewCollection">
-            <span>Collected today</span>
-            <strong>₹{{ todayAmount }}</strong>
-          </div>
+                </div>
+                <div class="booking-skeleton-stats">
+                  <span class="skeleton shimmer"></span>
 
-          <span class="focus-orb orb-one"></span>
-          <span class="focus-orb orb-two"></span>
-        </section> -->
-        <!-- <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
-          <div class="wm-clickable" (click)="openWalletModal()">
+
+                </div>
+              </article>
+            </div>
+          </section>
+        </ng-container>
+
+        <ng-template #loadedContent>
+          <section class="stats-grid" aria-label="Selected date statistics">
+            <article class="metric-card">
+              <span class="metric-icon patients"><ion-icon name="people-outline"></ion-icon></span>
+              <div>
+                <strong>{{ totalPatients }}</strong>
+                <span>Patients</span>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-icon samples"><ion-icon name="beaker-outline"></ion-icon></span>
+              <div>
+                <strong>{{ totalSamples }}</strong>
+                <span>Samples</span>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-icon reports"><ion-icon name="document-text-outline"></ion-icon></span>
+              <div>
+                <strong>{{ totalReports }}</strong>
+                <span>Reports</span>
+              </div>
+            </article>
+
+            <article class="metric-card">
+              <span class="metric-icon bookings"><ion-icon name="calendar-outline"></ion-icon></span>
+              <div>
+                <strong>{{ totalBookings }}</strong>
+                <span>Bookings</span>
+              </div>
+            </article>
+          </section>
+
+          <!-- <section class="focus-card" aria-label="Today's booking highlight">
+            <div class="focus-primary">
+              <p>Today · {{ todayKeyLabel }}</p>
+              <div>
+                <strong>{{ todayBookingsCount }}</strong>
+                <span>Bookings today</span>
+              </div>
+            </div>
+
+            <div class="focus-divider" *ngIf="canViewCollection"></div>
+
+            <div class="focus-amount" *ngIf="canViewCollection">
+              <span>Collected today</span>
+              <strong>₹{{ todayAmount }}</strong>
+            </div>
+
+            <span class="focus-orb orb-one"></span>
+            <span class="focus-orb orb-two"></span>
+          </section> -->
+          <!-- <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
+            <div class="wm-clickable" (click)="openWalletModal()">
+              <span class="wm-icon-badge">
+                <ion-icon name="wallet-outline"></ion-icon>
+              </span>
+              <div class="wm-info">
+                <span class="wm-label">Balance</span>
+                <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+              </div>
+            </div>
+
+            <button type="button" class="wm-add-btn" (click)="openAddFundsModal()">
+              <ion-icon name="add-circle-outline"></ion-icon>
+            </button>
+
+            <span class="wallet-orb wm-orb-one"></span>
+            <span class="wallet-orb wm-orb-two"></span>
+          </div> -->
+          <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
             <span class="wm-icon-badge">
               <ion-icon name="wallet-outline"></ion-icon>
             </span>
+
             <div class="wm-info">
               <span class="wm-label">Balance</span>
               <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
             </div>
+
+            <button type="button" class="wm-add-btn" (click)="openWalletModal()">
+              <ion-icon name="add-circle-outline"></ion-icon>
+            </button>
+
+            <span class="wallet-orb wm-orb-one"></span>
+            <span class="wallet-orb wm-orb-two"></span>
           </div>
-
-          <button type="button" class="wm-add-btn" (click)="openAddFundsModal()">
-            <ion-icon name="add-circle-outline"></ion-icon>
-          </button>
-
-          <span class="wallet-orb wm-orb-one"></span>
-          <span class="wallet-orb wm-orb-two"></span>
-        </div> -->
-        <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
-          <span class="wm-icon-badge">
-            <ion-icon name="wallet-outline"></ion-icon>
-          </span>
-
-          <div class="wm-info">
-            <span class="wm-label">Balance</span>
-            <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
-          </div>
-
-          <button type="button" class="wm-add-btn" (click)="openWalletModal()">
-            <ion-icon name="add-circle-outline"></ion-icon>
-          </button>
-
-          <span class="wallet-orb wm-orb-one"></span>
-          <span class="wallet-orb wm-orb-two"></span>
-        </div>
-        <section class="content-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Shortcuts</p>
-              <h2>Services</h2>
-            </div>
-            <p class="section-note">Get things done</p>
-          </div>
-
-          <div class="services-grid">
-            <div class="service-card" (click)="goToPage('add-patient')">
-              <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
-              <span class="service-name">Add patient</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+          <section class="content-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Shortcuts</p>
+                <h2>Services</h2>
+              </div>
+              <p class="section-note">Get things done</p>
             </div>
 
-            <div class="service-card" (click)="goToPage('booking-status')">
-              <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
-              <span class="service-name">Booking status</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('reports')">
-              <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
-              <span class="service-name">Download reports</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('bookings')">
-              <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
-              <span class="service-name">Test list</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('samples')">
-              <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
-              <span class="service-name">Profile list</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('outsource')">
-              <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
-              <span class="service-name">Client history</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="content-section bookings-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Recent activity</p>
-              <h2>Daily bookings</h2>
-            </div>
-            <p class="section-note">Last 5 days</p>
-          </div>
-
-          <div class="daily-list">
-            <article class="booking-card" *ngFor="let item of dailyBookings"
-              [class.is-today]="item.dateKey === todayKey">
-              <div class="booking-card-head">
-                <div>
-                  <p>{{ item.date }}</p>
-                  <span *ngIf="item.dateKey === todayKey">Today</span>
-                </div>
-                <ion-icon name="calendar-outline"></ion-icon>
+            <div class="services-grid">
+              <div class="service-card" (click)="goToPage('add-patient')">
+                <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
+                <span class="service-name">Add patient</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
-              <div class="booking-overview">
-                <div>
-                  <strong>{{ item.bookings }}</strong>
-                  <span>Bookings</span>
-                </div>
-
-                <div *ngIf="canViewCollection">
-                  <strong>₹{{ item.amount }}</strong>
-                  <span>Amount</span>
-                </div>
+              <div class="service-card" (click)="goToPage('booking-status')">
+                <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
+                <span class="service-name">Booking status</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
               </div>
-              <app-stacked-bar [received]="item.received" [pending]="item.pending" [outSourced]="item.outSourced"
-                [rejected]="item.rejected" [total]="item.samples">
-              </app-stacked-bar>
 
-
-              <div class="booking-stat-grid">
-
-                <div>
-                  <strong>{{ item.samples }}</strong>
-                  <span>Samples</span>
-                </div>
-
-                <div class="received">
-                  <strong>{{ item.received }}/{{ item.samples }}</strong>
-                  <span>Received</span>
-                </div>
-
-                <div class="pending">
-                  <strong>{{ item.pending }}/{{ item.samples }}</strong>
-                  <span>Pending</span>
-                </div>
-
-                <div class="outsourced">
-                  <strong>{{ item.outSourced }}/{{ item.samples }}</strong>
-                  <span>OutSourced</span>
-                </div>
-
-                <div class="rejected">
-                  <strong>{{ item.rejected }}/{{ item.samples }}</strong>
-                  <span>Rejected</span>
-                </div>
-
+              <div class="service-card" (click)="goToPage('reports')">
+                <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
+                <span class="service-name">Download reports</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
               </div>
-            </article>
 
-            <div class="empty-state" *ngIf="dailyBookings.length === 0">
-              <span><ion-icon name="calendar-outline"></ion-icon></span>
-              <h3>No bookings yet</h3>
-              <p>New bookings will show up here, date wise.</p>
+              <div class="service-card" (click)="goToPage('bookings')">
+                <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
+                <span class="service-name">Test list</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('samples')">
+                <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
+                <span class="service-name">Profile list</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
+
+              <div class="service-card" (click)="goToPage('outsource')">
+                <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
+                <span class="service-name">Client history</span>
+                <span class="service-arrow" aria-hidden="true">›</span>
+              </div>
             </div>
-          </div>
-        </section>
-      </ng-template>
-    </main>
-  </ion-content>
-</div>
+          </section>
+
+          <section class="content-section bookings-section">
+            <div class="section-heading">
+              <div>
+                <p class="eyebrow">Recent activity</p>
+                <h2>Daily bookings</h2>
+              </div>
+              <p class="section-note">Last 5 days</p>
+            </div>
+
+            <div class="daily-list">
+              <article class="booking-card" *ngFor="let item of dailyBookings"
+                [class.is-today]="item.dateKey === todayKey">
+                <div class="booking-card-head">
+                  <div>
+                    <p>{{ item.date }}</p>
+                    <span *ngIf="item.dateKey === todayKey">Today</span>
+                  </div>
+                  <ion-icon name="calendar-outline"></ion-icon>
+                </div>
+
+                <div class="booking-overview">
+                  <div>
+                    <strong>{{ item.bookings }}</strong>
+                    <span>Bookings</span>
+                  </div>
+
+                  <div *ngIf="canViewCollection">
+                    <strong>₹{{ item.amount }}</strong>
+                    <span>Amount</span>
+                  </div>
+                </div>
+                <app-stacked-bar [received]="item.received" [pending]="item.pending" [outSourced]="item.outSourced"
+                  [rejected]="item.rejected" [total]="item.samples">
+                </app-stacked-bar>
+
+
+                <div class="booking-stat-grid">
+
+                  <div>
+                    <strong>{{ item.samples }}</strong>
+                    <span>Samples</span>
+                  </div>
+
+                  <div class="received">
+                    <strong>{{ item.received }}/{{ item.samples }}</strong>
+                    <span>Received</span>
+                  </div>
+
+                  <div class="pending">
+                    <strong>{{ item.pending }}/{{ item.samples }}</strong>
+                    <span>Pending</span>
+                  </div>
+
+                  <div class="outsourced">
+                    <strong>{{ item.outSourced }}/{{ item.samples }}</strong>
+                    <span>OutSourced</span>
+                  </div>
+
+                  <div class="rejected">
+                    <strong>{{ item.rejected }}/{{ item.samples }}</strong>
+                    <span>Rejected</span>
+                  </div>
+
+                </div>
+              </article>
+
+              <div class="empty-state" *ngIf="dailyBookings.length === 0">
+                <span><ion-icon name="calendar-outline"></ion-icon></span>
+                <h3>No bookings yet</h3>
+                <p>New bookings will show up here, date wise.</p>
+              </div>
+            </div>
+          </section>
+        </ng-template>
+      </main>
+    </ion-content>
+  </div>

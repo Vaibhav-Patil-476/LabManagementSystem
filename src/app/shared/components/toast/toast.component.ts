@@ -1,6 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Toast, ToastService } from '../../services/toast';
+import { Toast, ToastService } from '../../../core/services/toast';
 
 @Component({
   selector: 'app-toast',

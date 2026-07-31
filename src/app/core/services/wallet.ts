@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { environment } from '../../environments/environment';
+import { environment } from '../../../environments/environment';
 import { AuthService } from './auth';
 
 @Injectable({
@@ -116,8 +116,13 @@ export class WalletService {
     return this.http.post(`${this.BASE_URL}/api/v1/order/approve-offline-order/${paymentId}`, null);
   }
 
-  // PUT /api/v1/order/update/{razorpayPaymentId}/{orderId}  (Verify wallet recharge payment)
-verifyWalletPayment(razorpayPaymentId: any, orderId: any): Observable<any> {
-  return this.http.put(`${this.BASE_URL}/api/v1/order/update/${razorpayPaymentId}/${orderId}`, []);
+// PUT /api/v1/order/update/{razorpayPaymentId}/{orderId}  (Verify wallet recharge payment)
+verifyWalletPayment(razorpayPaymentId: any, orderId: any, labId?: any, walletId?: any): Observable<any> {
+  const lId = labId ?? this.getLabId();
+  const body: any = { labId: lId };
+  if (walletId != null) {
+    body.walletId = walletId;
+  }
+  return this.http.put(`${this.BASE_URL}/api/v1/order/update/${razorpayPaymentId}/${orderId}`, body);
 }
 }
