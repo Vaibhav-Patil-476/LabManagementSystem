@@ -8,7 +8,8 @@ import { FormsModule } from "@angular/forms";
 import {
   IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
   IonProgressBar, IonModal, IonSpinner, IonSelect, IonSelectOption,
-  IonDatetime, IonButton, IonSearchbar, MenuController, AlertController
+  IonDatetime, IonButton, IonSearchbar, MenuController, AlertController,
+  LoadingController
 } from "@ionic/angular/standalone";
 
 import { MatDatepickerModule } from "@angular/material/datepicker";
@@ -51,8 +52,6 @@ type BarcodeRow = {
   canEditBarcode: boolean;
   saving: boolean;
 };
-
-type PaymentMethod = 'razorpay' | 'upi' | 'qr' | 'bank' | 'icici';
 
 const ROLE = {
   LAB_ADMIN: 'ROLE_LAB_ADMIN',
@@ -191,29 +190,13 @@ export class DashboardPage implements OnInit, OnDestroy {
   isAddFundsModalOpen = false;
   addFundsAmount: any = null;
   isAddFundsSaving = false;
-  showVerificationDialog = false;
 
   // Wallet modal filters
   walletFilterScope: 'user' | 'lab' = 'user'; // ⚠️ UI-only for now — no backend param wired for this yet
   walletPaymentModeFilter = '';
 
-  selectedPaymentMethod: PaymentMethod = 'razorpay';
-  transactionId = '';
-  transactionIdError = '';
-
-  // ⚠️ Static payment info — replace with real values or fetch from a
-  // lab-settings API if one becomes available.
-  upiId = '7776008079@ybl';
-  qrImageUrl = 'assets/images/payment-qr.png';
-  bankDetails = {
-    bankName: 'Bank of Maharashtra',
-    accountNumber: '60117071950',
-    ifsc: 'MAHB0000172'
-  };
-
-  private downloadingReportId: any = null;
+  downloadingReportId: any = null;
   printingId: any = null;
-  get downloadingReportIdValue() { return this.downloadingReportId; }
 
   // ============================================================
   // ROLE CONSTANTS
@@ -232,6 +215,8 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   private orderId: any;
 
+  private verifyLoading?: HTMLIonLoadingElement;
+
   constructor(
     private router: Router,
     private menuCtrl: MenuController,
@@ -242,6 +227,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     private roleService: RoleService,
     private ngZone: NgZone,
     private alertController: AlertController,
+    private loadingController: LoadingController,
     private walletService: WalletService,
     private cdr: ChangeDetectorRef,
   ) {
@@ -297,12 +283,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
   }
 
-  get isManualPaymentMethod(): boolean {
-    return this.selectedPaymentMethod === 'upi' ||
-      this.selectedPaymentMethod === 'qr' ||
-      this.selectedPaymentMethod === 'bank';
-  }
-
   get canEditPatient(): boolean {
     const role = this.authService.role;
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
@@ -338,8 +318,6 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   get canShowDownloadReport(): boolean {
     const role = this.authService?.role;
-    // Download-reports page cha ekच rule — fakt LAB_ADMIN / FRANCHISE
-    // la download allow, STAFF la kधीच nahi.
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
   }
 
@@ -400,6 +378,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.refreshSub?.unsubscribe();
     this.pollSub?.unsubscribe();
     this.walletPollSub?.unsubscribe();
+    this.verifyLoading?.dismiss();
   }
 
   ionViewWillEnter(): void {
@@ -595,7 +574,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.expandedSearchId = this.expandedSearchId === item.bookingId ? null : item.bookingId;
   }
 
-  /** Shared role-based visibility filter: STAFF sees only their own bookings, everyone else sees all. */
   private applyStaffOwnershipFilter(list: any[]): any[] {
     if (!this.isStaffRole) return list || [];
 
@@ -669,8 +647,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       ...b,
       title: raw.title,
       customerName: raw.customerName,
-      doctorName: raw.doctorName || 'self',
-      franchiseName: raw.franchiseName || 'SELF',
       bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : '',
       progress: `${completedCount}/${testCount}`,
       statusClass: testCount > 0 && completedCount === testCount ? 'completed' : 'pending',
@@ -815,7 +791,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private handleRemoveTestConfirmed(test: any): void {
-    // Newly added (not yet saved to DB) — pure local removal.
     if (test.isNewlyAdded) {
       this.selectedTests = this.selectedTests.filter((t: any) => t !== test);
       if (this.selectedBooking?.tests) {
@@ -826,7 +801,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Existing/saved test — must go through backend first.
     if (!test.testMappingId) {
       this.toastService.error('Error', 'Test ID missing. Cannot delete this test.');
       return;
@@ -1507,8 +1481,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-  /** Company-style dual stats — derived client-side from booking-status
-   *  data since no dedicated aggregate endpoint exists for this role. */
   private computeStaffDashboardStats(mappedBookings: any[]): void {
     let patientsCompleted = 0, patientsPending = 0;
     let samplesReceivedCount = 0, samplesMissingCount = 0, samplesCanceledCount = 0;
@@ -1657,8 +1629,11 @@ export class DashboardPage implements OnInit, OnDestroy {
       ...raw,
       tests,
       samples,
-      doctorName: raw.doctorName || raw.customDoctorName || 'self',
-      franchiseName: raw.franchiseName || raw.customFranchiseLab || 'SELF'
+      // FIX: custom name/lab must win over raw.doctorName/raw.franchiseName —
+      // matches booking-status.page.ts's mapBookingItem() priority order, so
+      // this page no longer reverts to the old doctor/lab name after refresh.
+      doctorName: raw.customDoctorName?.trim() || raw.doctorName || 'self',
+      franchiseName: raw.customFranchiseLab?.trim() || raw.franchiseName || 'SELF'
     };
   }
 
@@ -1740,7 +1715,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         .subscribe({
           next: (res: any) => {
             const content = res?.transaction?.content || [];
-            this.walletTransactions = content; // no spinner — silent refresh
+            this.walletTransactions = content;
             this.walletTotalRows = res?.transaction?.totalElements ?? content.length;
             this.cdr.detectChanges();
           },
@@ -1783,8 +1758,6 @@ export class DashboardPage implements OnInit, OnDestroy {
         this.walletTransactions = [...this.walletTransactions, ...content];
         this.walletTotalRows = res?.transaction?.totalElements ?? this.walletTransactions.length;
         this.isWalletLoading = false;
-
-        // Change detection नाहीतर verify झाल्यावर लगेच call झाला की UI update होत नाही.
         this.cdr.detectChanges();
       },
       error: (err) => {
@@ -1803,13 +1776,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   // ============================================================
-  // ADD FUNDS MODAL
+  // ADD FUNDS MODAL — ✅ SIMPLIFIED: only Razorpay, for both Admin
+  // and Franchise. No ICICI/UPI/QR/Bank Transfer, no manual flow.
   // ============================================================
   openAddFundsModal(): void {
     this.addFundsAmount = null;
-    this.selectedPaymentMethod = 'razorpay';
-    this.transactionId = '';
-    this.transactionIdError = '';
     this.isAddFundsModalOpen = true;
   }
 
@@ -1817,59 +1788,36 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.isAddFundsModalOpen = false;
   }
 
-  selectPaymentMethod(method: PaymentMethod): void {
-    this.selectedPaymentMethod = method;
-    this.transactionId = '';
-    this.transactionIdError = '';
-  }
-
   submitAddFunds(): void {
     if (!this.addFundsAmount || Number(this.addFundsAmount) <= 0) {
       this.toastService.warning('Warning', 'Please enter a valid amount');
       return;
     }
-
-    if (this.isManualPaymentMethod) {
-      if (!this.transactionId?.trim()) {
-        this.transactionIdError = 'Transaction Id is required';
-        return;
-      }
-      this.transactionIdError = '';
-      this.submitManualAddFunds();
-    } else {
-      this.submitOnlineAddFunds();
-    }
+    this.confirmAddFunds();
   }
 
-  /** UPI / QR / Bank — manual submission, goes for admin approval via approve-offline-order later. */
-  private submitManualAddFunds(): void {
-    this.isAddFundsSaving = true;
+  /** Amount confirm करणारा premium Yes/No popup — Yes दाबल्यावर
+   *  थेट Razorpay flow सुरू होतो, No दाबलं तर Add Funds modal वरच राहतो. */
+  private async confirmAddFunds(): Promise<void> {
+    const amount = Number(this.addFundsAmount);
 
-    const payload = {
-      labId: this.authService.labId,
-      franchiseId: this.authService.franchiseId,
-      amount: Number(this.addFundsAmount),
-      paymentMode: this.selectedPaymentMethod,
-      transactionId: this.transactionId.trim(),
-      remark: `${this.selectedPaymentMethod.toUpperCase()} payment - Txn: ${this.transactionId.trim()}`
-    };
-
-    this.walletService.addFundsToLabWallet(payload).subscribe({
-      next: () => {
-        this.isAddFundsSaving = false;
-        this.toastService.success('Success', 'Payment submitted, pending approval');
-        this.closeAddFundsModal();
-        this.loadWallet();
-      },
-      error: (err) => {
-        this.isAddFundsSaving = false;
-        this.toastService.error('Error', err?.error?.message || 'Add funds fail zala');
-      }
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert payment-confirm-alert',
+      header: 'Confirm Payment',
+      message: `Add ₹${amount} via Razorpay?`,
+      buttons: [
+        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
+        {
+          text: 'Yes',
+          cssClass: 'alert-btn-confirm',
+          handler: () => this.submitOnlineAddFunds()
+        }
+      ]
     });
+
+    await alert.present();
   }
 
-  /** Razorpay / ICICI online recharge. Admin uses the dedicated
-   *  lab-recharge endpoint; Franchise uses the franchise order endpoint. */
   private submitOnlineAddFunds(): void {
     this.isAddFundsSaving = true;
 
@@ -1881,7 +1829,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       const payload: any = {
         totalAmount: finalAmount,
         gst: gstAmount,
-        pgName: this.selectedPaymentMethod === 'icici' ? 'icici' : 'razorpay',
+        pgName: 'razorpay',
         type: 'walletRecharge',
         walletId: this.wallet?.walletId,
         remark: 'Wallet recharge',
@@ -1970,25 +1918,30 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (Capacitor.isNativePlatform()) {
       try {
         const data: any = await Checkout.open(options);
-        this.ngZone.run(() => this.verifyWalletPayment(data.razorpay_payment_id, this.orderId));
+        this.ngZone.run(() => {
+          this.isAddFundsModalOpen = false;
+          this.verifyWalletPayment(data.razorpay_payment_id, this.orderId);
+        });
       } catch {
         this.ngZone.run(() => this.toastService.warning('Warning', 'Payment cancelled or failed'));
       }
       return;
     }
 
-    // Web checkout.js flow
     try {
       await this.ensureRazorpayScriptLoaded();
     } catch {
-      this.toastService.error('Error', 'Payment gateway load fail zale');
+      this.toastService.error('Error', 'Payment gateway load fale');
       return;
     }
 
     const webOptions: any = {
       ...options,
       handler: (response: any) => {
-        this.ngZone.run(() => this.verifyWalletPayment(response.razorpay_payment_id, this.orderId));
+        this.ngZone.run(() => {
+          this.isAddFundsModalOpen = false;
+          this.verifyWalletPayment(response.razorpay_payment_id, this.orderId);
+        });
       },
       modal: {
         ondismiss: () => {
@@ -2004,15 +1957,42 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // PAYMENT VERIFICATION
   // ============================================================
-  verifyWalletPayment(razorpayPaymentId: any, orderId: any, retryCount: number = 0): void {
+  async verifyWalletPayment(razorpayPaymentId: any, orderId: any): Promise<void> {
     const walletId = this.wallet?.walletId;
-    this.showVerificationDialog = true;
+
+    this.verifyLoading = await this.loadingController.create({
+      message: 'We are verifying your payment, please wait...',
+      spinner: 'crescent',
+      backdropDismiss: false,
+      cssClass: 'payment-verify-loading'
+    });
+    await this.verifyLoading.present();
+
+    let retryCount = 0;
 
     const attempt = () => {
       this.walletService.verifyWalletPayment(
         razorpayPaymentId, orderId, this.authService.labId, walletId
       ).subscribe({
-        next: (data: any) => this.handleVerifyResponse(data, razorpayPaymentId, orderId, retryCount, attempt),
+        next: (data: any) => {
+          const isPaid = this.isPaymentPaid(data);
+
+          if (isPaid) {
+            this.onPaymentVerified();
+            return;
+          }
+
+          retryCount++;
+          if (retryCount < PAYMENT_VERIFY_MAX_RETRIES) {
+            setTimeout(attempt, PAYMENT_VERIFY_RETRY_DELAY_MS);
+          } else {
+            this.dismissVerifyLoading();
+            this.isAddFundsModalOpen = false;
+            this.isWalletModalOpen = true;
+            this.toastService.error('Error', 'Payment verification failed, please contact support');
+            this.cdr.detectChanges();
+          }
+        },
         error: (err: any) => this.handleVerifyError(err, razorpayPaymentId)
       });
     };
@@ -2020,61 +2000,50 @@ export class DashboardPage implements OnInit, OnDestroy {
     setTimeout(attempt, PAYMENT_VERIFY_INITIAL_DELAY_MS);
   }
 
-  private handleVerifyResponse(
-    data: any, razorpayPaymentId: any, orderId: any, retryCount: number, retryFn: () => void
-  ): void {
-    const isPaid = data?.status === 'PAID' || data?.paymentDetails?.paymentStatus === 'success';
+  private dismissVerifyLoading(): void {
+    this.verifyLoading?.dismiss();
+    this.verifyLoading = undefined;
+  }
 
-    if (!isPaid) {
-      if (retryCount < PAYMENT_VERIFY_MAX_RETRIES) {
-        setTimeout(() => this.verifyWalletPayment(razorpayPaymentId, orderId, retryCount + 1), PAYMENT_VERIFY_RETRY_DELAY_MS);
-      } else {
-        this.showVerificationDialog = false;
-        this.toastService.error('Error', 'Payment verification failed, please contact support');
-      }
-      return;
-    }
+  private isPaymentPaid(data: any): boolean {
+    if (!data) return false;
+    return (
+      data.status === 'PAID' ||
+      data.status === 'SUCCESS' ||
+      data.paymentDetails?.paymentStatus === 'success' ||
+      data.paymentDetails?.status === 'PAID' ||
+      data.paymentStatus === 'success' ||
+      data.paid === true ||
+      data.success === true
+    );
+  }
 
-    const balanceBefore = this.wallet?.balance ?? 0;
+  private onPaymentVerified(): void {
+    this.dismissVerifyLoading();
+    this.isAddFundsModalOpen = false;
+    this.isWalletModalOpen = true;
+    this.toastService.success('Success', 'Wallet recharge successful');
+    this.cdr.detectChanges();
 
     this.walletService.getWallet(this.authService.labId, this.authService.franchiseId, 0, 1).subscribe({
       next: (walletRes: any) => {
-        const newBalance = walletRes?.balance ?? balanceBefore;
-
-        if (newBalance > balanceBefore) {
-          this.showVerificationDialog = false;
-          this.toastService.success('Success', 'Wallet recharge successful');
-          this.closeAddFundsModal();
-          this.wallet = walletRes;
-          this.cdr.detectChanges();
-
-          if (this.isWalletModalOpen) {
-            this.walletPage = 0;
-            this.walletTransactions = [];
-            this.loadWalletTransactions();
-          }
-        } else {
-          this.showVerificationDialog = false;
-          this.toastService.error(
-            'Error',
-            'Payment received but wallet not credited. Please contact support with Payment ID: ' + razorpayPaymentId
-          );
-          this.cdr.detectChanges();
-        }
+        const normalizedWallet = walletRes?.content ? { ...walletRes, ...(walletRes.content[0] || {}) } : walletRes;
+        this.wallet = normalizedWallet;
+        this.walletPage = 0;
+        this.walletTransactions = [];
+        this.loadWalletTransactions();
+        this.cdr.detectChanges();
       },
       error: () => {
-        this.showVerificationDialog = false;
-        this.toastService.error(
-          'Error',
-          'Could not verify wallet balance. Please contact support with Payment ID: ' + razorpayPaymentId
-        );
         this.cdr.detectChanges();
       }
     });
   }
 
   private handleVerifyError(err: any, razorpayPaymentId: any): void {
-    this.showVerificationDialog = false;
+    this.dismissVerifyLoading();
+    this.isAddFundsModalOpen = false;
+    this.isWalletModalOpen = true;
 
     if (err?.status === 401 || err?.status === 400) {
       this.toastService.error(
@@ -2085,6 +2054,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     } else {
       this.toastService.error('Error', err?.error?.message || 'Payment verification error');
     }
+
+    this.cdr.detectChanges();
   }
 
   // ============================================================

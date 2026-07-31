@@ -45,7 +45,7 @@ export interface ReportBookingRow {
   reportId?: number;
   remark?: string;
   file?: string;
-  bucket?: ReportTabKey;   // 👈 add kara
+  bucket?: ReportTabKey;
 }
 
 @Component({
@@ -75,8 +75,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     { key: 'CANCEL', label: 'Cancel', badgeClass: 'badge-cancel' },
   ];
 
-
-
   activeTab: ReportTabKey = 'COMPLETE';
   fromDate: string = this.todayIso();
   toDate: string = this.todayIso();
@@ -92,6 +90,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   hasMore = false;
   totalBookingsFromServer = 0;
   expandedId: number | string | null = null;
+
   // ---------- Lab typeahead + add-lab modal ----------
   franchiseLabs: any[] = [];
   labSearchTerm = '';
@@ -131,7 +130,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     private toast: ToastService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-
   ) {
     addIcons({
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
@@ -142,11 +140,28 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- lifecycle ----------
-  ngOnInit() {
+  ngOnInit(): void {
     this.loadFilterFranchises();
   }
 
-  ngOnDestroy() {
+  /*
+   * Ionic caches pages instead of destroying them, so ngOnInit() only
+   * runs once. Without this hook, editing a patient/booking status
+   * elsewhere and coming back to this tab kept showing stale data
+   * (unlike Dashboard / Booking Status, which already refresh on
+   * re-entry). ionViewWillEnter() fires every time this page becomes
+   * active again, so we re-fetch fresh data from the server here too.
+   */
+  ionViewWillEnter(): void {
+    if (this.isSearchMode) {
+      this.hasSearchLoaded = false;
+      this.runSearch();
+    } else {
+      this.loadData();
+    }
+  }
+
+  ngOnDestroy(): void {
     if (this.searchDebounceTimer) {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
@@ -196,7 +211,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
          * =========================================================
          * FRANCHISE / FRANCHISE STAFF
          * =========================================================
-         * स्वतःच्या franchise वरच filter locked राहील.
+         * Franchise filter stays locked to the user's own franchise.
          */
         if (isFranchiseUser) {
 
@@ -226,8 +241,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
            * =========================================================
            * LAB ADMIN / STAFF
            * =========================================================
-           * All Franchises initially.
-           * User franchise search करून specific franchise select करू शकतो.
+           * Starts on "All Franchises"; user can search and select
+           * a specific franchise afterwards.
            */
         } else if (canSearchAllFranchises) {
 
@@ -269,7 +284,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       })
     });
   }
-  onFranchiseChange(id: any) {
+
+  onFranchiseChange(id: any): void {
     this.franchiseId = id;
     if (this.isSearchMode) this.runSearch();
     else this.loadData();
@@ -286,17 +302,17 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return this.formatDateForInput(d);
   }
 
-  openDateRangePicker() {
+  openDateRangePicker(): void {
     this.rangeStart = this.toDateObj(this.fromDate);
     this.rangeEnd = this.toDateObj(this.toDate);
     this.rangePicker?.open();
   }
 
-  onRangeStartChange(event: any) {
+  onRangeStartChange(event: any): void {
     this.rangeStart = event?.value || null;
   }
 
-  onRangeEndChange(event: any) {
+  onRangeEndChange(event: any): void {
     this.rangeEnd = event?.value || null;
     if (this.rangeStart && this.rangeEnd) {
       this.fromDate = this.toDateStr(this.rangeStart);
@@ -305,13 +321,13 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
   }
 
-  onDateRangeChange() {
+  onDateRangeChange(): void {
     if (this.isSearchMode) return;
     this.loadData();
   }
 
   // ---------- quick search ----------
-  onQuickSearchChange() {
+  onQuickSearchChange(): void {
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => {
       if (this.isSearchMode) {
@@ -346,13 +362,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
             rows = rows.filter(r => r.createdBy === this.authService.userId);
           }
 
-          const seenIds = new Set<string>();
-          this.searchDataset = rows.filter(r => {
-            const key = String(r.bookingId);
-            if (seenIds.has(key)) return false;
-            seenIds.add(key);
-            return true;
-          });
+          this.searchDataset = this.dedupeByBookingId(rows);
           this.hasSearchLoaded = true;
           this.applySearchFilter();
           this.isLoading = false;
@@ -394,7 +404,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.autoSwitchTab();
   }
 
-  private autoSwitchTab() {
+  private autoSwitchTab(): void {
     if (this.autoTabSwitched) return;
 
     const order: ReportTabKey[] = ['ALL', 'COMPLETE', 'CLINICAL', 'PENDING', 'SNR', 'CANCEL'];
@@ -409,7 +419,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- data loading ----------
-  loadData() {
+  loadData(): void {
     this.hasSearchLoaded = false;
     this.searchDataset = [];
     this.filteredDataset = [];
@@ -421,7 +431,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.fetchPage();
   }
 
-  loadMore() {
+  loadMore(): void {
     if (!this.hasMore || this.isLoadingMore) return;
     this.currentPage++;
     this.fetchPage(true);
@@ -431,7 +441,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.loadMore();
   }
 
-  private fetchPage(isLoadMore: boolean = false) {
+  private fetchPage(isLoadMore: boolean = false): void {
     if (isLoadMore) this.isLoadingMore = true; else this.isLoading = true;
 
     const labId = this.authService.labId;
@@ -450,13 +460,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
         }
 
         const merged = isLoadMore ? [...this.bookings, ...rows] : rows;
-        const seenIds = new Set<string>();
-        this.bookings = merged.filter(r => {
-          const key = String(r.bookingId);
-          if (seenIds.has(key)) return false;
-          seenIds.add(key);
-          return true;
-        });
+        this.bookings = this.dedupeByBookingId(merged);
+
         this.totalBookingsFromServer = res?.totalElements ?? res?.totalCount ?? this.bookings.length;
         this.hasMore = this.bookings.length < this.totalBookingsFromServer;
         this.isLoading = false;
@@ -473,12 +478,24 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       }
     });
   }
+
+  /** De-duplicates rows by bookingId, keeping the first occurrence of each. */
+  private dedupeByBookingId<T extends { bookingId: number | string }>(rows: T[]): T[] {
+    const seenIds = new Set<string>();
+    return rows.filter(r => {
+      const key = String(r.bookingId);
+      if (seenIds.has(key)) return false;
+      seenIds.add(key);
+      return true;
+    });
+  }
+
   private testMatchesTab(status: string | undefined, tabKey: ReportTabKey): boolean {
-    const s = (status || 'snr').toLowerCase();
+    const s = this.normalizeStatus(status, 'snr');
 
     switch (tabKey) {
       case 'COMPLETE':
-        return s.includes('complete') || s.includes('ready');
+        return this.isCompleteOrReady(s);
       case 'SNR':
         return s === 'snr';
       case 'CANCEL':
@@ -486,12 +503,12 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       case 'CLINICAL':
         return s.includes('clinical');
       case 'PARTIALLY_COMPLETE':
-        // "Partially complete" ha booking-level concept ahe (test-level nahi),
-        // tyामुळे ha tab आता egzакt match करत नाही — 'pending' madhe merge kela.
+        // "Partially complete" is a booking-level concept, not test-level,
+        // so this tab has no exact per-test match — it's merged into 'PENDING'.
         return false;
       case 'PENDING':
         return !(
-          s.includes('complete') || s.includes('ready') ||
+          this.isCompleteOrReady(s) ||
           s === 'snr' || s === 'cancel' || s === 'cancelled' ||
           s.includes('clinical')
         );
@@ -499,8 +516,9 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
         return false;
     }
   }
+
   // ---------- mapping ----------
-  private mapToRow(raw: any): ReportBookingRow {
+private mapToRow(raw: any): ReportBookingRow {
     const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
 
     const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
@@ -529,8 +547,9 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       barcodes.push(sampleType ? `${barcode} - ${sampleType}` : barcode);
     });
 
-    const doctorName = raw.doctorName || raw.doctor?.doctor_name || 'self';
-    const franchiseName = raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
+  
+    const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
+    const franchiseName = raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
 
     return {
       bookingId: raw.bookingId,
@@ -550,27 +569,26 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       bucket: this.deriveBucket(tests)
     };
   }
-
   private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
     if (tests.length === 0) return 'PENDING';
 
-    const statuses = tests.map(t => (t.status || '').toLowerCase());
+    const statuses = tests.map(t => this.normalizeStatus(t.status));
 
-    if (statuses.every(s => s.includes('complete') || s.includes('ready'))) return 'COMPLETE';
+    if (statuses.every(s => this.isCompleteOrReady(s))) return 'COMPLETE';
     if (statuses.some(s => s === 'snr')) return 'SNR';
     if (statuses.some(s => s.includes('clinical'))) return 'CLINICAL';
-    if (statuses.some(s => s.includes('complete') || s.includes('ready'))) return 'PARTIALLY_COMPLETE';
+    if (statuses.some(s => this.isCompleteOrReady(s))) return 'PARTIALLY_COMPLETE';
     return 'PENDING';
   }
 
   // ---------- tabs / rows ----------
-  setTab(tab: ReportTabKey) {
+  setTab(tab: ReportTabKey): void {
     this.activeTab = tab;
     this.autoTabSwitched = true;
     this.selectedIds.clear();
   }
 
-  toggleExpand(item: ReportBookingRow) {
+  toggleExpand(item: ReportBookingRow): void {
     this.expandedId = this.expandedId === item.bookingId ? null : item.bookingId;
   }
 
@@ -590,7 +608,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return this.isSearchMode ? this.filteredDataset.length : this.totalBookingsFromServer;
   }
 
-  get bucketCount() {
+  get bucketCount(): Record<ReportTabKey, number> {
     const counts: Record<ReportTabKey, number> = {
       ALL: 0, COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0, CANCEL: 0
     };
@@ -613,23 +631,22 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
   reportsFraction(item: ReportBookingRow): string {
     const total = item.tests.length;
-    const done = item.tests.filter(t =>
-      (t.status || '').toLowerCase().includes('complete') || (t.status || '').toLowerCase().includes('ready')
-    ).length;
+    const done = item.tests.filter(t => this.isCompleteOrReady(this.normalizeStatus(t.status))).length;
     return `${done}/${total}`;
   }
 
   reportsComplete(item: ReportBookingRow): boolean {
     return item.bucket === 'COMPLETE';
   }
+
   testStatusClass(status?: string): string {
-    const s = (status || 'snr').toLowerCase();
+    const s = this.normalizeStatus(status, 'snr');
 
     if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
     if (s === 'snr') return 'badge-snr';
     if (s.includes('clinical')) return 'badge-clinical';
     if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
-    if (s.includes('complete') || s.includes('ready')) return 'badge-ready';
+    if (this.isCompleteOrReady(s)) return 'badge-ready';
     if (
       s.includes('process') ||
       s.includes('outsource') ||
@@ -640,13 +657,13 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   testStatusLabel(status?: string): string {
-    const s = (status || 'snr').toLowerCase();
+    const s = this.normalizeStatus(status, 'snr');
 
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
     if (s === 'snr') return 'SNR';
     if (s.includes('clinical')) return 'CLINICAL';
     if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
-    if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
+    if (this.isCompleteOrReady(s)) return 'COMPLETE';
     if (
       s.includes('process') ||
       s.includes('outsource') ||
@@ -655,13 +672,22 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
     return 'PENDING';
   }
+
   getTestCountStatusClass(item: ReportBookingRow): string {
     const total = item.tests.length;
     if (total === 0) return 'pending';
-    const done = item.tests.filter(t =>
-      (t.status || '').toLowerCase().includes('complete') || (t.status || '').toLowerCase().includes('ready')
-    ).length;
+    const done = item.tests.filter(t => this.isCompleteOrReady(this.normalizeStatus(t.status))).length;
     return done === total ? 'completed' : 'pending';
+  }
+
+  /** Lower-cases a status string, falling back to `fallback` (default '') when empty/undefined. */
+  private normalizeStatus(status: string | undefined, fallback: string = ''): string {
+    return (status || fallback).toLowerCase();
+  }
+
+  /** True when an already-normalized (lower-cased) status string represents a completed/ready test. */
+  private isCompleteOrReady(normalizedStatus: string): boolean {
+    return normalizedStatus.includes('complete') || normalizedStatus.includes('ready');
   }
 
   // ---------- role gates ----------
@@ -674,7 +700,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return this.selectedIds.has(String(item.bookingId));
   }
 
-  toggleSelect(item: ReportBookingRow, checked: boolean) {
+  toggleSelect(item: ReportBookingRow, checked: boolean): void {
     if (!this.canShowDownloadControls) return;
     const id = String(item.bookingId);
     if (checked) this.selectedIds.add(id);
@@ -686,7 +712,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- download ----------
-  async downloadSelected() {
+  async downloadSelected(): Promise<void> {
     if (!this.canShowDownloadControls) {
       this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
       return;
@@ -721,23 +747,22 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }
   }
 
-  onFranchiseBlur() {
-    // ✅ Delay deऊन blur close kार — jेणेकरून dropdown item cha click
-    // (jो blur peksha थोडा नंतर fire होतो) आधी process होईल,
-    // ani मगच dropdown बंद होईल.
+  onFranchiseBlur(): void {
+    // Delay closing the dropdown so a click on a dropdown item
+    // (which fires slightly after blur) is processed first.
     setTimeout(() => {
       this.showFranchiseDropdown = false;
     }, 200);
   }
 
-  onFranchiseSearch() {
+  onFranchiseSearch(): void {
     const q = this.franchiseSearchTerm.trim().toLowerCase();
 
     if (!q) {
       this.filteredFranchiseList = [];
       this.showFranchiseDropdown = false;
-      // text clear zala tari selected franchise tashich rahil,
-      // jopryant user explicitly clear (X icon) dabat nahi.
+      // Clearing the text keeps the currently selected franchise intact,
+      // until the user explicitly clears it via the X icon.
       return;
     }
 
@@ -747,7 +772,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.showFranchiseDropdown = true;
   }
 
-  selectFranchise(f: any) {
+  selectFranchise(f: any): void {
     const franchiseId = f?.franchiseId ?? f?.id ?? null;
     if (franchiseId === null || franchiseId === undefined || Number(franchiseId) <= 0) {
       return;
@@ -758,10 +783,11 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.filteredFranchiseList = [];
     this.onFranchiseChange(Number(franchiseId));
   }
-  clearFranchise() {
+
+  clearFranchise(): void {
     const role = this.authService?.role;
     if (role === 'ROLE_FRANCHISE' || role === 'ROLE_FRANCHISE_STAFF') {
-      // Franchise user cannot clear their own franchise filter
+      // Franchise users cannot clear their own franchise filter.
       const currentFranchiseId = this.authService?.franchiseId;
       const currentFranchiseName = this.authService?.franchiseName;
       this.franchiseId = currentFranchiseId ? Number(currentFranchiseId) : null;

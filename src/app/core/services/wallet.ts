@@ -67,7 +67,7 @@ export class WalletService {
 
   url = url.replace(/&$/, '');
 
-  console.log('FINAL WALLET API URL:', url);
+
 
   return this.http.get(url);
 }

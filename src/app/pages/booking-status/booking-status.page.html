@@ -624,8 +624,8 @@
 
 
 
-                <!-- REF DOCTOR -->
-                <div class="doctor-lab-row">
+                <!-- <div class="doctor-lab-row">
+
                   <div class="summary-field doctor-search-field">
                     <label>Ref. Doctor</label>
                     <div class="doctor-input-wrapper">
@@ -640,7 +640,7 @@
                     </div>
 
 
-                    <!-- DOCTOR SUGGESTIONS -->
+                
                     <div class="test-suggestions overlay-dropdown doctor-dropdown"
                       *ngIf="showDoctorSuggestions && filteredDoctors.length > 0">
 
@@ -652,6 +652,41 @@
                         </span>
 
                       </div>
+
+                    </div>
+
+                  </div>
+                
+                  <div class="summary-field">
+                    <label>Custom Doctor Name</label>
+                    <input type="text" [(ngModel)]="editPatientData.customDoctorName"
+                      placeholder="Enter custom doctor name">
+                  </div>
+
+               
+                  <div class="summary-field lab-search-field" style="position: relative;">
+                    <label>Custom Lab Name</label>
+                    <input type="text" [(ngModel)]="customLabSearch" (ngModelChange)="searchCustomLabInput()"
+                      placeholder="Enter custom lab name" autocomplete="off">
+                    <div class="test-suggestions overlay-dropdown"
+                      *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
+                      <div class="suggestion-item" *ngFor="let lab of filteredCustomLabs"
+                        (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
+                        <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
+                            *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
+                      </div>
+                    </div>
+                  </div>
+                </div> -->
+
+                <!-- REF DOCTOR -->
+                <div class="doctor-lab-row">
+                  <div class="summary-field doctor-search-field">
+                    <label>Ref. Doctor</label>
+                    <div class="doctor-input-wrapper">
+
+                      <input type="text" [ngModel]="doctorSearch"
+                        placeholder="Search doctor name" autocomplete="off" readonly>
 
                     </div>
 
