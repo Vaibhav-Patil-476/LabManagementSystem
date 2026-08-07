@@ -10,7 +10,7 @@ import { AuthService } from './auth';
 export class LabApiService {
 
   private readonly BASE_URL = environment.BASE_URL;
-private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
+  private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
   constructor(private http: HttpClient, private authService: AuthService) { }
 
   private getLabId(): number {
@@ -22,11 +22,18 @@ private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
       `${this.BASE_URL}/api/v1/lab/booking/patient/last-booking/${this.getLabId()}`
     );
   }
-  
 
-  getTests(): Observable<any[]> {
+
+  getTests(franchiseId?: number | string): Observable<any[]> {
+    let params = new HttpParams();
+
+    if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+      params = params.set('franchiseId', franchiseId.toString());
+    }
+
     return this.http.get<any[]>(
-      `${this.BASE_URL}/api/v1/lab/report-master/tests/t/${this.getLabId()}`
+      `${this.BASE_URL}/api/v1/lab/report-master/tests/t/${this.getLabId()}`,
+      { params }
     );
   }
 
@@ -36,115 +43,115 @@ private readonly billUrl = 'https://pdf.hypatholab.in/bill-pdf';
     );
   }
 
-createDoctor(payload: any): Observable<any> {
-  const formData = new FormData();
+  createDoctor(payload: any): Observable<any> {
+    const formData = new FormData();
 
-  formData.append(
-    'type',
-    String(payload.type ?? true)
-  );
-
-  formData.append(
-    'doctor_name',
-    String(payload.doctor_name ?? '')
-  );
-
-  formData.append(
-    'mobileNumber',
-    String(payload.mobileNumber ?? '')
-  );
-
-  // IMPORTANT:
-  // Backend DoctorDto.getEmail() null होऊ नये म्हणून
-  // email field नेहमी पाठवत आहोत.
-  formData.append(
-    'email',
-    String(payload.email ?? '')
-  );
-
-  formData.append(
-    'departmentId',
-    String(payload.departmentId ?? 1)
-  );
-
-  formData.append(
-    'address',
-    String(payload.address ?? '')
-  );
-
-  formData.append(
-    'signature',
-    String(payload.signature ?? '')
-  );
-
-  formData.append(
-    'username',
-    String(payload.username ?? '')
-  );
-
-  formData.append(
-    'password',
-    String(payload.password ?? '')
-  );
-
-  // IMPORTANT:
-  // Empty date_of_birth पाठवू नका.
-  // Backend ला java.util.Date अपेक्षित आहे.
-  if (payload.date_of_birth) {
     formData.append(
-      'date_of_birth',
-      String(payload.date_of_birth)
+      'type',
+      String(payload.type ?? true)
+    );
+
+    formData.append(
+      'doctor_name',
+      String(payload.doctor_name ?? '')
+    );
+
+    formData.append(
+      'mobileNumber',
+      String(payload.mobileNumber ?? '')
+    );
+
+    // IMPORTANT:
+    // Backend DoctorDto.getEmail() null होऊ नये म्हणून
+    // email field नेहमी पाठवत आहोत.
+    formData.append(
+      'email',
+      String(payload.email ?? '')
+    );
+
+    formData.append(
+      'departmentId',
+      String(payload.departmentId ?? 1)
+    );
+
+    formData.append(
+      'address',
+      String(payload.address ?? '')
+    );
+
+    formData.append(
+      'signature',
+      String(payload.signature ?? '')
+    );
+
+    formData.append(
+      'username',
+      String(payload.username ?? '')
+    );
+
+    formData.append(
+      'password',
+      String(payload.password ?? '')
+    );
+
+    // IMPORTANT:
+    // Empty date_of_birth पाठवू नका.
+    // Backend ला java.util.Date अपेक्षित आहे.
+    if (payload.date_of_birth) {
+      formData.append(
+        'date_of_birth',
+        String(payload.date_of_birth)
+      );
+    }
+
+    formData.append(
+      'level',
+      String(payload.level ?? 1)
+    );
+
+    formData.append(
+      'degree',
+      String(payload.degree ?? '')
+    );
+
+    formData.append(
+      'isReferral',
+      String(payload.isReferral ?? true)
+    );
+
+    formData.append(
+      'labId',
+      String(
+        payload.labId ??
+        this.getCurrentLabId()
+      )
+    );
+
+    console.log(
+      'CREATE DOCTOR FORMDATA:',
+      {
+        type: payload.type ?? true,
+        doctor_name: payload.doctor_name ?? '',
+        mobileNumber: payload.mobileNumber ?? '',
+        email: payload.email ?? '',
+        departmentId: payload.departmentId ?? 1,
+        address: payload.address ?? '',
+        signature: payload.signature ?? '',
+        username: payload.username ?? '',
+        password: payload.password ?? '',
+        date_of_birth: payload.date_of_birth ?? '(not sent)',
+        level: payload.level ?? 1,
+        degree: payload.degree ?? '',
+        isReferral: payload.isReferral ?? true,
+        labId: payload.labId ?? this.getCurrentLabId()
+      }
+    );
+
+    return this.http.post(
+      `${this.BASE_URL}/api/v1/lab/doctor/create`,
+      formData
     );
   }
-
-  formData.append(
-    'level',
-    String(payload.level ?? 1)
-  );
-
-  formData.append(
-    'degree',
-    String(payload.degree ?? '')
-  );
-
-  formData.append(
-    'isReferral',
-    String(payload.isReferral ?? true)
-  );
-
-  formData.append(
-    'labId',
-    String(
-      payload.labId ??
-      this.getCurrentLabId()
-    )
-  );
-
-  console.log(
-    'CREATE DOCTOR FORMDATA:',
-    {
-      type: payload.type ?? true,
-      doctor_name: payload.doctor_name ?? '',
-      mobileNumber: payload.mobileNumber ?? '',
-      email: payload.email ?? '',
-      departmentId: payload.departmentId ?? 1,
-      address: payload.address ?? '',
-      signature: payload.signature ?? '',
-      username: payload.username ?? '',
-      password: payload.password ?? '',
-      date_of_birth: payload.date_of_birth ?? '(not sent)',
-      level: payload.level ?? 1,
-      degree: payload.degree ?? '',
-      isReferral: payload.isReferral ?? true,
-      labId: payload.labId ?? this.getCurrentLabId()
-    }
-  );
-
-  return this.http.post(
-    `${this.BASE_URL}/api/v1/lab/doctor/create`,
-    formData
-  );
-}
 
 
 
@@ -160,12 +167,12 @@ createDoctor(payload: any): Observable<any> {
     );
   }
 
-createBooking(body: any): Observable<any> {
-  return this.http.post<any>(
-    `${this.BASE_URL}/api/v1/lab/booking/patient/create`,
-    body
-  );
-}
+  createBooking(body: any): Observable<any> {
+    return this.http.post<any>(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/create`,
+      body
+    );
+  }
 
   getBooking(id: number): Observable<any> {
     return this.http.get(
@@ -210,12 +217,12 @@ createBooking(body: any): Observable<any> {
       { params }
     );
   }
-  
+
   deleteTestFromBooking(labId: number, bookingId: number, testMappingId: number): Observable<any> {
-  return this.http.delete(
-    `${this.BASE_URL}/api/v1/lab/booking/patient/deleteTest/${labId}/${bookingId}/${testMappingId}`
-  );
-}
+    return this.http.delete(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/deleteTest/${labId}/${bookingId}/${testMappingId}`
+    );
+  }
 
   // FAST endpoint — company app pramane server-side date + franchise
   // filtering karto, tyamule payload halka ani jalad yeto.
@@ -387,65 +394,65 @@ createBooking(body: any): Observable<any> {
     );
   }
 
-generatePdfReport(
-  bookingIds: number[],
-  options?: {
-    single?: boolean;
-    letterHead?: boolean;
-    fLetterHead?: boolean;
-    waterMark?: boolean;
+  generatePdfReport(
+    bookingIds: number[],
+    options?: {
+      single?: boolean;
+      letterHead?: boolean;
+      fLetterHead?: boolean;
+      waterMark?: boolean;
+    }
+  ): Observable<any> {
+    const labId = this.getLabId();
+    const token = this.authService.getToken(); // तुझ्या AuthService प्रमाणे adjust कर
+    const domain = environment.domain;
+
+    const bookingApi = `${this.BASE_URL}/api/v1/lab/booking/patient/get-bookings/${labId}?bookingIds=${bookingIds.join(',')}`;
+    const labSettingsApi = `${this.BASE_URL}/api/v1/lab/settings/${labId}`;
+
+    const payload = {
+      templateName: 'template1',
+      params: {
+        letterHead: options?.letterHead ?? true,
+        domain,
+        fLetterHead: options?.fLetterHead ?? false,
+        waterMark: options?.waterMark ?? false,
+        single: options?.single ?? (bookingIds.length === 1),
+        bookings: bookingIds,
+        bookingApi,
+        labSettingsApi,
+        token,
+        reportTestId: 'null',   // ✅ हे मिसिंग होतं — company code मध्ये हे नेहमी पाठवलं जातं
+        cancelTest: '0'          // ✅ हेही मिसिंग होतं
+      }
+    };
+
+    return this.http.post('https://pdf.hypatholab.in/simple-pdf', payload);
   }
-): Observable<any> {
-  const labId = this.getLabId();
-  const token = this.authService.getToken(); // तुझ्या AuthService प्रमाणे adjust कर
-  const domain = environment.domain;
-
-  const bookingApi = `${this.BASE_URL}/api/v1/lab/booking/patient/get-bookings/${labId}?bookingIds=${bookingIds.join(',')}`;
-  const labSettingsApi = `${this.BASE_URL}/api/v1/lab/settings/${labId}`;
-
-  const payload = {
-    templateName: 'template1',
-    params: {
-      letterHead: options?.letterHead ?? true,
-      domain,
-      fLetterHead: options?.fLetterHead ?? false,
-      waterMark: options?.waterMark ?? false,
-      single: options?.single ?? (bookingIds.length === 1),
-      bookings: bookingIds,
-      bookingApi,
-      labSettingsApi,
-      token,
-      reportTestId: 'null',   // ✅ हे मिसिंग होतं — company code मध्ये हे नेहमी पाठवलं जातं
-      cancelTest: '0'          // ✅ हेही मिसिंग होतं
-    }
-  };
-
-  return this.http.post('https://pdf.hypatholab.in/simple-pdf', payload);
-}
 
 
-printBill(payload: any): Observable<any> {
-  return this.http.post(this.billUrl, payload);
-}
+  printBill(payload: any): Observable<any> {
+    return this.http.post(this.billUrl, payload);
+  }
 
-buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmount: any = null): any {
-  const labId = this.getLabId();
-  const token = this.authService.getToken();
-  const domain = environment.domain;
+  buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmount: any = null): any {
+    const labId = this.getLabId();
+    const token = this.authService.getToken();
+    const domain = environment.domain;
 
-  return {
-    params: {
-      bookingApi: `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`,
-      labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
-      currentUserApi: `${this.BASE_URL}/auth/current-user`,   // ✅ AuthService वरून confirm केलेला exact URL
-      billType: billType,
-      token,
-      customBillAmount,
-      domain
-    }
-  };
-}
-// ✅ CONFIRMED Edit Barcode API — array payload accept karto
+    return {
+      params: {
+        bookingApi: `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`,
+        labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
+        currentUserApi: `${this.BASE_URL}/auth/current-user`,   // ✅ AuthService वरून confirm केलेला exact URL
+        billType: billType,
+        token,
+        customBillAmount,
+        domain
+      }
+    };
+  }
+  // ✅ CONFIRMED Edit Barcode API — array payload accept karto
   updateBarcode(bookingId: number, payload: any[]): Observable<any> {
     return this.http.put(
       `${this.BASE_URL}/api/v1/sampleaccession/updateBarcode/${bookingId}`,
@@ -454,12 +461,12 @@ buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmou
   }
 
   checkBarcode(payload: any): Observable<any> {
-  return this.http.post(
-    `${this.BASE_URL}/api/v1/lab/booking/patient/checkbarcode`,
-    payload
-  );
-}
-// ---------- Franchise Lab (custom lab / hospital) ----------
+    return this.http.post(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/checkbarcode`,
+      payload
+    );
+  }
+  // ---------- Franchise Lab (custom lab / hospital) ----------
   getFranchiseLabs(): Observable<any[]> {
     return this.http.get<any[]>(
       `${this.BASE_URL}/api/v1/lab/franchise/lab/`
@@ -480,9 +487,92 @@ buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmou
   }
 
   // ✅ Delete booking API — labId + bookingId path pattern (deleteTest sarkha)
-deleteBooking(labId: number, bookingId: number): Observable<any> {
-  return this.http.delete(
-    `${this.BASE_URL}/api/v1/lab/booking/patient/delete-booking/${bookingId}`
-  );
-}
+  deleteBooking(labId: number, bookingId: number): Observable<any> {
+    return this.http.delete(
+      `${this.BASE_URL}/api/v1/lab/booking/patient/delete-booking/${bookingId}`
+    );
+  }
+
+  // ============================================================
+  // PROFILE / PACKAGE (test-bundle) APIs
+  // ============================================================
+
+  // Lab/franchise sathi available packages cha list.
+  // franchiseId dilyas backend franchise-specific pricing/list return
+  // karto (jasa tests cha franchiseId based rate asto).
+  getProfiles(labId: number, franchiseId?: number | string): Observable<any> {
+    let params = new HttpParams();
+
+    if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+      params = params.set('franchiseId', franchiseId.toString());
+    }
+
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/report-master/profile/p/${labId}`,
+      { params }
+    );
+  }
+
+  // specific profileIds cha paged/filtered list (comma separated ids).
+  getProfilesByIds(labId: number, profileIds: (number | string)[]): Observable<any> {
+    const params = new HttpParams().set(
+      'profileIds',
+      profileIds.join(',')
+    );
+
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/report-master/profile/page/${labId}`,
+      { params }
+    );
+  }
+
+  // ============================================================
+  // ✅ NEW: Franchise-aware LIVE search (company web sarkha)
+  // ============================================================
+
+  // Test search — franchiseId नुसार assignedPrice (real B2B) परत देतो
+  searchTests(
+    labId: number,
+    franchiseId: any,
+    searchData: string,
+    page: number = 0,
+    size: number = 30
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('searchData', searchData)
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+      params = params.set('franchiseId', franchiseId.toString());
+    }
+
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/report-master/tests/page/${labId}`,
+      { params }
+    );
+  }
+
+  // Package/Profile search — franchiseId नुसार profileAssignedPrice परत देतो
+  searchProfiles(
+    labId: number,
+    franchiseId: any,
+    searchData: string,
+    page: number = 0,
+    size: number = 30
+  ): Observable<any> {
+    let params = new HttpParams()
+      .set('searchData', searchData)
+      .set('page', page.toString())
+      .set('size', size.toString());
+
+    if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+      params = params.set('franchiseId', franchiseId.toString());
+    }
+
+    return this.http.get(
+      `${this.BASE_URL}/api/v1/lab/report-master/profile/page/${labId}`,
+      { params }
+    );
+  }
 }

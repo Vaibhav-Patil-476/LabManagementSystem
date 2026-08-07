@@ -308,7 +308,8 @@
   .suggestion-item {
     display: flex;
     justify-content: space-between;
-    align-items: center;
+    align-items: flex-start;   
+    gap: 12px;     
     padding: 12px 16px;
     font-size: 13px;
     color: var(--text-secondary);
@@ -324,14 +325,30 @@
       color: var(--brand);
     }
 
+    
+    span:first-child {
+      flex: 1 1 auto;
+      min-width: 0;
+      line-height: 1.4;
+    }
+
     .sug-price {
+      flex: 0 0 auto;
+      white-space: nowrap;
+      text-align: right;
+      line-height: 1.4;
       font-weight: 700;
       color: var(--brand);
+    }
+
+   
+    .sug-mrp {
+      white-space: nowrap;
     }
   }
 }
 
-/* Overlay-positioned dropdowns (REF DOC / LAB-HOS) */
+
 .test-suggestions.overlay-dropdown {
   position: absolute;
   top: calc(100% + 4px);
@@ -340,7 +357,6 @@
   z-index: 50;
   margin-bottom: 0;
 }
-
 /* =====================
    TEST TABLE
 ===================== */
@@ -1287,4 +1303,49 @@ ion-modal {
 
 .add-btn ion-icon {
   font-size: 22px;
+}.sug-mrp {
+  color: var(--ion-color-medium);
+  font-size: 0.85em;
+  margin-left: 4px;
+}.premium-alert {
+  --backdrop-opacity: 0.6;
+
+  .alert-wrapper {
+    border-radius: 16px;
+    padding: 4px;
+  }
+
+  .alert-head {
+    padding-top: 20px;
+    padding-bottom: 4px;
+
+    h2 {
+      font-weight: 700;
+      color: #0f4c3a; // teal-ish dark, image 2 sarkha
+      font-size: 20px;
+    }
+  }
+
+  .alert-message {
+    color: #555;
+    font-size: 15px;
+  }
+
+  .alert-button-group {
+    padding: 12px 16px 16px;
+  }
+
+  .alert-btn-cancel {
+    color: #333 !important;
+    background: #f1f3f5;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+
+  .alert-btn-danger {
+    color: #fff !important;
+    background: #0f7a5f; // teal, image 2 cha "Yes" button color
+    border-radius: 10px;
+    font-weight: 600;
+  }
 }

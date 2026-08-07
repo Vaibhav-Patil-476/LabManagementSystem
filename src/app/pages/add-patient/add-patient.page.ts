@@ -224,6 +224,18 @@ export class AddPatientComponent {
   selectedSampleTests: any[] = [];
 
   // ============================================================
+  // PACKAGES / PROFILES (test bundles)
+  // ============================================================
+
+  allPackages: any[] = [];
+
+  filteredPackages: any[] = [];
+
+  packageSearch = '';
+
+  showPackageSuggestions = false;
+
+  // ============================================================
   // FILE
   // ============================================================
 
@@ -457,7 +469,11 @@ export class AddPatientComponent {
 
         this.loadTests();
 
+        this.loadPackages();
+
         this.loadLastPatient();
+        console.log('MY ROLE:', this.role);
+        console.log('RAW USER:', (this.authService.currentUserValue as any)?.raw);
       },
 
       error: (err) => {
@@ -466,6 +482,7 @@ export class AddPatientComponent {
           'CURRENT USER ERROR:',
           err
         );
+
 
         this.toastService.error(
           'Error',
@@ -2085,6 +2102,13 @@ export class AddPatientComponent {
       'SELECTED LAB:',
       lab
     );
+
+    this.loadTests();
+
+    // ✅ Collection center badalla ki current test/package search
+    // franchise-specific price sobat refresh vhaycha.
+    if (this.testSearch.trim()) this.searchTest();
+    if (this.packageSearch.trim()) this.searchPackage();
   }
 
   // ============================================================
@@ -2244,104 +2268,95 @@ export class AddPatientComponent {
 
   loadTests() {
 
-    this.labApi
-      .getTests()
-      .subscribe({
+    const franchiseId =
+      this.selectedLab?.franchiseId ??
+      this.selectedLab?.id ??
+      undefined;
 
-        next: (res: any) => {
+    this.labApi.getTests(franchiseId).subscribe({
+      next: (res: any) => {
+        const apiTests = res || [];
 
-          const apiTests =
-            res || [];
-
-          this.allTests =
-            (
-              Array.isArray(
-                apiTests
-              )
-                ? apiTests
-                : []
-            ).map(
-              (t: any) => ({
-
-                id:
-                  t.testId,
-
-                sampleId:
-                  t.sample_type,
-
-                name:
-                  t.test_name ||
-                  'Unnamed Test',
-
-                b2b:
-                  t.price2 ??
-                  0,
-
-                tat:
-                  t.tat ||
-                  'N/A',
-
-                mrp:
-                  t.test_price ??
-                  0,
-
-                dis:
-                  0,
-
-                fluid:
-                  t.sampleTypeName ||
-                  'N/A',
-
-                sampleType:
-                  t.sampleTypeName ||
-                  'OTHER',
-
-                color:
-                  t.sampleColor ||
-                  '#a855f7'
-              })
-            );
-        },
-
-        error: () => {
-
-          this.toastService.error(
-            'Error',
-            'Failed to load tests from server.'
-          );
-        }
-      });
+        this.allTests = (Array.isArray(apiTests) ? apiTests : []).map((t: any) => ({
+          id: t.testId,
+          sampleId: t.sample_type,
+          name: t.test_name || 'Unnamed Test',
+          b2b: t.price2 ?? 0,
+          tat: t.tat || 'N/A',
+          mrp: t.test_price ?? 0,
+          dis: 0,
+          fluid: t.sampleTypeName || 'N/A',
+          sampleType: t.sampleTypeName || 'OTHER',
+          color: t.sampleColor || '#a855f7'
+        }));
+      },
+      error: () => {
+        this.toastService.error('Error', 'Failed to load tests from server.');
+      }
+    });
   }
 
-  searchTest() {
+  private testSearchTimer: any = null;
 
-    if (
-      this.testSearch
-        .trim()
-        .length > 0
-    ) {
+  searchTest(): void {
+    const q = String(this.testSearch || '').trim();
 
-      this.filteredTests =
-        this.allTests.filter(
-          (t: any) =>
-            t.name
-              .toLowerCase()
-              .includes(
-                this.testSearch
-                  .toLowerCase()
-              )
-        );
-
-      this.showSuggestions =
-        true;
-
-    } else {
-
-      this.filteredTests = [];
-
-      this.showSuggestions =
-        false;
+    if (this.testSearchTimer) {
+      clearTimeout(this.testSearchTimer);
     }
+
+    if (!q) {
+      this.filteredTests = [];
+      this.showSuggestions = false;
+      return;
+    }
+
+    this.testSearchTimer = setTimeout(() => {
+
+      const labId = this.labApi.getCurrentLabId();
+
+      const franchiseId =
+        this.selectedLab?.franchiseId ??
+        this.selectedLab?.id ??
+        undefined;
+
+      this.labApi.searchTests(labId, franchiseId, q).subscribe({
+        next: (res: any) => {
+
+          const list = Array.isArray(res?.content) ? res.content : [];
+
+          this.filteredTests = list
+            .filter((t: any) =>
+              !this.selectedTests.some(
+                (s: any) => s.name === String(t.test_name || '').trim()
+              )
+            )
+            .map((t: any) => ({
+              id: t.testId,
+              sampleId: t.sample_type,
+              name: String(t.test_name || 'Unnamed Test').trim(),
+
+              b2b: this.isAdminRole
+                ? (t.price2 ?? 0)
+                : (t.assignedPrice ?? t.price2 ?? 0),
+
+              tat: t.tat || 'N/A',
+              mrp: t.test_price ?? 0,
+              dis: 0,
+              fluid: t.sampleTypeName || 'N/A',
+              sampleType: t.sampleTypeName || 'OTHER',
+              color: t.sampleColor || '#a855f7'
+            }));
+
+          this.showSuggestions = this.filteredTests.length > 0;
+        },
+        error: () => {
+          this.filteredTests = [];
+          this.showSuggestions = false;
+        }
+      });
+
+    }, 250);
   }
 
   addTest(
@@ -2405,6 +2420,230 @@ export class AddPatientComponent {
       false;
   }
 
+  // ============================================================
+  // PACKAGES / PROFILES (test bundles)
+  // ============================================================
+
+  loadPackages(): void {
+
+    const labId =
+      this.labApi.getCurrentLabId();
+
+    const franchiseId =
+      this.selectedLab?.franchiseId ??
+      this.selectedLab?.id ??
+      undefined;
+
+    this.labApi.getProfiles(labId, franchiseId).subscribe({
+
+      next: (res: any) => {
+
+        const list =
+          Array.isArray(res)
+            ? res
+            : (
+              res?.content ||
+              res?.data ||
+              []
+            );
+
+        this.allPackages =
+          Array.isArray(list)
+            ? list
+            : [];
+
+        console.log(
+          'LOADED PACKAGES:',
+          this.allPackages
+        );
+      },
+
+      error: (err: any) => {
+
+        console.error(
+          'LOAD PACKAGES ERROR:',
+          err
+        );
+
+        this.toastService.error(
+          'Error',
+          'Failed to load packages.'
+        );
+      }
+    });
+  }
+
+  private packageSearchTimer: any = null;
+
+  searchPackage(): void {
+    const q = String(this.packageSearch || '').trim();
+
+    if (this.packageSearchTimer) {
+      clearTimeout(this.packageSearchTimer);
+    }
+
+    if (!q) {
+      this.filteredPackages = [];
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    this.packageSearchTimer = setTimeout(() => {
+
+      const labId = this.labApi.getCurrentLabId();
+
+      const franchiseId =
+        this.selectedLab?.franchiseId ??
+        this.selectedLab?.id ??
+        undefined;
+
+      this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
+        next: (res: any) => {
+          this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
+          this.showPackageSuggestions = this.filteredPackages.length > 0;
+        },
+        error: () => {
+          this.filteredPackages = [];
+          this.showPackageSuggestions = false;
+        }
+      });
+
+    }, 250);
+  }
+  addPackage(pkg: any): void {
+
+    const packageTests: any[] =
+      pkg?.withTest ||
+      pkg?.tests ||
+      pkg?.testList ||
+      pkg?.profileTests ||
+      [];
+
+    // 👀 Debug: console madhe ha expand karun andarcha exact field
+    // name (testId / test_id / etc.) confirm kar — matched na
+    // zaleli tests khali 'PACKAGE TEST NOT MATCHED' warning deतील.
+    console.log(
+      'RAW withTest ARRAY:',
+      packageTests
+    );
+
+    if (!Array.isArray(packageTests) || packageTests.length === 0) {
+
+      this.toastService.warning(
+        'Empty Package',
+        'No tests found inside this package.'
+      );
+
+      this.packageSearch = '';
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    let addedCount = 0;
+
+    packageTests.forEach((pt: any) => {
+
+      // ✅ FIX: withTest cha andarcha item exact konta field name
+      // vaparto he confirm nahi (docx sample "{}" hota), tyamule
+      // sagle sambhavya key-names try kartoy — testId, test_id,
+      // masterTestId, id, tacha nested 'test' object.
+      const testId =
+        Number(
+          pt?.testId ??
+          pt?.test_id ??
+          pt?.masterTestId ??
+          pt?.testMasterId ??
+          pt?.test?.testId ??
+          pt?.test?.id ??
+          pt?.id ??
+          0
+        );
+
+      const test =
+        this.allTests.find(
+          (t: any) =>
+            Number(t.id) ===
+            testId
+        );
+
+      if (!test) {
+
+        console.warn(
+          'PACKAGE TEST NOT MATCHED IN allTests:',
+          pt
+        );
+
+        return;
+      }
+
+      const exists =
+        this.selectedTests.find(
+          (t: any) =>
+            t.name === test.name
+        );
+
+      if (exists) {
+        return;
+      }
+
+      this.selectedTests.push(
+        test
+      );
+
+      this.selectedSampleTests.push({
+
+        barcode: '',
+
+        sampleType:
+          test.sampleType,
+
+        testName:
+          test.name,
+
+        color:
+          test.color,
+
+        testId:
+          test.id,
+
+        sampleId:
+          test.sampleId
+      });
+
+      addedCount++;
+    });
+
+    this.calculateBilling();
+
+    const packageName =
+      String(
+        pkg?.profileName ||
+        pkg?.profile_name ||
+        pkg?.name ||
+        'Package'
+      );
+
+    if (addedCount > 0) {
+
+      this.toastService.success(
+        'Package Added',
+        `${addedCount} test(s) from "${packageName}" added.`
+      );
+
+    } else {
+
+      this.toastService.warning(
+        'Already Added',
+        `All tests from "${packageName}" already exist in bill.`
+      );
+    }
+
+    this.packageSearch = '';
+
+    this.showPackageSuggestions =
+      false;
+  }
+
   async removeTest(
     index: number
   ) {
@@ -2417,6 +2656,9 @@ export class AddPatientComponent {
     const alert =
       await this.alertController.create({
 
+        cssClass:
+          'premium-alert',
+
         header:
           'Remove Test',
 
@@ -2427,35 +2669,46 @@ export class AddPatientComponent {
 
           {
             text: 'No',
-            role: 'cancel'
+            role: 'cancel',
+            cssClass: 'alert-btn-cancel'
           },
 
           {
 
             text: 'Yes',
 
+            cssClass: 'alert-btn-danger',
+
             handler: () => {
 
-              this.selectedTests.splice(
-                index,
-                1
-              );
+              // ✅ FIX: AlertController buttons run OUTSIDE Angular's
+              // zone. Without ngZone.run(), splicing the array actually
+              // changes the data, but Angular never re-renders the
+              // view — so the row stays visible even though it's
+              // logically deleted. Wrapping forces change detection.
+              this.ngZone.run(() => {
 
-              this.selectedSampleTests =
-                this.selectedSampleTests
-                  .filter(
-                    (x: any) =>
-                      x.testName !==
-                      test.name
-                  );
+                this.selectedTests.splice(
+                  index,
+                  1
+                );
 
-              this.toastService.warning(
-                'Test Removed',
-                test.name +
-                ' removed from bill.'
-              );
+                this.selectedSampleTests =
+                  this.selectedSampleTests
+                    .filter(
+                      (x: any) =>
+                        x.testName !==
+                        test.name
+                    );
 
-              this.calculateBilling();
+                this.toastService.warning(
+                  'Test Removed',
+                  test.name +
+                  ' removed from bill.'
+                );
+
+                this.calculateBilling();
+              });
             }
           }
         ]
@@ -2466,6 +2719,11 @@ export class AddPatientComponent {
 
   getSubTotal() {
 
+    // ✅ FIX: Admin "Price"/Sub Total ha actual selling price (b2b)
+    // varun yayla hava, raw MRP (t.mrp) varun nahi. Company web
+    // (Admin login) cha "Price"/"Sub Total" column hach discounted
+    // rate (b2b) dakhavto, MRP nahi — tyamule apla app pan tech
+    // vaparto ahe ata.
     return this.selectedTests.reduce(
       (
         sum: number,
@@ -2473,7 +2731,7 @@ export class AddPatientComponent {
       ) =>
         sum +
         Number(
-          t?.mrp ||
+          t?.b2b ||
           0
         ),
       0
@@ -2742,6 +3000,15 @@ export class AddPatientComponent {
     this.filteredTests =
       [];
 
+    this.packageSearch =
+      '';
+
+    this.filteredPackages =
+      [];
+
+    this.showPackageSuggestions =
+      false;
+
     this.selectedFileName =
       '';
 
@@ -2851,6 +3118,15 @@ export class AddPatientComponent {
 
     this.filteredTests =
       [];
+
+    this.packageSearch =
+      '';
+
+    this.filteredPackages =
+      [];
+
+    this.showPackageSuggestions =
+      false;
 
     this.selectedFileName =
       '';
@@ -3011,7 +3287,13 @@ export class AddPatientComponent {
         0
       );
 
+      // ✅ FIX: t.b2b (API cha price2 field, actual selling price)
+      // sagalya pahile check karaycha — nahitar fallback chain
+      // seedha t?.mrp (raw MRP 400) var yeun padte, karan
+      // t?.price / t?.test_price he fields loadTests() madhe
+      // set hotach nahiyet.
       const testPrice = Number(
+        t?.b2b ??
         t?.price ??
         t?.test_price ??
         t?.mrp ??
@@ -3061,13 +3343,18 @@ export class AddPatientComponent {
         discount: Number(t?.discount || 0),
         tat: String(t?.tat ?? 'N/A'),
         testPrice,
-        dob: null,
-        height: null,
-        weight: null,
-        remark: null,
-        history: null,
-        fluid: null,
-        document: null,
+        // ✅ FIX: Company payload madhe he flags nehmi `false` astat
+        // (null nahi). Backend kadhi kadhi strict boolean check
+        // karto, tyamule null pathvne ऐवजी false pathvto ahot.
+        dob: false,
+        height: false,
+        weight: false,
+        remark: false,
+        history: false,
+        fluid: false,
+        document: false,
+        // drawnOnTime he company payload madhe pan null astach —
+        // te tasach thevla ahe.
         drawnOnTime: null
       };
     });
@@ -3234,6 +3521,14 @@ export class AddPatientComponent {
 
       tests
     };
+
+    // ✅ FIX: Company backend flat fields sobat ha stringified
+    // 'request' field pan expect karto — company web cha payload
+    // madhe ha field asto, apla madhe missing hota. Payload complete
+    // zalyavarach (sagle fields set zalyavar) generate karaycha, ani
+    // he sagle assignments/pushes zalya nantar shevatach karaycha
+    // jenekaruna string snapshot flat fields sarkhach rahil.
+    payload.request = JSON.stringify(payload);
 
     console.log(
       'SELECTED DOCTOR:',
@@ -3607,7 +3902,7 @@ export class AddPatientComponent {
               'cancel',
 
             cssClass:
-              'alert-btn-cancel'
+              'alert-button-cancel'
           },
 
           {
@@ -3616,7 +3911,7 @@ export class AddPatientComponent {
               'Yes',
 
             cssClass:
-              'alert-btn-danger',
+              'alert-button-danger',
 
             handler: () => {
 

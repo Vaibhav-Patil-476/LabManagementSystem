@@ -117,6 +117,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   rangeStart: Date | null = null;
   rangeEnd: Date | null = null;
 
+  packageSearchTerm = '';
+  filteredPackages: any[] = [];
+  showPackageSuggestions = false;
+  private packageSearchTimer: any = null;
   // ============================================================
   // GLOBAL SEARCH
   // ============================================================
@@ -325,7 +329,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   // DERIVED BILLING VALUES
   // ============================================================
   get subTotal(): number {
-    return this.selectedTests.reduce((sum, t) => sum + Number(t.testMrp || 0), 0);
+    return this.selectedTests.reduce((sum, t) => sum + Number(t.testPrice ?? t.testMrp ?? 0), 0);
   }
 
   get totalAmount(): number {
@@ -366,7 +370,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     }
 
     this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
-    this.loadAvailableTests();
 
     if (this.canViewWallet) {
       this.loadWallet();
@@ -756,13 +759,127 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   searchTestsInline(val: string): void {
     this.testSearchTerm = val ?? '';
-    const t = this.testSearchTerm.trim().toLowerCase();
-    if (!t) { this.filteredTests = []; return; }
+    const q = this.testSearchTerm.trim();
 
-    this.filteredTests = this.availableTests.filter(x =>
-      x.testName.toLowerCase().includes(t) &&
-      !this.selectedTests.some(s => s.testName === x.testName)
-    );
+    if (!q) {
+      this.filteredTests = [];
+      return;
+    }
+
+    const labId = this.labApi.getCurrentLabId();
+
+    // ✅ FIX: Ha booking konatya franchise cha ahe tyachyach franchiseId
+    // varun b2b price yeil — this.currentFranchiseId (Admin साठी नेहमी
+    // undefined असतो) kadhihi fallback mhanun vaparu naka, nahitar
+    // wrong/admin default price2 yeto, actual franchise-specific
+    // assignedPrice nahi. `??` वापरल्यास franchiseId = 0 astana pan te
+    // "defined" mhanun pakडलं जातं, mhanun explicit > 0 check kelela ahe.
+    const bookingFranchiseId = Number(this.selectedBooking?.franchiseId || 0);
+    const franchiseId = bookingFranchiseId > 0 ? bookingFranchiseId : undefined;
+
+    this.labApi.searchTests(labId, franchiseId, q).subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.content) ? res.content : [];
+
+        this.filteredTests = list
+          .filter((t: any) =>
+            !this.selectedTests.some((s: any) => s.testName === String(t.test_name || '').trim())
+          )
+          .map((t: any) => ({
+            testId: t.testId,
+            testName: String(t.test_name || 'Unnamed Test').trim(),
+            testMrp: t.test_price ?? 0,
+
+            // ✅ FIX: Admin la base rate (price2), Franchise/Staff la
+            // franchise-specific assignedPrice — add-patient sarkhach rule.
+            testPrice: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0)
+          }));
+      },
+      error: () => {
+        this.filteredTests = [];
+      }
+    });
+  }
+
+  searchPackagesInline(val: string): void {
+    this.packageSearchTerm = val ?? '';
+    const q = this.packageSearchTerm.trim();
+
+    if (this.packageSearchTimer) clearTimeout(this.packageSearchTimer);
+
+    if (!q) {
+      this.filteredPackages = [];
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    this.packageSearchTimer = setTimeout(() => {
+      const labId = this.labApi.getCurrentLabId();
+
+      // ✅ FIX: same as searchTestsInline — booking cha swतःचा franchiseId
+      // strict वापरा, this.currentFranchiseId कडे कधीही fallback नाही.
+      const bookingFranchiseId = Number(this.selectedBooking?.franchiseId || 0);
+      const franchiseId = bookingFranchiseId > 0 ? bookingFranchiseId : undefined;
+
+      this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
+        next: (res: any) => {
+          this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
+          this.showPackageSuggestions = this.filteredPackages.length > 0;
+        },
+        error: () => {
+          this.filteredPackages = [];
+          this.showPackageSuggestions = false;
+        }
+      });
+    }, 250);
+  }
+
+  addPackageInline(pkg: any): void {
+    const packageTests: any[] = pkg?.withTest || pkg?.tests || pkg?.testList || pkg?.profileTests || [];
+
+    if (!Array.isArray(packageTests) || packageTests.length === 0) {
+      this.toastService.warning('Empty Package', 'No tests found inside this package.');
+      this.packageSearchTerm = '';
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    let addedCount = 0;
+
+    packageTests.forEach((pt: any) => {
+      const testId = Number(pt?.testId ?? pt?.test_id ?? pt?.id ?? 0);
+      const testName = String(pt?.testName ?? pt?.test_name ?? '').trim();
+
+      if (!testId || !testName) return;
+      if (this.selectedTests.some((s: any) => s.testName === testName)) return;
+
+      this.selectedTests.push({
+        testId,
+        testName,
+        testMrp: pt.test_price ?? 0,
+
+        // ✅ FIX: searchTestsInline() sarkhach role-based rule ithe pan
+        // lagu keli — Admin la price2 (base rate) pahile, Franchise/Staff
+        // la assignedPrice pahile. Adhi role check nasल्यamule Admin
+        // sathihi assignedPrice (franchise-specific rate) yet hota.
+        testPrice: this.isAdminRole
+          ? (pt.price2 ?? pt.assignedPrice ?? 0)
+          : (pt.assignedPrice ?? pt.price2 ?? 0),
+        isNewlyAdded: true
+      });
+
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      this.toastService.success('Package Added', `${addedCount} test(s) added.`);
+    } else {
+      this.toastService.warning('Already Added', 'All tests from this package already exist.');
+    }
+
+    this.packageSearchTerm = '';
+    this.filteredPackages = [];
+    this.showPackageSuggestions = false;
   }
 
   addTestInline(test: any): void {
@@ -911,7 +1028,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-  private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
+private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
     const addTestBody: any = {
       bookingId,
       customerName: this.selectedBooking.customerName,
@@ -922,9 +1039,15 @@ export class DashboardPage implements OnInit, OnDestroy {
       tests: newTests.map(t => ({
         testId: t.testId,
         testName: t.testName,
-        testPrice: t.testMrp,
+        // ✅ FIX: b2b/billing price ata "testPrice" field madhe jato —
+        // adhi ithe t.testMrp (MRP) chukिने jat hota, tyamule Admin
+        // re-fetch nantar mapBooking() cha price2-fallback chain
+        // (price2 ?? testPrice ?? test_price) la MRP milत hota, b2b nahi.
+        testPrice: t.testPrice ?? t.testMrp,
+        // ✅ FIX: MRP ata "test_price" field madhe — naming consistent
+        // keli loadAvailableTests()/mapBooking() varlya conventionshi.
         test_price: t.testMrp,
-        assignedPrice: [t.testMrp],
+        assignedPrice: [t.testPrice ?? t.testMrp],
         source: 'RPL',
         discount: 0,
         newTest: true
@@ -1410,7 +1533,15 @@ export class DashboardPage implements OnInit, OnDestroy {
         const totalPending = Number(s?.notReceived || 0);
         const totalOutSourced = Number(s?.outSourced || 0);
         const totalRejected = Number(s?.rejected || 0);
-        this.totalSamples = totalReceived + totalPending + totalOutSourced + totalRejected;
+        // ✅ FIX: cancelled samples aadhi kadhich vachle jat navhte,
+        // tyamule totalSamples ani samplesCanceled donhi chukiche yet hote.
+        const totalCancelled = Number(s?.cancel ?? s?.cancelled ?? s?.canceled ?? 0);
+
+        // ✅ FIX: totalSamples madhe cancelled add kela
+        this.totalSamples = totalReceived + totalPending + totalOutSourced + totalRejected + totalCancelled;
+        // ✅ FIX: samplesCanceled full-access dashboard sathi ithech set kela
+        // (aadhi ha property फक्त staff dashboard madhe set hot hota)
+        this.samplesCanceled = totalCancelled;
 
         this.totalReports = selected.reports?.[0]?.completed || 0;
 
@@ -1422,13 +1553,16 @@ export class DashboardPage implements OnInit, OnDestroy {
           const pending = Number(smp?.notReceived || 0);
           const outSourced = Number(smp?.outSourced || 0);
           const rejected = Number(smp?.rejected || 0);
+          // ✅ FIX: cancelled ithe pan add kela
+          const cancelled = Number(smp?.cancel ?? smp?.cancelled ?? smp?.canceled ?? 0);
 
           return {
             dateKey: d.key,
             date: d.display.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
             bookings: resp.totalBookingsCount || 0,
-            samples: received + pending + outSourced + rejected,
-            received, pending, outSourced, rejected,
+            // ✅ FIX: samples cha total madhe cancelled include kela
+            samples: received + pending + outSourced + rejected + cancelled,
+            received, pending, outSourced, rejected, cancelled,
             amount: Number(resp.totalPaid || 0)
           };
         });
@@ -1467,7 +1601,10 @@ export class DashboardPage implements OnInit, OnDestroy {
 
         this.computeStaffDashboardStats(mappedBookings);
 
-        this.rawBookings = this.applyStaffOwnershipFilter(rollingWindowBookings);
+        // ✅ FIX: map raw bookings so `tests`/`samples` field names are normalized
+        // (raw API returns bookingWithTestMappings/sampleAccessions, not tests/samples)
+        const mappedRollingWindow = (rollingWindowBookings || []).map((raw: any) => this.mapBooking(raw));
+        this.rawBookings = this.applyStaffOwnershipFilter(mappedRollingWindow);
         this.prepareDailyBookings();
       },
       error: (err) => {
@@ -1481,9 +1618,25 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
+  // ✅ NEW HELPER: ekach jaga varun sagle sample/test counts consistently
+  // classify karnyasathi. `tests` array reliable ahe karan cancel-status
+  // ithech (t.cancelDate / t.deleted) yeto — `samples` array madhe
+  // cancelled cha record backend kadhun kadhikadhi missing asto, tyamule
+  // top summary card ani daily-breakdown card वेगळे counts dakhavत hote.
+  private classifyTestStatus(status: string): 'received' | 'pending' | 'outSourced' | 'rejected' | 'cancelled' {
+    const st = (status || '').toLowerCase();
+    if (st === 'cancel' || st === 'cancelled') return 'cancelled';
+    if (st.includes('reject')) return 'rejected';
+    if (st.includes('process') || st.includes('outsource') || st.includes('doctor approval')) return 'outSourced';
+    if (st.includes('complete') || st.includes('ready')) return 'received';
+    return 'pending'; // snr / default
+  }
+
   private computeStaffDashboardStats(mappedBookings: any[]): void {
     let patientsCompleted = 0, patientsPending = 0;
-    let samplesReceivedCount = 0, samplesMissingCount = 0, samplesCanceledCount = 0;
+    // ✅ FIX: outSourced/rejected/cancelled buckets add kele, ani sagle
+    // counts ata `tests` array varun (samples array ऐवजी) kadhले jataहेत.
+    let receivedCount = 0, pendingCount = 0, outSourcedCount = 0, rejectedCount = 0, cancelledCount = 0;
     let reportsCompletedCount = 0, reportsPendingCount = 0;
     let businessAmount = 0;
 
@@ -1495,14 +1648,16 @@ export class DashboardPage implements OnInit, OnDestroy {
       });
       if (allComplete) patientsCompleted++; else patientsPending++;
 
-      (b.samples || []).forEach((s: any) => {
-        const st = (s.status || '').toLowerCase();
-        if (st.includes('cancel')) samplesCanceledCount++;
-        else if (st.includes('received') || st.includes('complete')) samplesReceivedCount++;
-        else samplesMissingCount++;
-      });
-
+      // ✅ FIX: samples array ऐवजी tests array वापरला — cancelled reliably
+      // count होईल, ani top-card cha total daily-breakdown shी match होईल.
       tests.forEach((t: any) => {
+        const bucket = this.classifyTestStatus(t.status);
+        if (bucket === 'received') receivedCount++;
+        else if (bucket === 'outSourced') outSourcedCount++;
+        else if (bucket === 'rejected') rejectedCount++;
+        else if (bucket === 'cancelled') cancelledCount++;
+        else pendingCount++;
+
         const st = (t.status || '').toLowerCase();
         if (st.includes('complete') || st.includes('ready')) reportsCompletedCount++;
         else reportsPendingCount++;
@@ -1513,10 +1668,14 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.patientsPending = patientsPending;
     this.patientsCompleted = patientsCompleted;
-    this.samplesMissing = samplesMissingCount;
-    this.totalSamples = samplesReceivedCount + samplesMissingCount;
-    this.samplesCanceled = samplesCanceledCount;
-    this.samplesReceived = samplesReceivedCount;
+    this.samplesMissing = pendingCount;
+    this.samplesReceived = receivedCount;
+    // ✅ FIX: cancelled ata staff dashboard sathi barobar count hoto
+    this.samplesCanceled = cancelledCount;
+    // ✅ FIX: totalSamples madhe cancelled (ani outSourced/rejected) include kele —
+    // aadhi फक्त received+missing hote, tyamule cancelled sample total madhun
+    // "गायब" व्हायचा.
+    this.totalSamples = receivedCount + pendingCount + outSourcedCount + rejectedCount + cancelledCount;
     this.reportsPending = reportsPendingCount;
     this.reportsCompleted = reportsCompletedCount;
     this.totalReports = reportsCompletedCount;
@@ -1541,35 +1700,29 @@ export class DashboardPage implements OnInit, OnDestroy {
         grouped[key] = {
           dateKey: key,
           date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          bookings: 0, samples: 0, received: 0, pending: 0, outSourced: 0, rejected: 0, tests: 0, amount: 0
+          // ✅ FIX: cancelled field add kela, tests-based counting sathi
+          bookings: 0, samples: 0, received: 0, pending: 0, outSourced: 0, rejected: 0, cancelled: 0, tests: 0, amount: 0
         };
       }
 
       grouped[key].bookings++;
-
-      const sampleCount = p.tests ? p.tests.length : 0;
-      grouped[key].samples += sampleCount;
-      grouped[key].tests += sampleCount;
       grouped[key].amount += Number(p.totalAmount || 0);
 
-      if (p.samples && Array.isArray(p.samples)) {
-        p.samples.forEach((sample: any) => {
-          switch ((sample.status || '').toLowerCase()) {
-            case 'received':
-            case 'completed':
-              grouped[key].received++;
-              break;
-            case 'rejected':
-              grouped[key].rejected++;
-              break;
-            default:
-              grouped[key].pending++;
-              break;
-          }
-        });
-      } else {
-        grouped[key].pending += sampleCount;
-      }
+      // ✅ FIX: p.samples ऐवजी p.tests हाच single source वापरला — top summary
+      // card (computeStaffDashboardStats) shी susangat rahण्यasathi, ani
+      // cancelled backend kadhun missing yeto tya problem madhun sutka.
+      const tests = p.tests || [];
+      grouped[key].tests += tests.length;
+      grouped[key].samples += tests.length;
+
+      tests.forEach((t: any) => {
+        const bucket = this.classifyTestStatus(t.status);
+        if (bucket === 'received') grouped[key].received++;
+        else if (bucket === 'outSourced') grouped[key].outSourced++;
+        else if (bucket === 'rejected') grouped[key].rejected++;
+        else if (bucket === 'cancelled') grouped[key].cancelled++;
+        else grouped[key].pending++;
+      });
     });
 
     this.dailyBookings = Object.keys(grouped)
@@ -1600,7 +1753,21 @@ export class DashboardPage implements OnInit, OnDestroy {
         testId: t.testId,
         testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
         testName: (t.testName || '').trim(),
-        testMrp: t.testMrp,
+
+        // ✅ FIX: Admin/Franchise/Staff sathi price kalatana tefarak
+        // yeत hota — searchTestsInline() cha rule ithe pan lagu kelay:
+        // Admin la nehmi price2 (base rate) pahile milava, franchise-
+        // specific assignedPrice nahi; Franchise/Staff sathi ulta.
+        // Adhi assignedPrice sagalyat pahile hota, tyamule Admin login
+        // asतानाही Edit Test modal madhe existing test cha price
+        // franchise-specific yeत hota (add-patient/searchTestsInline
+        // peksha veगळा) — hach tumcha "edit test madhe price different"
+        // cha mool karan hota.
+        testPrice: this.isAdminRole
+          ? (t.price2 ?? t.testPrice ?? t.test_price ?? 0)
+          : (t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0),
+        testMrp: t.testMrp ?? t.test_mrp ?? 0,
+
         status: (t.cancelDate || t.deleted) ? 'cancel' :
           (statusByTestId.get(t.testId) ||
             (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||

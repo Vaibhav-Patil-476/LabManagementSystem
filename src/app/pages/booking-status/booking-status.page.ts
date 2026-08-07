@@ -112,7 +112,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   fromDate = '';
   toDate = '';
   filterFranchises: any[] = [];
-
+  packageSearchTerm = '';
+  filteredPackages: any[] = [];
+  showPackageSuggestions = false;
+  private packageSearchTimer: any = null;
   currentPage = 0;
   pageSize = 20;
   totalPages = 1;
@@ -313,7 +316,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   get subTotal(): number {
-    return this.selectedTests.reduce((s, t) => s + Number(t.testMrp || 0), 0);
+    return this.selectedTests.reduce((s, t) => s + Number(t.testPrice ?? t.testMrp ?? 0), 0);
   }
   get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
   get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
@@ -432,7 +435,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.toDate = today;
 
     this.loadCurrentUser();
-    this.loadAvailableTests();
   }
 
   ionViewWillEnter(): void {
@@ -605,12 +607,13 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       const isSampleReceived = sampleStatus === 'RECEIVED';
       const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
 
-      return {
+return {
         testId: t.testId,
         testMappingId: mappingId,
         testName: (t.testName || '').trim(),
-        testPrice: t.testPrice,
-        testMrp: t.testMrp,
+        testPrice: t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0,
+        testMrp: t.testMrp ?? t.test_mrp ?? 0,
+
         method: t.testCode,
         status: (t.cancelDate || t.deleted) ? 'cancel' :
           (statusByTestId.get(t.testId) ||
@@ -1075,13 +1078,115 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   searchTests(): void {
-    const t = this.searchTerm.trim().toLowerCase();
-    if (!t) { this.filteredTests = []; return; }
+    const q = this.searchTerm.trim();
 
-    this.filteredTests = this.availableTests.filter(x =>
-      x.testName.toLowerCase().includes(t) && !this.selectedTests.some(s => s.testName === x.testName)
-    );
+    if (!q) {
+      this.filteredTests = [];
+      return;
+    }
+
+    const labId = this.labApi.getCurrentLabId();
+
+    // ✅ Ha booking konatya franchise cha ahe tyachyach franchiseId
+    // varun b2b price yeil (list filter navhe, actual bookingcha franchise)
+    const franchiseId =
+      this.selectedBooking?.franchise?.franchiseId ??
+      this.selectedFranchiseId ??
+      undefined;
+
+    this.labApi.searchTests(labId, franchiseId, q).subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.content) ? res.content : [];
+
+        this.filteredTests = list
+          .filter((t: any) =>
+            !this.selectedTests.some(s => s.testName === String(t.test_name || '').trim())
+          )
+          .map((t: any) => ({
+            testId: t.testId,
+            testName: String(t.test_name || 'Unnamed Test').trim(),
+            testMrp: t.test_price ?? 0,
+
+            // ✅ FIX: Admin la NEHMI base rate (price2) distoy, Franchise/Staff
+            // la tyanchya franchise-specific assignedPrice — add-patient sarkhach
+            // rule.
+            testPrice: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0)
+          }));
+      },
+      error: () => {
+        this.filteredTests = [];
+      }
+    });
   }
+
+  searchPackages(): void {
+  const q = this.packageSearchTerm.trim();
+
+  if (this.packageSearchTimer) clearTimeout(this.packageSearchTimer);
+
+  if (!q) {
+    this.filteredPackages = [];
+    this.showPackageSuggestions = false;
+    return;
+  }
+
+  this.packageSearchTimer = setTimeout(() => {
+    const labId = this.labApi.getCurrentLabId();
+    const franchiseId = this.selectedBooking?.franchise?.franchiseId ?? this.selectedFranchiseId ?? undefined;
+
+    this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
+      next: (res: any) => {
+        this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
+        this.showPackageSuggestions = this.filteredPackages.length > 0;
+      },
+      error: () => {
+        this.filteredPackages = [];
+        this.showPackageSuggestions = false;
+      }
+    });
+  }, 250);
+}
+
+addPackage(pkg: any): void {
+  const packageTests: any[] = pkg?.withTest || pkg?.tests || pkg?.testList || pkg?.profileTests || [];
+
+  if (!Array.isArray(packageTests) || packageTests.length === 0) {
+    this.showToast('No tests found inside this package', 'warning');
+    this.packageSearchTerm = '';
+    this.showPackageSuggestions = false;
+    return;
+  }
+
+  let addedCount = 0;
+
+  packageTests.forEach((pt: any) => {
+    const testId = Number(pt?.testId ?? pt?.test_id ?? pt?.id ?? 0);
+    const testName = String(pt?.testName ?? pt?.test_name ?? '').trim();
+
+    if (!testId || !testName) return;
+    if (this.selectedTests.some(s => s.testName === testName)) return;
+
+    this.selectedTests.push({
+      testId,
+      testName,
+      testMrp: pt.test_price ?? 0,
+      testPrice: pt.assignedPrice ?? pt.price2 ?? 0,
+      isNewlyAdded: true
+    } as any);
+
+    addedCount++;
+  });
+
+  if (addedCount > 0) {
+    this.showToast(`${addedCount} test(s) added from package`, 'success');
+  } else {
+    this.showToast('All tests already added', 'warning');
+  }
+
+  this.packageSearchTerm = '';
+  this.filteredPackages = [];
+  this.showPackageSuggestions = false;
+}
 
   addTest(test: BookingTest): void {
     this.selectedTests.push({ ...test, resultValue: '', isNewlyAdded: true });
@@ -1202,7 +1307,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.paidAmount = this.basePaidAmount + this.payNowAmount;
   }
 
-  updateTestBooking(): void {
+updateTestBooking(): void {
     if (!this.selectedBooking || this.isSavingTest) return;
 
     // Empty test lists are allowed — a user can delete all tests and still save/update the booking.
@@ -1257,10 +1362,15 @@ export class BookingStatusPage implements OnInit, OnDestroy {
             tests: newTests.map(t => ({
               testId: t.testId,
               testName: t.testName,
-              testPrice: t.testMrp,
+              // ✅ FIX: b2b/billing price ata "testPrice" field madhe —
+              // adhi ithe t.testMrp (MRP) chukine jat hota, tyamule
+              // re-fetch/verify nantar Admin la MRP distat hota, b2b nahi.
+              testPrice: t.testPrice ?? t.testMrp,
               doctorTestDiscountPrice: 0,
               doctorTestCommissionPrice: 0,
-              test_price: t.testPrice ?? t.testMrp,
+              // ✅ FIX: MRP ata "test_price" field madhe — naming
+              // consistent keli loadAvailableTests() varlya conventionshi.
+              test_price: t.testMrp,
               assignedPrice: [t.testPrice ?? t.testMrp],
               source: t.method || 'RPL',
               discount: 0,

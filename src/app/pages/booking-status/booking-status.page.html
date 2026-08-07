@@ -343,7 +343,8 @@
               <div class="search-dropdown" *ngIf="searchTerm && filteredTests.length > 0">
                 <div class="search-dropdown-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
                   <span>{{ test.testName }}</span>
-                  <span class="price">{{ canViewAmount ? ('₹' + test.testMrp) : '...' }}</span>
+                  <span class="price" *ngIf="canViewAmount">B2B ₹{{ test.testPrice }} / MRP ₹{{ test.testMrp }}</span>
+                  <span class="price" *ngIf="!canViewAmount">...</span>
                 </div>
               </div>
             </div>
@@ -355,7 +356,6 @@
                     <tr>
                       <th>Test Name</th>
                       <th *ngIf="canViewAmount">Amount</th>
-                      <th *ngIf="canViewAmount">Discount</th>
                       <th></th>
                     </tr>
                   </thead>
@@ -366,13 +366,13 @@
                         <span class="franchise-tag" *ngIf="test.method">Method: {{ test.method }}</span>
                         <span class="new-tag" *ngIf="test.isNewlyAdded">Not saved yet</span>
                       </td>
-                      <td *ngIf="canViewAmount">₹{{ test.testMrp }}</td>
-                      <td *ngIf="canViewAmount">{{ test.discount || 0 }}</td>
-                      <td><ion-icon name="trash-outline" class="delete-icon" (click)="removeTest(test)"></ion-icon>
+                      <td *ngIf="canViewAmount">₹{{ test.testPrice }}</td>
+                      <td>
+                        <ion-icon name="trash-outline" class="delete-icon" (click)="removeTest(test)"></ion-icon>
                       </td>
                     </tr>
                     <tr *ngIf="selectedTests.length === 0">
-                      <td [attr.colspan]="canViewAmount ? 4 : 2" class="empty-tests">No tests added</td>
+                      <td [attr.colspan]="canViewAmount ? 3 : 2" class="empty-tests">No tests added</td>
                     </tr>
                   </tbody>
                 </table>
@@ -685,8 +685,8 @@
                     <label>Ref. Doctor</label>
                     <div class="doctor-input-wrapper">
 
-                      <input type="text" [ngModel]="doctorSearch"
-                        placeholder="Search doctor name" autocomplete="off" readonly>
+                      <input type="text" [ngModel]="doctorSearch" placeholder="Search doctor name" autocomplete="off"
+                        readonly>
 
                     </div>
 

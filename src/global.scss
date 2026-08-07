@@ -153,12 +153,6 @@
 
 /* =====================================================================
    ✅ SINGLE-SCROLL-OWNER FIX (double scrollbar issue)
-   -----------------------------------------------------------------------
-   html/body used to be free to scroll WHILE ion-content also scrolled
-   internally — two scroll containers moving independently produces two
-   scrollbars, and only the outer (body) one actually tracked drag/wheel.
-   Locking html/body/ion-app to overflow:hidden makes ion-content's own
-   .inner-scroll the only thing that can move.
 ===================================================================== */
 html,
 body {
@@ -193,7 +187,6 @@ h1, h2, h3, .greeting-name, .spotlight-count, .sheet-title-main {
   font-family: var(--font-display);
 }
 
-/* Data / ids read like a lab printout, not a spreadsheet */
 .link-id, .link-name, .id-link, .booking-time, .patient-id,
 .new-barcode-input, .barcode-line, .test-modal-body-pad .info-value {
   font-family: var(--font-mono);
@@ -201,13 +194,7 @@ h1, h2, h3, .greeting-name, .spotlight-count, .sheet-title-main {
 }
 
 /* =====================================================================
-   ✅ SLIM PREMIUM SCROLLBARS — applied to the actual scrolling elements
-   -----------------------------------------------------------------------
-   `::-webkit-scrollbar` on html/body is intentionally NOT used anymore
-   since body no longer scrolls (see fix above). Instead we style
-   ion-content's shadow-DOM scroll part directly, plus any plain
-   overflow:auto containers (modals, dropdowns, popovers) via the
-   generic selector below.
+   ✅ SLIM PREMIUM SCROLLBARS
 ===================================================================== */
 ion-content {
   --overflow: auto;
@@ -233,8 +220,6 @@ ion-content::part(scroll)::-webkit-scrollbar-thumb:hover {
   background: var(--brand-500);
 }
 
-/* Generic fallback for any other manually-scrolling container
-   (modal bodies, dropdowns, popovers) that isn't an ion-content */
 ::-webkit-scrollbar { width: 8px; height: 8px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb {
@@ -243,7 +228,6 @@ ion-content::part(scroll)::-webkit-scrollbar-thumb:hover {
 }
 ::-webkit-scrollbar-thumb:hover { background: var(--brand-500); }
 
-/* Respect reduced motion */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.01ms !important;
@@ -271,7 +255,6 @@ ion-modal .invoice-header h2 {
   font-family: var(--font-display);
 }
 
-/* Popover — soft glass, no harsh backdrop */
 ion-popover {
   --backdrop-opacity: 0;
   --box-shadow: 0 18px 40px rgba(10, 27, 23, 0.18);
@@ -291,7 +274,6 @@ ion-item ion-select { --ripple-color: transparent; }
 .input-wrap ion-select { --ripple-color: transparent; }
 .input-wrap ion-select::part(icon) { color: var(--text-faint); }
 
-/* Every ion-modal in the app inherits the premium sheet treatment */
 ion-modal {
   --background: var(--card-bg);
   --ion-background-color: var(--card-bg);
@@ -302,7 +284,6 @@ ion-modal::part(content) {
   box-shadow: var(--shadow-lg);
 }
 
-/* Checkboxes / toggles pick up the brand teal everywhere by default */
 ion-checkbox {
   --size: 19px;
   --checkbox-background-checked: var(--brand-600);
@@ -310,8 +291,6 @@ ion-checkbox {
   --border-radius: 6px;
 }
 
-// ✅ Material calendar overlay la white background + shadow deण्यासाठी
-// (theme import न karता, फक्त explicit override).
 .mat-datepicker-content {
   background-color: #ffffff !important;
   border-radius: 12px;
@@ -327,63 +306,68 @@ ion-checkbox {
 }
 
 // ==========================================================
-// PREMIUM ALERT (Delete Test / other confirm dialogs)
+// PREMIUM ALERT (Delete Test / Cancel Booking / other confirm dialogs)
+// -----------------------------------------------------------------
+// IMPORTANT: ion-alert has NO shadow parts (Ionic docs confirm this
+// explicitly) — ::part() selectors silently do nothing for ion-alert.
+// The only supported technique is nested CSS classes with extra
+// specificity (Ionic's own docs example: ".my-class .alert-wrapper").
 // ==========================================================
 ion-alert.premium-alert {
   --backdrop-opacity: 0.5;
 
   .alert-wrapper {
-    border-radius: var(--radius-lg, 22px);
-    box-shadow: var(--shadow-lg, 0 22px 50px rgba(10, 27, 23, 0.14));
+    border-radius: var(--radius-lg, 22px) !important;
+    box-shadow: var(--shadow-lg, 0 22px 50px rgba(10, 27, 23, 0.14)) !important;
   }
 
   .alert-head {
-    padding-top: 22px;
-    padding-bottom: 4px;
+    padding-top: 22px !important;
+    padding-bottom: 4px !important;
   }
 
   .alert-title {
-    font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif);
-    font-size: 18px;
-    font-weight: 800;
-    color: var(--text-primary, #0c201c);
+    font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif) !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    color: var(--text-primary, #0c201c) !important;
   }
 
   .alert-message {
-    font-size: 14px;
-    color: var(--text-muted, #5c7671);
-    padding-top: 6px;
-    line-height: 1.5;
+    font-size: 14px !important;
+    color: var(--text-muted, #5c7671) !important;
+    padding-top: 6px !important;
+    line-height: 1.5 !important;
   }
 
   .alert-button-group {
-    padding: 10px 16px 16px;
-    gap: 8px;
+    padding: 10px 16px 16px !important;
+    gap: 8px !important;
   }
 
-  button.alert-button {
-    border-radius: var(--radius-sm, 12px);
-    font-weight: 700;
-    font-size: 13.5px;
-    margin: 0;
-    height: 42px;
-    text-transform: none;
+  .alert-button {
+    border-radius: var(--radius-sm, 12px) !important;
+    font-weight: 700 !important;
+    font-size: 13.5px !important;
+    height: 42px !important;
+    text-transform: none !important;
+    margin: 0 !important;
   }
 
+  // These class names come from OUR OWN cssClass values passed
+  // in the button config (add-patient.page.ts) — not Ionic's
+  // internal naming — so they're guaranteed to exist on the button.
   .alert-btn-cancel {
-    color: var(--text-muted, #5c7671);
-    background: var(--section-bg, #f6faf9);
+    color: var(--text-muted, #5c7671) !important;
+    background: var(--section-bg, #f6faf9) !important;
   }
 
   .alert-btn-danger {
     color: #ffffff !important;
-    background: var(--status-danger, #c14c5f);
+    background: var(--status-danger, #c14c5f) !important;
   }
-
-  body {
-  transform: none !important;
 }
-}/* ==========================================================
+/* ==========================================================
    Admin "Add Funds" — centered popup, corner-leak fix
 ========================================================== */
 ion-modal.admin-addfunds-popup {
@@ -397,7 +381,7 @@ ion-modal.admin-addfunds-popup {
 ion-modal.admin-addfunds-popup::part(content) {
   border-radius: 22px;
   overflow: hidden;
-  transform: translateZ(0); // ✅ GPU compositing — corner pixel-leak fix
+  transform: translateZ(0);
   isolation: isolate;
 }
 
@@ -407,9 +391,6 @@ ion-modal.admin-addfunds-popup .test-modal-wrapper {
   transform: translateZ(0);
 }
 
-// ✅ sheet-top la vegla radius set karायचा nahi — parent (.test-modal-wrapper)
-// cha overflow:hidden आधीच tyala clip karतो, doubling clipping मुळेच
-// corner mismatch/leak yet hota
 ion-modal.admin-addfunds-popup .sheet-top {
   border-radius: 0 !important;
 }

@@ -318,6 +318,40 @@
     <div class="form-card" style="margin-top: 12px;">
       <div class="form-card-title">Search Test To Add into Bill</div>
 
+      <!-- ✅ PACKAGE / PROFILE SEARCH -->
+      <!-- Ekach package select karun tya package madhle sagle tests
+             ekach click var bill madhe add hotat. Test search cha khali
+             baghitla tar donhi separate rahtat, mix hot nahi. -->
+      <div class="input-wrap search-test-wrap">
+        <ion-icon name="search-outline"></ion-icon>
+        <ion-input type="text" placeholder="Search Package..." [(ngModel)]="packageSearch"
+          (ionInput)="searchPackage()"></ion-input>
+      </div>
+
+      <div class="test-suggestions" *ngIf="showPackageSuggestions">
+        <div class="suggestion-item" *ngFor="let pkg of filteredPackages" (click)="addPackage(pkg)">
+          <span>{{ pkg.profileName || pkg.profile_name || pkg.name }}</span>
+
+          <!-- Admin login -> B2B (franchise-specific) + MRP donhi -->
+          <span class="sug-price" *ngIf="isAdminRole">
+            B2B ₹{{ pkg.profileAssignedPrice || 0 }} <span class="sug-mrp">/ MRP ₹{{ pkg.mrp || pkg.total_amount || 0
+              }}</span>
+          </span>
+
+          <!-- Franchise login -> B2B + MRP donhi -->
+          <span class="sug-price" *ngIf="isFranchiseOnlyRole">
+            B2B ₹{{ pkg.profileAssignedPrice || 0 }} <span class="sug-mrp">/ MRP ₹{{ pkg.mrp || pkg.total_amount || 0
+              }}</span>
+          </span>
+
+          <!-- Staff / Franchise-Staff -> price show honar nahi -->
+        </div>
+
+        <div class="lab-picker-empty" *ngIf="filteredPackages.length === 0">
+          No package found
+        </div>
+      </div>
+
       <div class="input-wrap search-test-wrap">
         <ion-icon name="search-outline"></ion-icon>
         <ion-input type="text" placeholder="Search Test..." [(ngModel)]="testSearch"
@@ -327,18 +361,30 @@
       <div class="test-suggestions" *ngIf="showSuggestions">
         <div class="suggestion-item" *ngFor="let test of filteredTests" (click)="addTest(test)">
           <span>{{ test.name }}</span>
-          <span class="sug-price" *ngIf="!isStaffRole && !isFranchiseStaffRole">₹{{ test.mrp }}</span>
+
+          <!-- Admin login -> B2B + MRP donhi -->
+          <span class="sug-price" *ngIf="isAdminRole">
+            B2B ₹{{ test.b2b }} <span class="sug-mrp">/ MRP ₹{{ test.mrp }}</span>
+          </span>
+
+          <!-- Franchise login -> B2B + MRP donhi -->
+          <span class="sug-price" *ngIf="isFranchiseOnlyRole">
+            B2B ₹{{ test.b2b }} <span class="sug-mrp">/ MRP ₹{{ test.mrp }}</span>
+          </span>
+
+          <!-- Staff / Franchise-Staff -> kahi show honar nahi (jase aadhi hote) -->
         </div>
       </div>
 
       <!-- ===================== LAB_ADMIN VIEW ===================== -->
-      <!-- Columns: #, Test Name, Price, TAT, Dis, Fluid, Action -->
+      <!-- Columns: #, Test Name, B2B, TAT, MRP, Dis, Fluid, Action -->
       <div class="test-table" *ngIf="isAdminRole">
         <div class="test-header">
           <div>#</div>
           <div>Test Name</div>
-          <div>Price</div>
+          <div>B2B</div>
           <div>TAT</div>
+          <div>MRP</div>
           <div>Dis</div>
           <div>Fluid</div>
           <div>Action</div>
@@ -351,8 +397,9 @@
         <div class="test-row" *ngFor="let t of selectedTests; let i = index">
           <div>{{ i + 1 }}</div>
           <div>{{ t.name }}</div>
-          <div>₹{{ t.mrp }}</div>
+          <div>₹{{ t.b2b }}</div>
           <div>{{ t.tat }}</div>
+          <div>₹{{ t.mrp }}</div>
           <div>{{ t.dis || 0 }}</div>
           <div>{{ t.fluid }}</div>
           <div>
@@ -377,7 +424,7 @@
           <div>B2B</div>
           <div>TAT</div>
           <div>MRP</div>
-
+          <div>Fluid</div>
           <div>Action</div>
         </div>
 
@@ -391,7 +438,7 @@
           <div>{{ t.b2b }}</div>
           <div>{{ t.tat }}</div>
           <div>{{ t.mrp }}</div>
-
+          <div>{{ t.fluid }}</div>
           <div>
             <ion-button fill="clear" color="danger" size="small" (click)="removeTest(i)">
               <ion-icon name="trash-outline"></ion-icon>
