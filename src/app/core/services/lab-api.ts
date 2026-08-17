@@ -575,4 +575,20 @@ export class LabApiService {
       { params }
     );
   }
+  getPatientByBooking(labId: any, bookingId: any) {
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`
+  );
+}
+
+// ✅ NEW: WhatsApp report share
+shareReportViaWhatsApp(bookingId: number): Observable<any> {
+  return this.http.post(
+    `${this.BASE_URL}/api/v1/lab/whatsapp/ShareReportViaWhatsApp?bookingId=${bookingId}`,
+    {}
+  );
+}
+getActivePlans(page = 0, size = 20): Observable<any> {
+  return this.http.get(`${this.BASE_URL}/api/v1/plans/active-plans/get-all?page=${page}&size=${size}`);
+}
 }

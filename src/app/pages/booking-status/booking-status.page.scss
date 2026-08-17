@@ -2389,8 +2389,9 @@
 
 .bcard-actions {
   display: flex;
-  justify-content: flex-end;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
   border-top: 1px solid var(--border-color);
   padding: var(--sp-3) var(--sp-2) var(--sp-3);
   margin: 0 calc(var(--sp-2) * -1);
@@ -3148,14 +3149,38 @@ ion-content.menu-open {
 }
 
 .bcard-actions {
-  padding: 12px 8px 8px;
+  padding: 12px 12px 8px;
   margin-bottom: 0;
+  align-items: center;
+  gap: 16px; // barcode block आणि buttons मध्ये जास्त breathing space
 }
-
 .bcard-actions .action-icon-btn {
   margin: 0;
   height: 38px;
   width: 38px;
+}
+// ✅ NEW — barcode left + buttons right, same row
+.bcard-barcode-inline-actions {
+  flex: 1;
+  min-width: 0;
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 10px; // barcode pills मधलं gap वाढवलं
+  margin-top: 0;
+  padding-left: 4px; // ✅ card च्या डाव्या edge पासून breathing space
+  padding-right: 4px;
+  .barcode-line {
+    padding: 7px 12px;
+    font-size: 12px;
+  }
+}
+.bcard-actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px; // buttons मधलं gap वाढवलं
+  flex-shrink: 0;
+  padding-left: 8px;
+  border-left: 1px solid var(--border-color); // buttons ला barcode पासून वेगळं करणारी हलकी divider line
 }
 
 /* =========================================================
@@ -3248,5 +3273,210 @@ ion-content.menu-open {
 
   .franchise-tag {
     font-size: 9.5px;
+  }
+
+  .bcard-test-table {
+
+    th,
+    td {
+      padding: 10px 8px;
+    }
+
+    th:first-child,
+    td:first-child {
+      width: 62%;
+      padding-right: 14px; // ✅ FIX: name ani badge madhe breathing space
+    }
+
+    th:last-child,
+    td:last-child {
+      width: 38%;
+      padding-left: 10px; // ✅ FIX
+      text-align: right !important;
+    }
+  }
+}
+
+.bcard-test-table {
+
+  th,
+  td {
+    padding: 10px 8px;
+  }
+
+  th:first-child,
+  td:first-child {
+    width: 62%;
+    padding-right: 14px;
+  }
+
+  th:last-child,
+  td:last-child {
+    width: 38%;
+    padding-left: 10px;
+    text-align: right !important;
+  }
+}.bcs-row-with-tests {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+}
+
+.bcs-text-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.bcard-tests-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  flex-shrink: 0;
+  padding: 5px 10px;
+  border-radius: var(--r-pill, 999px);
+  background: var(--brand-soft, #eef8f7);
+  border: 1px solid var(--brand-light, #d9f0ee);
+
+  .bcard-tests-label {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--brand-deep, #075f5d);
+    white-space: nowrap;
+  }
+
+  .test-eye-icon {
+    font-size: 16px;
+    color: var(--brand, #087b76);
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+
+}/* ============================================================
+   TEST PREVIEW MODAL — small centered popup (eye icon)
+============================================================ */
+.test-preview-popup {
+  --width: 380px;
+  --max-width: 92vw;
+  --height: auto;
+  --max-height: 78vh;
+  --border-radius: 22px;
+  align-items: center;
+
+  &::part(content) {
+    border-radius: 22px;
+    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+    overflow: hidden;
+  }
+
+  .modal-page {
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+    border-bottom: none;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    padding: 18px 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      margin: 0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    ion-button {
+      margin: 0;
+      --color: #fff;
+      width: 32px;
+      height: 32px;
+      --box-shadow: none;
+
+      &::part(native) {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+      }
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .pkg-preview-table {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .pkg-preview-header-full {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 0.4fr 2.2fr 1fr;
+    gap: 8px;
+    background: #eef8f7;
+    color: #075f5d;
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 10px 18px;
+    border-bottom: 1px solid #d9f0ee;
+  }
+
+  .pkg-preview-row-full {
+    display: grid;
+    grid-template-columns: 0.4fr 2.2fr 1fr;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    color: #475569;
+    border-bottom: 1px solid #f1f5f5;
+    transition: background 0.15s;
+
+    &:nth-child(even) {
+      background: #fbfdfd;
+    }
+
+    div:nth-child(2) {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.35;
+    }
+  }
+
+  .lab-picker-empty {
+    padding: 30px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
   }
 }

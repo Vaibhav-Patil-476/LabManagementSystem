@@ -19,6 +19,11 @@
  *   locked to overflow:hidden so ion-content is the single scroll owner,
  *   and the premium scrollbar styling is applied to ion-content's actual
  *   shadow-DOM scroll part (::part(scroll)) instead of the page body.
+ *
+ * ✅ FIX ADDED (invoice modal fullscreen):
+ *   ion-modal.invoice-modal-cls now stretches to full viewport width/height
+ *   instead of Ionic's default centered floating card, so the invoice no
+ *   longer looks like a small card floating with gaps around it.
  */
 
 /* Core CSS required for Ionic components to work properly */
@@ -183,12 +188,23 @@ body {
   letter-spacing: 0.1px;
 }
 
-h1, h2, h3, .greeting-name, .spotlight-count, .sheet-title-main {
+h1,
+h2,
+h3,
+.greeting-name,
+.spotlight-count,
+.sheet-title-main {
   font-family: var(--font-display);
 }
 
-.link-id, .link-name, .id-link, .booking-time, .patient-id,
-.new-barcode-input, .barcode-line, .test-modal-body-pad .info-value {
+.link-id,
+.link-name,
+.id-link,
+.booking-time,
+.patient-id,
+.new-barcode-input,
+.barcode-line,
+.test-modal-body-pad .info-value {
   font-family: var(--font-mono);
   letter-spacing: 0.2px;
 }
@@ -209,27 +225,43 @@ ion-content::part(scroll)::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
+
 ion-content::part(scroll)::-webkit-scrollbar-track {
   background: transparent;
 }
+
 ion-content::part(scroll)::-webkit-scrollbar-thumb {
   background: var(--brand-300);
   border-radius: var(--radius-pill);
 }
+
 ion-content::part(scroll)::-webkit-scrollbar-thumb:hover {
   background: var(--brand-500);
 }
 
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
   background: var(--brand-300);
   border-radius: var(--radius-pill);
 }
-::-webkit-scrollbar-thumb:hover { background: var(--brand-500); }
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--brand-500);
+}
 
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
@@ -260,25 +292,42 @@ ion-popover {
   --box-shadow: 0 18px 40px rgba(10, 27, 23, 0.18);
   --width: auto;
 }
+
 ion-popover::part(content) {
   border-radius: var(--radius-md);
   border: 1px solid var(--card-border);
 }
+
 ion-popover::part(backdrop) {
   background: transparent;
 }
 
-ion-select { --ripple-color: transparent; }
-ion-item ion-select { --ripple-color: transparent; }
-.ion-activatable { --ripple-color: transparent; }
-.input-wrap ion-select { --ripple-color: transparent; }
-.input-wrap ion-select::part(icon) { color: var(--text-faint); }
+ion-select {
+  --ripple-color: transparent;
+}
+
+ion-item ion-select {
+  --ripple-color: transparent;
+}
+
+.ion-activatable {
+  --ripple-color: transparent;
+}
+
+.input-wrap ion-select {
+  --ripple-color: transparent;
+}
+
+.input-wrap ion-select::part(icon) {
+  color: var(--text-faint);
+}
 
 ion-modal {
   --background: var(--card-bg);
   --ion-background-color: var(--card-bg);
   --backdrop-opacity: 0.45 !important;
 }
+
 ion-modal::part(content) {
   background: var(--card-bg);
   box-shadow: var(--shadow-lg);
@@ -367,6 +416,7 @@ ion-alert.premium-alert {
     background: var(--status-danger, #c14c5f) !important;
   }
 }
+
 /* ==========================================================
    Admin "Add Funds" — centered popup, corner-leak fix
 ========================================================== */
@@ -393,4 +443,39 @@ ion-modal.admin-addfunds-popup .test-modal-wrapper {
 
 ion-modal.admin-addfunds-popup .sheet-top {
   border-radius: 0 !important;
+}
+/* ==========================================================
+   INVOICE MODAL — TRUE FULLSCREEN (kills iOS card-modal gap)
+========================================================== */
+ion-modal.invoice-modal-cls {
+  --width: 100vw !important;
+  --height: 100vh !important;
+  --max-width: 100vw !important;
+  --max-height: 100vh !important;
+  --border-radius: 0 !important;
+  --box-shadow: none !important;
+}
+
+ion-modal.invoice-modal-cls::part(content) {
+  width: 100vw !important;
+  height: 100vh !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+/* Ionic's iOS "card style" auto-modal adds this wrapper + backdrop
+   scaling to the presenting page behind it. Kill both so it behaves
+   like a plain fullscreen modal, not a stacked card. */
+ion-modal.invoice-modal-cls .modal-wrapper,
+ion-modal.invoice-modal-cls .modal-shadow {
+  border-radius: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  top: 0 !important;
+  left: 0 !important;
+  transform: none !important;
+}
+
+ion-modal.invoice-modal-cls {
+  --backdrop-opacity: 0 !important;
 }

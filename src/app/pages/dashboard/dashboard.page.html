@@ -1,4 +1,4 @@
-  <ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
+<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
     <ion-content class="menu-content">
       <div class="menu-shell">
         <div class="menu-brand">
@@ -67,7 +67,6 @@
                 </div>
                 <div class="sc-header-right">
                   <div class="sc-count-box">
-                    <ion-icon name="chevron-down-outline" class="sc-chevron"></ion-icon>
                     <span class="sc-count" [ngClass]="item.statusClass">Test Count: {{ item.progress }}</span>
                     <span class="sc-count">Sample Count: {{ item.samples?.length || 0 }}</span>
                   </div>
@@ -76,8 +75,18 @@
 
               <div class="sc-stats">
                 <div class="sc-stat">
-                  <span class="sc-stat-label">Client / Doctor</span>
-                  <span class="sc-stat-value">({{ item.franchiseName }}) Dr. {{ item.doctorName }}</span>
+                  <div class="sc-row-with-tests">
+                    <div class="sc-text-col">
+                      <span class="sc-stat-label">Client / Doctor</span>
+                      <span class="sc-stat-value">({{ item.franchiseName }}) Dr. {{ item.doctorName }}</span>
+                    </div>
+
+                    <!-- ✅ NEW: Tests eye icon (same as Booking Status page) -->
+                    <div class="sc-tests-row" (click)="openTestPreview(item, $event)">
+                      <span class="sc-tests-label">Tests :-</span>
+                      <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
+                    </div>
+                  </div>
                 </div>
                 <div class="sc-stat">
                   <div class="sc-barcode-inline">
@@ -91,26 +100,7 @@
                 </div>
               </div>
 
-              <div class="sc-details" *ngIf="expandedSearchId === item.bookingId">
-                <div class="sc-section-label">Tests</div>
-                <table class="sc-test-table">
-                  <thead>
-                    <tr>
-                      <th>Test Name</th>
-                      <th>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr *ngFor="let t of item.testsDisplay">
-                      <td>{{ t.name }}</td>
-                      <td><span class="sc-status-badge" [ngClass]="t.statusClass">{{ t.status }}</span></td>
-                    </tr>
-                    <tr *ngIf="!item.testsDisplay?.length">
-                      <td colspan="2" class="sc-empty">No tests</td>
-                    </tr>
-                  </tbody>
-                </table>
-
+              <div class="sc-details">
                 <div class="sc-actions-list">
                   <div class="sc-action-item" (click)="onEditTestClick(item)">
                     <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
@@ -152,6 +142,43 @@
         </div>
       </ng-template>
     </ion-modal>
+
+    <!-- ===================== TEST PREVIEW MODAL (eye icon — global search) ===================== -->
+    <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">
+      <ng-template>
+        <div class="modal-page">
+          <div class="modal-header">
+            <h2>{{ previewBooking?.customerName }} – Tests</h2>
+            <ion-button fill="clear" (click)="closeTestPreview()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="pkg-preview-table">
+            <div class="pkg-preview-header-full">
+              <div>#</div>
+              <div>Test Name</div>
+              <div>Status</div>
+            </div>
+
+            <div class="pkg-preview-row-full" *ngFor="let test of previewBooking?.tests; let i = index">
+              <div>{{ i + 1 }}</div>
+              <div>{{ test.testName }}</div>
+              <div>
+                <span class="status-badge" [ngClass]="testStatusClass(test.status)">
+                  {{ testStatusLabel(test.status) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="lab-picker-empty" *ngIf="!previewBooking?.tests?.length">
+              No tests found in this booking.
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </ion-modal>
+
     <!-- ===================== EDIT TEST MODAL ===================== -->
     <ion-modal class="test-modal sheet-modal" [isOpen]="isEditTestModalOpen" (didDismiss)="closeTestModal()"
       [breakpoints]="[0, 1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
@@ -1090,38 +1117,41 @@
             <div class="services-grid">
               <div class="service-card" (click)="goToPage('add-patient')">
                 <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
-                <span class="service-name">Add patient</span>
+                <span class="service-name">New Booking</span>
                 <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
               <div class="service-card" (click)="goToPage('booking-status')">
                 <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
-                <span class="service-name">Booking status</span>
+                <span class="service-name">Booking Status</span>
                 <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
               <div class="service-card" (click)="goToPage('reports')">
                 <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
-                <span class="service-name">Download reports</span>
+                <span class="service-name">Download Reports</span>
                 <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
-              <div class="service-card" (click)="goToPage('bookings')">
+              <div class="service-card" [class.locked-card]="isPageLocked('bookings')" (click)="goToPage('bookings')">
                 <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
-                <span class="service-name">Test list</span>
-                <span class="service-arrow" aria-hidden="true">›</span>
+                <span class="service-name">Test List</span>
+                <span class="service-arrow" *ngIf="!isPageLocked('bookings')" aria-hidden="true">›</span>
+                <ion-icon *ngIf="isPageLocked('bookings')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
               </div>
 
-              <div class="service-card" (click)="goToPage('samples')">
+              <div class="service-card" [class.locked-card]="isPageLocked('samples')" (click)="goToPage('samples')">
                 <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
-                <span class="service-name">Profile list</span>
-                <span class="service-arrow" aria-hidden="true">›</span>
+                <span class="service-name">Profile List</span>
+                <span class="service-arrow" *ngIf="!isPageLocked('samples')" aria-hidden="true">›</span>
+                <ion-icon *ngIf="isPageLocked('samples')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
               </div>
 
-              <div class="service-card" (click)="goToPage('outsource')">
+              <div class="service-card" [class.locked-card]="isPageLocked('outsource')" (click)="goToPage('outsource')">
                 <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
-                <span class="service-name">Client history</span>
-                <span class="service-arrow" aria-hidden="true">›</span>
+                <span class="service-name">Client History</span>
+                <span class="service-arrow" *ngIf="!isPageLocked('outsource')" aria-hidden="true">›</span>
+                <ion-icon *ngIf="isPageLocked('outsource')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
               </div>
             </div>
           </section>
@@ -1129,10 +1159,10 @@
           <section class="content-section">
             <div class="section-heading">
               <div>
-                <p class="eyebrow">Recent activity</p>
-                <h2>Daily bookings</h2>
+                <p class="eyebrow">Recent Activity</p>
+                <h2>Daily Bookings</h2>
               </div>
-              <p class="section-note">Last 5 days</p>
+              <p class="section-note">Last 5 Days</p>
             </div>
 
             <div class="daily-list">
@@ -1187,43 +1217,6 @@
             </article>
           </section>
 
-          <!-- <section class="focus-card" aria-label="Today's booking highlight">
-              <div class="focus-primary">
-                <p>Today · {{ todayKeyLabel }}</p>
-                <div>
-                  <strong>{{ todayBookingsCount }}</strong>
-                  <span>Bookings today</span>
-                </div>
-              </div>
-
-              <div class="focus-divider" *ngIf="canViewCollection"></div>
-
-              <div class="focus-amount" *ngIf="canViewCollection">
-                <span>Collected today</span>
-                <strong>₹{{ todayAmount }}</strong>
-              </div>
-
-              <span class="focus-orb orb-one"></span>
-              <span class="focus-orb orb-two"></span>
-            </section> -->
-          <!-- <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
-              <div class="wm-clickable" (click)="openWalletModal()">
-                <span class="wm-icon-badge">
-                  <ion-icon name="wallet-outline"></ion-icon>
-                </span>
-                <div class="wm-info">
-                  <span class="wm-label">Balance</span>
-                  <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
-                </div>
-              </div>
-
-              <button type="button" class="wm-add-btn" (click)="openAddFundsModal()">
-                <ion-icon name="add-circle-outline"></ion-icon>
-              </button>
-
-              <span class="wallet-orb wm-orb-one"></span>
-              <span class="wallet-orb wm-orb-two"></span>
-            </div> -->
           <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
             <span class="wm-icon-badge">
               <ion-icon name="wallet-outline"></ion-icon>
@@ -1253,38 +1246,41 @@
             <div class="services-grid">
               <div class="service-card" (click)="goToPage('add-patient')">
                 <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
-                <span class="service-name">Add patient</span>
+                <span class="service-name">New Booking</span>
                 <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
               <div class="service-card" (click)="goToPage('booking-status')">
                 <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
-                <span class="service-name">Booking status</span>
+                <span class="service-name">Booking Status</span>
                 <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
               <div class="service-card" (click)="goToPage('reports')">
                 <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
-                <span class="service-name">Download reports</span>
+                <span class="service-name">Download Reports</span>
                 <span class="service-arrow" aria-hidden="true">›</span>
               </div>
 
-              <div class="service-card" (click)="goToPage('bookings')">
+              <div class="service-card" [class.locked-card]="isPageLocked('bookings')" (click)="goToPage('bookings')">
                 <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
-                <span class="service-name">Test list</span>
-                <span class="service-arrow" aria-hidden="true">›</span>
+                <span class="service-name">Test List</span>
+                <span class="service-arrow" *ngIf="!isPageLocked('bookings')" aria-hidden="true">›</span>
+                <ion-icon *ngIf="isPageLocked('bookings')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
               </div>
 
-              <div class="service-card" (click)="goToPage('samples')">
+              <div class="service-card" [class.locked-card]="isPageLocked('samples')" (click)="goToPage('samples')">
                 <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
-                <span class="service-name">Profile list</span>
-                <span class="service-arrow" aria-hidden="true">›</span>
+                <span class="service-name">Profile List</span>
+                <span class="service-arrow" *ngIf="!isPageLocked('samples')" aria-hidden="true">›</span>
+                <ion-icon *ngIf="isPageLocked('samples')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
               </div>
 
-              <div class="service-card" (click)="goToPage('outsource')">
+              <div class="service-card" [class.locked-card]="isPageLocked('outsource')" (click)="goToPage('outsource')">
                 <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
-                <span class="service-name">Client history</span>
-                <span class="service-arrow" aria-hidden="true">›</span>
+                <span class="service-name">Client History</span>
+                <span class="service-arrow" *ngIf="!isPageLocked('outsource')" aria-hidden="true">›</span>
+                <ion-icon *ngIf="isPageLocked('outsource')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
               </div>
             </div>
           </section>

@@ -1,0 +1,120 @@
+:host {
+  --ink: #14222e;
+  --muted: #6c7b86;
+  --line: #e8edf0;
+  --canvas: #f5f8f8;
+  --surface: #ffffff;
+  --brand: #087b76;
+  --brand-deep: #075f5d;
+}
+
+ion-content.profile-content { --background: var(--canvas); }
+
+.profile-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 0 40px;
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: max(18px, env(safe-area-inset-top)) 18px 20px;
+  margin-bottom: 22px;
+  background: linear-gradient(135deg, var(--brand), var(--brand-deep));
+  border-radius: 0 0 20px 20px;
+  box-shadow: 0 6px 18px rgba(7, 95, 93, .18);
+
+  h1 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.03em; color: #fff; }
+}
+
+.back-btn {
+  width: 40px; height: 40px;
+  border: 0; border-radius: 12px;
+  display: grid; place-items: center;
+  background: rgba(255, 255, 255, .15);
+  ion-icon { font-size: 20px; color: #fff; }
+}
+
+.profile-loading {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  padding: 60px 0; color: var(--muted); font-size: 13px; font-weight: 600;
+  margin: 0 18px;
+}
+
+.profile-card {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 18px;
+  margin: 0 18px 14px;
+  box-shadow: 0 4px 16px rgba(23,45,50,.03);
+}
+
+.card-title {
+  display: flex; align-items: center; gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--line);
+
+  ion-icon { font-size: 17px; color: var(--brand); }
+  h2 { margin: 0; font-size: 15px; font-weight: 800; color: var(--brand-deep); }
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 9px 0;
+  border-bottom: 1px dashed var(--line);
+  gap: 10px;
+
+  &:last-of-type { border-bottom: 0; }
+}
+
+.info-label {
+  font-size: 12.5px;
+  color: var(--muted);
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.info-value {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--ink);
+  text-align: right;
+  word-break: break-word;
+}
+
+.update-pass-btn {
+  margin-top: 14px;
+  --background: linear-gradient(135deg, #087d78, #055f5d);
+  --color: #fff;
+  --border-radius: 12px;
+  height: 46px;
+  font-weight: 800;
+}
+
+.plan-card {
+  border-top: 3px solid #16866e;
+}
+
+.status-pill {
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: #d8f2ed;
+  color: #16866e;
+  font-size: 11px;
+  font-weight: 800;
+
+  &.expired { background: #ffebef; color: #c0392b; }
+}
+
+.no-plan-text {
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  margin: 10px 0;
+}

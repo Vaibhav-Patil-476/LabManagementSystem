@@ -30,7 +30,8 @@ import {
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, addOutline, attachOutline,
   checkmarkOutline, walletOutline, cardOutline, removeCircleOutline,
-  addCircleOutline, businessOutline, phonePortraitOutline, lockClosedOutline
+  addCircleOutline, businessOutline, phonePortraitOutline, lockClosedOutline,
+  eyeOutline // ✅ NEW — Tests preview (eye icon) साठी
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -133,6 +134,23 @@ export class DashboardPage implements OnInit, OnDestroy {
   private currentFranchiseId: any = undefined;
 
   // ============================================================
+  // TEST PREVIEW MODAL (eye icon — search results)
+  // ============================================================
+  isTestPreviewModalOpen = false;
+  previewBooking: any = null;
+
+  openTestPreview(item: any, event?: MouseEvent): void {
+    event?.stopPropagation(); // card expand होऊ नये म्हणून
+    this.previewBooking = item;
+    this.isTestPreviewModalOpen = true;
+  }
+
+  closeTestPreview(): void {
+    this.isTestPreviewModalOpen = false;
+    this.previewBooking = null;
+  }
+
+  // ============================================================
   // EDIT TEST MODAL
   // ============================================================
   isEditTestModalOpen = false;
@@ -201,6 +219,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   downloadingReportId: any = null;
   printingId: any = null;
+
 
   // ============================================================
   // ROLE CONSTANTS
@@ -275,8 +294,10 @@ export class DashboardPage implements OnInit, OnDestroy {
       'business-outline': businessOutline,
       'phone-portrait-outline': phonePortraitOutline,
       'lock-closed-outline': lockClosedOutline,
+      'eye-outline': eyeOutline, // ✅ NEW
     });
   }
+
 
   // ============================================================
   // ROLE / PERMISSION GETTERS
@@ -592,13 +613,51 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   private filterBookingsByQuery(list: any[], query: string): any[] {
-    const ql = query.toLowerCase();
-    return list.filter((b: any) =>
-      String(b.bookingId).includes(ql) ||
-      (b.patientId || '').toLowerCase().includes(ql) ||
-      (b.customerName || '').toLowerCase().includes(ql) ||
-      (b.doctorName || '').toLowerCase().includes(ql)
-    );
+    const q = query.trim();
+    if (!q) return [];
+
+    const ql = q.toLowerCase();
+    const isNumericQuery = /^\d+$/.test(q);
+    const hasLetters = /[a-zA-Z]/.test(q);
+
+    // 1) Booking ID — query पूर्ण numeric असेल तरच ID वर match करा
+    //    (exact match आधी, नंतर startsWith) — यामुळे "2345" हे दुसऱ्या
+    //    booking च्या barcode मध्ये सापडलं तरी ते इथे धरलं जाणार नाही.
+    if (isNumericQuery) {
+      const idExact = list.filter((b: any) => String(b.bookingId) === q);
+      if (idExact.length) return idExact;
+
+      const idPrefix = list.filter((b: any) => String(b.bookingId).startsWith(q));
+      if (idPrefix.length) return idPrefix;
+    }
+
+    // 2) Patient ID — exact / startsWith match
+    const patientIdMatches = list.filter((b: any) => {
+      const pid = (b.patientId || '').toLowerCase();
+      return pid === ql || pid.startsWith(ql);
+    });
+    if (patientIdMatches.length) return patientIdMatches;
+
+    // 3) Name / Doctor — query मध्ये letters असतील तरच नाव/डॉक्टर वर शोधा
+    if (hasLetters) {
+      const nameMatches = list.filter((b: any) =>
+        (b.customerName || '').toLowerCase().includes(ql) ||
+        (b.doctorName || '').toLowerCase().includes(ql)
+      );
+      if (nameMatches.length) return nameMatches;
+    }
+
+    // 4) Barcode — सगळ्यात शेवटचा पर्याय, फक्त वरचं काहीच match नाही झालं तरच
+    return list.filter((b: any) => this.matchesBarcode(b, ql));
+  }
+
+  private matchesBarcode(booking: any, query: string): boolean {
+    const sampleList: any[] = booking?.sampleAccessions || booking?.samples || [];
+
+    return sampleList.some((s: any) => {
+      const code = String(s?.barCode || s?.barcode || '').toLowerCase();
+      return code.includes(query);
+    });
   }
 
   private fetchAllBookingStatusForSearch(): Observable<any> {
@@ -1028,7 +1087,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
+  private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
     const addTestBody: any = {
       bookingId,
       customerName: this.selectedBooking.customerName,
@@ -1804,7 +1863,7 @@ private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
     };
   }
 
-  private testStatusLabel(status?: string): string {
+  testStatusLabel(status?: string): string {
     const s = (status || 'snr').toLowerCase();
     if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
     if (s === 'snr') return 'SNR';
@@ -1814,7 +1873,7 @@ private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
     return 'PENDING';
   }
 
-  private testStatusClass(status?: string): string {
+  testStatusClass(status?: string): string {
     const s = (status || 'snr').toLowerCase();
     if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
     if (s === 'snr') return 'badge-snr';
@@ -1827,7 +1886,20 @@ private addNewTestsToBooking(bookingId: number, newTests: any[]): void {
   // ============================================================
   // NAVIGATION
   // ============================================================
+
+
+
+  private readonly LOCKED_PAGES = ['bookings', 'samples', 'outsource'];
+
+  isPageLocked(page: string): boolean {
+    return this.LOCKED_PAGES.includes(page);
+  }
+
   goToPage(page: string): void {
+    if (this.isPageLocked(page)) {
+      return;
+    }
+
     this.menuCtrl.close();
     this.router.navigate(['/' + page]);
   }

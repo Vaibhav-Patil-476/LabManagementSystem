@@ -14,7 +14,7 @@ import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline
 } from 'ionicons/icons';
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
@@ -168,7 +168,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   isBarcodeModalOpen = false;
   barcodeBooking: BookingListItem | null = null;
   barcodeRows: {
-    accessionId?: number; sampleTypeId?: number; sampleType: string;
+    accessionId?: number; sampleTypeId?: number; testId?: number; sampleType: string;
     oldBarcode: string; newBarcode: string; receiveDate: string;
     status: string; canEditBarcode: boolean; saving: boolean;
   }[] = [];
@@ -179,7 +179,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   billHistoryBooking: BookingListItem | null = null;
 
   openActionRowId: number | null = null;
-  generatingBillId: number | null = null;
+generatingBillId: number | null = null;
+sharingWhatsappId: number | null = null;   // ✅ NEW
   openActionItem: BookingListItem | null = null;
   actionMenuPosition = { top: 0, left: 0 };
   expandedBookingId: number | null = null;
@@ -419,12 +420,12 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     private alertController: AlertController,
     private authService: AuthService
   ) {
-    addIcons({
-      flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
-      addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
-      documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-      refreshOutline, searchOutline, closeCircleOutline
-    });
+addIcons({
+  flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
+  addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
+  documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline
+});
   }
 
   // ---------- lifecycle ----------
@@ -607,7 +608,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       const isSampleReceived = sampleStatus === 'RECEIVED';
       const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
 
-return {
+      return {
         testId: t.testId,
         testMappingId: mappingId,
         testName: (t.testName || '').trim(),
@@ -930,6 +931,20 @@ return {
     this.expandedBookingId = this.expandedBookingId === item.bookingId ? null : item.bookingId;
   }
 
+  isTestPreviewModalOpen = false;
+previewBooking: BookingListItem | null = null;
+
+openTestPreview(item: BookingListItem, event?: MouseEvent): void {
+  event?.stopPropagation(); // card expand होऊ नये म्हणून
+  this.previewBooking = item;
+  this.isTestPreviewModalOpen = true;
+}
+
+closeTestPreview(): void {
+  this.isTestPreviewModalOpen = false;
+  this.previewBooking = null;
+}
+
   getSamples(item: BookingListItem): number {
     return (item.samples?.length || (item.tests || []).length) || 0;
   }
@@ -1038,6 +1053,38 @@ return {
     });
   }
 
+  // ---------- share report via whatsapp ----------
+shareViaWhatsApp(item: BookingListItem): void {
+  this.closeActionMenu();
+
+  if (this.sharingWhatsappId === item.bookingId) return;
+  this.sharingWhatsappId = item.bookingId;
+
+  this.labApi.shareReportViaWhatsApp(item.bookingId).subscribe({
+    next: (res: any) => this.ngZone.run(() => {
+      this.sharingWhatsappId = null;
+
+      if (res?.success === false) {
+        this.showToast(res?.message || 'Failed to share the report via WhatsApp.', 'error');
+        return;
+      }
+
+      this.showToast('Report shared via WhatsApp successfully.', 'success');
+      this.cdr.detectChanges();
+    }),
+    error: (err) => {
+      console.error('SHARE WHATSAPP ERROR:', err);
+      this.ngZone.run(() => {
+        this.sharingWhatsappId = null;
+        this.showToast(
+          err?.error?.message || 'Failed to share the report via WhatsApp. Please try again.',
+          'error'
+        );
+      });
+    }
+  });
+}
+
   // ---------- edit test ----------
   editTest(item: BookingListItem): void {
     this.closeActionMenu();
@@ -1120,73 +1167,73 @@ return {
   }
 
   searchPackages(): void {
-  const q = this.packageSearchTerm.trim();
+    const q = this.packageSearchTerm.trim();
 
-  if (this.packageSearchTimer) clearTimeout(this.packageSearchTimer);
+    if (this.packageSearchTimer) clearTimeout(this.packageSearchTimer);
 
-  if (!q) {
+    if (!q) {
+      this.filteredPackages = [];
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    this.packageSearchTimer = setTimeout(() => {
+      const labId = this.labApi.getCurrentLabId();
+      const franchiseId = this.selectedBooking?.franchise?.franchiseId ?? this.selectedFranchiseId ?? undefined;
+
+      this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
+        next: (res: any) => {
+          this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
+          this.showPackageSuggestions = this.filteredPackages.length > 0;
+        },
+        error: () => {
+          this.filteredPackages = [];
+          this.showPackageSuggestions = false;
+        }
+      });
+    }, 250);
+  }
+
+  addPackage(pkg: any): void {
+    const packageTests: any[] = pkg?.withTest || pkg?.tests || pkg?.testList || pkg?.profileTests || [];
+
+    if (!Array.isArray(packageTests) || packageTests.length === 0) {
+      this.showToast('No tests found inside this package', 'warning');
+      this.packageSearchTerm = '';
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    let addedCount = 0;
+
+    packageTests.forEach((pt: any) => {
+      const testId = Number(pt?.testId ?? pt?.test_id ?? pt?.id ?? 0);
+      const testName = String(pt?.testName ?? pt?.test_name ?? '').trim();
+
+      if (!testId || !testName) return;
+      if (this.selectedTests.some(s => s.testName === testName)) return;
+
+      this.selectedTests.push({
+        testId,
+        testName,
+        testMrp: pt.test_price ?? 0,
+        testPrice: pt.assignedPrice ?? pt.price2 ?? 0,
+        isNewlyAdded: true
+      } as any);
+
+      addedCount++;
+    });
+
+    if (addedCount > 0) {
+      this.showToast(`${addedCount} test(s) added from package`, 'success');
+    } else {
+      this.showToast('All tests already added', 'warning');
+    }
+
+    this.packageSearchTerm = '';
     this.filteredPackages = [];
     this.showPackageSuggestions = false;
-    return;
   }
-
-  this.packageSearchTimer = setTimeout(() => {
-    const labId = this.labApi.getCurrentLabId();
-    const franchiseId = this.selectedBooking?.franchise?.franchiseId ?? this.selectedFranchiseId ?? undefined;
-
-    this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
-      next: (res: any) => {
-        this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
-        this.showPackageSuggestions = this.filteredPackages.length > 0;
-      },
-      error: () => {
-        this.filteredPackages = [];
-        this.showPackageSuggestions = false;
-      }
-    });
-  }, 250);
-}
-
-addPackage(pkg: any): void {
-  const packageTests: any[] = pkg?.withTest || pkg?.tests || pkg?.testList || pkg?.profileTests || [];
-
-  if (!Array.isArray(packageTests) || packageTests.length === 0) {
-    this.showToast('No tests found inside this package', 'warning');
-    this.packageSearchTerm = '';
-    this.showPackageSuggestions = false;
-    return;
-  }
-
-  let addedCount = 0;
-
-  packageTests.forEach((pt: any) => {
-    const testId = Number(pt?.testId ?? pt?.test_id ?? pt?.id ?? 0);
-    const testName = String(pt?.testName ?? pt?.test_name ?? '').trim();
-
-    if (!testId || !testName) return;
-    if (this.selectedTests.some(s => s.testName === testName)) return;
-
-    this.selectedTests.push({
-      testId,
-      testName,
-      testMrp: pt.test_price ?? 0,
-      testPrice: pt.assignedPrice ?? pt.price2 ?? 0,
-      isNewlyAdded: true
-    } as any);
-
-    addedCount++;
-  });
-
-  if (addedCount > 0) {
-    this.showToast(`${addedCount} test(s) added from package`, 'success');
-  } else {
-    this.showToast('All tests already added', 'warning');
-  }
-
-  this.packageSearchTerm = '';
-  this.filteredPackages = [];
-  this.showPackageSuggestions = false;
-}
 
   addTest(test: BookingTest): void {
     this.selectedTests.push({ ...test, resultValue: '', isNewlyAdded: true });
@@ -1307,7 +1354,7 @@ addPackage(pkg: any): void {
     this.paidAmount = this.basePaidAmount + this.payNowAmount;
   }
 
-updateTestBooking(): void {
+  updateTestBooking(): void {
     if (!this.selectedBooking || this.isSavingTest) return;
 
     // Empty test lists are allowed — a user can delete all tests and still save/update the booking.
@@ -1827,7 +1874,6 @@ updateTestBooking(): void {
         displayStatus = 'PENDING';
         canEdit = true;
       } else {
-        // in_process, complete, and everything else -> locked/received
         displayStatus = 'RECEIVED';
         canEdit = false;
       }
@@ -1835,6 +1881,7 @@ updateTestBooking(): void {
       return {
         accessionId: s.accessionId || s.sampleAccessionId,
         sampleTypeId: s.sampleTypeId,
+        testId: Number(s.testId),   // ✅ verify साठी लागेल
         sampleType: s.sampleType || '-',
         oldBarcode: s.barcode,
         newBarcode: s.barcode,
@@ -1914,7 +1961,7 @@ updateTestBooking(): void {
   }
 
   updateBarcodeRow(row: {
-    sampleTypeId?: number; newBarcode: string; oldBarcode: string;
+    sampleTypeId?: number; testId?: number; newBarcode: string; oldBarcode: string;
     receiveDate: string; status: string; canEditBarcode: boolean; saving: boolean;
   }): void {
     if (!row.canEditBarcode) {
@@ -1929,25 +1976,92 @@ updateTestBooking(): void {
       return;
     }
 
+    const trimmedNewBarcode = row.newBarcode.trim();
+
+    if (trimmedNewBarcode === row.oldBarcode) {
+      this.showToast('Barcode unchanged.', 'warning');
+      return;
+    }
+
+    // ✅ याच booking मधल्या दुसऱ्या row ला हाच barcode आधीच दिलेला नाहीये ना (local check)
+    const isDuplicateLocally = this.barcodeRows.some(
+      r => r !== row && String(r.oldBarcode || '').trim() === trimmedNewBarcode
+    );
+
+    if (isDuplicateLocally) {
+      this.showToast('This barcode is already used for another sample in this booking.', 'error');
+      return;
+    }
+
     row.saving = true;
     const bookingId = this.barcodeBooking.bookingId;
     const payload = [{
       oldBarcode: row.oldBarcode,
-      updatedBarcode: row.newBarcode.trim(),
+      updatedBarcode: trimmedNewBarcode,
       receiveDate: row.receiveDate || '',
       sampleTypeId: row.sampleTypeId,
       bookingId
     }];
 
     this.labApi.updateBarcode(bookingId, payload).subscribe({
-      next: () => this.ngZone.run(() => {
-        row.saving = false;
-        row.oldBarcode = row.newBarcode;
-        row.status = 'RECEIVED';
-        this.showToast('Barcode updated successfully', 'success');
-        this.cdr.detectChanges();
-        this.fetchSingleBooking(bookingId, () => this.loadBookings());
-      }),
+      next: () => {
+
+        // ✅ FIX: backend duplicate barcode वर पण कधी कधी HTTP 200 देतो
+        // पण प्रत्यक्षात row update करत नाही (silent no-op). त्यामुळे
+        // HTTP success वर आंधळेपणे विश्वास न ठेवता, booking परत fetch
+        // करून खरंच नवीन barcode save झालाय का verify करतो.
+        this.labApi.getSingleBooking(bookingId).subscribe({
+
+          next: (freshRes: any) => {
+
+            this.ngZone.run(() => {
+
+              row.saving = false;
+
+              const freshSamples = freshRes?.sampleAccessions || freshRes?.samples || [];
+
+              const matchedFreshSample = freshSamples.find(
+                (s: any) =>
+                  Number(s?.testId) === Number(row.testId) &&
+                  Number(s?.sampleTypeId ?? s?.sampleTypeData?.sample_type_id) === Number(row.sampleTypeId)
+              );
+
+              const savedBarcode = String(
+                matchedFreshSample?.barCode || matchedFreshSample?.barcode || ''
+              ).trim();
+
+              if (savedBarcode && savedBarcode === trimmedNewBarcode) {
+
+                // ✅ खरंच backend मध्ये save झालं
+                row.oldBarcode = trimmedNewBarcode;
+                row.status = 'RECEIVED';
+                this.showToast('Barcode updated successfully', 'success');
+                this.cdr.detectChanges();
+                this.fetchSingleBooking(bookingId, () => this.loadBookings());
+
+              } else {
+
+                // ❌ backend नी silently reject केलं (barcode दुसऱ्या
+                // कुठल्या तरी booking मध्ये आधीच वापरलेला आहे) — UI
+                // revert करा, चुकीचा success दाखवू नका.
+                row.newBarcode = row.oldBarcode;
+                this.showToast(
+                  'This barcode has already been used elsewhere. Please enter a different barcode.',
+                  'error'
+                );
+                this.cdr.detectChanges();
+              }
+            });
+          },
+
+          error: () => {
+            this.ngZone.run(() => {
+              row.saving = false;
+              this.showToast('Barcode update sent, but could not confirm. Please refresh and check.', 'warning');
+            });
+          }
+        });
+      },
       error: (err) => {
         console.log('UPDATE BARCODE ERROR:', err);
         this.ngZone.run(() => {

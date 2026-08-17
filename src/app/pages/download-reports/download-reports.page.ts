@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner,
-  IonSelect, IonSelectOption
+  IonSelect, IonSelectOption, IonModal
 } from '@ionic/angular/standalone';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -13,7 +13,8 @@ import { addIcons } from 'ionicons';
 import {
   downloadOutline, documentTextOutline, checkmarkDoneOutline,
   refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
-  businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline, qrCodeOutline
+  businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline, qrCodeOutline,
+  closeOutline, eyeOutline
 } from 'ionicons/icons';
 import { firstValueFrom } from 'rxjs';
 
@@ -56,7 +57,7 @@ export interface ReportBookingRow {
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
     IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner,
-    IonSelect, IonSelectOption,
+    IonSelect, IonSelectOption, IonModal,
     MatDatepickerModule, MatFormFieldModule, MatInputModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
@@ -90,6 +91,19 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   hasMore = false;
   totalBookingsFromServer = 0;
   expandedId: number | string | null = null;
+  showTestPreview = false;
+  previewItem: ReportBookingRow | null = null;
+
+  openTestPreview(item: ReportBookingRow, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.previewItem = item;
+    this.showTestPreview = true;
+  }
+
+  closeTestPreview(): void {
+    this.showTestPreview = false;
+    this.previewItem = null;
+  }
 
   // ---------- Lab typeahead + add-lab modal ----------
   franchiseLabs: any[] = [];
@@ -135,7 +149,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
       refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
       businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline,
-      qrCodeOutline
+      qrCodeOutline, closeOutline, eyeOutline
     });
   }
 
@@ -471,7 +485,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       error: (err) => {
         console.error('Failed to load bookings', err);
         this.ngZone.run(() => {
-          this.toast.error('Error', 'Data load houu shakla nahi, punha try kara');
+          this.toast.error('Error', 'Failed to load bookings. Please try again.');
           this.isLoading = false;
           this.isLoadingMore = false;
         });
@@ -518,7 +532,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- mapping ----------
-private mapToRow(raw: any): ReportBookingRow {
+  private mapToRow(raw: any): ReportBookingRow {
     const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
 
     const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
@@ -547,7 +561,7 @@ private mapToRow(raw: any): ReportBookingRow {
       barcodes.push(sampleType ? `${barcode} - ${sampleType}` : barcode);
     });
 
-  
+
     const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
     const franchiseName = raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
 
@@ -714,13 +728,13 @@ private mapToRow(raw: any): ReportBookingRow {
   // ---------- download ----------
   async downloadSelected(): Promise<void> {
     if (!this.canShowDownloadControls) {
-      this.toast.error('Not allowed', 'Download फक्त Admin ला, Complete tab वर उपलब्ध आहे');
+      this.toast.error('Not Allowed', 'Downloads are only available to Admin users on the Complete tab.');
       return;
     }
 
     const selected = this.selectedReports;
     if (selected.length === 0) {
-      this.toast.warning('Warning', 'Kripya kimman ek report select kara');
+      this.toast.warning('Selection Required', 'Please select at least one report to download.');
       return;
     }
 
@@ -734,14 +748,14 @@ private mapToRow(raw: any): ReportBookingRow {
 
       if (res?.success && res?.downloadUrl) {
         window.open(res.downloadUrl, '_blank');
-        this.toast.success('Success', `${bookingIds.length} report(s) ready`);
+        this.toast.success('Success', `${bookingIds.length} report(s) downloaded successfully.`);
         this.selectedIds.clear();
       } else {
-        this.toast.error('Error', res?.message || 'PDF generate karta aala nahi');
+        this.toast.error('Generation Failed', res?.message || 'Unable to generate the PDF report.');
       }
     } catch (err) {
       console.error('PDF generation failed', err);
-      this.toast.error('Error', 'PDF generate karnyat error aali, punha try kara');
+      this.toast.error('Error', 'An error occurred while generating the PDF. Please try again.');
     } finally {
       this.isGenerating = false;
     }

@@ -41,7 +41,8 @@ import {
   attachOutline,
   documentOutline,
   checkmarkOutline,
-  chevronDownOutline
+  chevronDownOutline,
+  eyeOutline
 } from 'ionicons/icons';
 
 import { RoleService } from '../../core/services/role';
@@ -235,6 +236,17 @@ export class AddPatientComponent {
 
   showPackageSuggestions = false;
 
+  // ✅ NEW: A package added to the bill is kept as ONE collapsed row
+  // (name + eye icon) instead of exploding into every individual
+  // test — matches company web. Each entry keeps the underlying
+  // tests so billing/barcode/invoice logic still has everything it
+  // needs, they're just not rendered as separate rows.
+  selectedPackages: any[] = [];
+
+  showPackageTestsModal = false;
+
+  activePackageForPreview: any = null;
+
   // ============================================================
   // FILE
   // ============================================================
@@ -248,6 +260,10 @@ export class AddPatientComponent {
   // ============================================================
 
   showInvoice = false;
+
+  // ✅ NEW: toggles the branded header on the invoice (matches the
+  // "Show Header" switch on the company web app invoice screen).
+  showInvoiceHeader = true;
 
   savedPatient: any = null;
 
@@ -356,10 +372,32 @@ export class AddPatientComponent {
   }
 
   getB2BSubTotal(): number {
-    return this.selectedTests.reduce(
-      (sum: number, t: any) => sum + Number(t?.b2b || 0),
-      0
-    );
+    return this.getSubTotal();
+  }
+
+get displayTestRows(): any[] {
+
+
+    const individualRows = this.selectedTests
+      .filter((t: any) => !t.packageName)
+      .map((t: any) => ({ ...t, isPackage: false }));
+
+    const packageRows = this.selectedPackages.map((p: any) => ({
+      name: p.profileName,
+      b2b: p.b2b,
+      mrp: p.mrp,
+      dis: 0,
+      tat: '-',
+      fluid: '-',
+      isPackage: true,
+      packageRef: p
+    }));
+
+    return [...individualRows, ...packageRows];
+  }
+
+  trackByRow(index: number, row: any): any {
+    return row?.isPackage ? ('pkg-' + row.name) : ('test-' + row.name);
   }
   // ============================================================
   // CONSTRUCTOR
@@ -392,7 +430,8 @@ export class AddPatientComponent {
       'attach-outline': attachOutline,
       'document-outline': documentOutline,
       'checkmark-outline': checkmarkOutline,
-      'chevron-down-outline': chevronDownOutline
+      'chevron-down-outline': chevronDownOutline,
+      'eye-outline': eyeOutline
     });
   }
 
@@ -693,10 +732,26 @@ export class AddPatientComponent {
       return;
     }
 
+    if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(doctorName)) {
+      this.toastService.error(
+        'Validation Error',
+        'Doctor name should contain only letters and be 2-60 characters long.'
+      );
+      return;
+    }
+
     if (this.isAdminRole && !mobileNumber) {
       this.toastService.error(
         'Validation Error',
         'Please enter mobile number.'
+      );
+      return;
+    }
+
+    if (this.isAdminRole && !/^[6-9]\d{9}$/.test(mobileNumber)) {
+      this.toastService.error(
+        'Validation Error',
+        'Mobile number must be exactly 10 digits and start with 6-9.'
       );
       return;
     }
@@ -1973,6 +2028,16 @@ export class AddPatientComponent {
       return;
     }
 
+    const labContact = String(this.newLab?.contact || '').trim();
+
+    if (labContact && !/^\d{10}$/.test(labContact)) {
+      this.toastService.error(
+        'Validation Error',
+        'Lab contact number must be exactly 10 digits.'
+      );
+      return;
+    }
+
     if (this.isSavingLab) {
       return;
     }
@@ -2359,6 +2424,260 @@ export class AddPatientComponent {
     }, 250);
   }
 
+  // ============================================================
+  // BARCODE GENERATION
+  //
+  // Company web app auto-generates a random Barcode Id per sample
+  // (image 2 reference). We mirror that here: every time a test /
+  // package is added, a 10-digit random barcode is generated once
+  // and used to seed BOTH:
+  //   - barcode         -> the auto/random one (readonly display)
+  //   - confirmBarcode  -> the editable "update barcode" value
+  //
+  // NOTE: confirmBarcode is already what savePatient()/proceedBookingSave()
+  // sends to the backend (see `barcode: String(sample?.confirmBarcode || barcode)`
+  // in savePatient()), so editing it here already flows into the booking
+  // payload with zero extra wiring.
+  // ============================================================
+
+  private generateBarcode(): string {
+    // 10-digit random numeric barcode, e.g. "0793594204"
+    return Math.floor(Math.random() * 10000000000)
+      .toString()
+      .padStart(10, '0');
+  }
+
+  // ============================================================
+  // ✅ SAMPLE-TYPE GROUPED BARCODES
+  //
+  // Company web gives ONE barcode per SAMPLE TYPE (e.g. one for
+  // all EDTA tests, one for all SERUM tests) — not one barcode
+  // per individual test. Every test that shares a sample type
+  // joins the same group and the same barcode; only a brand-new
+  // sample type gets a freshly generated barcode.
+  //
+  // ✅ FIX: addTest() / addPackage() / removeRow() / removeTest()
+  // were pushing/filtering selectedSampleTests directly (one entry
+  // per TEST) instead of calling these two helpers — that's why 11
+  // tests produced 11 separate barcodes instead of grouping by
+  // sample type (2 barcodes: EDTA + SERUM), unlike company web.
+  // Every add/remove now routes through these two functions only.
+  // ============================================================
+
+  private addTestToSampleGroup(test: any): void {
+
+    const sampleId = Number(test?.sampleId || 0);
+    const sampleType = String(test?.sampleType || 'OTHER');
+
+    let group = this.selectedSampleTests.find(
+      (g: any) => Number(g.sampleId) === sampleId && g.sampleType === sampleType
+    );
+
+    if (!group) {
+
+      const generatedBarcode = this.generateBarcode();
+
+      group = {
+        sampleId: test?.sampleId,
+        sampleType,
+        color: test?.color,
+        barcode: generatedBarcode,
+        confirmBarcode: generatedBarcode,
+        testNames: [],
+        testIds: []
+      };
+
+      this.selectedSampleTests.push(group);
+    }
+
+    const testId = Number(test?.id ?? test?.testId ?? 0);
+
+    if (!group.testIds.includes(testId)) {
+      group.testIds.push(testId);
+      group.testNames.push(test?.name);
+    }
+  }
+
+  private removeTestFromSampleGroup(test: any): void {
+
+    const testId = Number(test?.id ?? test?.testId ?? 0);
+
+    const group = this.selectedSampleTests.find(
+      (g: any) => (g.testIds || []).includes(testId)
+    );
+
+    if (!group) {
+      return;
+    }
+
+    const idx = group.testIds.indexOf(testId);
+
+    if (idx >= 0) {
+      group.testIds.splice(idx, 1);
+      group.testNames.splice(idx, 1);
+    }
+
+    if (group.testIds.length === 0) {
+      this.selectedSampleTests = this.selectedSampleTests.filter(
+        (g: any) => g !== group
+      );
+    }
+  }
+
+  // ============================================================
+  // UPDATE BARCODE (invoice screen)
+  //
+  // User edits the "Update Barcode" box, taps Save -> the edited
+  // value becomes the sample's actual barcode (shown in the
+  // "Barcode Id" column too) AND stays as confirmBarcode, which is
+  // what savePatient()/proceedBookingSave() already sends to the
+  // backend.
+  // ============================================================
+
+updateSampleBarcode(sample: any): void {
+
+  const newBarcode = String(sample?.confirmBarcode || '').trim();
+
+  if (!newBarcode) {
+    this.toastService.error('Invalid Barcode', 'Please enter a barcode before saving.');
+    return;
+  }
+
+  const bookingId = Number(this.savedPatient?.id || 0);
+
+  if (!bookingId) {
+    this.toastService.error('Update Error', 'Booking not found. Cannot update barcode.');
+    return;
+  }
+
+  const oldBarcode = String(sample?.barcode || '').trim();
+
+  if (newBarcode === oldBarcode) {
+    this.toastService.warning('No Change', 'Barcode is unchanged.');
+    return;
+  }
+
+  // ✅ याच booking मधल्या दुसऱ्या sample ला हाच barcode आधीच दिलेला नाहीये ना
+  const isDuplicateLocally = (this.savedPatient?.sampleTests || []).some(
+    (s: any) => s !== sample && String(s?.barcode || '').trim() === newBarcode
+  );
+
+  if (isDuplicateLocally) {
+    this.toastService.error(
+      'Duplicate Barcode',
+      'This barcode is already used for another sample in this booking.'
+    );
+    return;
+  }
+
+  const payload = [{
+    oldBarcode: oldBarcode,
+    updatedBarcode: newBarcode,
+    receiveDate: '',
+    sampleTypeId: sample?.sampleId,
+    bookingId
+  }];
+
+  sample.saving = true;
+
+  this.labApi.updateBarcode(bookingId, payload).subscribe({
+
+    next: () => {
+
+      // ✅ FIX: backend कधी कधी duplicate barcode वर पण HTTP 200
+      // देतो पण प्रत्यक्षात row update करत नाही (silent no-op).
+      // त्यामुळे HTTP success वर आंधळेपणे विश्वास न ठेवता, booking
+      // परत fetch करून खरंच नवीन barcode save झालाय का verify करतो.
+      this.labApi.getSingleBooking(bookingId).subscribe({
+
+        next: (freshRes: any) => {
+
+          sample.saving = false;
+
+          const freshSamples =
+            freshRes?.sampleAccessions ||
+            freshRes?.samples ||
+            [];
+
+          const matchedFreshSample = freshSamples.find(
+            (s: any) =>
+              Number(s?.sampleTypeId ?? s?.sampleTypeData?.sample_type_id) === Number(sample?.sampleId)
+          );
+
+          const savedBarcode = String(
+            matchedFreshSample?.barCode ||
+            matchedFreshSample?.barcode ||
+            ''
+          ).trim();
+
+          if (savedBarcode && savedBarcode === newBarcode) {
+
+            // ✅ खरंच backend मध्ये save झालं
+            sample.barcode = newBarcode;
+            sample.confirmBarcode = newBarcode;
+
+            this.toastService.success(
+              'Barcode Updated',
+              'Barcode updated to ' + newBarcode + '.'
+            );
+
+          } else {
+
+            // ❌ backend नी silently reject केलं (duplicate barcode
+            // दुसऱ्या कुठल्या तरी booking मध्ये आधीच वापरलेला आहे) —
+            // UI revert करा, चुकीचा success दाखवू नका.
+            sample.confirmBarcode = sample.barcode;
+
+            this.toastService.error(
+              'Barcode Already Used',
+              'This barcode has already been used elsewhere. Please enter a different barcode.'
+            );
+          }
+        },
+
+        error: () => {
+          sample.saving = false;
+
+          // Verify call fail झाली तरी update झालं असण्याची शक्यता आहे,
+          // पण खात्री नाही म्हणून optimistic success न दाखवता warn करा.
+          this.toastService.warning(
+            'Please Verify',
+            'Barcode update sent, but could not confirm. Please refresh and check.'
+          );
+        }
+      });
+    },
+
+    error: (err: any) => {
+
+      sample.saving = false;
+
+      console.error('UPDATE BARCODE ERROR:', err);
+
+      const message = String(
+        err?.error?.message || err?.error?.error || ''
+      ).toLowerCase();
+
+      const isDuplicateOnServer =
+        message.includes('barcode') &&
+        (message.includes('already') || message.includes('exist') || message.includes('duplicate') || message.includes('used'));
+
+      if (isDuplicateOnServer) {
+        this.toastService.error(
+          'Barcode Already Used',
+          'This barcode has already been used elsewhere. Please enter a different barcode.'
+        );
+        return;
+      }
+
+      this.toastService.error(
+        'Update Error',
+        err?.error?.message || err?.error?.error || 'Failed to update barcode on server.'
+      );
+    }
+  });
+}
+
   addTest(
     test: any
   ) {
@@ -2376,25 +2695,9 @@ export class AddPatientComponent {
         test
       );
 
-      this.selectedSampleTests.push({
-
-        barcode: '',
-
-        sampleType:
-          test.sampleType,
-
-        testName:
-          test.name,
-
-        color:
-          test.color,
-
-        testId:
-          test.id,
-
-        sampleId:
-          test.sampleId
-      });
+      // ✅ FIX: group by sample type instead of pushing a fresh
+      // barcode entry per test.
+      this.addTestToSampleGroup(test);
 
       this.toastService.success(
         'Test Added',
@@ -2510,7 +2813,19 @@ export class AddPatientComponent {
 
     }, 250);
   }
-  addPackage(pkg: any): void {
+
+  // ============================================================
+  // ✅ PACKAGE PREVIEW (eye icon click -> shows bundled tests)
+  // ============================================================
+
+addPackage(pkg: any): void {
+
+    const packageName = String(
+      pkg?.profileName ||
+      pkg?.profile_name ||
+      pkg?.name ||
+      'Package'
+    );
 
     const packageTests: any[] =
       pkg?.withTest ||
@@ -2519,129 +2834,127 @@ export class AddPatientComponent {
       pkg?.profileTests ||
       [];
 
-    // 👀 Debug: console madhe ha expand karun andarcha exact field
-    // name (testId / test_id / etc.) confirm kar — matched na
-    // zaleli tests khali 'PACKAGE TEST NOT MATCHED' warning deतील.
-    console.log(
-      'RAW withTest ARRAY:',
-      packageTests
-    );
-
     if (!Array.isArray(packageTests) || packageTests.length === 0) {
-
-      this.toastService.warning(
-        'Empty Package',
-        'No tests found inside this package.'
-      );
-
+      this.toastService.warning('Empty Package', 'No tests found inside this package.');
       this.packageSearch = '';
       this.showPackageSuggestions = false;
       return;
     }
 
     let addedCount = 0;
+    const matchedTestsForPreview: any[] = [];
 
     packageTests.forEach((pt: any) => {
 
-      // ✅ FIX: withTest cha andarcha item exact konta field name
-      // vaparto he confirm nahi (docx sample "{}" hota), tyamule
-      // sagle sambhavya key-names try kartoy — testId, test_id,
-      // masterTestId, id, tacha nested 'test' object.
-      const testId =
-        Number(
-          pt?.testId ??
-          pt?.test_id ??
-          pt?.masterTestId ??
-          pt?.testMasterId ??
-          pt?.test?.testId ??
-          pt?.test?.id ??
-          pt?.id ??
-          0
-        );
+      const testId = Number(
+        pt?.testId ?? pt?.test_id ?? pt?.masterTestId ?? pt?.testMasterId ??
+        pt?.test?.testId ?? pt?.test?.id ?? pt?.id ?? 0
+      );
 
-      const test =
-        this.allTests.find(
-          (t: any) =>
-            Number(t.id) ===
-            testId
-        );
+      const test = this.allTests.find((t: any) => Number(t.id) === testId);
 
       if (!test) {
-
-        console.warn(
-          'PACKAGE TEST NOT MATCHED IN allTests:',
-          pt
-        );
-
+        console.warn('PACKAGE TEST NOT MATCHED IN allTests:', pt);
         return;
       }
 
-      const exists =
-        this.selectedTests.find(
-          (t: any) =>
-            t.name === test.name
-        );
+      matchedTestsForPreview.push({
+        name: test.name,
+        tat: test.tat,
+        mrp: test.mrp,
+        isAdditional: !!(pt?.additionalPrice || pt?.isAdditional || pt?.extra)
+      });
 
+      const exists = this.selectedTests.find((t: any) => t.name === test.name);
       if (exists) {
         return;
       }
 
-      this.selectedTests.push(
-        test
-      );
+      this.selectedTests.push({ ...test, packageName });
 
-      this.selectedSampleTests.push({
-
-        barcode: '',
-
-        sampleType:
-          test.sampleType,
-
-        testName:
-          test.name,
-
-        color:
-          test.color,
-
-        testId:
-          test.id,
-
-        sampleId:
-          test.sampleId
-      });
+      // ✅ FIX: group by sample type instead of pushing a fresh
+      // barcode entry per test.
+      this.addTestToSampleGroup(test);
 
       addedCount++;
     });
 
+    const existingPkg = this.selectedPackages.find(
+      (p: any) => p.profileName === packageName
+    );
+
+    if (!existingPkg) {
+      this.selectedPackages.push({
+        profileName: packageName,
+        b2b: pkg?.profileAssignedPrice ?? 0,
+        mrp: pkg?.mrp ?? pkg?.total_amount ?? 0,
+        tests: matchedTestsForPreview
+      });
+    }
+
     this.calculateBilling();
 
-    const packageName =
-      String(
-        pkg?.profileName ||
-        pkg?.profile_name ||
-        pkg?.name ||
-        'Package'
-      );
-
     if (addedCount > 0) {
-
-      this.toastService.success(
-        'Package Added',
-        `${addedCount} test(s) from "${packageName}" added.`
-      );
-
+      this.toastService.success('Package Added', `${addedCount} test(s) from "${packageName}" added.`);
     } else {
-
-      this.toastService.warning(
-        'Already Added',
-        `All tests from "${packageName}" already exist in bill.`
-      );
+      this.toastService.warning('Already Added', `All tests from "${packageName}" already exist in bill.`);
     }
 
     this.packageSearch = '';
+    this.showPackageSuggestions = false;
+  }
+openPackagePreview(pkg: any): void {
+    this.activePackageForPreview = pkg;
+    this.showPackageTestsModal = true;
+  }
 
-    this.showPackageSuggestions =
-      false;
+removeRow(index: number): void {
+
+    const individualTests = this.selectedTests.filter((t: any) => !t.packageName);
+    const individualCount = individualTests.length;
+
+    if (index < individualCount) {
+
+      const test = individualTests[index];
+
+      this.selectedTests = this.selectedTests.filter((t: any) => t !== test);
+
+      // ✅ FIX: remove this ONE test from its sample-type group
+      // instead of clearing the whole group by name.
+      this.removeTestFromSampleGroup(test);
+
+      this.toastService.warning('Test Removed', test.name + ' removed from bill.');
+
+    } else {
+
+      const pkgIndex = index - individualCount;
+      const pkg = this.selectedPackages[pkgIndex];
+
+      if (!pkg) {
+        return;
+      }
+
+      const pkgTestNames: string[] = (pkg?.tests || []).map((t: any) => t.name);
+
+      // Capture the actual test objects (with id) before filtering
+      // them out of selectedTests, so we can update the barcode
+      // groups correctly for each removed test.
+      const removedTests = this.selectedTests.filter(
+        (t: any) => pkgTestNames.includes(t.name)
+      );
+
+      this.selectedTests = this.selectedTests.filter(
+        (t: any) => !pkgTestNames.includes(t.name)
+      );
+
+      removedTests.forEach((t: any) => this.removeTestFromSampleGroup(t));
+
+      this.selectedPackages.splice(pkgIndex, 1);
+
+      this.toastService.warning('Package Removed', (pkg?.profileName || 'Package') + ' removed from bill.');
+    }
+
+    this.calculateBilling();
   }
 
   async removeTest(
@@ -2693,13 +3006,9 @@ export class AddPatientComponent {
                   1
                 );
 
-                this.selectedSampleTests =
-                  this.selectedSampleTests
-                    .filter(
-                      (x: any) =>
-                        x.testName !==
-                        test.name
-                    );
+                // ✅ FIX: remove this ONE test from its sample-type
+                // group instead of clearing the whole group by name.
+                this.removeTestFromSampleGroup(test);
 
                 this.toastService.warning(
                   'Test Removed',
@@ -2716,31 +3025,28 @@ export class AddPatientComponent {
 
     await alert.present();
   }
+getSubTotal() {
 
-  getSubTotal() {
+    const individualTotal = this.selectedTests
+      .filter((t: any) => !t.packageName)
+      .reduce((sum: number, t: any) => sum + Number(t?.b2b || 0), 0);
 
-    // ✅ FIX: Admin "Price"/Sub Total ha actual selling price (b2b)
-    // varun yayla hava, raw MRP (t.mrp) varun nahi. Company web
-    // (Admin login) cha "Price"/"Sub Total" column hach discounted
-    // rate (b2b) dakhavto, MRP nahi — tyamule apla app pan tech
-    // vaparto ahe ata.
-    return this.selectedTests.reduce(
-      (
-        sum: number,
-        t: any
-      ) =>
-        sum +
-        Number(
-          t?.b2b ||
-          0
-        ),
-      0
-    );
+    const packageTotal = this.selectedPackages
+      .reduce((sum: number, p: any) => sum + Number(p?.b2b || 0), 0);
+
+    return individualTotal + packageTotal;
   }
 
   // ============================================================
   // BILLING
   // ============================================================
+  get isCashEditable(): boolean {
+    return this.canEditPayment && this.billing.paymentMode === 'cash';
+  }
+
+  get isUpiEditable(): boolean {
+    return this.canEditPayment && this.billing.paymentMode === 'upi';
+  }
 
   calculateBilling() {
 
@@ -2777,30 +3083,37 @@ export class AddPatientComponent {
           .discountAmount
       );
 
-    if (
-      this.billing.paymentMode ===
-      'cash'
-    ) {
+    if (this.billing.paymentMode === 'cash') {
 
       this.billing.cashAmount =
-        this.billing.paidAmount ||
-        0;
+        this.billing.grandTotal;
+
+      this.billing.upiAmount = 0;
+
+    } else {
 
       this.billing.upiAmount =
-        0;
+        this.billing.grandTotal;
 
-    } else if (
-      this.billing.paymentMode ===
-      'upi'
-    ) {
-
-      this.billing.upiAmount =
-        this.billing.paidAmount ||
-        0;
-
-      this.billing.cashAmount =
-        0;
+      this.billing.cashAmount = 0;
     }
+
+    this.updatePaidAndDue();
+  }
+
+  private updatePaidAndDue(): void {
+
+    this.billing.paidAmount =
+      this.billing.paymentMode ===
+        'cash'
+        ? (
+          this.billing.cashAmount ||
+          0
+        )
+        : (
+          this.billing.upiAmount ||
+          0
+        );
 
     this.billing.dueAmount =
       Math.max(
@@ -2812,6 +3125,27 @@ export class AddPatientComponent {
           0
         )
       );
+  }
+
+  onPaymentAmountInput(): void {
+    this.updatePaidAndDue();
+  }
+
+  onPaymentModeChange(): void {
+
+    // Mode switch झाल्यावर active box मध्ये Grand Total auto-fill,
+    // दुसरा box 0.
+    this.billing.cashAmount =
+      this.billing.paymentMode === 'cash'
+        ? this.billing.grandTotal
+        : 0;
+
+    this.billing.upiAmount =
+      this.billing.paymentMode === 'upi'
+        ? this.billing.grandTotal
+        : 0;
+
+    this.updatePaidAndDue();
   }
 
   resetBilling() {
@@ -2852,7 +3186,6 @@ export class AddPatientComponent {
         null
     };
   }
-
   // ============================================================
   // FILE
   // ============================================================
@@ -2994,6 +3327,9 @@ export class AddPatientComponent {
     this.selectedSampleTests =
       [];
 
+    this.selectedPackages =
+      [];
+
     this.testSearch =
       '';
 
@@ -3113,6 +3449,9 @@ export class AddPatientComponent {
     this.selectedSampleTests =
       [];
 
+    this.selectedPackages =
+      [];
+
     this.testSearch =
       '';
 
@@ -3142,32 +3481,172 @@ export class AddPatientComponent {
     // intentionally remain unchanged.
   }
 
+  // ============================================================
+  // ✅ VALIDATION (industry-style form validation)
+  //
+  // RULES:
+  //  - REQUIRED (must be filled, always checked):
+  //      • Patient Full Name
+  //      • Age
+  //      • Ref. Doctor (selected or typed)
+  //      • At least 1 Test selected
+  //
+  //  - OPTIONAL (fine to leave blank — but if the user DOES fill
+  //    it in, the value must match the correct format/length for
+  //    that field type):
+  //      • Mobile Number  -> exactly 10 digits, starts 6-9
+  //      • Aadhaar Number -> exactly 12 digits, numeric only
+  //      • UHID           -> 2-30 chars (letters/numbers/-//)
+  //      • Address        -> max 200 chars
+  //      • Clinical History -> max 500 chars
+  //      • Other Charges  -> valid non-negative number
+  //      • Custom Franchise (Admin) -> max 60 chars
+  //
+  // Returns the first validation error message found, or null if
+  // the form is valid.
+  // ============================================================
+
+  private validatePatientForm(): string | null {
+
+    // ---------- Patient Name (REQUIRED) ----------
+    const name = String(this.patient?.name || '').trim();
+
+    if (!name) {
+      return 'Please enter patient full name.';
+    }
+
+    if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(name)) {
+      return 'Patient name should contain only letters and be 2-60 characters long.';
+    }
+
+    // ---------- Age (REQUIRED) ----------
+    const ageRaw = String(this.patient?.age ?? '').trim();
+
+    if (!ageRaw) {
+      return 'Please enter patient age.';
+    }
+
+    if (!/^\d+$/.test(ageRaw)) {
+      return 'Age must contain numbers only.';
+    }
+
+    const ageNum = Number(ageRaw);
+    const ageType = this.patient?.ageType || 'years';
+
+    if (ageType === 'years' && (ageNum < 1 || ageNum > 120)) {
+      return 'Age (in years) must be between 1 and 120.';
+    }
+
+    if (ageType === 'months' && (ageNum < 1 || ageNum > 11)) {
+      return 'Age (in months) must be between 1 and 11.';
+    }
+
+    if (ageType === 'days' && (ageNum < 1 || ageNum > 31)) {
+      return 'Age (in days) must be between 1 and 31.';
+    }
+
+    // ---------- Ref. Doctor (REQUIRED) ----------
+    const doctorTyped = String(
+      this.doctorSearch || this.patient?.doctor || ''
+    ).trim();
+
+    if (!doctorTyped) {
+      return 'Please select or enter Ref. Doctor name.';
+    }
+
+    if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(doctorTyped)) {
+      return 'Doctor name should contain only letters and be 2-60 characters long.';
+    }
+
+    // ---------- Mobile Number (OPTIONAL, format checked if filled) ----------
+    const mobile = String(this.patient?.phone || '').trim();
+
+    if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
+      return 'Mobile number must be exactly 10 digits and start with 6-9.';
+    }
+
+    // ---------- Aadhaar Number (OPTIONAL, format checked if filled) ----------
+    const aadhaar = String(this.patient?.aadhaar || '').trim();
+
+    if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
+      return 'Aadhaar number must be exactly 12 digits.';
+    }
+
+    // ---------- UHID (OPTIONAL, format checked if filled) ----------
+    const uhid = String(this.patient?.uhid || '').trim();
+
+    if (uhid && !/^[A-Za-z0-9\-\/]{2,30}$/.test(uhid)) {
+      return 'UHID should be 2-30 characters (letters, numbers, - or / only).';
+    }
+
+    // ---------- Address (OPTIONAL, length checked if filled) ----------
+    const address = String(this.patient?.address || '').trim();
+
+    if (address && address.length > 200) {
+      return 'Address should not exceed 200 characters.';
+    }
+
+    // ---------- Clinical History (OPTIONAL, length checked if filled) ----------
+    const history = String(this.patient?.history || '').trim();
+
+    if (history && history.length > 500) {
+      return 'Clinical history should not exceed 500 characters.';
+    }
+
+    // ---------- Other Charges (OPTIONAL, valid number if filled) ----------
+    const otherChargesRaw = this.patient?.otherCharges;
+
+    if (
+      otherChargesRaw !== null &&
+      otherChargesRaw !== undefined &&
+      String(otherChargesRaw).trim() !== '' &&
+      Number(otherChargesRaw) !== 0
+    ) {
+      if (isNaN(Number(otherChargesRaw)) || Number(otherChargesRaw) < 0) {
+        return 'Other charges must be a valid positive number.';
+      }
+    }
+
+    // ---------- Custom Franchise (Admin only, OPTIONAL) ----------
+    if (this.isAdminRole) {
+
+      const customFranchise = String(
+        this.customFranchiseName || ''
+      ).trim();
+
+      if (customFranchise && customFranchise.length > 60) {
+        return 'Custom franchise name should not exceed 60 characters.';
+      }
+    }
+
+    // ---------- Tests (REQUIRED — at least 1) ----------
+    if (!this.selectedTests || this.selectedTests.length === 0) {
+      return 'Please select at least one test.';
+    }
+
+    return null;
+  }
 
   // ============================================================
   // SAVE PATIENT / BOOKING
   // ============================================================
 
   savePatient(): void {
+
+    // ============================================================
+    // ✅ CENTRALIZED VALIDATION (industry-style)
+    // Required fields are always checked. Optional fields are only
+    // checked for correct format/length WHEN the user has filled
+    // them in — leaving them blank is fine.
+    // ============================================================
+    const validationError = this.validatePatientForm();
+
+    if (validationError) {
+      this.toastService.error('Validation Error', validationError);
+      return;
+    }
+
     const patientName = String(this.patient?.name || '').trim();
-
-    if (!patientName) {
-      this.toastService.error('Validation Error', 'Please enter patient full name.');
-      return;
-    }
-
-    if (
-      this.patient?.age === null ||
-      this.patient?.age === undefined ||
-      String(this.patient.age).trim() === ''
-    ) {
-      this.toastService.error('Validation Error', 'Please enter patient age.');
-      return;
-    }
-
-    if (!this.selectedTests || this.selectedTests.length === 0) {
-      this.toastService.error('Validation Error', 'Please select at least one test.');
-      return;
-    }
 
     const selectedDoctorId = Number(
       this.selectedDoctor?.doctorid ??
@@ -3266,8 +3745,11 @@ export class AddPatientComponent {
         0
       );
 
+      // ✅ FIX: selectedSampleTests entries are now sample-type
+      // GROUPS holding a `testIds` array (not a single `testId`),
+      // so we look up the group that contains this test's id.
       const sample = this.selectedSampleTests.find(
-        (s: any) => Number(s?.testId) === testId
+        (s: any) => Array.isArray(s?.testIds) && s.testIds.includes(testId)
       );
 
       const barcode = String(
@@ -3569,7 +4051,6 @@ export class AddPatientComponent {
   }
 
 
-
   private proceedBookingSave(
     payload: any
   ): void {
@@ -3627,98 +4108,51 @@ export class AddPatientComponent {
           res?.data?.id ??
           '—';
 
-        this.savedPatient = {
+        // ============================================================
+        // ✅ FIX: Actual auto-generated Patient Id (e.g. 3505001062)
+        // create-booking cha response madhe nasto — company web app
+        // booking save zalyavar vegळa GET
+        // /api/v1/lab/booking/patient/{labId}/{bookingId} call marun
+        // to id anta. Tyamule apla app pan tach call karun, response
+        // milalyavarach invoice banवayचा — nahitar Patient Id
+        // "—" / empty distel.
+        // ============================================================
 
-          name:
-            (
-              this.patient?.title
-                ? String(
-                  this.patient.title
-                ).toUpperCase() + '. '
-                : ''
-            ) +
-            (
-              this.patient?.name ||
-              '—'
-            ),
+        const labId = this.labApi.getCurrentLabId();
 
-          doctor:
-            (
-              this.patient?.doctorTitle
-                ? String(
-                  this.patient.doctorTitle
-                ).toUpperCase() + '. '
-                : ''
-            ) +
-            (
-              this.doctorSearch ||
-              this.patient?.doctor ||
-              this.selectedDoctor?.doctor_name ||
-              this.selectedDoctor?.doctorName ||
-              this.selectedDoctor?.name ||
-              '—'
-            ),
+        this.labApi.getPatientByBooking(labId, bookingId).subscribe({
 
-          bookingDate:
-            new Date()
-              .toLocaleString(
-                'en-IN',
-                {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  hour12: true
-                }
-              ),
+          next: (patientRes: any) => {
 
-          id:
-            bookingId,
+            console.log(
+              'PATIENT DETAILS RES:',
+              patientRes
+            );
 
-          phone:
-            this.patient?.phone ||
-            '',
+            this.buildInvoiceAndShow(
+              res,
+              bookingId,
+              patientRes
+            );
+          },
 
-          totalAmount:
-            this.getSubTotal(),
+          error: (err: any) => {
 
-          discount:
-            this.billing?.discountAmount ||
-            0,
+            console.error(
+              'GET PATIENT DETAILS ERROR:',
+              err
+            );
 
-          grandTotal:
-            this.billing?.grandTotal ||
-            0
-        };
-
-        if (
-          this.isAdminRole
-        ) {
-
-          this.showInvoice =
-            true;
-
-        } else {
-
-          this.toastService.success(
-            'Done!',
-            'You can create the next booking now.'
-          );
-
-          this.resetFormKeepingDoctorAndFranchise();
-
-          setTimeout(() => {
-
-            this.ngZone.run(() => {
-
-              this.loadLastPatient();
-
-            });
-
-          }, 300);
-
-        }
+            // Patient details call fail zali tari booking successful
+            // ahech — invoice patientId shivay dakhva, booking flow
+            // adkun raha nahi.
+            this.buildInvoiceAndShow(
+              res,
+              bookingId,
+              null
+            );
+          }
+        });
 
       },
 
@@ -3821,6 +4255,195 @@ export class AddPatientComponent {
     });
   }
 
+private buildInvoiceAndShow(
+    res: any,
+    bookingId: any,
+    patientRes: any
+  ): void {
+
+    const collectionCenter = String(
+      this.patient?.lab ||
+      this.selectedLab?.franchiseName ||
+      this.selectedStaffLab?.franchiseName ||
+      this.customFranchiseName ||
+      '—'
+    ).trim();
+
+    const billCreatedBy = String(
+      (this.authService.currentUserValue as any)?.raw?.name ||
+      (this.authService.currentUserValue as any)?.raw?.username ||
+      (this.authService.currentUserValue as any)?.raw?.fullName ||
+      this.role ||
+      '—'
+    ).trim();
+
+    // ============================================================
+    // ✅ FIX: khara auto-generated Patient Id (e.g. "3505001064")
+    // GET /api/v1/lab/booking/patient/{labId}/{bookingId} cha
+    // response madhe TOP-LEVEL "patientId" field madhech asto —
+    // confirm zala console log varun. UHID var fallback purna
+    // kadhla, kारण UHID rikami thevli tari he ID yetach (backend
+    // auto-generate karto).
+    // ============================================================
+
+    const patientId = String(
+      patientRes?.patientId ??
+      res?.patientId ??
+      '—'
+    ).trim() || '—';
+
+    // ============================================================
+    // ✅ FIX: Bill Id patientRes cha nested "bill.billingId" madhe
+    // asto (bill: { billingId: 104797, bookingId: 2557, ... }),
+    // create-booking cha response madhe nahi.
+    // ============================================================
+
+    const billId =
+      patientRes?.bill?.billingId ??
+      res?.billId ??
+      res?.bill?.id ??
+      res?.data?.billId ??
+      bookingId;
+
+    // ============================================================
+    // ✅ FIX: Invoice cha TEST NAME table pahilyanda package chi
+    // sagli tests explode karून dakhavत होता (12 separate rows).
+    // Company web / bill-table sarkha, package ata EK collapsed
+    // row banते (name + eye icon), tichyat bundled tests
+    // openPackagePreview() cha same modal madhe distat —
+    // individual (non-package) tests aधीच्यासारखेच वेगळे rows रहतात.
+    // ============================================================
+
+    const invoiceTests = [
+
+      ...this.selectedTests
+        .filter((t: any) => !t.packageName)
+        .map((t: any) => {
+
+          const price = Number(t?.b2b || 0);
+          const dis = Number(t?.dis || 0);
+
+          return {
+            name: t?.name || 'NA',
+            price,
+            dis,
+            total: Math.max(0, price - dis),
+            isPackage: false
+          };
+        }),
+
+      ...this.selectedPackages.map((p: any) => {
+
+        const price = Number(p?.b2b || 0);
+
+        return {
+          name: p?.profileName || 'Package',
+          price,
+          dis: 0,
+          total: price,
+          isPackage: true,
+          packageRef: p
+        };
+      })
+    ];
+
+    // ✅ FIX: selectedSampleTests entries are now sample-type GROUPS
+    // (barcode + testNames[] for every test that shares that sample
+    // type) instead of one entry per test — the invoice's sample
+    // table already renders `s.testNames`, so we pass that array
+    // straight through instead of a single `testId`.
+    const invoiceSampleTests = this.selectedSampleTests.map((s: any) => ({
+      sampleType: s?.sampleType || 'OTHER',
+      barcode: s?.barcode || '',
+      confirmBarcode: s?.confirmBarcode || s?.barcode || '',
+      color: s?.color || '#a855f7',
+      sampleId: Number(s?.sampleId || 0),
+      testNames: s?.testNames || []
+    }));
+
+    this.savedPatient = {
+
+      name:
+        (
+          this.patient?.title
+            ? String(this.patient.title).toUpperCase() + '. '
+            : ''
+        ) +
+        (this.patient?.name || '—'),
+
+      doctor:
+        (
+          this.patient?.doctorTitle
+            ? String(this.patient.doctorTitle).toUpperCase() + '. '
+            : ''
+        ) +
+        (
+          this.doctorSearch ||
+          this.patient?.doctor ||
+          this.selectedDoctor?.doctor_name ||
+          this.selectedDoctor?.doctorName ||
+          this.selectedDoctor?.name ||
+          '—'
+        ),
+
+      collectionCenter,
+
+      billCreatedBy,
+
+      bookingDate:
+        new Date().toLocaleString('en-IN', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric',
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        }),
+
+      id: bookingId,
+
+      billId,
+
+      patientId,
+
+      phone: this.patient?.phone || '',
+
+      tests: invoiceTests,
+
+      sampleTests: invoiceSampleTests,
+
+      totalAmount: this.getSubTotal(),
+
+      discount: this.billing?.discountAmount || 0,
+
+      grandTotal: this.billing?.grandTotal || 0,
+
+      paidAmount: this.billing?.paidAmount || 0,
+
+      dueAmount: this.billing?.dueAmount || 0
+    };
+
+    if (this.isAdminRole) {
+
+      this.showInvoice = true;
+
+    } else {
+
+      this.toastService.success(
+        'Done!',
+        'You can create the next booking now.'
+      );
+
+      this.resetFormKeepingDoctorAndFranchise();
+
+      setTimeout(() => {
+        this.ngZone.run(() => {
+          this.loadLastPatient();
+        });
+      }, 300);
+
+    }
+  }
 
   // ============================================================
   // CAPITALIZE
@@ -3841,9 +4464,114 @@ export class AddPatientComponent {
   // PRINT INVOICE
   // ============================================================
 
-  printInvoice() {
+  // ============================================================
+  // PRINT INVOICE
+  //
+  // ✅ FIX: window.print() cha jaga khara "bill-pdf" API vaparat
+  // ahot — booking-status.page.ts madhe printBill() function
+  // confirm karto ki PDF URL response.downloadUrl field madhe
+  // yeto, tyach pattern ithe vaparla ahe.
+  // ============================================================
 
-    window.print();
+  isPrintingInvoice = false;
+
+  printInvoice(): void {
+
+    const bookingId = Number(
+      this.savedPatient?.id ||
+      0
+    );
+
+    if (!bookingId) {
+
+      this.toastService.error(
+        'Print Error',
+        'Booking not found for printing.'
+      );
+
+      return;
+    }
+
+    if (this.isPrintingInvoice) {
+      return;
+    }
+
+    this.isPrintingInvoice = true;
+
+    const payload = this.labApi.buildBillPayload(
+      bookingId
+    );
+
+    this.labApi.printBill(payload).subscribe({
+
+      next: (res: any) => {
+
+        this.isPrintingInvoice = false;
+
+        console.log(
+          'PRINT BILL RESPONSE:',
+          res
+        );
+
+        if (res?.downloadUrl) {
+
+          window.open(
+            res.downloadUrl,
+            '_blank',
+            'noopener,noreferrer'
+          );
+
+          this.toastService.success(
+            'Bill Ready',
+            'Bill PDF opened successfully.'
+          );
+
+        } else {
+
+          console.warn(
+            'PRINT BILL: No downloadUrl in response:',
+            res
+          );
+
+          this.toastService.error(
+            'Print Error',
+            res?.message ||
+            'Could not generate bill PDF.'
+          );
+        }
+      },
+
+      error: (err: any) => {
+
+        this.isPrintingInvoice = false;
+
+        console.error(
+          'PRINT BILL ERROR:',
+          err
+        );
+
+        this.toastService.error(
+          'Print Error',
+          'Failed to print bill. Please try again.'
+        );
+      }
+    });
+  }
+
+  receiveSample(
+    sample: any,
+    alsoPrint: boolean = false
+  ): void {
+
+    this.toastService.success(
+      'Sample Received',
+      (sample?.sampleType || 'Sample') +
+      ' marked as received.'
+    );
+
+    if (alsoPrint) {
+      this.printInvoice();
+    }
   }
 
   // ============================================================
@@ -3859,7 +4587,7 @@ export class AddPatientComponent {
 
     this.toastService.success(
       'Done!',
-      'Redirecting to dashboard...'
+      'Redirecting to booking...'
     );
 
     setTimeout(
@@ -3867,7 +4595,7 @@ export class AddPatientComponent {
         this.ngZone.run(
           () =>
             this.router.navigate([
-              '/dashboard'
+              '/add-patient'
             ])
         ),
       800

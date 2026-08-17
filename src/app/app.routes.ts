@@ -8,7 +8,10 @@ export const routes: Routes = [
     redirectTo: 'login',
     pathMatch: 'full'
   },
-
+  {
+    path: 'profile',
+    loadComponent: () => import('./pages/profile/profile.component').then(m => m.ProfilePage)
+  },
   {
     path: 'login',
     loadComponent: () =>

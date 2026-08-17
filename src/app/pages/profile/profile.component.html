@@ -1,0 +1,122 @@
+<ion-content class="profile-content" [fullscreen]="true">
+  <div class="profile-shell">
+
+    <header class="profile-header">
+      <button class="back-btn" (click)="goBack()">
+        <ion-icon name="arrow-back-outline"></ion-icon>
+      </button>
+      <h1>My Profile</h1>
+    </header>
+
+    <div class="profile-loading" *ngIf="loading">
+      <ion-spinner name="dots"></ion-spinner>
+      <span>Loading profile...</span>
+    </div>
+
+    <ng-container *ngIf="!loading && user">
+
+      <!-- Personal Information -->
+      <section class="profile-card">
+        <div class="card-title">
+          <ion-icon name="person-outline"></ion-icon>
+          <h2>Personal Information</h2>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">User Name</span>
+          <span class="info-value">{{ user.username }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">First Name</span>
+          <span class="info-value">{{ user.firstname || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Last Name</span>
+          <span class="info-value">{{ user.lastname || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Role</span>
+          <span class="info-value">{{ user.roles?.[0]?.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Mobile Number</span>
+          <span class="info-value">{{ user.mobileNumber || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value">{{ user.email }}</span>
+        </div>
+
+        <ion-button expand="block" class="update-pass-btn" [disabled]="true">
+          <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
+          Update Password
+        </ion-button>
+      </section>
+
+      <!-- Lab Information -->
+      <section class="profile-card" *ngIf="user.lab">
+        <div class="card-title">
+          <ion-icon name="business-outline"></ion-icon>
+          <h2>Lab Information</h2>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Lab Name</span>
+          <span class="info-value">{{ user.lab.lab_name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Lab Address</span>
+          <span class="info-value">{{ user.lab.city }}{{ user.lab.pincode ? ', ' + user.lab.pincode : '' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Lab Owner Name</span>
+          <span class="info-value">{{ user.lab.lab_owner_name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Lab Owner Contact Number</span>
+          <span class="info-value">{{ user.lab.owner_contact_number || '-' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Lab Email</span>
+          <span class="info-value">{{ user.lab.email }}</span>
+        </div>
+      </section>
+
+      <!-- Active Plan -->
+      <section class="profile-card plan-card" *ngIf="activePlan">
+        <div class="card-title">
+          <ion-icon name="ribbon-outline"></ion-icon>
+          <h2>Your Active Plan</h2>
+        </div>
+
+        <div class="info-row">
+          <span class="info-label">Plan Name</span>
+          <span class="info-value">{{ activePlan.planName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Price</span>
+          <span class="info-value">₹{{ activePlan.price | number:'1.0-0' }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Activation Date</span>
+          <span class="info-value">{{ formatDate(activePlan.activationDate) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Expiration Date</span>
+          <span class="info-value">{{ formatDate(activePlan.expirationDate) }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Status</span>
+          <span class="status-pill" [class.expired]="activePlan.expired">
+            {{ activePlan.expired ? 'Expired' : 'Active' }}
+          </span>
+        </div>
+      </section>
+
+      <section class="profile-card" *ngIf="!activePlan">
+        <p class="no-plan-text">No active plan found.</p>
+      </section>
+
+    </ng-container>
+  </div>
+</ion-content>

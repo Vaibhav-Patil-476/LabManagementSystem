@@ -1154,6 +1154,23 @@
   width: 100%;
 }
 
+// Client/Doctor stat now shares its row with the Tests pill,
+// right-aligned, matching the Booking Status card layout.
+.bcard-stat-with-tests {
+  flex-direction: row;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+
+  .bcs-text {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+    flex: 1;
+  }
+}
+
 .bcs-label {
   font-size: 10px;
   font-weight: 800;
@@ -1436,5 +1453,163 @@
     --background: linear-gradient(135deg, #087d78, #055f5d);
     --color: #fff;
     --border-radius: 10px;
+  }
+}/* ============================================================
+   TESTS ROW WITH EYE ICON — now anchored top-right, under the
+   Test Count / Sample Count badges (bcard-count-box), so it
+   matches the Booking Status card layout.
+============================================================ */
+.bcard-tests-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 0;
+  flex-shrink: 0;
+  cursor: pointer;
+  width: fit-content;
+
+  padding: 6px 12px;
+  border-radius: var(--r-pill);
+  border: 1.5px solid var(--primary-light, #d9f0ee);
+  background: var(--primary-light, #d9f0ee);
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+
+  .bcard-tests-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--primary-dark, #075f5d);
+  }
+
+  .test-eye-icon {
+    font-size: 16px;
+    color: var(--primary, #087b76);
+  }
+
+  &:active {
+    opacity: 0.7;
+    transform: scale(0.97);
+  }
+}
+
+/* ============================================================
+   TEST PREVIEW MODAL — small centered popup (eye icon)
+============================================================ */
+.test-preview-popup {
+  --width: 380px;
+  --max-width: 92vw;
+  --height: auto;
+  --max-height: 78vh;
+  --border-radius: 22px;
+  align-items: center;
+
+  &::part(content) {
+    border-radius: 22px;
+    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+    overflow: hidden;
+  }
+
+  .modal-page {
+    max-height: 78vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    background: var(--brand-gradient);
+    border-bottom: none;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    padding: 18px 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      margin: 0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    ion-button {
+      margin: 0;
+      --color: #fff;
+      width: 32px;
+      height: 32px;
+      --box-shadow: none;
+
+      &::part(native) {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+      }
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .pkg-preview-table {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 6px;
+  }
+
+  .pkg-preview-header-full {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: grid;
+    grid-template-columns: 0.4fr 2.2fr 1fr;
+    gap: 8px;
+    background: var(--primary-light, #d9f0ee);
+    color: var(--primary-dark, #075f5d);
+    font-size: 10.5px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    padding: 10px 18px;
+    border-bottom: 1px solid #d9f0ee;
+  }
+
+  .pkg-preview-row-full {
+    display: grid;
+    grid-template-columns: 0.4fr 2.2fr 1fr;
+    gap: 8px;
+    padding: 10px 18px;
+    font-size: 12.5px;
+    color: #475569;
+    border-bottom: 1px solid #f1f5f5;
+    transition: background 0.15s;
+
+    &:nth-child(even) {
+      background: #fbfdfd;
+    }
+
+    div:nth-child(2) {
+      white-space: normal;
+      word-break: break-word;
+      overflow-wrap: anywhere;
+      font-weight: 600;
+      color: #1e293b;
+      line-height: 1.35;
+    }
+  }
+
+  .lab-picker-empty {
+    padding: 30px 16px;
+    text-align: center;
+    color: #94a3b8;
+    font-size: 13px;
   }
 }

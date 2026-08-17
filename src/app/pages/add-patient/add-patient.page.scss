@@ -67,7 +67,7 @@
    LAST PATIENT BAR
 ===================== */
 .last-patient-bar {
-  background: var(--brand-gradient); // or var(--brand)
+  background: var(--brand-gradient);
   padding: 12px 16px;
   border-bottom: none;
   display: flex;
@@ -308,8 +308,8 @@
   .suggestion-item {
     display: flex;
     justify-content: space-between;
-    align-items: flex-start;   
-    gap: 12px;     
+    align-items: flex-start;
+    gap: 12px;
     padding: 12px 16px;
     font-size: 13px;
     color: var(--text-secondary);
@@ -325,7 +325,6 @@
       color: var(--brand);
     }
 
-    
     span:first-child {
       flex: 1 1 auto;
       min-width: 0;
@@ -341,13 +340,11 @@
       color: var(--brand);
     }
 
-   
     .sug-mrp {
       white-space: nowrap;
     }
   }
 }
-
 
 .test-suggestions.overlay-dropdown {
   position: absolute;
@@ -357,48 +354,67 @@
   z-index: 50;
   margin-bottom: 0;
 }
-/* =====================
-   TEST TABLE
-===================== */
+
+/* =====================================================
+   TEST TABLE — FULLY FLUID, ROLE-BASED GRID
+===================================================== */
 .test-table {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-sm);
   overflow: hidden;
+  width: 100%;
+}
+
+.test-header,
+.test-row {
+  display: grid;
+  align-items: start;
+  gap: clamp(2px, 1vw, 6px);
+  padding: clamp(6px, 2vw, 10px) clamp(4px, 1.5vw, 10px);
+  box-sizing: border-box;
+  width: 100%;
 }
 
 .test-header {
-  display: grid;
-  grid-template-columns: 28px 1fr 50px 50px 55px 55px 50px;
   background: var(--app-bg);
-  padding: 10px;
-  font-size: 10px;
+  font-size: clamp(8px, 2.3vw, 10px);
   font-weight: 700;
   color: var(--brand-deep);
   text-transform: uppercase;
-  letter-spacing: 0.3px;
-  gap: 4px;
+  letter-spacing: 0.2px;
 }
 
 .test-row {
-  display: grid;
-  grid-template-columns: 28px 1fr 50px 50px 55px 55px 50px;
-  padding: 10px;
-  font-size: 11px;
+  font-size: clamp(9px, 2.6vw, 11px);
   color: var(--text-secondary);
   border-top: 1px solid #f1f5f5;
-  align-items: center;
-  gap: 4px;
   background: var(--card-bg);
 
   &:active {
     background: #f8fbfb;
   }
+}
 
-  div {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
+.test-header>div,
+.test-row>div {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.test-header>div:nth-child(2),
+.test-row>div:nth-child(2) {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.test-row>div:nth-child(2) {
+  padding-top: 2px;
 }
 
 .test-empty {
@@ -409,23 +425,51 @@
   background: var(--card-bg);
 }
 
+.test-header.admin-view,
+.test-row.admin-view {
+  grid-template-columns: 0.6fr 2.2fr 0.9fr 0.8fr 1fr 0.7fr 1fr 0.9fr;
+}
+
+.test-header.franchise-view,
+.test-row.franchise-view {
+  grid-template-columns: 0.6fr 2.4fr 1fr 0.9fr 1fr 1fr 0.9fr;
+}
+
+.test-header.staff-view,
+.test-row.staff-view {
+  grid-template-columns: 0.6fr 2.6fr 1fr 1fr 0.9fr;
+}
+
+.test-row ion-button {
+  --padding-start: 0;
+  --padding-end: 0;
+  width: clamp(28px, 8vw, 36px);
+  height: clamp(28px, 8vw, 36px);
+  margin: 0;
+  align-self: start;
+}
+
+.test-row ion-icon {
+  font-size: clamp(14px, 4vw, 18px);
+}
+
 .subtotal-row {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 16px;
-  padding: 12px 16px;
+  gap: 12px;
+  padding: 10px clamp(8px, 3vw, 16px);
   border-top: 1px solid var(--line-soft);
-  font-size: 13px;
+  font-size: clamp(11px, 3vw, 13px);
   font-weight: 700;
   color: var(--text-secondary);
   background: #f8fbfb;
 
   .subtotal-amount {
-    font-size: 16px;
+    font-size: clamp(13px, 3.5vw, 16px);
     font-weight: 800;
     color: var(--brand);
-    min-width: 60px;
+    min-width: 50px;
     text-align: right;
   }
 }
@@ -479,14 +523,20 @@
   pointer-events: none;
 }
 
-.sample-header {
+.sample-header,
+.sample-row {
   display: grid;
-  grid-template-columns: 160px 30px 100px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
+  grid-template-columns: 1.7fr 0.35fr 1fr 1.6fr;
+  align-items: start;
+  gap: clamp(4px, 2vw, 10px);
+  padding: clamp(8px, 2.5vw, 12px);
+  box-sizing: border-box;
+  width: 100%;
+}
+
+.sample-header {
   background: var(--app-bg);
-  font-size: 11px;
+  font-size: clamp(9px, 2.4vw, 11px);
   font-weight: 700;
   color: var(--brand-deep);
   text-transform: uppercase;
@@ -494,22 +544,20 @@
 }
 
 .sample-row {
-  display: grid;
-  grid-template-columns: 160px 30px 100px minmax(0, 1fr);
-  align-items: center;
-  gap: 10px;
-  padding: 10px 12px;
   border-top: 1px solid var(--line-soft);
-  font-size: 12px;
+  font-size: clamp(10px, 2.8vw, 12px);
   color: var(--text-secondary);
 
-  // Test Name lamba asla tari div baher jaycha nahi — wrap karto
+  >div:nth-child(2) {
+    padding-top: 2px;
+  }
+
   >div:last-child {
     min-width: 0;
     white-space: normal;
     word-break: break-word;
     overflow-wrap: anywhere;
-    line-height: 1.3;
+    line-height: 1.35;
   }
 }
 
@@ -519,17 +567,16 @@
   gap: 4px;
   border: 1px solid #d1d9d9;
   border-radius: var(--r-sm);
-  padding: 4px 8px;
-  width: 160px;
-  min-width: 160px;
+  padding: 4px clamp(4px, 1.5vw, 8px);
+  width: 100%;
+  min-width: 0;
   max-width: 100%;
   box-sizing: border-box;
-  flex-shrink: 0;
 
   ion-input {
     flex: 1;
     min-width: 0;
-    font-size: 12px;
+    font-size: clamp(10px, 2.6vw, 12px);
     --padding-top: 4px;
     --padding-bottom: 4px;
     --padding-start: 0;
@@ -538,20 +585,10 @@
   ion-button {
     flex-shrink: 0;
     margin: 0;
-  }
-}
-
-@media (max-width: 480px) {
-
-  .sample-header,
-  .sample-row {
-    grid-template-columns: 130px 24px 80px minmax(0, 1fr);
-    gap: 6px;
-  }
-
-  .barcode-box {
-    width: 130px;
-    min-width: 130px;
+    width: clamp(24px, 6vw, 30px);
+    height: clamp(24px, 6vw, 30px);
+    --padding-start: 0;
+    --padding-end: 0;
   }
 }
 
@@ -686,120 +723,6 @@ ion-modal {
     transform: scale(0.97);
   }
 }
-
-/* =====================
-   INVOICE MODAL
-===================== */
-.invoice-page {
-  padding: 20px;
-  background: var(--card-bg);
-  min-height: 100%;
-  overflow-y: auto;
-
- .invoice-header {
-    text-align: center;
-    padding: 28px 20px 20px;
-    background: var(--brand-gradient);
-    border-bottom: none;
-    margin: -20px -20px 20px;
-    border-radius: 0 0 24px 24px;
-    box-shadow: 0 8px 24px rgba(7, 95, 93, 0.22);
-
-    h2 {
-      margin: 0;
-      font-size: 21px;
-      font-weight: 800;
-      color: #fff;
-      letter-spacing: -0.3px;
-    }
-
-    p {
-      margin: 4px 0 0;
-      font-size: 12.5px;
-      color: rgba(255, 255, 255, 0.85);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-  }
-  }
- .invoice-body {
-    background: var(--card-bg);
-    border-radius: var(--r-lg);
-    border: 1px solid rgba(8, 123, 118, 0.08);
-    box-shadow: var(--shadow-sm);
-    padding: 4px 16px;
-    margin-bottom: 16px;
-
-    .invoice-row {
-      padding: 12px 0;
-      border-bottom: 1px dashed var(--line-soft);
-
-      span:first-child {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.4px;
-        color: var(--brand);
-      }
-
-      span:last-child {
-        font-weight: 700;
-        color: var(--text-primary, #1a2b2a);
-      }
-
-      &:last-child { border-bottom: none; }
-    }
-  }
-  .invoice-totals {
-    background: var(--brand-soft);
-    border: 1.5px solid var(--brand-light);
-    border-radius: var(--r-lg);
-    box-shadow: var(--shadow-xs);
-
-    .inv-total-row.grand {
-      font-size: 18px;
-      color: var(--brand-deep);
-      border-top: 2px solid var(--brand-light);
-      padding-top: 12px;
-    }
-  } .print-btn { box-shadow: var(--shadow-glow); }
-.invoice-totals {
-  .inv-total-row {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 8px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--text-secondary);
-
-    span:first-child { color: var(--text-muted); }
-    span:last-child { font-weight: 700; color: var(--brand-deep); }
-  }
-}
-  .invoice-actions {
-    padding-top: 8px;
-  }
-
-  .print-btn {
-    height: 50px;
-    --background: var(--brand-gradient);
-    --border-radius: var(--r-lg);
-    font-size: 15px;
-    font-weight: 700;
-    margin-bottom: 10px;
-  }
-
-  .close-btn {
-    height: 46px;
-    --border-radius: var(--r-lg);
-    --color: var(--brand);
-    --border-color: var(--brand-light);
-    font-size: 14px;
-    font-weight: 600;
-  }
-
 
 /* =====================
    ANIMATION
@@ -1023,168 +946,9 @@ ion-modal {
   margin: auto;
 }
 
-/* Role-based test table column fix (staff/franchise view) */
-.test-header.staff-view,
-.test-row.staff-view {
-  grid-template-columns: 40px 1fr 70px 90px 60px !important;
-}
-
-/* Invoice — extra elements */
 .inv-close-btn {
   display: flex;
   justify-content: flex-end;
-}
-
-.inv-logo-wrap {
-  text-align: center;
-  padding: 8px 0;
-
-  .inv-logo {
-    max-width: 220px;
-    height: auto;
-  }
-}
-
-.inv-divider {
-  border: none;
-  border-top: 2px solid var(--brand);
-  margin: 8px 0 16px;
-}
-
-.inv-details-card {
-  padding: 0 20px 12px;
-}
-
-.inv-detail-row {
-  display: flex;
-  gap: 8px;
-  padding: 4px 0;
-  font-size: 14px;
-
-  .inv-label {
-    flex: 0 0 140px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .inv-colon {
-    flex: 0 0 10px;
-  }
-
-  .inv-value {
-    flex: 1;
-    color: var(--text-muted);
-  }
-}
-
-.inv-table-card {
-  margin: 0 20px 12px;
-  border: 1px solid #eee;
-  border-radius: var(--r-sm);
-  overflow: hidden;
-}
-
-.inv-table-header,
-.inv-table-row {
-  display: grid;
-  grid-template-columns: 40px 1fr 70px 60px 70px;
-  padding: 8px 10px;
-  font-size: 13px;
-  align-items: center;
-}
-
-.inv-table-header {
-  background: var(--brand);
-  color: #fff;
-  font-weight: 600;
-}
-
-.inv-table-row {
-  border-top: 1px solid #eee;
-}
-
-.inv-sample-header,
-.inv-sample-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr 2fr;
-  padding: 8px 10px;
-  font-size: 13px;
-  align-items: center;
-  gap: 8px;
-}
-
-.inv-sample-header {
-  background: var(--brand);
-  color: #fff;
-  font-weight: 600;
-}
-
-.inv-sample-row {
-  border-top: 1px solid #eee;
-}
-
-.inv-barcode-input {
-  width: 100%;
-  padding: 6px 8px;
-  border: 1px solid #ddd;
-  border-radius: var(--r-sm);
-  font-size: 13px;
-}
-
-.inv-sample-actions {
-  display: flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
-
-.inv-summary-card {
-  margin: 0 20px 12px;
-  padding: 12px;
-  border: 1px solid #eee;
-  border-radius: var(--r-sm);
-  background: var(--brand-soft);
-}
-
-.inv-summary-row {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 6px 0;
-
-  span:first-child {
-    flex: 0 0 120px;
-    font-weight: 600;
-    color: var(--text-primary);
-  }
-
-  .inv-colon {
-    flex: 0 0 10px;
-  }
-
-  input {
-    flex: 1;
-    padding: 6px 10px;
-    border: 1px solid #ddd;
-    border-radius: var(--r-sm);
-    text-align: right;
-    background: var(--card-bg);
-    font-weight: 600;
-  }
-}
-
-.inv-toggle-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin: 0 20px 12px;
-  font-size: 14px;
-}
-
-.inv-action-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-  margin: 0 20px;
 }
 
 .lab-picker-wrap {
@@ -1207,7 +971,6 @@ ion-modal {
   position: relative;
 }
 
-/* Top-right "Select collection center" type-ahead search input */
 .lab-search-wrap {
   display: flex;
   align-items: center;
@@ -1223,7 +986,6 @@ ion-modal {
   }
 }
 
-/* Staff Add Lab modal full-width green -> brand Add button */
 .modal-add-btn.full-width {
   width: 100%;
   justify-content: center;
@@ -1303,11 +1065,15 @@ ion-modal {
 
 .add-btn ion-icon {
   font-size: 22px;
-}.sug-mrp {
+}
+
+.sug-mrp {
   color: var(--ion-color-medium);
   font-size: 0.85em;
   margin-left: 4px;
-}.premium-alert {
+}
+
+.premium-alert {
   --backdrop-opacity: 0.6;
 
   .alert-wrapper {
@@ -1321,7 +1087,7 @@ ion-modal {
 
     h2 {
       font-weight: 700;
-      color: #0f4c3a; // teal-ish dark, image 2 sarkha
+      color: #0f4c3a;
       font-size: 20px;
     }
   }
@@ -1344,8 +1110,629 @@ ion-modal {
 
   .alert-btn-danger {
     color: #fff !important;
-    background: #0f7a5f; // teal, image 2 cha "Yes" button color
+    background: #0f7a5f;
     border-radius: 10px;
     font-weight: 600;
   }
+}
+
+// ============================================================
+// ✅ INVOICE — FULL SCREEN, FLAT LAYOUT
+// Same pattern as New Booking page: full-width gradient header,
+// then flat edge-to-edge cards stacked one after another —
+// NOT one big card wrapping other cards inside it.
+// ============================================================
+
+::ng-deep ion-modal.invoice-modal-cls {
+  --width: 100%;
+  --height: 100%;
+  --border-radius: 0;
+  --box-shadow: none;
+  align-items: stretch;
+  justify-content: stretch;
+
+  &::part(content) {
+    border-radius: 0;
+  }
+}
+
+.invoice-page {
+  font-family: 'Inter', 'Segoe UI', -apple-system, sans-serif;
+  background: var(--app-bg);
+  min-height: 100vh;
+  width: 100%;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- HEADER — full-width banner, no floating card ---------- */
+.invoice-header {
+  position: relative;
+  background: var(--brand-gradient);
+  padding: 22px 16px 20px;
+  text-align: center;
+  flex-shrink: 0;
+
+  h2 {
+    color: #fff;
+    font-size: 18px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    margin: 0;
+  }
+
+  p {
+    color: rgba(255, 255, 255, 0.85);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin: 4px 0 0;
+  }
+
+  .status-badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 16px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+
+    &.paid {
+      background: rgba(34, 197, 94, 0.2);
+      color: #dcfce7;
+      border: 1px solid rgba(74, 222, 128, 0.5);
+    }
+
+    &.due {
+      background: rgba(248, 113, 113, 0.2);
+      color: #fee2e2;
+      border: 1px solid rgba(252, 165, 165, 0.5);
+    }
+  }
+}
+
+/* ---------- FLAT SECTION CARD — same as booking .form-card:
+   margin 12px, touches full width, ONE level only, no nesting ---------- */
+.invoice-card {
+  background: var(--card-bg);
+  margin: 12px;
+  border-radius: var(--r-lg);
+  padding: 16px;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid rgba(8, 123, 118, 0.06);
+}
+
+.invoice-card-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--brand-deep);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+/* ✅ Label + value both LEFT aligned, e.g. "Patient Name : MR. Vaibhav" */
+.invoice-row {
+  display: flex;
+  justify-content: flex-start;
+  align-items: baseline;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px dashed #eef1f5;
+  font-size: 13px;
+
+  &:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  &:first-child {
+    padding-top: 0;
+  }
+
+  span:first-child {
+    color: var(--text-muted);
+    font-weight: 600;
+    flex: 0 0 auto;
+  }
+
+  span:first-child::after {
+    content: " :";
+  }
+
+  span:last-child {
+    color: var(--text-primary, #0f172a);
+    font-weight: 700;
+    text-align: left;
+  }
+}
+
+/* ============================================================
+   ✅ TEST TABLE — sits inside .invoice-card, no separate
+   border/shadow of its own (that was the "card inside card"
+   problem before).
+============================================================ */
+.invoice-test-table {
+  width: 100%;
+
+  .inv-test-header,
+  .inv-test-row {
+    display: grid;
+    grid-template-columns: 24px 1fr 56px 40px 56px;
+    gap: 6px;
+    align-items: center;
+    padding: 9px 2px;
+    box-sizing: border-box;
+    width: 100%;
+  }
+
+  .inv-test-header {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .inv-test-row {
+    font-size: 12.5px;
+    color: var(--text-secondary);
+    border-bottom: 1px solid #f4f5f7;
+
+    &:last-child {
+      border-bottom: none;
+    }
+  }
+
+  .inv-test-name-cell {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    min-width: 0;
+    font-weight: 600;
+    color: var(--text-primary, #1e293b);
+
+    span {
+      min-width: 0;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      line-height: 1.3;
+    }
+  }
+
+  .pkg-eye-icon {
+    font-size: 15px;
+    color: #2563eb;
+    cursor: pointer;
+    flex-shrink: 0;
+  }
+}
+
+/* ============================================================
+   ✅ SAMPLE DETAILS — rows live directly inside .invoice-card,
+   separated by a divider only, not a nested bordered card each.
+   Updated: wider barcode columns + wrap instead of cut/truncate,
+   looser spacing, bigger fonts, visible action icon.
+============================================================ */
+.invoice-sample-table {
+  width: 100%;
+
+  /* Header labels: kept as reference labels only — the real layout
+     below no longer follows a strict 3-column grid, since squeezing
+     Sample Type + two barcode boxes into one row made everything
+     tall/narrow and left dead space on the right. */
+  /* Header row now only labels "Sample Type" since Barcode ID /
+     Update Barcode get their own mini-label right above each box
+     per row (below) — keeps them visually tied to their box even
+     though the layout stacks vertically. */
+  .inv-sample-grid-header {
+    display: flex;
+    gap: 14px;
+    font-weight: 700;
+    font-size: 10.5px;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--line-soft);
+    margin-bottom: 6px;
+
+    div:nth-child(2),
+    div:nth-child(3) {
+      display: none;
+    }
+  }
+
+  .inv-sample-grid-row {
+    padding: 16px 0;
+    border-bottom: 1px solid #f4f5f7;
+
+    &:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    &:first-child {
+      padding-top: 14px;
+    }
+  }
+
+  /* ✅ Sample Type sits on its own full-width row (so long test-name
+     lists don't get squeezed into a narrow column), then Barcode ID
+     + Update Barcode sit together underneath as a wide two-column
+     row that uses the full card width — no leftover empty space,
+     and the barcode number/icon never gets clipped. */
+  .inv-sample-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 12px;
+    align-items: start;
+
+    >div {
+      min-width: 0;
+    }
+  }
+
+  .inv-sample-type-cell {
+    min-width: 0;
+  }
+
+  .inv-sample-type-name {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-primary, #0f172a);
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .sample-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  .inv-sample-testnames {
+    font-size: 12.5px;
+    color: var(--text-muted);
+    line-height: 1.6;
+    margin-top: 6px;
+    padding-left: 15px;
+    overflow-wrap: anywhere;
+    word-break: break-word;
+
+    &::before {
+      content: "•";
+      margin-right: 5px;
+      color: #cbd5e1;
+    }
+  }
+
+  /* Barcode ID + Update Barcode: wide two-column row, full card width */
+  .inv-barcode-update-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    align-items: start;
+  }
+
+  .inv-barcode-col {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+  }
+
+  .inv-barcode-mini-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+  }
+
+  .inv-barcode-box {
+    display: flex;
+    align-items: center;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 12px;
+    min-height: 46px;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    font-size: 13.5px;
+    letter-spacing: 0.02em;
+    color: #334155;
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    overflow-wrap: anywhere;
+    word-break: break-all;
+    white-space: normal;
+    line-height: 1.4;
+  }
+
+  .inv-update-barcode-cell {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #f8fafc;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 6px 6px 6px 12px;
+    min-height: 46px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease;
+
+    &:focus-within {
+      border-color: var(--brand);
+      background: #fff;
+    }
+
+    ion-input {
+      flex: 1;
+      min-width: 0;
+      --padding-start: 0;
+      --padding-top: 6px;
+      --padding-bottom: 6px;
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-primary, #1e293b);
+      white-space: normal;
+      overflow-wrap: anywhere;
+    }
+
+    /* ✅ Filled, clearly-clickable confirm button — a plain
+       transparent checkmark blended into the background and was
+       hard to notice after editing. Now it always stands out. */
+    ion-button {
+      flex-shrink: 0;
+      margin: 0;
+      --border-radius: 8px;
+      --background: var(--brand);
+      --background-activated: var(--brand-deep);
+      --background-hover: var(--brand-deep);
+      --color: #fff;
+      --box-shadow: 0 2px 6px rgba(8, 123, 118, 0.3);
+      height: 32px;
+      width: 32px;
+
+      ion-icon {
+        font-size: 17px;
+      }
+    }
+  }
+}
+
+/* On very narrow screens, stack Barcode ID above Update Barcode too,
+   so neither box gets squeezed. */
+@media (max-width: 340px) {
+  .invoice-sample-table .inv-barcode-update-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ---------- TOTALS — same flat .invoice-card, no separate box ---------- */
+.invoice-totals-card {
+  .inv-total-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 6px 0;
+    font-size: 13.5px;
+    color: var(--text-muted);
+    font-weight: 600;
+
+    span:last-child {
+      color: var(--text-primary, #0f172a);
+      font-weight: 700;
+    }
+
+    &.grand {
+      margin-top: 4px;
+      padding-top: 12px;
+      border-top: 2px dashed var(--line-soft);
+      font-size: 16px;
+
+      span:first-child {
+        color: var(--text-primary, #0f172a);
+        font-weight: 800;
+      }
+
+      span:last-child {
+        color: var(--brand);
+        font-weight: 900;
+        font-size: 18px;
+      }
+    }
+  }
+}
+
+/* ---------- ACTIONS — full width, sticky to bottom of screen ----------
+   ✅ Solid background (no transparent gradient) so content behind the
+   sticky button bar never shows through. ---------- */
+.invoice-actions {
+  margin: 8px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  padding: 12px 12px 8px;
+  background: #f7f9f9 !important;
+
+  .print-btn {
+    --background: var(--brand-gradient);
+    --border-radius: var(--r-lg);
+    --box-shadow: var(--shadow-glow);
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    height: 48px;
+  }
+
+  .close-btn {
+    --border-radius: var(--r-lg);
+    --border-color: var(--brand-light);
+    --color: var(--brand);
+    font-weight: 700;
+    height: 46px;
+  }
+}
+
+.show-header-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 12px 0;
+  padding: 12px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  font-weight: 700;
+  font-size: 12.5px;
+  color: var(--text-muted);
+}
+
+.pkg-preview-header-full,
+.pkg-preview-row-full {
+  display: grid;
+  grid-template-columns: 0.4fr 2fr 0.7fr 0.7fr;
+  gap: 8px;
+}
+
+/* ============================================================
+   PACKAGE PREVIEW MODAL — compact confirmation-style popup
+============================================================ */
+.pkg-preview-popup {
+  --width: 380px;
+  --max-width: 92vw;
+  --height: auto;
+  --max-height: 78vh;
+  align-items: center;
+
+  &::part(content) {
+    border-radius: var(--r-xl);
+    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+    overflow: hidden;
+  }
+}
+
+.pkg-preview-popup .modal-page {
+  max-height: 78vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--card-bg);
+}
+
+.pkg-preview-popup .modal-header {
+  background: var(--brand-gradient);
+  border-bottom: none;
+  padding: 16px 18px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  h2 {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: 0.2px;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+  }
+
+  ion-button {
+    margin: 0;
+    width: 32px;
+    height: 32px;
+    --box-shadow: none;
+
+    &::part(native) {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 10px;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+    }
+
+    ion-icon {
+      color: #fff !important;
+      font-size: 18px;
+    }
+  }
+}
+
+.pkg-preview-table {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 6px;
+}
+
+.pkg-preview-header-full {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--brand-soft);
+  color: var(--brand-deep);
+  font-size: 10.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  padding: 10px 18px;
+  border-bottom: 1px solid var(--brand-light);
+}
+
+.pkg-preview-row-full {
+  padding: 10px 18px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  border-bottom: 1px solid #f1f5f5;
+  transition: background 0.15s;
+
+  &:nth-child(even) {
+    background: #fbfdfd;
+  }
+
+  &:active {
+    background: var(--brand-soft);
+  }
+
+  >div:nth-child(2) {
+    white-space: normal;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    font-weight: 600;
+    color: #1e293b;
+    line-height: 1.35;
+  }
+}
+
+.pkg-preview-highlight {
+  background: var(--warning-bg) !important;
+  border-radius: 6px;
+}
+
+.pkg-preview-popup .lab-picker-empty {
+  padding: 30px 16px;
+  font-size: 13px;
+}
+
+.test-name-cell {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
