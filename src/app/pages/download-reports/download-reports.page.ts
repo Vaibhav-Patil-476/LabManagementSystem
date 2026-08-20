@@ -90,7 +90,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   isGenerating = false;
   hasMore = false;
   totalBookingsFromServer = 0;
-  expandedId: number | string | null = null;
   showTestPreview = false;
   previewItem: ReportBookingRow | null = null;
 
@@ -105,15 +104,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.previewItem = null;
   }
 
-  // ---------- Lab typeahead + add-lab modal ----------
-  franchiseLabs: any[] = [];
-  labSearchTerm = '';
-  filteredLabList: any[] = [];
-  showLabDropdown = false;
-
-  isAddLabModalOpen = false;
-  isSavingLab = false;
-  newLabData = { labName: '', ownerName: '', mobileNumber: '', whatsappNumber: '', additionalDetails: '' };
   selectedIds = new Set<string>();
 
   private bookings: ReportBookingRow[] = [];
@@ -482,8 +472,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
         this.isLoadingMore = false;
         this.cdr.detectChanges();
       }),
-      error: (err) => {
-        console.error('Failed to load bookings', err);
+      error: () => {
         this.ngZone.run(() => {
           this.toast.error('Error', 'Failed to load bookings. Please try again.');
           this.isLoading = false;
@@ -602,10 +591,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.selectedIds.clear();
   }
 
-  toggleExpand(item: ReportBookingRow): void {
-    this.expandedId = this.expandedId === item.bookingId ? null : item.bookingId;
-  }
-
   get rowsForActiveTab(): ReportBookingRow[] {
     const source = this.isSearchMode ? this.filteredDataset : this.bookings;
 
@@ -647,10 +632,6 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     const total = item.tests.length;
     const done = item.tests.filter(t => this.isCompleteOrReady(this.normalizeStatus(t.status))).length;
     return `${done}/${total}`;
-  }
-
-  reportsComplete(item: ReportBookingRow): boolean {
-    return item.bucket === 'COMPLETE';
   }
 
   testStatusClass(status?: string): string {
@@ -753,8 +734,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       } else {
         this.toast.error('Generation Failed', res?.message || 'Unable to generate the PDF report.');
       }
-    } catch (err) {
-      console.error('PDF generation failed', err);
+    } catch {
       this.toast.error('Error', 'An error occurred while generating the PDF. Please try again.');
     } finally {
       this.isGenerating = false;

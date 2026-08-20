@@ -182,16 +182,8 @@ ion-content.menu-content {
   gap: 7px;
 }
 
-/* Date input — native OS calendar can't be fully restyled, but these
-   two properties tint the selected day / arrows / focus ring to the
-   brand color instead of the default browser blue, and the webkit
-   indicator filter recolors the little calendar glyph to match. */
-// ==========================================================
-// DATE TRIGGER — premium single-date picker button (Material
-// datepicker underneath), same pattern as Booking Status /
-// Download Reports pages, instead of the old raw native
-// <input type="date">.
-// ==========================================================
+/* Single-date picker button (Material datepicker underneath), matching
+   the Booking Status / Download Reports pages. */
 .date-trigger {
   display: inline-flex;
   align-items: center;
@@ -578,85 +570,6 @@ ion-content.menu-content {
   border-bottom: 1px solid var(--line);
 }
 
-// ==========================================================
-// ✅ PROGRESS BAR — Received/Pending/Rejected split, matches the
-// screenshot reference. Sits between the bookings/amount row and
-// the stat grid.
-// ==========================================================
-.booking-progress-bar {
-  display: flex;
-  height: 26px;
-  border-radius: 8px;
-  overflow: hidden;
-  margin-top: 14px;
-  background: #eef2f2;
-}
-
-.booking-progress-bar span {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 10px;
-  font-weight: 800;
-  color: #fff;
-  transition: width 0.3s ease;
-  min-width: 0;
-  overflow: hidden;
-  white-space: nowrap;
-}
-
-.bp-received {
-  background: #16866e;
-}
-
-.bp-pending {
-  background: #bd7d19;
-}
-
-.bp-rejected {
-  background: #c05262;
-}
-
-.booking-progress-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 10px;
-}
-
-.legend-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--muted);
-}
-
-.dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.dot-received {
-  background: #16866e;
-}
-
-.dot-pending {
-  background: #f59e0b;
-}
-
-.dot-outsourced {
-  background: #2563eb;
-}
-
-.dot-rejected {
-  background: #ef4444;
-
-}
-
 .stats {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
@@ -668,10 +581,6 @@ ion-content.menu-content {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-}
-
-.dot-rejected {
-  background: #c05262;
 }
 
 .booking-overview strong,
@@ -1102,7 +1011,7 @@ ion-content.menu-content {
     height: 38px;
   }
 
-  /* ---------------- Dashboard Booking Card ---------------- */
+  /* Dashboard booking card */
 
   .booking-card {
     padding: 14px;
@@ -1188,9 +1097,7 @@ ion-content.menu-content {
   }
 }
 
-/* ==========================================================
-   Material single-date-picker overlay
-========================================================== */
+/* Material single-date-picker overlay */
 
 ::ng-deep .cdk-overlay-container {
   z-index: 99999 !important;
@@ -1980,7 +1887,7 @@ ion-content.menu-content {
 .doctor-lab-stack {
   display: flex;
   flex-direction: column;
-  gap: 24px; // 20px वरून वाढवलं — fields मधलं space
+  gap: 24px;
   width: 100%;
 
   .summary-field {
@@ -1988,12 +1895,12 @@ ion-content.menu-content {
   }
 
   label {
-    color: var(--brand-deep, #075f5d) !important; // teal color
+    color: var(--brand-deep, #075f5d) !important;
     font-size: 11px !important;
     font-weight: 800 !important;
     text-transform: uppercase !important;
     letter-spacing: 0.3px !important;
-    margin-bottom: 10px !important; // label आणि box मध्ये space वाढवलं
+    margin-bottom: 10px !important;
     display: block !important;
   }
 
@@ -2345,7 +2252,7 @@ ion-content.menu-content {
   th:last-child,
   td:last-child {
     width: 55%;
-    text-align: right !important; // ⬅️ right align
+    text-align: right !important;
   }
 
   th {
@@ -2471,7 +2378,7 @@ ion-content.menu-content {
   margin-bottom: 0;
 }
 
-/* Doctor / Lab picker modals */
+/* Doctor / lab picker modals */
 .modal-page {
   background: #fff;
   height: 100%;
@@ -2573,7 +2480,7 @@ ion-content.menu-content {
   }
 }
 
-/* ===== FINAL FIX: Edit Test modal layout (mirrors booking-status) ===== */
+/* Edit Test modal layout (mirrors booking-status) */
 .test-modal-wrapper .modal-body-grid {
   display: flex !important;
   flex-wrap: wrap !important;
@@ -2614,213 +2521,110 @@ ion-content.menu-content {
   }
 }
 
-/* ============================================================
-   PAYMENT SUMMARY — COMPACT PREMIUM MOBILE UI
-   ============================================================ */
+/* Payment summary — compact premium mobile UI */
 
 .test-modal-wrapper {
 
   .summary-side-panel {
-
-    /* Compact card */
     padding: 20px !important;
-
     border-radius: 22px !important;
-
     column-gap: 14px !important;
     row-gap: 14px !important;
-
     background: #f5f9f8 !important;
   }
 
-
-  /* ==========================================================
-     PAYMENT SUMMARY TITLE
-     ========================================================== */
-
   .summary-panel-title {
-
     margin: 0 0 2px !important;
-
     font-size: 16px !important;
-
     line-height: 1.2 !important;
-
     letter-spacing: 0.35px !important;
-
     font-weight: 800 !important;
   }
 
-
-  /* ==========================================================
-     FIELD
-     ========================================================== */
-
   .summary-field {
-
     margin: 0 !important;
   }
 
-
-  /* ==========================================================
-     LABEL
-     ========================================================== */
-
   .summary-field label {
-
     margin: 0 0 7px !important;
-
     font-size: 13px !important;
-
     line-height: 1.2 !important;
-
     font-weight: 750 !important;
-
     letter-spacing: 0.15px !important;
   }
 
-
-  /* ==========================================================
-     INPUT BOX
-     ========================================================== */
-
   .summary-field input {
-
     width: 100% !important;
-
     height: 52px !important;
-
     min-height: 52px !important;
-
     padding: 0 15px !important;
-
     border-radius: 15px !important;
-
     font-size: 18px !important;
-
     font-weight: 700 !important;
-
     border: 1px solid #e1eae8 !important;
-
-    box-shadow:
-      0 2px 8px rgba(20, 60, 58, 0.025) !important;
+    box-shadow: 0 2px 8px rgba(20, 60, 58, 0.025) !important;
   }
 
-
-  /* ==========================================================
-     READ ONLY TEXT
-     ========================================================== */
-
   .summary-field input[readonly] {
-
     color: #8b9da3 !important;
   }
 
-
-  /* ==========================================================
-     EDITABLE INPUT
-     ========================================================== */
-
   .summary-field input:not([readonly]) {
-
     color: #182326 !important;
   }
 
-
-  /* ==========================================================
-     PAYMENT METHOD
-     ========================================================== */
-
   .payment-method-field {
-
     margin-top: 2px !important;
   }
 
-
   .payment-method-field .premium-select {
-
     width: 100% !important;
-
     height: 52px !important;
-
     min-height: 52px !important;
-
     padding: 0 15px !important;
-
     border-radius: 15px !important;
-
     border: 1.5px solid #d9e5e2 !important;
-
     font-size: 18px !important;
-
     font-weight: 700 !important;
-
     --padding-start: 15px !important;
-
     --padding-end: 15px !important;
   }
 
 }
-
-
-/* ============================================================
-   MOBILE COMPACT TUNING
-   ============================================================ */
 
 @media (max-width: 700px) {
 
   .test-modal-wrapper {
 
     .summary-side-panel {
-
       padding: 20px !important;
-
       border-radius: 22px !important;
-
       column-gap: 14px !important;
-
       row-gap: 14px !important;
     }
 
-
     .summary-panel-title {
-
       font-size: 16px !important;
     }
 
-
     .summary-field label {
-
       font-size: 13px !important;
-
       margin-bottom: 7px !important;
     }
 
-
     .summary-field input {
-
       height: 52px !important;
-
       min-height: 52px !important;
-
       padding: 0 15px !important;
-
       border-radius: 15px !important;
-
       font-size: 18px !important;
     }
 
-
     .payment-method-field .premium-select {
-
       height: 52px !important;
-
       min-height: 52px !important;
-
       padding: 0 15px !important;
-
       border-radius: 15px !important;
-
       font-size: 18px !important;
     }
 
@@ -2828,67 +2632,44 @@ ion-content.menu-content {
 
 }
 
-/* ============================================================
-   PAYMENT SUMMARY — SMALLER INPUT TEXT
-   ============================================================ */
+/* Payment summary — smaller input text (final override) */
 
 .test-modal-wrapper {
 
   .summary-field input {
-
     height: 50px !important;
     min-height: 50px !important;
-
     padding: 0 14px !important;
-
     font-size: 15px !important;
-
     font-weight: 650 !important;
-
     border-radius: 14px !important;
   }
 
-
   .payment-method-field .premium-select {
-
     height: 50px !important;
     min-height: 50px !important;
-
     padding: 0 14px !important;
-
     font-size: 15px !important;
-
     font-weight: 650 !important;
-
     border-radius: 14px !important;
-
     --padding-start: 14px !important;
     --padding-end: 14px !important;
   }
 
-
   .summary-field label {
-
     font-size: 12px !important;
-
     font-weight: 750 !important;
-
     margin-bottom: 6px !important;
   }
 
-
   .summary-panel-title {
-
     font-size: 15px !important;
-
     font-weight: 800 !important;
   }
 
 }
 
-// ==========================================================
-// BARCODE MODAL — PREMIUM SKELETON SHIMMER
-// ==========================================================
+// Barcode modal — skeleton shimmer
 
 .skeleton-block {
   width: 100%;
@@ -2906,7 +2687,6 @@ ion-content.menu-content {
   overflow: hidden;
 }
 
-// Common shimmer
 .skeleton-box,
 .skeleton-label,
 .skeleton-input,
@@ -2921,7 +2701,6 @@ ion-content.menu-content {
   animation: barcodeSkeletonShimmer 1.5s ease-in-out infinite;
 }
 
-// Top section
 .skeleton-top-row {
   display: flex;
   align-items: center;
@@ -2941,7 +2720,6 @@ ion-content.menu-content {
   border-radius: 20px;
 }
 
-// Fields
 .skeleton-fields {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
@@ -2966,7 +2744,6 @@ ion-content.menu-content {
   border-radius: 9px;
 }
 
-// Button
 .skeleton-button {
   width: 100%;
   height: 44px;
@@ -2974,7 +2751,6 @@ ion-content.menu-content {
   border-radius: 10px;
 }
 
-// Shimmer animation
 @keyframes barcodeSkeletonShimmer {
   0% {
     background-position: 200% 0;
@@ -2985,7 +2761,6 @@ ion-content.menu-content {
   }
 }
 
-// Mobile responsive
 @media (max-width: 768px) {
   .skeleton-fields {
     grid-template-columns: 1fr;
@@ -3526,9 +3301,7 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   padding-bottom: 16px;
 }
 
-// ============================================================
-// PAYMENT VERIFICATION OVERLAY
-// ============================================================
+// Payment verification overlay
 .payment-verify-overlay {
   position: fixed;
   inset: 0;
@@ -3783,10 +3556,9 @@ ion-modal.admin-addfunds-popup .sheet-footer {
     border-radius: 10px;
     font-weight: 600;
   }
-}// ============================================================
-// ✅ NEW — Global Search: "Tests 👁" row + Test Preview popup
-// (dashboard.page.scss च्या शेवटी हे संपूर्ण block copy-paste करा)
-// ============================================================
+}
+
+// Global search — "Tests" eye-icon row + test preview popup
 
 .sc-row-with-tests {
   display: flex;
@@ -3831,9 +3603,7 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   }
 }
 
-/* ============================================================
-   TEST PREVIEW MODAL — small centered popup (eye icon)
-============================================================ */
+/* Test preview modal — small centered popup (eye icon) */
 .test-preview-popup {
   --width: 380px;
   --max-width: 92vw;
@@ -3954,8 +3724,7 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   }
 }
 
-/* status-badge class dashboard.page.scss मध्ये आधी नव्हती —
-   preview modal madhla status badge रंगीत दिसण्यासाठी हे आवश्यक आहे. */
+/* Status badge used inside the test preview modal */
 .status-badge {
   display: inline-flex !important;
   align-items: center !important;
@@ -3994,4 +3763,11 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   &.badge-cancel {
     background: #dc3545 !important;
   }
+}.service-icon.danger {
+  background: rgba(231, 76, 60, 0.12);
+  color: #e74c3c;
+}
+.service-icon.cyan {
+  background: rgba(0, 188, 212, 0.12);
+  color: #00bcd4;
 }

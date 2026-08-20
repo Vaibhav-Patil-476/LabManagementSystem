@@ -63,6 +63,18 @@ export const routes: Routes = [
   },
 
   {
+    path: 'cancel-test',
+    canActivate: [authGuard], // ✅ ADDED — hyach mule refresh var 400 auth error yet hota
+    loadComponent: () => import('./pages/cancel-test/cancel-test.page').then(m => m.CancelTestPage)
+  },
+  {
+    path: 'clinical-history',
+    canActivate: [authGuard], // ✅ ADDED
+    loadComponent: () => import('./pages/clinical-history/clinical-history.page').then(m => m.ClinicalHistoryPage)
+  },
+
+ 
+  {
     path: '**',
     redirectTo: 'login'
   }

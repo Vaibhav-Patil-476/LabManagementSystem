@@ -3184,21 +3184,24 @@ ion-content.menu-open {
 }
 
 /* =========================================================
-   BOOKING CARD BOTTOM CLIPPING FIX
+   BOOKING CARD BOTTOM CLIPPING FIX (mobile/APK)
+   ---------------------------------------------------------
+   Root cause: ion-content already manages its own internal
+   scroll container. Manually forcing `overflow: auto` on
+   .booking-content AND separately overriding its
+   ::part(scroll) confuses Ionic's scroll-height calculation
+   inside the native WebView (Capacitor APK) — even though it
+   renders fine on the web. That's what was cropping the last
+   card. Fix: don't touch overflow/::part(scroll) at all — just
+   set the officially supported --padding-bottom variable, and
+   add env(safe-area-inset-bottom) so the last card also clears
+   gesture-nav bars on notched phones.
    ========================================================= */
 
 .booking-content {
-  --padding-bottom: 24px;
+  --padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
   --padding-start: 0;
   --padding-end: 0;
-
-  overflow: auto;
-}
-
-.booking-content::part(scroll) {
-  overflow-y: auto;
-  overflow-x: hidden;
-  padding-bottom: 24px;
 }
 
 .form-card {
@@ -3214,7 +3217,7 @@ ion-content.menu-open {
   flex-direction: column;
   gap: var(--sp-3, 12px);
   margin-top: var(--sp-3);
-  padding: 0 var(--sp-3) 30px;
+  padding: 0 var(--sp-3) calc(30px + env(safe-area-inset-bottom, 0px));
 
   height: auto;
   min-height: 0;
@@ -3226,7 +3229,6 @@ ion-content.menu-open {
   height: auto;
   min-height: 0;
   max-height: none;
-  // overflow: visible;
   overflow: hidden;
   box-sizing: border-box;
 }

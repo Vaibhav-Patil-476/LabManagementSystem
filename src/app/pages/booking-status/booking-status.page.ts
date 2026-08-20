@@ -1,4 +1,4 @@
-import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
@@ -112,15 +112,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   fromDate = '';
   toDate = '';
   filterFranchises: any[] = [];
-  packageSearchTerm = '';
-  filteredPackages: any[] = [];
-  showPackageSuggestions = false;
-  private packageSearchTimer: any = null;
-  currentPage = 0;
-  pageSize = 20;
-  totalPages = 1;
   private readonly SEARCH_START_DATE = '2015-01-01';
-  private readonly SEARCH_PAGE_SIZE = 500;
   private searchDebounceTimer: any = null;
   private readonly SEARCH_DEBOUNCE_MS = 400;
 
@@ -141,14 +133,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   isPatientLoading = false;
   editPatientData: any = null;
   doctorSearch = '';
-  filteredDoctors: any[] = [];
-  showDoctorSuggestions = false;
   customLabSearch = '';
   filteredCustomLabs: any[] = [];
   showCustomLabDropdown = false;
-  labSearch = '';
-  filteredLabs: any[] = [];
-  showLabDropdown = false;
   showDoctorPicker = false;
   showLabPicker = false;
   doctors: any[] = [];
@@ -179,12 +166,15 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   billHistoryBooking: BookingListItem | null = null;
 
   openActionRowId: number | null = null;
-generatingBillId: number | null = null;
-sharingWhatsappId: number | null = null;   // ✅ NEW
+  generatingBillId: number | null = null;
+  sharingWhatsappId: number | null = null;
   openActionItem: BookingListItem | null = null;
   actionMenuPosition = { top: 0, left: 0 };
-  expandedBookingId: number | null = null;
   role = '';
+
+  // ✅ Reference to the rendered dropdown element — used to measure its
+  // REAL height/width before finally positioning it (see toggleActionMenu).
+  @ViewChild('actionDropdown') actionDropdownRef?: ElementRef<HTMLElement>;
 
   readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
     { key: 'all', label: 'All', badgeClass: 'badge-all' },
@@ -225,7 +215,6 @@ sharingWhatsappId: number | null = null;   // ✅ NEW
     this.selectedReportStatus = key;
   }
 
-  availableTests: BookingTest[] = [];
   private currentUserId = 0;
 
   @ViewChild('rangePicker') rangePicker!: any;
@@ -263,7 +252,6 @@ sharingWhatsappId: number | null = null;   // ✅ NEW
 
       if (!isFranchiseUser && this.selectedFranchiseId !== null) {
         this.selectedFranchiseId = null;
-        this.currentPage = 0;
         this.loadBookings();
       }
 
@@ -289,7 +277,6 @@ sharingWhatsappId: number | null = null;   // ✅ NEW
     this.selectedFranchiseId = Number(franchiseId);
     this.showFranchiseDropdown = false;
     this.filteredFranchiseList = [];
-    this.currentPage = 0;
 
     this.applyFilters();
   }
@@ -311,7 +298,6 @@ sharingWhatsappId: number | null = null;   // ✅ NEW
   get canViewAmount(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
   get canEditBilling(): boolean { return this.isAdminRole || this.isStaffRole; }
   get canViewPayment(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
-  get canViewAllBookings(): boolean { return this.isAdminRole; }
   get canSaveBooking(): boolean {
     return [this.ROLE_LAB_ADMIN, this.ROLE_STAFF, this.ROLE_FRANCHISE, this.ROLE_FRANCHISE_STAFF].includes(this.role);
   }
@@ -420,12 +406,12 @@ sharingWhatsappId: number | null = null;   // ✅ NEW
     private alertController: AlertController,
     private authService: AuthService
   ) {
-addIcons({
-  flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
-  addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
-  documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline
-});
+    addIcons({
+      flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
+      addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
+      documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
+      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline
+    });
   }
 
   // ---------- lifecycle ----------
@@ -568,7 +554,6 @@ addIcons({
     }
 
     this.searchDebounceTimer = setTimeout(() => {
-      this.currentPage = 0;
       this.loadBookings();
     }, this.SEARCH_DEBOUNCE_MS);
   }
@@ -687,7 +672,7 @@ addIcons({
   }
 
   // ---------- data loading ----------
-  loadBookings(isLoadMore: boolean = false): void {
+  loadBookings(): void {
     this.isLoadingList = true;
 
     const labId = this.labApi.getCurrentLabId();
@@ -725,7 +710,6 @@ addIcons({
 
   // ---------- template aliases ----------
   loadData(): void {
-    this.currentPage = 0;
     this.loadBookings();
   }
 
@@ -767,7 +751,6 @@ addIcons({
 
   // ---------- apply filters ----------
   applyFilters(): void {
-    this.currentPage = 0;
     this.loadBookings();
   }
 
@@ -816,7 +799,6 @@ addIcons({
           }
 
           // Important: the booking API is only called once franchise selection is ready.
-          this.currentPage = 0;
           this.loadBookings();
 
           this.cdr.detectChanges();
@@ -845,7 +827,6 @@ addIcons({
             this.franchiseSearchTerm = '';
           }
 
-          this.currentPage = 0;
           this.loadBookings();
 
           this.cdr.detectChanges();
@@ -871,7 +852,6 @@ addIcons({
     this.selectedFranchiseId = null;
     this.filteredFranchiseList = [];
     this.showFranchiseDropdown = false;
-    this.currentPage = 0;
 
     this.loadBookings();
   }
@@ -905,48 +885,19 @@ addIcons({
     });
   }
 
-  // ---------- available tests ----------
-  loadAvailableTests(): void {
-    this.labApi.getTests().subscribe({
-      next: (res: any) => {
-        const apiTests = Array.isArray(res) ? res : [];
-
-        this.availableTests = apiTests.map((t: any) => ({
-          testId: t.test_id ?? t.testId,
-          testName: t.test_name || 'Unnamed Test',
-          testPrice: t.price2 ?? 0,
-          testMrp: t.test_price ?? 0,
-          sample: t.sampleTypeName || 'OTHER'
-        }));
-      },
-
-      error: () => {
-        this.availableTests = [];
-      }
-    });
-  }
-
-  // ---------- card / row helpers ----------
-  toggleExpand(item: BookingListItem): void {
-    this.expandedBookingId = this.expandedBookingId === item.bookingId ? null : item.bookingId;
-  }
-
+  // ---------- test preview modal (eye icon) ----------
   isTestPreviewModalOpen = false;
-previewBooking: BookingListItem | null = null;
+  previewBooking: BookingListItem | null = null;
 
-openTestPreview(item: BookingListItem, event?: MouseEvent): void {
-  event?.stopPropagation(); // card expand होऊ नये म्हणून
-  this.previewBooking = item;
-  this.isTestPreviewModalOpen = true;
-}
+  openTestPreview(item: BookingListItem, event?: MouseEvent): void {
+    event?.stopPropagation(); // prevent the card-level click from firing
+    this.previewBooking = item;
+    this.isTestPreviewModalOpen = true;
+  }
 
-closeTestPreview(): void {
-  this.isTestPreviewModalOpen = false;
-  this.previewBooking = null;
-}
-
-  getSamples(item: BookingListItem): number {
-    return (item.samples?.length || (item.tests || []).length) || 0;
+  closeTestPreview(): void {
+    this.isTestPreviewModalOpen = false;
+    this.previewBooking = null;
   }
 
   getReportProgress(item: BookingListItem): string {
@@ -994,28 +945,77 @@ closeTestPreview(): void {
   }
 
   // ---------- action menu ----------
+
+  /**
+   * ✅ FIXED VERSION
+   * The old logic guessed the dropdown's height with a hardcoded
+   * `menuHeightEstimate = 260`. The real menu now has up to 9 items
+   * (~350-400px), so the guess was wrong and the menu could render
+   * partially off the bottom of the screen (web + Capacitor APK both).
+   *
+   * Fix: open the menu off-screen first (invisible), let Angular render
+   * it, measure its REAL height/width on the next animation frame, and
+   * only then calculate the final on-screen position (flip up if it
+   * doesn't fit below, clamp inside viewport as a last resort).
+   */
   toggleActionMenu(item: BookingListItem, event: MouseEvent): void {
     event.stopPropagation();
+
     if (this.openActionRowId === item.bookingId) {
       this.closeActionMenu();
       return;
     }
 
-    const rect = (event.currentTarget as HTMLElement).getBoundingClientRect();
-    const menuWidth = 200;
-    const menuHeightEstimate = 260;
+    const anchorRect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 
-    let left = rect.right - menuWidth;
-    if (left < 8) left = 8;
-    if (left + menuWidth > window.innerWidth - 8) left = window.innerWidth - menuWidth - 8;
-
-    let top = rect.bottom + 6;
-    if (top + menuHeightEstimate > window.innerHeight) top = Math.max(8, rect.top - menuHeightEstimate - 6);
-
-    this.actionMenuPosition = { top, left };
+    // Render off-screen first so we can measure the real size.
+    this.actionMenuPosition = { top: -9999, left: -9999 };
     this.openActionRowId = item.bookingId;
     this.openActionItem = item;
     document.body.classList.add('action-menu-open');
+    this.cdr.detectChanges();
+
+    requestAnimationFrame(() => {
+      // Guard: user might have closed the menu again before this frame runs.
+      if (this.openActionRowId !== item.bookingId) return;
+      this.positionActionMenu(anchorRect);
+      this.cdr.detectChanges();
+    });
+  }
+
+  private positionActionMenu(anchorRect: DOMRect): void {
+    const menuEl = this.actionDropdownRef?.nativeElement;
+
+    // Real measured size — fallback estimate only if the element wasn't found.
+    const menuWidth = menuEl?.offsetWidth || 216;
+    const menuHeight = menuEl?.offsetHeight || 320;
+
+    const viewportW = window.innerWidth;
+    const viewportH = window.innerHeight;
+    const margin = 8;
+
+    // ---- horizontal ----
+    let left = anchorRect.right - menuWidth;
+    if (left < margin) left = margin;
+    if (left + menuWidth > viewportW - margin) left = viewportW - menuWidth - margin;
+
+    // ---- vertical: try below the button first ----
+    let top = anchorRect.bottom + 6;
+
+    // Doesn't fit below → flip above the button.
+    if (top + menuHeight > viewportH - margin) {
+      top = anchorRect.top - menuHeight - 6;
+    }
+
+    // Still doesn't fit (e.g. button is near the top of a short screen) →
+    // clamp inside the viewport. CSS max-height + overflow-y:auto on
+    // .action-dropdown handles scrolling for whatever doesn't fit.
+    if (top < margin) top = margin;
+    if (top + menuHeight > viewportH - margin) {
+      top = Math.max(margin, viewportH - menuHeight - margin);
+    }
+
+    this.actionMenuPosition = { top, left };
   }
 
   closeActionMenu(): void {
@@ -1042,8 +1042,7 @@ closeTestPreview(): void {
         }
         this.cdr.detectChanges();
       }),
-      error: (err) => {
-        console.log('PRINT BILL ERROR:', err);
+      error: () => {
         this.ngZone.run(() => {
           this.generatingBillId = null;
           this.showToast('Bill generate karnyat error aali', 'error');
@@ -1054,36 +1053,35 @@ closeTestPreview(): void {
   }
 
   // ---------- share report via whatsapp ----------
-shareViaWhatsApp(item: BookingListItem): void {
-  this.closeActionMenu();
+  shareViaWhatsApp(item: BookingListItem): void {
+    this.closeActionMenu();
 
-  if (this.sharingWhatsappId === item.bookingId) return;
-  this.sharingWhatsappId = item.bookingId;
+    if (this.sharingWhatsappId === item.bookingId) return;
+    this.sharingWhatsappId = item.bookingId;
 
-  this.labApi.shareReportViaWhatsApp(item.bookingId).subscribe({
-    next: (res: any) => this.ngZone.run(() => {
-      this.sharingWhatsappId = null;
-
-      if (res?.success === false) {
-        this.showToast(res?.message || 'Failed to share the report via WhatsApp.', 'error');
-        return;
-      }
-
-      this.showToast('Report shared via WhatsApp successfully.', 'success');
-      this.cdr.detectChanges();
-    }),
-    error: (err) => {
-      console.error('SHARE WHATSAPP ERROR:', err);
-      this.ngZone.run(() => {
+    this.labApi.shareReportViaWhatsApp(item.bookingId).subscribe({
+      next: (res: any) => this.ngZone.run(() => {
         this.sharingWhatsappId = null;
-        this.showToast(
-          err?.error?.message || 'Failed to share the report via WhatsApp. Please try again.',
-          'error'
-        );
-      });
-    }
-  });
-}
+
+        if (res?.success === false) {
+          this.showToast(res?.message || 'Failed to share the report via WhatsApp.', 'error');
+          return;
+        }
+
+        this.showToast('Report shared via WhatsApp successfully.', 'success');
+        this.cdr.detectChanges();
+      }),
+      error: (err) => {
+        this.ngZone.run(() => {
+          this.sharingWhatsappId = null;
+          this.showToast(
+            err?.error?.message || 'Failed to share the report via WhatsApp. Please try again.',
+            'error'
+          );
+        });
+      }
+    });
+  }
 
   // ---------- edit test ----------
   editTest(item: BookingListItem): void {
@@ -1134,8 +1132,8 @@ shareViaWhatsApp(item: BookingListItem): void {
 
     const labId = this.labApi.getCurrentLabId();
 
-    // ✅ Ha booking konatya franchise cha ahe tyachyach franchiseId
-    // varun b2b price yeil (list filter navhe, actual bookingcha franchise)
+    // The booking's own franchise decides the B2B price shown here
+    // (not the list filter) — that's the actual franchise this booking belongs to.
     const franchiseId =
       this.selectedBooking?.franchise?.franchiseId ??
       this.selectedFranchiseId ??
@@ -1154,9 +1152,8 @@ shareViaWhatsApp(item: BookingListItem): void {
             testName: String(t.test_name || 'Unnamed Test').trim(),
             testMrp: t.test_price ?? 0,
 
-            // ✅ FIX: Admin la NEHMI base rate (price2) distoy, Franchise/Staff
-            // la tyanchya franchise-specific assignedPrice — add-patient sarkhach
-            // rule.
+            // Admin always sees the base rate (price2); Franchise/Staff see their
+            // franchise-specific assignedPrice — same rule as add-patient.
             testPrice: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0)
           }));
       },
@@ -1164,75 +1161,6 @@ shareViaWhatsApp(item: BookingListItem): void {
         this.filteredTests = [];
       }
     });
-  }
-
-  searchPackages(): void {
-    const q = this.packageSearchTerm.trim();
-
-    if (this.packageSearchTimer) clearTimeout(this.packageSearchTimer);
-
-    if (!q) {
-      this.filteredPackages = [];
-      this.showPackageSuggestions = false;
-      return;
-    }
-
-    this.packageSearchTimer = setTimeout(() => {
-      const labId = this.labApi.getCurrentLabId();
-      const franchiseId = this.selectedBooking?.franchise?.franchiseId ?? this.selectedFranchiseId ?? undefined;
-
-      this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
-        next: (res: any) => {
-          this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
-          this.showPackageSuggestions = this.filteredPackages.length > 0;
-        },
-        error: () => {
-          this.filteredPackages = [];
-          this.showPackageSuggestions = false;
-        }
-      });
-    }, 250);
-  }
-
-  addPackage(pkg: any): void {
-    const packageTests: any[] = pkg?.withTest || pkg?.tests || pkg?.testList || pkg?.profileTests || [];
-
-    if (!Array.isArray(packageTests) || packageTests.length === 0) {
-      this.showToast('No tests found inside this package', 'warning');
-      this.packageSearchTerm = '';
-      this.showPackageSuggestions = false;
-      return;
-    }
-
-    let addedCount = 0;
-
-    packageTests.forEach((pt: any) => {
-      const testId = Number(pt?.testId ?? pt?.test_id ?? pt?.id ?? 0);
-      const testName = String(pt?.testName ?? pt?.test_name ?? '').trim();
-
-      if (!testId || !testName) return;
-      if (this.selectedTests.some(s => s.testName === testName)) return;
-
-      this.selectedTests.push({
-        testId,
-        testName,
-        testMrp: pt.test_price ?? 0,
-        testPrice: pt.assignedPrice ?? pt.price2 ?? 0,
-        isNewlyAdded: true
-      } as any);
-
-      addedCount++;
-    });
-
-    if (addedCount > 0) {
-      this.showToast(`${addedCount} test(s) added from package`, 'success');
-    } else {
-      this.showToast('All tests already added', 'warning');
-    }
-
-    this.packageSearchTerm = '';
-    this.filteredPackages = [];
-    this.showPackageSuggestions = false;
   }
 
   addTest(test: BookingTest): void {
@@ -1324,7 +1252,6 @@ shareViaWhatsApp(item: BookingListItem): void {
 
               error: (err) => {
                 this.ngZone.run(() => {
-                  console.error('DELETE TEST ERROR:', err);
                   this.showToast(err?.error?.message || 'Failed to delete test from database.', 'error');
                 });
               }
@@ -1409,14 +1336,12 @@ shareViaWhatsApp(item: BookingListItem): void {
             tests: newTests.map(t => ({
               testId: t.testId,
               testName: t.testName,
-              // ✅ FIX: b2b/billing price ata "testPrice" field madhe —
-              // adhi ithe t.testMrp (MRP) chukine jat hota, tyamule
-              // re-fetch/verify nantar Admin la MRP distat hota, b2b nahi.
+              // B2B/billing price goes into "testPrice".
               testPrice: t.testPrice ?? t.testMrp,
               doctorTestDiscountPrice: 0,
               doctorTestCommissionPrice: 0,
-              // ✅ FIX: MRP ata "test_price" field madhe — naming
-              // consistent keli loadAvailableTests() varlya conventionshi.
+              // MRP goes into "test_price" — naming kept consistent with the
+              // convention used elsewhere for test pricing.
               test_price: t.testMrp,
               assignedPrice: [t.testPrice ?? t.testMrp],
               source: t.method || 'RPL',
@@ -1431,7 +1356,6 @@ shareViaWhatsApp(item: BookingListItem): void {
             },
 
             error: (err) => {
-              console.log('ADD TEST ERROR:', err);
               this.ngZone.run(() => {
                 this.isSavingTest = false;
                 this.showToast('Naveen test add nahi zala: ' + (err.error?.message || 'Unknown error'), 'error');
@@ -1445,7 +1369,6 @@ shareViaWhatsApp(item: BookingListItem): void {
       },
 
       error: (err) => {
-        console.log('UPDATE PATIENT ERROR:', err);
         this.ngZone.run(() => {
           this.isSavingTest = false;
           this.showToast('Failed to update booking: ' + (err.error?.message || 'Unknown error'), 'error');
@@ -1481,8 +1404,7 @@ shareViaWhatsApp(item: BookingListItem): void {
           this.loadBookings();
         });
       },
-      error: (err) => {
-        console.log('RE-FETCH AFTER SAVE ERROR:', err);
+      error: () => {
         this.ngZone.run(() => {
           this.isSavingTest = false;
           this.showToast('Saved, but refresh failed — please reopen', 'warning');
@@ -1515,12 +1437,7 @@ shareViaWhatsApp(item: BookingListItem): void {
       this.editPatientData = data;
 
       this.doctorSearch = data.doctor;
-      this.labSearch = data.lab;
       this.customLabSearch = data.customFranchiseLab || '';
-      this.filteredDoctors = [];
-      this.filteredLabs = [];
-      this.showDoctorSuggestions = false;
-      this.showLabDropdown = false;
       this.isPatientLoading = false;
     }, () => {
       this.isPatientLoading = false;
@@ -1533,14 +1450,9 @@ shareViaWhatsApp(item: BookingListItem): void {
     this.isPatientLoading = false;
     this.editPatientData = null;
     this.doctorSearch = '';
-    this.labSearch = '';
     this.customLabSearch = '';
     this.filteredCustomLabs = [];
     this.showCustomLabDropdown = false;
-    this.filteredDoctors = [];
-    this.filteredLabs = [];
-    this.showDoctorSuggestions = false;
-    this.showLabDropdown = false;
   }
 
   updatePatient(): void {
@@ -1609,8 +1521,7 @@ shareViaWhatsApp(item: BookingListItem): void {
         this.closePatientModal();
         this.cdr.detectChanges();
       }),
-      error: (err) => {
-        console.log('UPDATE PATIENT ERROR:', err);
+      error: () => {
         this.ngZone.run(() => this.showToast('Patient update fail zala', 'error'));
       }
     });
@@ -1655,75 +1566,6 @@ shareViaWhatsApp(item: BookingListItem): void {
     this.showLabPicker = false;
   }
 
-  searchDoctorInput(): void {
-    const searchTerm = String(this.doctorSearch || '').trim().toLowerCase();
-    if (!this.editPatientData) return;
-
-    this.editPatientData.doctor = this.doctorSearch;
-    this.editPatientData.doctorId = null; // custom typed name — reset the id
-
-    if (!searchTerm) {
-      this.filteredDoctors = [];
-      this.showDoctorSuggestions = false;
-      return;
-    }
-
-    this.labApi.getDoctors().subscribe({
-      next: (res: any) => {
-        const doctors = res?.data || res?.doctors || res?.content || res || [];
-        if (!Array.isArray(doctors)) {
-          this.filteredDoctors = [];
-          this.showDoctorSuggestions = false;
-          return;
-        }
-        this.doctors = doctors;
-        this.filteredDoctors = doctors.filter((doc: any) => {
-          const name = String(doc?.doctor_name || doc?.doctorName || doc?.name || '').trim().toLowerCase();
-          return name.includes(searchTerm);
-        });
-        this.showDoctorSuggestions = this.filteredDoctors.length > 0;
-      },
-      error: () => { this.filteredDoctors = []; this.showDoctorSuggestions = false; }
-    });
-  }
-
-  selectDoctorFromSearch(doc: any): void {
-    if (!doc || !this.editPatientData) return;
-    const doctorId = Number(doc?.doctorid ?? doc?.doctorId ?? doc?.id ?? 0);
-    const doctorName = String(doc?.doctor_name || doc?.doctorName || doc?.name || '').trim();
-    this.editPatientData.doctor = doctorName;
-    this.editPatientData.doctorId = doctorId;
-    this.doctorSearch = doctorName;
-    this.showDoctorSuggestions = false;
-  }
-
-  searchLabInput(): void {
-    const q = String(this.labSearch || '').trim().toLowerCase();
-    if (!this.editPatientData) return;
-
-    this.editPatientData.lab = this.labSearch;
-    this.editPatientData.franchiseId = null; // custom typed name — reset the id
-
-    if (!q) {
-      this.filteredLabs = [];
-      this.showLabDropdown = false;
-      return;
-    }
-
-    this.labApi.getFranchises().subscribe({
-      next: (res: any) => {
-        const list = Array.isArray(res) ? res : (res?.content || []);
-        this.labs = list;
-        this.filteredLabs = list.filter((lab: any) => {
-          const name = String(lab?.franchiseName || lab?.name || '').trim().toLowerCase();
-          return name.includes(q);
-        });
-        this.showLabDropdown = this.filteredLabs.length > 0;
-      },
-      error: () => { this.filteredLabs = []; this.showLabDropdown = false; }
-    });
-  }
-
   searchCustomLabInput(): void {
     const q = String(this.customLabSearch || '').trim().toLowerCase();
     if (!this.editPatientData) return;
@@ -1755,16 +1597,6 @@ shareViaWhatsApp(item: BookingListItem): void {
     this.editPatientData.customFranchiseLab = name;
     this.customLabSearch = name;
     this.showCustomLabDropdown = false;
-  }
-
-  selectLabFromSearch(lab: any): void {
-    if (!lab || !this.editPatientData) return;
-    const franchiseId = Number(lab?.franchiseId ?? lab?.id ?? 0);
-    const franchiseName = String(lab?.franchiseName || lab?.name || '').trim();
-    this.editPatientData.lab = franchiseName;
-    this.editPatientData.franchiseId = franchiseId;
-    this.labSearch = franchiseName;
-    this.showLabDropdown = false;
   }
 
   onPatientFileSelected(event: any): void {
@@ -1825,8 +1657,7 @@ shareViaWhatsApp(item: BookingListItem): void {
           this.closeNoteModal();
           this.loadBookings();
         }),
-        error: (err) => {
-          console.log('ADD NOTE ERROR:', err);
+        error: () => {
           this.ngZone.run(() => {
             this.isSavingNote = false;
             this.showToast('Note save fail zala', 'error');
@@ -1881,7 +1712,7 @@ shareViaWhatsApp(item: BookingListItem): void {
       return {
         accessionId: s.accessionId || s.sampleAccessionId,
         sampleTypeId: s.sampleTypeId,
-        testId: Number(s.testId),   // ✅ verify साठी लागेल
+        testId: Number(s.testId),
         sampleType: s.sampleType || '-',
         oldBarcode: s.barcode,
         newBarcode: s.barcode,
@@ -1949,7 +1780,6 @@ shareViaWhatsApp(item: BookingListItem): void {
                 this.loadBookings();
               }),
               error: (err) => this.ngZone.run(() => {
-                console.log('DELETE BOOKING ERROR:', err);
                 this.showToast('Booking delete fail zala: ' + (err.error?.message || 'Unknown error'), 'error');
               })
             });
@@ -1983,7 +1813,7 @@ shareViaWhatsApp(item: BookingListItem): void {
       return;
     }
 
-    // ✅ याच booking मधल्या दुसऱ्या row ला हाच barcode आधीच दिलेला नाहीये ना (local check)
+    // Confirm another row in this same booking doesn't already use this barcode (local check).
     const isDuplicateLocally = this.barcodeRows.some(
       r => r !== row && String(r.oldBarcode || '').trim() === trimmedNewBarcode
     );
@@ -2006,10 +1836,10 @@ shareViaWhatsApp(item: BookingListItem): void {
     this.labApi.updateBarcode(bookingId, payload).subscribe({
       next: () => {
 
-        // ✅ FIX: backend duplicate barcode वर पण कधी कधी HTTP 200 देतो
-        // पण प्रत्यक्षात row update करत नाही (silent no-op). त्यामुळे
-        // HTTP success वर आंधळेपणे विश्वास न ठेवता, booking परत fetch
-        // करून खरंच नवीन barcode save झालाय का verify करतो.
+        // The backend can occasionally return HTTP 200 for a duplicate barcode
+        // without actually updating the row (silent no-op). Re-fetch the
+        // booking to verify the new barcode really was saved before trusting
+        // the HTTP success.
         this.labApi.getSingleBooking(bookingId).subscribe({
 
           next: (freshRes: any) => {
@@ -2032,7 +1862,7 @@ shareViaWhatsApp(item: BookingListItem): void {
 
               if (savedBarcode && savedBarcode === trimmedNewBarcode) {
 
-                // ✅ खरंच backend मध्ये save झालं
+                // Confirmed saved in the backend.
                 row.oldBarcode = trimmedNewBarcode;
                 row.status = 'RECEIVED';
                 this.showToast('Barcode updated successfully', 'success');
@@ -2041,9 +1871,8 @@ shareViaWhatsApp(item: BookingListItem): void {
 
               } else {
 
-                // ❌ backend नी silently reject केलं (barcode दुसऱ्या
-                // कुठल्या तरी booking मध्ये आधीच वापरलेला आहे) — UI
-                // revert करा, चुकीचा success दाखवू नका.
+                // Backend silently rejected it (barcode already used elsewhere) —
+                // revert the UI instead of showing a false success.
                 row.newBarcode = row.oldBarcode;
                 this.showToast(
                   'This barcode has already been used elsewhere. Please enter a different barcode.',
@@ -2063,7 +1892,6 @@ shareViaWhatsApp(item: BookingListItem): void {
         });
       },
       error: (err) => {
-        console.log('UPDATE BARCODE ERROR:', err);
         this.ngZone.run(() => {
           row.saving = false;
           this.showToast('Barcode update fail zala: ' + (err.error?.message || 'Unknown error'), 'error');

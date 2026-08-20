@@ -520,10 +520,10 @@
   background: #2470b9;
 }
 
-    // SNR - PURPLE
-    &.badge-snr {
-      background: var(--purple);
-    }
+  &.badge-snr {
+    background: var(--purple, #7856c9) !important;
+    color: #fff !important;
+  }
 
     // CANCEL - RED
     &.badge-cancel {
@@ -861,36 +861,36 @@
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 
   &.status-in\ process {
-    background: var(--warning);
+    background: #bd7d19 !important;
   }
 
   &.status-pending {
-    background: var(--warning);
+    background: #bd7d19 !important;
   }
 
   &.status-complete {
-    background: var(--success);
+    background: #16866e !important;
   }
 
   &.status-clinical {
-    background: var(--info);
+    background: #2470b9 !important;
   }
 
   &.status-snr {
-    background: var(--purple);
+    background: #7856c9 !important;
   }
 
-  // 👇 testStatusClass() cha output ithe map hoto
   &.badge-ready {
-    background: var(--success);
+    background: #16866e !important;
   }
 
   &.badge-inprocess {
-    background: var(--info);
+    background: #2470b9 !important;
   }
 
   &.badge-snr {
-    background: var(--purple);
+    background: #7856c9 !important;
+    color: #fff !important;
   }
 
   &.badge-clinical {
@@ -899,17 +899,17 @@
   }
 
   &.badge-pending {
-    background: var(--warning);
+    background: #bd7d19 !important;
   }
 
   &.badge-recheck {
-    background: var(--warning);
+    background: #bd7d19 !important;
   }
 
+  // ✅ FIX: Booking Status सारखा solid red — outline नाही
   &.badge-cancel {
-    background: var(--danger-bg);
-    color: var(--danger);
-    border: 1px solid var(--danger);
+    background: #dc3545 !important;
+    color: #fff !important;
   }
 }
 .reports-pill {

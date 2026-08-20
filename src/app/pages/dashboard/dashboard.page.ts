@@ -7,7 +7,7 @@ import { FormsModule } from "@angular/forms";
 
 import {
   IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
-  IonProgressBar, IonModal, IonSpinner, IonSelect, IonSelectOption,
+  IonModal, IonSpinner, IonSelect, IonSelectOption,
   IonDatetime, IonButton, IonSearchbar, MenuController, AlertController,
   LoadingController
 } from "@ionic/angular/standalone";
@@ -25,13 +25,12 @@ import { addIcons } from "ionicons";
 import {
   beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
   logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
-  personCircleOutline, personOutline, shareSocialOutline, clipboardOutline,
+  personCircleOutline, personOutline, clipboardOutline,
   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
-  printOutline, cashOutline, qrCodeOutline, addOutline, attachOutline,
-  checkmarkOutline, walletOutline, cardOutline, removeCircleOutline,
-  addCircleOutline, businessOutline, phonePortraitOutline, lockClosedOutline,
-  eyeOutline // ✅ NEW — Tests preview (eye icon) साठी
+  printOutline, cashOutline, qrCodeOutline, attachOutline,
+  checkmarkOutline, walletOutline, cardOutline,
+  addCircleOutline, lockClosedOutline, eyeOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -77,7 +76,7 @@ const ADMIN_GST_RATE = 0.18;
     CommonModule,
     FormsModule,
     IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
-    IonProgressBar, IonModal, IonSpinner, IonSelect, IonSelectOption,
+    IonModal, IonSpinner, IonSelect, IonSelectOption,
     IonDatetime, IonButton, IonSearchbar,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
     StackedBarComponent
@@ -122,6 +121,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   filteredPackages: any[] = [];
   showPackageSuggestions = false;
   private packageSearchTimer: any = null;
+
   // ============================================================
   // GLOBAL SEARCH
   // ============================================================
@@ -140,7 +140,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   previewBooking: any = null;
 
   openTestPreview(item: any, event?: MouseEvent): void {
-    event?.stopPropagation(); // card expand होऊ नये म्हणून
+    event?.stopPropagation(); // prevent triggering the card's own expand/click handler
     this.previewBooking = item;
     this.isTestPreviewModalOpen = true;
   }
@@ -214,12 +214,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   isAddFundsSaving = false;
 
   // Wallet modal filters
-  walletFilterScope: 'user' | 'lab' = 'user'; // ⚠️ UI-only for now — no backend param wired for this yet
+  walletFilterScope: 'user' | 'lab' = 'user'; // UI-only for now — no backend param wired for this yet
   walletPaymentModeFilter = '';
 
   downloadingReportId: any = null;
   printingId: any = null;
-
 
   // ============================================================
   // ROLE CONSTANTS
@@ -266,7 +265,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       'document-text-outline': documentTextOutline,
       'calendar-outline': calendarOutline,
       'person-add-outline': personAddOutline,
-      'share-social-outline': shareSocialOutline,
       'notifications-outline': notificationsOutline,
       'person-outline': personOutline,
       'person-circle-outline': personCircleOutline,
@@ -284,20 +282,15 @@ export class DashboardPage implements OnInit, OnDestroy {
       'print-outline': printOutline,
       'cash-outline': cashOutline,
       'qr-code-outline': qrCodeOutline,
-      'add-outline': addOutline,
       'attach-outline': attachOutline,
       'checkmark-outline': checkmarkOutline,
       'wallet-outline': walletOutline,
       'card-outline': cardOutline,
-      'remove-circle-outline': removeCircleOutline,
       'add-circle-outline': addCircleOutline,
-      'business-outline': businessOutline,
-      'phone-portrait-outline': phonePortraitOutline,
       'lock-closed-outline': lockClosedOutline,
-      'eye-outline': eyeOutline, // ✅ NEW
+      'eye-outline': eyeOutline,
     });
   }
-
 
   // ============================================================
   // ROLE / PERMISSION GETTERS
@@ -612,6 +605,12 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
+  /**
+   * Field-priority search: booking ID > patient ID > name/doctor > barcode.
+   * Checking fields in priority order (returning as soon as a tier finds
+   * matches) instead of OR-ing every field prevents a numeric ID query from
+   * incidentally matching a substring inside an unrelated booking's barcode.
+   */
   private filterBookingsByQuery(list: any[], query: string): any[] {
     const q = query.trim();
     if (!q) return [];
@@ -620,9 +619,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     const isNumericQuery = /^\d+$/.test(q);
     const hasLetters = /[a-zA-Z]/.test(q);
 
-    // 1) Booking ID — query पूर्ण numeric असेल तरच ID वर match करा
-    //    (exact match आधी, नंतर startsWith) — यामुळे "2345" हे दुसऱ्या
-    //    booking च्या barcode मध्ये सापडलं तरी ते इथे धरलं जाणार नाही.
     if (isNumericQuery) {
       const idExact = list.filter((b: any) => String(b.bookingId) === q);
       if (idExact.length) return idExact;
@@ -631,14 +627,12 @@ export class DashboardPage implements OnInit, OnDestroy {
       if (idPrefix.length) return idPrefix;
     }
 
-    // 2) Patient ID — exact / startsWith match
     const patientIdMatches = list.filter((b: any) => {
       const pid = (b.patientId || '').toLowerCase();
       return pid === ql || pid.startsWith(ql);
     });
     if (patientIdMatches.length) return patientIdMatches;
 
-    // 3) Name / Doctor — query मध्ये letters असतील तरच नाव/डॉक्टर वर शोधा
     if (hasLetters) {
       const nameMatches = list.filter((b: any) =>
         (b.customerName || '').toLowerCase().includes(ql) ||
@@ -647,7 +641,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       if (nameMatches.length) return nameMatches;
     }
 
-    // 4) Barcode — सगळ्यात शेवटचा पर्याय, फक्त वरचं काहीच match नाही झालं तरच
     return list.filter((b: any) => this.matchesBarcode(b, ql));
   }
 
@@ -712,12 +705,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : '',
       progress: `${completedCount}/${testCount}`,
       statusClass: testCount > 0 && completedCount === testCount ? 'completed' : 'pending',
-      hasCompletedTest: completedCount > 0,
-      testsDisplay: b.tests.map((t: any) => ({
-        name: t.testName,
-        status: this.testStatusLabel(t.status),
-        statusClass: this.testStatusClass(t.status)
-      }))
+      hasCompletedTest: completedCount > 0
     };
   }
 
@@ -827,12 +815,11 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     const labId = this.labApi.getCurrentLabId();
 
-    // ✅ FIX: Ha booking konatya franchise cha ahe tyachyach franchiseId
-    // varun b2b price yeil — this.currentFranchiseId (Admin साठी नेहमी
-    // undefined असतो) kadhihi fallback mhanun vaparu naka, nahitar
-    // wrong/admin default price2 yeto, actual franchise-specific
-    // assignedPrice nahi. `??` वापरल्यास franchiseId = 0 astana pan te
-    // "defined" mhanun pakडलं जातं, mhanun explicit > 0 check kelela ahe.
+    // The booking's own franchiseId must drive b2b pricing — never fall
+    // back to this.currentFranchiseId (always undefined for Admin), or the
+    // wrong/admin default price is used instead of the franchise-specific
+    // assignedPrice. `??` would treat franchiseId = 0 as "defined", so an
+    // explicit > 0 check is used here.
     const bookingFranchiseId = Number(this.selectedBooking?.franchiseId || 0);
     const franchiseId = bookingFranchiseId > 0 ? bookingFranchiseId : undefined;
 
@@ -849,8 +836,8 @@ export class DashboardPage implements OnInit, OnDestroy {
             testName: String(t.test_name || 'Unnamed Test').trim(),
             testMrp: t.test_price ?? 0,
 
-            // ✅ FIX: Admin la base rate (price2), Franchise/Staff la
-            // franchise-specific assignedPrice — add-patient sarkhach rule.
+            // Admin gets base rate (price2), Franchise/Staff gets the
+            // franchise-specific assignedPrice — same rule as add-patient.
             testPrice: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0)
           }));
       },
@@ -875,8 +862,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.packageSearchTimer = setTimeout(() => {
       const labId = this.labApi.getCurrentLabId();
 
-      // ✅ FIX: same as searchTestsInline — booking cha swतःचा franchiseId
-      // strict वापरा, this.currentFranchiseId कडे कधीही fallback नाही.
+      // Same as searchTestsInline — use the booking's own franchiseId
+      // strictly, never fall back to this.currentFranchiseId.
       const bookingFranchiseId = Number(this.selectedBooking?.franchiseId || 0);
       const franchiseId = bookingFranchiseId > 0 ? bookingFranchiseId : undefined;
 
@@ -917,10 +904,8 @@ export class DashboardPage implements OnInit, OnDestroy {
         testName,
         testMrp: pt.test_price ?? 0,
 
-        // ✅ FIX: searchTestsInline() sarkhach role-based rule ithe pan
-        // lagu keli — Admin la price2 (base rate) pahile, Franchise/Staff
-        // la assignedPrice pahile. Adhi role check nasल्यamule Admin
-        // sathihi assignedPrice (franchise-specific rate) yet hota.
+        // Same role-based rule as searchTestsInline() — Admin sees price2
+        // first, Franchise/Staff sees assignedPrice first.
         testPrice: this.isAdminRole
           ? (pt.price2 ?? pt.assignedPrice ?? 0)
           : (pt.assignedPrice ?? pt.price2 ?? 0),
@@ -1098,13 +1083,10 @@ export class DashboardPage implements OnInit, OnDestroy {
       tests: newTests.map(t => ({
         testId: t.testId,
         testName: t.testName,
-        // ✅ FIX: b2b/billing price ata "testPrice" field madhe jato —
-        // adhi ithe t.testMrp (MRP) chukिने jat hota, tyamule Admin
-        // re-fetch nantar mapBooking() cha price2-fallback chain
-        // (price2 ?? testPrice ?? test_price) la MRP milत hota, b2b nahi.
+        // b2b/billing price goes in "testPrice"; the MRP goes in
+        // "test_price" — naming kept consistent with mapBooking()'s
+        // fallback chain (price2 ?? testPrice ?? test_price).
         testPrice: t.testPrice ?? t.testMrp,
-        // ✅ FIX: MRP ata "test_price" field madhe — naming consistent
-        // keli loadAvailableTests()/mapBooking() varlya conventionshi.
         test_price: t.testMrp,
         assignedPrice: [t.testPrice ?? t.testMrp],
         source: 'RPL',
@@ -1592,14 +1574,11 @@ export class DashboardPage implements OnInit, OnDestroy {
         const totalPending = Number(s?.notReceived || 0);
         const totalOutSourced = Number(s?.outSourced || 0);
         const totalRejected = Number(s?.rejected || 0);
-        // ✅ FIX: cancelled samples aadhi kadhich vachle jat navhte,
-        // tyamule totalSamples ani samplesCanceled donhi chukiche yet hote.
+        // Cancelled samples weren't being read before, which threw off
+        // both totalSamples and samplesCanceled.
         const totalCancelled = Number(s?.cancel ?? s?.cancelled ?? s?.canceled ?? 0);
 
-        // ✅ FIX: totalSamples madhe cancelled add kela
         this.totalSamples = totalReceived + totalPending + totalOutSourced + totalRejected + totalCancelled;
-        // ✅ FIX: samplesCanceled full-access dashboard sathi ithech set kela
-        // (aadhi ha property फक्त staff dashboard madhe set hot hota)
         this.samplesCanceled = totalCancelled;
 
         this.totalReports = selected.reports?.[0]?.completed || 0;
@@ -1612,14 +1591,12 @@ export class DashboardPage implements OnInit, OnDestroy {
           const pending = Number(smp?.notReceived || 0);
           const outSourced = Number(smp?.outSourced || 0);
           const rejected = Number(smp?.rejected || 0);
-          // ✅ FIX: cancelled ithe pan add kela
           const cancelled = Number(smp?.cancel ?? smp?.cancelled ?? smp?.canceled ?? 0);
 
           return {
             dateKey: d.key,
             date: d.display.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
             bookings: resp.totalBookingsCount || 0,
-            // ✅ FIX: samples cha total madhe cancelled include kela
             samples: received + pending + outSourced + rejected + cancelled,
             received, pending, outSourced, rejected, cancelled,
             amount: Number(resp.totalPaid || 0)
@@ -1660,8 +1637,8 @@ export class DashboardPage implements OnInit, OnDestroy {
 
         this.computeStaffDashboardStats(mappedBookings);
 
-        // ✅ FIX: map raw bookings so `tests`/`samples` field names are normalized
-        // (raw API returns bookingWithTestMappings/sampleAccessions, not tests/samples)
+        // Map raw bookings so `tests`/`samples` field names are normalized
+        // (raw API returns bookingWithTestMappings/sampleAccessions, not tests/samples).
         const mappedRollingWindow = (rollingWindowBookings || []).map((raw: any) => this.mapBooking(raw));
         this.rawBookings = this.applyStaffOwnershipFilter(mappedRollingWindow);
         this.prepareDailyBookings();
@@ -1677,46 +1654,56 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-  // ✅ NEW HELPER: ekach jaga varun sagle sample/test counts consistently
-  // classify karnyasathi. `tests` array reliable ahe karan cancel-status
-  // ithech (t.cancelDate / t.deleted) yeto — `samples` array madhe
-  // cancelled cha record backend kadhun kadhikadhi missing asto, tyamule
-  // top summary card ani daily-breakdown card वेगळे counts dakhavत hote.
-  private classifyTestStatus(status: string): 'received' | 'pending' | 'outSourced' | 'rejected' | 'cancelled' {
+  /**
+   * Bucket for a single sample, based on its matched TEST's status
+   * (not the sample's own `status`, which only ever carries a plain
+   * RECEIVED/NOT_RECEIVED flag with no reject/cancel information).
+   * `cancel`/`cancelled` folds into 'rejected' since this dashboard's
+   * daily table and stacked-bar have no separate cancelled column.
+   */
+  private classifyTestStatus(status: string): 'received' | 'pending' | 'outSourced' | 'rejected' {
     const st = (status || '').toLowerCase();
-    if (st === 'cancel' || st === 'cancelled') return 'cancelled';
-    if (st.includes('reject')) return 'rejected';
-    if (st.includes('process') || st.includes('outsource') || st.includes('doctor approval')) return 'outSourced';
-    if (st.includes('complete') || st.includes('ready')) return 'received';
-    return 'pending'; // snr / default
+    if (st === 'cancel' || st === 'cancelled') return 'rejected';
+    if (st === 'snr') return 'pending';
+    if (st.includes('outsource') || st.includes('doctor approval')) return 'outSourced';
+    return 'received'; // inprocess, complete, ready, etc.
   }
 
   private computeStaffDashboardStats(mappedBookings: any[]): void {
     let patientsCompleted = 0, patientsPending = 0;
-    // ✅ FIX: outSourced/rejected/cancelled buckets add kele, ani sagle
-    // counts ata `tests` array varun (samples array ऐवजी) kadhले jataहेत.
     let receivedCount = 0, pendingCount = 0, outSourcedCount = 0, rejectedCount = 0, cancelledCount = 0;
     let reportsCompletedCount = 0, reportsPendingCount = 0;
     let businessAmount = 0;
 
     mappedBookings.forEach((b: any) => {
       const tests = b.tests || [];
+      const samples = b.samples || [];
+
       const allComplete = tests.length > 0 && tests.every((t: any) => {
         const st = (t.status || '').toLowerCase();
         return st.includes('complete') || st.includes('ready');
       });
       if (allComplete) patientsCompleted++; else patientsPending++;
 
-      // ✅ FIX: samples array ऐवजी tests array वापरला — cancelled reliably
-      // count होईल, ani top-card cha total daily-breakdown shी match होईल.
-      tests.forEach((t: any) => {
-        const bucket = this.classifyTestStatus(t.status);
+      // Bucket counting is done per actual SAMPLE (deduplicated barcode)
+      // instead of per test, since one sample can cover several tests —
+      // counting on `tests` would inflate the sample total.
+      samples.forEach((s: any) => {
+        const matchedTest = tests.find((t: any) => Number(t.testId) === Number(s.testId));
+        const testStatus = (matchedTest?.status || '').toLowerCase();
+
+        // Tracked separately (informational) without double-counting in
+        // the received/pending/outSourced/rejected sum below.
+        if (testStatus === 'cancel' || testStatus === 'cancelled') cancelledCount++;
+
+        const bucket = this.classifyTestStatus(matchedTest?.status);
         if (bucket === 'received') receivedCount++;
         else if (bucket === 'outSourced') outSourcedCount++;
         else if (bucket === 'rejected') rejectedCount++;
-        else if (bucket === 'cancelled') cancelledCount++;
         else pendingCount++;
+      });
 
+      tests.forEach((t: any) => {
         const st = (t.status || '').toLowerCase();
         if (st.includes('complete') || st.includes('ready')) reportsCompletedCount++;
         else reportsPendingCount++;
@@ -1729,12 +1716,11 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.patientsCompleted = patientsCompleted;
     this.samplesMissing = pendingCount;
     this.samplesReceived = receivedCount;
-    // ✅ FIX: cancelled ata staff dashboard sathi barobar count hoto
     this.samplesCanceled = cancelledCount;
-    // ✅ FIX: totalSamples madhe cancelled (ani outSourced/rejected) include kele —
-    // aadhi फक्त received+missing hote, tyamule cancelled sample total madhun
-    // "गायब" व्हायचा.
-    this.totalSamples = receivedCount + pendingCount + outSourcedCount + rejectedCount + cancelledCount;
+    // received+pending+outSourced+rejected already accounts for every
+    // sample exactly once (cancel folded into rejected above), so this
+    // must NOT also add cancelledCount or the total would double-count.
+    this.totalSamples = receivedCount + pendingCount + outSourcedCount + rejectedCount;
     this.reportsPending = reportsPendingCount;
     this.reportsCompleted = reportsCompletedCount;
     this.totalReports = reportsCompletedCount;
@@ -1759,7 +1745,6 @@ export class DashboardPage implements OnInit, OnDestroy {
         grouped[key] = {
           dateKey: key,
           date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-          // ✅ FIX: cancelled field add kela, tests-based counting sathi
           bookings: 0, samples: 0, received: 0, pending: 0, outSourced: 0, rejected: 0, cancelled: 0, tests: 0, amount: 0
         };
       }
@@ -1767,19 +1752,20 @@ export class DashboardPage implements OnInit, OnDestroy {
       grouped[key].bookings++;
       grouped[key].amount += Number(p.totalAmount || 0);
 
-      // ✅ FIX: p.samples ऐवजी p.tests हाच single source वापरला — top summary
-      // card (computeStaffDashboardStats) shी susangat rahण्यasathi, ani
-      // cancelled backend kadhun missing yeto tya problem madhun sutka.
       const tests = p.tests || [];
-      grouped[key].tests += tests.length;
-      grouped[key].samples += tests.length;
+      const samples = p.samples || [];
 
-      tests.forEach((t: any) => {
-        const bucket = this.classifyTestStatus(t.status);
+      // `tests` count is the raw test total; sample buckets come from the
+      // deduplicated sample/barcode array via the matched test's status.
+      grouped[key].tests += tests.length;
+      grouped[key].samples += samples.length;
+
+      samples.forEach((s: any) => {
+        const matchedTest = tests.find((t: any) => Number(t.testId) === Number(s.testId));
+        const bucket = this.classifyTestStatus(matchedTest?.status);
         if (bucket === 'received') grouped[key].received++;
         else if (bucket === 'outSourced') grouped[key].outSourced++;
         else if (bucket === 'rejected') grouped[key].rejected++;
-        else if (bucket === 'cancelled') grouped[key].cancelled++;
         else grouped[key].pending++;
       });
     });
@@ -1813,15 +1799,10 @@ export class DashboardPage implements OnInit, OnDestroy {
         testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
         testName: (t.testName || '').trim(),
 
-        // ✅ FIX: Admin/Franchise/Staff sathi price kalatana tefarak
-        // yeत hota — searchTestsInline() cha rule ithe pan lagu kelay:
-        // Admin la nehmi price2 (base rate) pahile milava, franchise-
-        // specific assignedPrice nahi; Franchise/Staff sathi ulta.
-        // Adhi assignedPrice sagalyat pahile hota, tyamule Admin login
-        // asतानाही Edit Test modal madhe existing test cha price
-        // franchise-specific yeत hota (add-patient/searchTestsInline
-        // peksha veगळा) — hach tumcha "edit test madhe price different"
-        // cha mool karan hota.
+        // Admin always gets price2 (base rate) first, never the
+        // franchise-specific assignedPrice; Franchise/Staff gets the
+        // reverse. Keeps this in sync with searchTestsInline()'s rule so
+        // the Edit Test modal shows the same price as add-patient does.
         testPrice: this.isAdminRole
           ? (t.price2 ?? t.testPrice ?? t.test_price ?? 0)
           : (t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0),
@@ -1855,9 +1836,8 @@ export class DashboardPage implements OnInit, OnDestroy {
       ...raw,
       tests,
       samples,
-      // FIX: custom name/lab must win over raw.doctorName/raw.franchiseName —
-      // matches booking-status.page.ts's mapBookingItem() priority order, so
-      // this page no longer reverts to the old doctor/lab name after refresh.
+      // Custom name/lab must win over raw.doctorName/raw.franchiseName —
+      // matches booking-status.page.ts's mapBookingItem() priority order.
       doctorName: raw.customDoctorName?.trim() || raw.doctorName || 'self',
       franchiseName: raw.customFranchiseLab?.trim() || raw.franchiseName || 'SELF'
     };
@@ -1886,9 +1866,6 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // NAVIGATION
   // ============================================================
-
-
-
   private readonly LOCKED_PAGES = ['bookings', 'samples', 'outsource'];
 
   isPageLocked(page: string): boolean {
@@ -2015,8 +1992,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   // ============================================================
-  // ADD FUNDS MODAL — ✅ SIMPLIFIED: only Razorpay, for both Admin
-  // and Franchise. No ICICI/UPI/QR/Bank Transfer, no manual flow.
+  // ADD FUNDS MODAL — Razorpay only, for both Admin and Franchise.
+  // No ICICI/UPI/QR/Bank Transfer, no manual flow.
   // ============================================================
   openAddFundsModal(): void {
     this.addFundsAmount = null;
@@ -2035,8 +2012,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.confirmAddFunds();
   }
 
-  /** Amount confirm करणारा premium Yes/No popup — Yes दाबल्यावर
-   *  थेट Razorpay flow सुरू होतो, No दाबलं तर Add Funds modal वरच राहतो. */
+  /** Confirms the amount before starting the Razorpay flow. */
   private async confirmAddFunds(): Promise<void> {
     const amount = Number(this.addFundsAmount);
 

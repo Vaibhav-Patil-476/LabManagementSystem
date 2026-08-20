@@ -1,0 +1,207 @@
+<ion-header>
+  <ion-toolbar class="ct-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tabs/home" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Cancel Test</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ct-content">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="form-card">
+
+    <!-- ===================== TOP SUMMARY BAR ===================== -->
+    <div class="summary-bar">
+      <div class="total-badge">
+        <ion-icon name="close-circle-outline"></ion-icon>
+        <span>Total Cancelled: {{ filteredTests.length }}</span>
+      </div>
+    </div>
+
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
+
+      <div class="filter-field search-field">
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
+        </span>
+        <input type="text" placeholder="Quick search" [(ngModel)]="searchTerm" (ngModelChange)="applySearch()" />
+      </div>
+
+      <!-- DATE RANGE (booking-status sarkha style) -->
+      <div class="filter-field date-field" (click)="openDateRangePicker()">
+        <span class="date-icon-badge">
+          <ion-icon name="calendar-outline"></ion-icon>
+        </span>
+
+        <span class="date-trigger-btn">
+          {{ startDate ? (startDate | date:'MM/dd/yyyy') : 'From' }}
+          –
+          {{ endDate ? (endDate | date:'MM/dd/yyyy') : 'To' }}
+        </span>
+      </div>
+
+      <!-- HIDDEN MATERIAL DATE RANGE -->
+      <mat-form-field class="hidden-range-field" appearance="fill">
+        <mat-date-range-input [rangePicker]="rangePicker">
+
+          <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeStartChange($event)" readonly>
+
+          <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeEndChange($event)" readonly>
+
+        </mat-date-range-input>
+
+        <mat-date-range-picker #rangePicker></mat-date-range-picker>
+      </mat-form-field>
+
+      <ion-button class="refresh-btn" fill="solid" (click)="loadCancelTests()" [disabled]="isLoading">
+        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+      </ion-button>
+
+    </div>
+
+    <!-- ===================== CANCEL TEST CARD LIST ===================== -->
+    <div class="ct-card-list">
+
+      <div class="ct-card" *ngFor="let item of filteredTests">
+
+        <!-- header: id/date left, status badge right -->
+        <div class="ct-card-header">
+          <div class="ct-header-left">
+            <div class="ct-id-row">
+              <span class="id-link">#{{ item.bookingId }}</span>
+              <span class="ct-date">{{ item.bookingDate }}</span>
+            </div>
+            <div class="ct-name-row">
+              <span class="ct-name">{{ item.patientName }}</span>
+              <span class="sub-text">({{ item.gender | titlecase }}/{{ item.age }})</span>
+            </div>
+          </div>
+
+          <div class="ct-header-right">
+            <span class="status-badge badge-cancel">CANCELLED</span>
+          </div>
+        </div>
+
+        <!-- stats: test name + lab/doctor -->
+        <div class="ct-stats">
+          <div class="ct-stat">
+            <div class="ct-stat-row-with-eye">
+              <span class="bcs-label">Test</span>
+              <div class="ct-tests-row" (click)="openTestPreview(item, $event)">
+                <span class="ct-tests-label">Tests :-</span>
+                <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
+              </div>
+            </div>
+            <span class="bcs-value">{{ item.testName || '-' }}</span>
+          </div>
+          <div class="ct-stat">
+            <span class="bcs-label">Lab / Doctor</span>
+            <span class="bcs-value">
+              {{ item.labName }} / <ng-container *ngIf="item.doctorName !== 'N/A'">Dr. </ng-container>{{ item.doctorName
+              }}
+            </span>
+          </div>
+        </div>
+
+        <!-- barcode + resend / refund row -->
+        <div class="ct-actions">
+
+          <div class="ct-barcode-inline">
+            <div class="barcode-line" *ngIf="item.barcode">
+              <ion-icon name="qr-code-outline"></ion-icon>
+              <span>{{ item.barcode }}</span>
+            </div>
+            <div class="barcode-line empty" *ngIf="!item.barcode">—</div>
+          </div>
+
+          <div class="ct-actions-buttons">
+            <ion-badge *ngIf="item.refundStatus === 'REFUNDED'" class="refund-badge">
+              Refunded ₹{{ item.refundAmount }}
+            </ion-badge>
+
+            <ion-badge *ngIf="item.refundStatus === 'PENDING'" class="refund-badge pending">
+              Refund Pending
+            </ion-badge>
+
+            <ion-button *ngIf="!item.refundStatus" size="small" fill="solid" class="resend-btn"
+              [disabled]="resendingId === item.bookingId" (click)="resend(item)">
+              <ion-spinner *ngIf="resendingId === item.bookingId" name="crescent"></ion-spinner>
+              <span *ngIf="resendingId !== item.bookingId">Resend</span>
+            </ion-button>
+          </div>
+
+        </div>
+
+        <!-- reason -->
+        <div class="ct-reason-row" *ngIf="item.reason">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <span>{{ item.reason }}</span>
+        </div>
+
+        <!-- cancel date footer line -->
+        <div class="ct-footer-line">
+          <span class="bcs-label">Cancel Date</span>
+          <span class="ct-footer-value">{{ item.cancelDate }}</span>
+        </div>
+
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoading && filteredTests.length === 0">
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>No cancelled tests found</span>
+        <p class="empty-sub">Try adjusting the date range or search term.</p>
+      </div>
+
+      <div class="table-skeleton" *ngIf="isLoading">
+        <div class="skeleton-card" *ngFor="let s of [1,2,3]">
+          <div class="skeleton-line" style="width:40%"></div>
+          <div class="skeleton-line" style="width:70%"></div>
+          <div class="skeleton-line" style="width:55%"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== TEST PREVIEW MODAL (eye icon) ===================== -->
+  <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>{{ previewItem?.patientName }} – Tests</h2>
+          <ion-button fill="clear" (click)="closeTestPreview()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="pkg-preview-table">
+          <div class="pkg-preview-header-full">
+            <div>#</div>
+            <div>Test Name</div>
+            <div>Status</div>
+          </div>
+
+          <div class="pkg-preview-row-full" *ngFor="let test of previewItem?.tests; let i = index">
+            <div>{{ i + 1 }}</div>
+            <div>{{ test.testName }}</div>
+            <div>
+              <span class="status-badge badge-cancel">{{ test.status }}</span>
+            </div>
+          </div>
+
+          <div class="lab-picker-empty" *ngIf="!previewItem?.tests?.length">
+            No tests found in this booking.
+          </div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+</ion-content>

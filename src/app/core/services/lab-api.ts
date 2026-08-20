@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { HttpClient, HttpParams } from '@angular/common/http';
+import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth';
@@ -590,5 +590,27 @@ shareReportViaWhatsApp(bookingId: number): Observable<any> {
 }
 getActivePlans(page = 0, size = 20): Observable<any> {
   return this.http.get(`${this.BASE_URL}/api/v1/plans/active-plans/get-all?page=${page}&size=${size}`);
+}
+
+getCancelTests(startDate: string, endDate: string, size: number = 500): Observable<any> {
+  let params = new HttpParams()
+    .set('startDate', startDate)
+    .set('endDate', endDate)
+    .set('size', size.toString());
+ 
+  const headers = new HttpHeaders().set('requestlabid', this.getLabId().toString());
+ 
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/cancel-tests`,
+    { params, headers }
+  );
+}
+ 
+// Cancelled barcode resend
+resendBarcode(payload: { bookingId: number; barcode: string; testMappingId?: number | null }): Observable<any> {
+  return this.http.post(
+    `${this.BASE_URL}/api/v1/lab/booking/patient/resend-barcode`,
+    payload
+  );
 }
 }
