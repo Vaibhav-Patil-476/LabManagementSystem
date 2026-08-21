@@ -613,4 +613,79 @@ resendBarcode(payload: { bookingId: number; barcode: string; testMappingId?: num
     payload
   );
 }
+
+getClinicalHistoryList(
+  page: number = 0,
+  size: number = 20,
+  search?: string,
+  startDate?: string,
+  endDate?: string
+): Observable<any> {
+  let params = new HttpParams()
+    .set('page', page.toString())
+    .set('size', size.toString());
+ 
+  if (search) params = params.set('search', search);
+  if (startDate) params = params.set('startDate', startDate);
+  if (endDate) params = params.set('endDate', endDate);
+ 
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/booking/clinical/getAll`,
+    { params }
+  );
+}
+ 
+// Ek specific booking + test chi full clinical-history thread
+getClinicalHistoryByBookingTest(bookingId: number, testId: number | string): Observable<any> {
+  const params = new HttpParams()
+    .set('bookingId', bookingId.toString())
+    .set('testId', testId.toString());
+ 
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/booking/clinical/get`,
+    { params }
+  );
+}
+ 
+// Navi history entry add karto (chat sarkha nava message pathvne)
+// ⚠️ NOTE: Postman example body full booking-create schema dakhavtay
+// (customerName, tests[], payment fields...) jo ithe lagu hot nahi
+// vatoy — mhanun minimal logical payload vaparlay. Backend testing
+// karun exact required fields confirm karava lagtil.
+createClinicalHistory(payload: {
+  bookingId: number;
+  testId: number | string;
+  history: string;
+  [key: string]: any;
+}): Observable<any> {
+  return this.http.post(
+    `${this.BASE_URL}/api/v1/lab/booking/clinical/create`,
+    payload
+  );
+}
+ 
+// Existing history entry (clinicalId) update karto
+updateClinicalHistory(bookingId: number, clinicalId: number, payload: any): Observable<any> {
+  return this.http.put(
+    `${this.BASE_URL}/api/v1/lab/booking/clinical/update/${bookingId}/${clinicalId}`,
+    payload
+  );
+}
+ 
+// LabApiService madhe (getTests() method chya jawal add kara)
+
+
+private readonly reportPreviewUrl = 'https://pdf.hypatholab.in/show-preview';
+
+
+
+previewDummyReport(payload: any): Observable<any> {
+  return this.http.post(this.reportPreviewUrl, payload);
+}
+
+getTestRanges(labId: number, testId: number): Observable<any[]> {
+  return this.http.get<any[]>(
+    `${this.BASE_URL}/api/v1/lab/report-master/master-report/test-ranges/getAllRanges/${labId}/${testId}`
+  );
+}
 }

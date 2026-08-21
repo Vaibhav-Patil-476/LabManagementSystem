@@ -3763,11 +3763,133 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   &.badge-cancel {
     background: #dc3545 !important;
   }
-}.service-icon.danger {
+}
+
+.service-icon.danger {
   background: rgba(231, 76, 60, 0.12);
   color: #e74c3c;
 }
+
 .service-icon.cyan {
   background: rgba(0, 188, 212, 0.12);
   color: #00bcd4;
+}
+
+// ============================================================
+// NEW — Compact circular Services grid (PAY NOW style, image-based)
+// Used by .services-grid-v2 in the template. Old .services-grid /
+// .service-card rules above are kept as-is (harmless if unused) in
+// case any other page still references them.
+// ============================================================
+.services-grid-v2 {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px 8px;
+  padding: 4px 2px;
+}
+
+.service-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: transform .15s ease;
+
+  &:active {
+    transform: scale(.94);
+  }
+}
+
+.service-circle {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(135deg, var(--brand-deep, #075f5d), var(--brand, #087b76));
+  box-shadow: 0 6px 14px rgba(7, 95, 93, .22);
+  position: relative;
+
+  ion-icon {
+    font-size: 22px;
+    color: #ededed;
+  }
+
+  &.danger {
+    background: linear-gradient(135deg, #c0392b, #e74c3c);
+  }
+
+  &.cyan {
+    background: linear-gradient(135deg, #0e7c8c, #00bcd4);
+  }
+
+  &.amber {
+    background: linear-gradient(135deg, #a96a0c, #d9920f);
+  }
+
+  &.rose {
+    background: linear-gradient(135deg, #9c3a54, #bd526f);
+  }
+
+  &.indigo {
+    background: linear-gradient(135deg, #3a4a9c, #5369bd);
+  }
+
+  &.violet {
+    background: linear-gradient(135deg, #4a3a9c, #6f55bc);
+  }
+
+  &.blue {
+    background: linear-gradient(135deg, #1a5a9c, #2372bb);
+  }
+
+  &.teal {
+    background: linear-gradient(135deg, var(--brand-deep, #075f5d), var(--brand, #087b76));
+  }
+}
+
+.service-label {
+  font-size: 10.5px;
+  font-weight: 700;
+  text-align: center;
+  color: #2a3944;
+  line-height: 1.25;
+  max-width: 68px;
+}
+
+.locked-item {
+  opacity: .55;
+  pointer-events: none;
+}
+
+@media (min-width: 480px) {
+  .service-circle {
+    width: 58px;
+    height: 58px;
+  }
+
+  .service-circle ion-icon {
+    font-size: 25px;
+  }
+}
+
+@media (max-width: 360px) {
+  .services-grid-v2 {
+    gap: 12px 4px;
+  }
+
+  .service-circle {
+    width: 48px;
+    height: 48px;
+  }
+
+  .service-circle ion-icon {
+    font-size: 20px;
+  }
+
+  .service-label {
+    font-size: 10px;
+    max-width: 62px;
+  }
 }

@@ -1,13 +1,298 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>clinical-history</ion-title>
+<ion-header>
+  <ion-toolbar class="ch-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+
+    <ion-title>Clinical History</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">clinical-history</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="ch-content">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="form-card">
+
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
+
+      <div class="filter-field search-field">
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
+        </span>
+
+        <input type="text" placeholder="Search booking or barcode" [(ngModel)]="searchTerm"
+          (ngModelChange)="applySearch()" />
+      </div>
+
+      <!-- DATE RANGE -->
+      <div class="filter-field date-field" (click)="openDateRangePicker()">
+        <span class="date-icon-badge">
+          <ion-icon name="calendar-outline"></ion-icon>
+        </span>
+
+        <span class="date-trigger-btn">
+          {{ startDate ? (startDate | date:'MM/dd/yyyy') : 'From' }}
+          –
+          {{ endDate ? (endDate | date:'MM/dd/yyyy') : 'To' }}
+        </span>
+      </div>
+
+      <!-- HIDDEN MATERIAL DATE RANGE -->
+      <mat-form-field class="hidden-range-field" appearance="fill">
+        <mat-date-range-input [rangePicker]="rangePicker">
+
+          <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{ standalone: true }"
+            (dateChange)="onRangeStartChange($event)" readonly />
+
+          <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{ standalone: true }"
+            (dateChange)="onRangeEndChange($event)" readonly />
+
+        </mat-date-range-input>
+
+        <mat-date-range-picker #rangePicker></mat-date-range-picker>
+      </mat-form-field>
+
+      <ion-button class="refresh-btn" fill="solid" (click)="loadThreads()" [disabled]="isLoading">
+        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+      </ion-button>
+
+    </div>
+
+    <!-- ===================== THREAD LIST ===================== -->
+    <div class="ch-card-list">
+
+      <div class="ch-card" *ngFor="let item of filteredThreads" (click)="openThread(item)">
+
+        <div class="ch-card-header">
+
+          <div class="ch-header-left">
+
+            <div class="ch-id-row">
+              <span class="id-link">
+                #{{ item.bookingId }}
+              </span>
+
+              <span class="ch-barcode" *ngIf="item.barcode">
+                {{ item.barcode }}
+              </span>
+            </div>
+
+            <div class="ch-name-row">
+              <span class="ch-name">
+                {{ item.testName }}
+              </span>
+            </div>
+
+          </div>
+
+          <div class="ch-header-right">
+
+            <span class="status-badge" [ngClass]="
+                item.status === 'closed'
+                  ? 'badge-closed'
+                  : 'badge-pending'
+              ">
+              {{ item.status }}
+            </span>
+
+            <ion-badge class="unread-badge" *ngIf="item.unreadCount > 0">
+              {{ item.unreadCount }}
+            </ion-badge>
+
+          </div>
+
+        </div>
+
+        <div class="ch-preview-row">
+
+          <ion-icon name="chatbubble-ellipses-outline" class="ch-preview-icon"></ion-icon>
+
+          <span class="ch-preview-text">
+            {{ item.lastMessage || 'No messages yet' }}
+          </span>
+
+        </div>
+
+        <div class="ch-footer-line">
+          <span class="ch-footer-value">
+            {{ item.lastMessageTime }}
+          </span>
+        </div>
+
+      </div>
+
+      <!-- EMPTY STATE -->
+      <div class="empty-state" *ngIf="!isLoading && filteredThreads.length === 0">
+        <ion-icon name="document-text-outline"></ion-icon>
+
+        <span>
+          No clinical history found
+        </span>
+
+        <p class="empty-sub">
+          Try adjusting the date range or search term.
+        </p>
+      </div>
+
+      <!-- LOADING SKELETON -->
+      <div class="table-skeleton" *ngIf="isLoading">
+        <div class="skeleton-card" *ngFor="let s of [1, 2, 3]">
+          <div class="skeleton-line" style="width:40%"></div>
+
+          <div class="skeleton-line" style="width:70%"></div>
+
+          <div class="skeleton-line" style="width:55%"></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ===================== THREAD / CHAT MODAL ===================== -->
+  <ion-modal [isOpen]="isThreadModalOpen" cssClass="thread-popup" (didDismiss)="closeThread()">
+    <ng-template>
+
+      <div class="modal-page">
+
+        <!-- MODAL HEADER -->
+        <div class="modal-header">
+
+          <div class="modal-header-text">
+
+            <h2>
+              {{ activeThread?.testName }}
+            </h2>
+
+            <div class="modal-chip-row">
+
+              <span class="chip">
+                Booking: {{ activeThread?.bookingId }}
+              </span>
+
+              <span class="chip" *ngIf="activeThread?.barcode">
+                Barcode: {{ activeThread?.barcode }}
+              </span>
+
+            </div>
+
+          </div>
+
+          <ion-button fill="clear" (click)="closeThread()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+
+        </div>
+
+        <!-- CHAT -->
+        <div class="chat-scroll" #chatScroll>
+
+          <div class="chat-loading" *ngIf="isThreadLoading">
+            <ion-spinner name="crescent"></ion-spinner>
+          </div>
+
+          <ng-container *ngIf="!isThreadLoading">
+
+            <div class="chat-row" *ngFor="let msg of threadMessages" [ngClass]="
+                msg.isMine
+                  ? 'row-mine'
+                  : 'row-theirs'
+              ">
+
+              <div class="avatar" *ngIf="!msg.isMine">
+                {{ msg.senderName.charAt(0) }}
+              </div>
+
+              <div class="bubble-col">
+
+                <!-- OTHER USER META -->
+                <div class="bubble-meta" *ngIf="!msg.isMine">
+
+                  <span class="sender-name">
+                    {{ msg.senderName }}
+                  </span>
+
+                  <span class="status-pill" *ngIf="msg.status" [ngClass]="
+                      msg.status === 'closed'
+                        ? 'pill-closed'
+                        : 'pill-pending'
+                    ">
+                    {{ msg.status }}
+                  </span>
+
+                  <span class="bubble-time">
+                    {{ msg.timestamp }}
+                  </span>
+
+                </div>
+
+                <!-- MESSAGE -->
+                <div class="bubble" [ngClass]="
+                    msg.isMine
+                      ? 'bubble-mine'
+                      : 'bubble-theirs'
+                  ">
+                  {{ msg.message }}
+                </div>
+
+                <!-- MY MESSAGE META -->
+                <div class="bubble-meta meta-mine" *ngIf="msg.isMine">
+
+                  <span class="bubble-time">
+                    {{ msg.timestamp }}
+                  </span>
+
+                  <span class="status-pill" *ngIf="msg.status" [ngClass]="
+                      msg.status === 'closed'
+                        ? 'pill-closed'
+                        : 'pill-pending'
+                    ">
+                    {{ msg.status }}
+                  </span>
+
+                </div>
+
+              </div>
+
+            </div>
+
+            <!-- CHAT EMPTY -->
+            <div class="chat-empty" *ngIf="threadMessages.length === 0">
+              <ion-icon name="chatbubble-ellipses-outline"></ion-icon>
+
+              <span>
+                No history yet — start the conversation
+              </span>
+            </div>
+
+          </ng-container>
+
+        </div>
+
+        <!-- CHAT INPUT (temporarily disabled - keep commented for future re-enable) -->
+        <!--
+        <div class="chat-input-bar">
+
+          <input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" (keyup.enter)="sendMessage()"
+            [disabled]="isSending" />
+
+          <ion-button class="send-btn" fill="solid" (click)="sendMessage()"
+            [disabled]="isSending || !newMessage.trim()">
+
+            <ion-spinner *ngIf="isSending" name="crescent"></ion-spinner>
+
+            <ion-icon *ngIf="!isSending" slot="icon-only" name="send-outline"></ion-icon>
+
+          </ion-button>
+
+        </div>
+        -->
+
+      </div>
+
+    </ng-template>
+  </ion-modal>
+
 </ion-content>

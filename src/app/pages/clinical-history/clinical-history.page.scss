@@ -1,0 +1,706 @@
+// Uses global premium tokens (--primary, --brand-gradient, --r-*, --sp-*,
+// --shadow-*, --border-color, --section-bg, --card-bg, --success,
+// --danger, --warning, --gray-accent, --text-dark) — same as
+// booking-status.page.scss / cancel-test.page.scss, so visuals stay
+// identical across pages.
+
+:host {
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    overflow-x: hidden;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+}
+
+.ch-header {
+    --background: var(--brand-gradient);
+    --color: #ffffff;
+    padding-top: env(safe-area-inset-top, 0);
+    box-shadow: 0 2px 14px rgba(6, 58, 56, 0.18);
+
+    ion-title {
+        color: #ffffff;
+        font-weight: 700;
+        font-size: 17px;
+        letter-spacing: -0.2px;
+    }
+
+    ion-back-button {
+        --color: #ffffff;
+    }
+}
+
+.ch-content {
+    --background: #ffffff;
+    --padding-start: 0;
+    --padding-end: 0;
+    --padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.form-card {
+    background: transparent;
+    padding: var(--sp-4) 0 var(--sp-5);
+    box-sizing: border-box;
+}
+
+/* ---------- filter bar ---------- */
+.filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: stretch;
+    gap: var(--sp-3);
+    padding: 0 var(--sp-3) var(--sp-5);
+}
+
+.filter-field {
+    flex: 1 1 220px;
+    min-width: 160px;
+    display: flex;
+    align-items: center;
+    gap: var(--sp-3);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-sm);
+    background: var(--section-bg);
+    padding: 0 var(--sp-4);
+    height: 56px;
+    box-sizing: border-box;
+    transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+
+    input {
+        border: none;
+        background: transparent;
+        outline: none;
+        width: 100%;
+        min-width: 0;
+        height: 100%;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--text-dark);
+    }
+
+    &:focus-within {
+        border-color: var(--primary);
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+    }
+}
+
+.search-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+        color: var(--primary);
+        font-size: 18px;
+        margin: 0;
+    }
+}
+
+.search-field input::placeholder {
+    color: #9aabae;
+    font-weight: 500;
+}
+
+.refresh-btn {
+    --border-radius: var(--r-sm);
+    --color: #fff;
+    margin: 0;
+    height: 56px;
+    width: 56px;
+    flex-shrink: 0;
+    --box-shadow: var(--shadow-glow);
+
+    &::part(native) {
+        background: var(--brand-gradient);
+        color: #fff;
+    }
+
+    &:active::part(native) {
+        transform: scale(0.94);
+    }
+}
+
+/* ---------- thread card list ---------- */
+.ch-card-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3, 12px);
+    padding: 0 var(--sp-3) calc(30px + env(safe-area-inset-bottom, 0px));
+}
+
+.ch-card {
+    background: var(--card-bg, #fff);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+    padding: var(--sp-4);
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: box-shadow 0.18s ease, border-color 0.18s ease;
+
+    &:hover {
+        box-shadow: var(--shadow-sm);
+    }
+
+    &:active {
+        opacity: 0.85;
+    }
+}
+
+.ch-card-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: var(--sp-3);
+    padding-bottom: var(--sp-3);
+    margin-bottom: var(--sp-3);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.ch-header-left {
+    min-width: 0;
+    flex: 1;
+}
+
+.ch-id-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .id-link {
+        color: var(--primary);
+        font-weight: 800;
+        font-size: 14px;
+    }
+
+    .ch-barcode {
+        color: var(--gray-accent);
+        font-size: 11px;
+        font-weight: 600;
+        font-family: 'Courier New', monospace;
+    }
+}
+
+.ch-name-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.ch-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-dark);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.sub-text {
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--gray-accent);
+}
+
+.ch-header-right {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 6px;
+}
+
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 5px 12px;
+    border-radius: var(--r-pill);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    color: #fff;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12);
+
+    &.badge-closed {
+        background: var(--success);
+    }
+
+    &.badge-pending {
+        background: var(--warning);
+    }
+}
+
+.unread-badge {
+    --background: var(--danger);
+    --color: #fff;
+    border-radius: var(--r-pill, 999px);
+    font-size: 10px;
+    font-weight: 800;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 6px;
+}
+
+.ch-preview-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: var(--sp-3);
+
+    .ch-preview-icon {
+        color: var(--primary);
+        font-size: 15px;
+        margin-top: 1px;
+        flex-shrink: 0;
+    }
+
+    .ch-preview-text {
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--gray-accent);
+        line-height: 1.4;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+}
+
+.ch-footer-line {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.ch-footer-value {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--gray-accent);
+}
+
+/* ---------- empty / skeleton ---------- */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--sp-2);
+    padding: var(--sp-7) var(--sp-4);
+    color: var(--text-light);
+
+    ion-icon {
+        font-size: 48px;
+        color: #c3d3d2;
+    }
+
+    span {
+        font-size: 15px;
+        font-weight: 700;
+        color: var(--text-mid);
+    }
+
+    .empty-sub {
+        font-size: 12.5px;
+        color: var(--gray-accent);
+        margin: 0;
+    }
+}
+
+.table-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3);
+}
+
+.skeleton-card {
+    background: var(--card-bg, #fff);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-lg);
+    padding: var(--sp-4);
+}
+
+.skeleton-line {
+    height: 14px;
+    border-radius: var(--r-sm);
+    margin-bottom: 10px;
+    background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
+    background-size: 400% 100%;
+    animation: skeletonShine 1.2s ease-in-out infinite;
+}
+
+@keyframes skeletonShine {
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 50%;
+    }
+}
+
+/* =========================================================
+   THREAD / CHAT MODAL — centered rounded popup card
+   (same style as cancel-test's test-preview-popup /
+   Report Download's "Tests" popup — NOT full-screen)
+   ========================================================= */
+.thread-popup {
+    --width: 420px;
+    --max-width: 92vw;
+    --height: auto;
+    --max-height: 88vh;
+    --border-radius: 22px;
+    align-items: center;
+
+    &::part(content) {
+        border-radius: 22px;
+        box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+        overflow: hidden;
+    }
+
+    .modal-page {
+        max-height: 88vh;
+        display: flex;
+        flex-direction: column;
+        background: #fff;
+        border-radius: 22px;
+        overflow: hidden;
+    }
+
+    .modal-header {
+        background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+        border-top-left-radius: 22px;
+        border-top-right-radius: 22px;
+        padding: 16px 18px;
+        flex-shrink: 0;
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+
+        .modal-header-text {
+            min-width: 0;
+        }
+
+        h2 {
+            color: #fff;
+            font-size: 16px;
+            font-weight: 800;
+            letter-spacing: 0.2px;
+            margin: 0 0 6px;
+            text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .modal-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .chip {
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #fff;
+            background: rgba(255, 255, 255, 0.18);
+            border-radius: var(--r-pill, 999px);
+            padding: 4px 10px;
+            white-space: nowrap;
+        }
+
+        ion-button {
+            margin: 0;
+            --color: #fff;
+            width: 32px;
+            height: 32px;
+            --box-shadow: none;
+            flex-shrink: 0;
+
+            &::part(native) {
+                background: rgba(255, 255, 255, 0.2);
+                border-radius: 10px;
+                width: 32px;
+                height: 32px;
+                padding: 0;
+            }
+
+            ion-icon {
+                font-size: 18px;
+            }
+        }
+    }
+
+    .chat-scroll {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: var(--sp-4) var(--sp-3);
+        background: var(--section-bg, #f7fbfb);
+        display: flex;
+        flex-direction: column;
+        gap: 14px;
+        min-height: 200px;
+    }
+
+    .chat-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--sp-6) 0;
+
+        ion-spinner {
+            color: var(--primary);
+            width: 28px;
+            height: 28px;
+        }
+    }
+
+    .chat-row {
+        display: flex;
+        align-items: flex-end;
+        gap: 8px;
+        max-width: 100%;
+
+        &.row-theirs {
+            justify-content: flex-start;
+        }
+
+        &.row-mine {
+            justify-content: flex-end;
+        }
+    }
+
+    .avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--brand-gradient);
+        color: #fff;
+        font-weight: 800;
+        font-size: 13px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    .bubble-col {
+        display: flex;
+        flex-direction: column;
+        max-width: 78%;
+    }
+
+    .bubble-meta {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-bottom: 4px;
+        flex-wrap: wrap;
+
+        &.meta-mine {
+            justify-content: flex-end;
+        }
+    }
+
+    .sender-name {
+        font-size: 11.5px;
+        font-weight: 800;
+        color: var(--primary);
+    }
+
+    .bubble-time {
+        font-size: 10px;
+        font-weight: 600;
+        color: var(--gray-accent);
+    }
+
+    .status-pill {
+        font-size: 9px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.3px;
+        padding: 2px 8px;
+        border-radius: var(--r-pill, 999px);
+        color: #fff;
+
+        &.pill-closed {
+            background: var(--success);
+        }
+
+        &.pill-pending {
+            background: var(--warning);
+        }
+    }
+
+    .bubble {
+        padding: 10px 14px;
+        font-size: 13.5px;
+        line-height: 1.45;
+        word-break: break-word;
+        box-shadow: var(--shadow-xs);
+    }
+
+    .bubble-theirs {
+        background: #fff;
+        color: var(--text-dark);
+        border: 1px solid var(--border-color);
+        border-radius: 4px 16px 16px 16px;
+    }
+
+    .bubble-mine {
+        background: var(--brand-gradient);
+        color: #fff;
+        border-radius: 16px 4px 16px 16px;
+    }
+
+    .chat-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: var(--sp-2);
+        padding: var(--sp-7) var(--sp-4);
+        color: var(--gray-accent);
+
+        ion-icon {
+            font-size: 40px;
+            color: #c3d3d2;
+        }
+
+        span {
+            font-size: 13px;
+            font-weight: 600;
+        }
+    }
+
+    .chat-input-bar {
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: #fff;
+        border-top: 1px solid var(--border-color);
+        border-bottom-left-radius: 22px;
+        border-bottom-right-radius: 22px;
+
+        input {
+            flex: 1;
+            min-width: 0;
+            height: 44px;
+            border: 1.5px solid var(--border-color);
+            border-radius: var(--r-pill, 999px);
+            background: var(--section-bg);
+            padding: 0 16px;
+            font-size: 14px;
+            font-weight: 500;
+            color: var(--text-dark);
+            outline: none;
+
+            &:focus {
+                border-color: var(--primary);
+                background: #fff;
+            }
+
+            &::placeholder {
+                color: #9aabae;
+                font-weight: 500;
+            }
+        }
+
+        .send-btn {
+            --border-radius: 50%;
+            --color: #fff;
+            margin: 0;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            --box-shadow: var(--shadow-glow);
+
+            &::part(native) {
+                background: var(--brand-gradient);
+                color: #fff;
+                padding: 0;
+            }
+
+            ion-spinner {
+                width: 16px;
+                height: 16px;
+            }
+        }
+    }
+}
+
+@media (max-width: 480px) {
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .filter-field,
+    .date-field-inline {
+        width: 100%;
+        flex: 1 1 100%;
+    }
+
+    .refresh-btn {
+        width: 100%;
+    }
+}
+
+/* ---------- date range field (cancel-test sarkha) ---------- */
+.date-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 11px;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+        color: var(--primary);
+        font-size: 18px;
+        margin: 0;
+    }
+}
+
+.date-field {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    flex: 1;
+    min-width: 0;
+}
+
+.date-trigger-btn {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 13px;
+    color: var(--ion-text-color, #333);
+}
+
+.hidden-range-field {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+}

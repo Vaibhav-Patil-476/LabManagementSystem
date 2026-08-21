@@ -1,0 +1,150 @@
+<ion-header>
+  <ion-toolbar class="tl-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Test List</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="tl-content">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="form-card">
+
+    <!-- ===================== TOP SUMMARY BAR ===================== -->
+    <div class="summary-bar">
+      <div class="total-badge">
+        <ion-icon name="list-outline"></ion-icon>
+        <span>Total Tests: {{ totalEntries }}</span>
+      </div>
+    </div>
+
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
+
+      <div class="filter-field search-field">
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
+        </span>
+        <input type="text" placeholder="Type & Search Test Name" [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()" />
+      </div>
+
+      <ion-button class="refresh-btn" fill="solid" (click)="loadTests()" [disabled]="isLoading">
+        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+      </ion-button>
+
+    </div>
+
+    <!-- ===================== TEST CARD LIST ===================== -->
+    <div class="tl-card-list">
+
+      <div class="tl-card" *ngFor="let item of pagedTests">
+
+        <div class="tl-row-top">
+          <div class="tl-name-col">
+            <span class="tl-name">{{ item.testName }}</span>
+            <span class="tl-code" *ngIf="item.testCode">{{ item.testCode }}</span>
+          </div>
+          <div class="tl-row-top-right">
+            <span class="pill tl-tat-pill">{{ item.tat }} min</span>
+            <button class="tl-action-btn" (click)="openDetail(item)" aria-label="View test details">
+              <ion-icon name="eye-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="tl-chip-row">
+          <span class="tl-chip">
+            <span class="tl-chip-label">Sample Type</span>
+            <span class="tl-chip-value" [ngStyle]="{ background: sampleColor(item.sampleType) }">
+              {{ item.sampleType }}
+            </span>
+          </span>
+          <span class="tl-chip">
+            <span class="tl-chip-label">Source</span>
+            <span class="tl-chip-value" [ngStyle]="{ background: sourceColor(item.source) }">
+              {{ item.source }}
+            </span>
+          </span>
+        </div>
+
+        <div class="tl-price-row" *ngIf="canViewAmount">
+          <span class="tl-price-chip">MRP <b>₹{{ item.mrp }}</b></span>
+          <span class="tl-price-chip tl-price-b2b">B2B <b>₹{{ item.b2b }}</b></span>
+        </div>
+
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoading && pagedTests.length === 0">
+        <ion-icon name="list-outline"></ion-icon>
+        <span>No tests found</span>
+        <p class="empty-sub">Try a different search term.</p>
+      </div>
+
+      <div class="table-skeleton" *ngIf="isLoading">
+        <div class="skeleton-card" *ngFor="let s of [1,2,3]">
+          <div class="skeleton-line" style="width:55%"></div>
+          <div class="skeleton-line" style="width:75%"></div>
+          <div class="skeleton-line" style="width:40%"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================== LOAD MORE FOOTER ===================== -->
+    <div class="tl-loadmore-wrap" *ngIf="!isLoading && totalEntries > 0">
+      <span class="tl-pg-info">Showing {{ pagedTests.length }} of {{ totalEntries }} tests</span>
+
+      <ion-button *ngIf="hasMore" fill="outline" class="tl-loadmore-btn" (click)="loadMore()">
+        Load More
+      </ion-button>
+    </div>
+
+  </div>
+
+  <!-- ===================== SAMPLE REPORT PREVIEW POPUP (action button) ===================== -->
+  <ion-modal [isOpen]="isDetailModalOpen" cssClass="test-preview-popup" (didDismiss)="closeDetail()">
+    <ng-template>
+      <div class="modal-page" *ngIf="selectedTest as t">
+        <div class="modal-header">
+          <h2>{{ t.testName }}</h2>
+          <ion-button fill="clear" (click)="closeDetail()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="rp-body">
+          <div class="rp-loading" *ngIf="previewState === 'loading'">
+            <ion-spinner name="crescent"></ion-spinner>
+            <span>Generating sample report…</span>
+            <p class="rp-sub">Building a dummy PDF with this test's actual report format.</p>
+          </div>
+
+          <div class="rp-ready" *ngIf="previewState === 'ready'">
+            <ion-icon name="document-text-outline" class="rp-doc-icon"></ion-icon>
+            <span class="rp-ready-title">Sample report is ready</span>
+            <p class="rp-sub" *ngIf="previewFileName">{{ previewFileName }}</p>
+            <ion-button expand="block" class="rp-open-btn" (click)="openReport()">
+              <ion-icon slot="start" name="open-outline"></ion-icon>
+              Open Report
+            </ion-button>
+          </div>
+
+          <div class="rp-error" *ngIf="previewState === 'error'">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+            <span>Could not generate the sample report.</span>
+            <ion-button fill="outline" size="small" class="rp-retry-btn" (click)="retryPreview()">
+              Try Again
+            </ion-button>
+          </div>
+
+          <p class="rp-footnote">This is a dummy report generated for preview purposes only.</p>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+</ion-content>

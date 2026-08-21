@@ -1,7 +1,8 @@
 // Uses global premium tokens (--primary, --brand-gradient, --r-*, --sp-*,
 // --shadow-*, --border-color, --section-bg, --card-bg, --success,
 // --danger, --warning, --gray-accent, --text-dark) — same as
-// booking-status.page.scss, so visuals stay identical across pages.
+// cancel-test.page.scss / booking-status.page.scss, so visuals stay
+// identical across pages.
 
 :host {
   display: block;
@@ -13,7 +14,7 @@
   -webkit-font-smoothing: antialiased;
 }
 
-.ct-header {
+.tl-header {
   --background: var(--brand-gradient);
   --color: #ffffff;
   padding-top: env(safe-area-inset-top, 0);
@@ -31,7 +32,7 @@
   }
 }
 
-.ct-content {
+.tl-content {
   --background: #ffffff;
   --padding-start: 0;
   --padding-end: 0;
@@ -89,20 +90,32 @@
   border-radius: var(--r-sm);
   background: var(--section-bg);
   padding: 0 var(--sp-4);
-  height: 56px;
+  // App-wide global input CSS ne ha box khup uncha stretch kela hota,
+  // mhanun height/min/max ithe tinhi + !important nis force kelay,
+  // jenekarun kuthlahi global rule override karu shakat nahi.
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
   box-sizing: border-box;
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 
   input {
-    border: none;
-    background: transparent;
-    outline: none;
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
     width: 100%;
     min-width: 0;
-    height: 100%;
+    height: 100% !important;
+    margin: 0 !important;
+    // Global input reset kadhi kadhi 16px+ vertical padding degto —
+    // to override karnyasathi padding explicit 0 kelay, height ithlya
+    // flex-align (center) ne aleal sambhalto.
+    padding: 0 !important;
     font-size: 15px;
     font-weight: 600;
+    line-height: normal;
     color: var(--text-dark);
+    box-shadow: none !important;
   }
 
   &:focus-within {
@@ -112,8 +125,7 @@
   }
 }
 
-.search-icon-badge,
-.date-icon-badge {
+.search-icon-badge {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -135,27 +147,13 @@
   font-weight: 500;
 }
 
-.date-field-inline {
-  flex: 1 1 280px;
-
-  .date-native-input {
-    flex: 1;
-    min-width: 0;
-    color-scheme: light;
-  }
-
-  .date-dash {
-    color: var(--gray-accent);
-    font-weight: 600;
-    flex-shrink: 0;
-  }
-}
-
 .refresh-btn {
   --border-radius: var(--r-sm);
   --color: #fff;
   margin: 0;
-  height: 56px;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
   width: 56px;
   flex-shrink: 0;
   --box-shadow: var(--shadow-glow);
@@ -163,6 +161,8 @@
   &::part(native) {
     background: var(--brand-gradient);
     color: #fff;
+    height: 56px !important;
+    min-height: 56px !important;
   }
 
   &:active::part(native) {
@@ -171,20 +171,25 @@
 }
 
 /* ---------- card list ---------- */
-.ct-card-list {
+.tl-card-list {
   display: flex;
   flex-direction: column;
   gap: var(--sp-3, 12px);
-  padding: 0 var(--sp-3) calc(30px + env(safe-area-inset-bottom, 0px));
+  padding: 0 var(--sp-3) var(--sp-4);
 }
 
-.ct-card {
+.tl-card {
+  // Compact card — kami padding/gaps mhanje jast scroll karava lagat
+  // nahi, ekaach screen madhe jasta cards distat.
   background: var(--card-bg, #fff);
   border: 1.5px solid var(--border-color);
-  border-radius: var(--r-lg);
+  border-radius: var(--r-md, 12px);
   box-shadow: var(--shadow-xs);
-  padding: var(--sp-4);
+  padding: 10px 12px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   transition: box-shadow 0.18s ease, border-color 0.18s ease;
 
   &:hover {
@@ -192,140 +197,58 @@
   }
 }
 
-.ct-card-header {
+.tl-row-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: var(--sp-3);
-  padding-bottom: var(--sp-3);
-  margin-bottom: var(--sp-3);
-  border-bottom: 1px solid var(--border-color);
+  gap: 8px;
 }
 
-.ct-header-left {
-  min-width: 0;
-  flex: 1;
-}
-
-.ct-id-row {
+.tl-row-top-right {
   display: flex;
   align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
-
-  .id-link {
-    color: var(--primary);
-    font-weight: 800;
-    font-size: 14px;
-  }
-
-  .ct-date {
-    color: var(--gray-accent);
-    font-size: 11px;
-    font-weight: 600;
-  }
-}
-
-.ct-name-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.ct-name {
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text-dark);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.sub-text {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--gray-accent);
-}
-
-.ct-header-right {
+  gap: 6px;
   flex-shrink: 0;
 }
 
-.status-badge {
+.tl-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tl-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text-dark);
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+.tl-code {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--gray-accent);
+  letter-spacing: 0.2px;
+}
+
+/* ---------- action button (eye icon) ---------- */
+.tl-action-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 5px 12px;
-  border-radius: var(--r-pill);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-  color: #fff;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12);
-
-  &.badge-cancel {
-    background: var(--danger);
-  }
-}
-
-/* ---------- stats (test + lab/doctor) ---------- */
-.ct-stats {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  padding-bottom: var(--sp-3);
-  margin-bottom: var(--sp-3);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.ct-stat {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 2px;
-}
-
-// "Lab/Doctor" text + Tests eye-icon pill, one row, pill on the right
-.ct-stat-row-with-eye {
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.ct-text-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  min-width: 0;
-}
-
-.ct-tests-row {
-  display: inline-flex;
-  align-items: center;
-  align-self: center;
-  width: fit-content;
-  max-width: 100%;
-  gap: 6px;
-  cursor: pointer;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary-light);
   flex-shrink: 0;
-  padding: 6px 14px;
-  border-radius: var(--r-pill, 999px);
-  background: var(--brand-soft, #eef8f7);
-  border: 1px solid var(--brand-light, #d9f0ee);
+  cursor: pointer;
 
-  .ct-tests-label {
-    font-size: 11px;
-    font-weight: 700;
-    color: var(--brand-deep, #075f5d);
-    white-space: nowrap;
-  }
-
-  .test-eye-icon {
-    font-size: 16px;
-    color: var(--brand, #087b76);
+  ion-icon {
+    font-size: 15px;
+    color: var(--primary);
   }
 
   &:active {
@@ -333,139 +256,91 @@
   }
 }
 
-.bcs-label {
-  font-size: 10px;
-  font-weight: 800;
+/* ---------- pills (shared base) ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 9px;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-dark);
+  letter-spacing: 0.2px;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12);
 }
 
-.bcs-value {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-accent);
-  line-height: 1.3;
-  word-break: break-word;
-}
-
-/* ---------- barcode + resend/refund row ---------- */
-.ct-actions {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--sp-3);
-  flex-wrap: wrap;
-  margin-bottom: var(--sp-3);
-}
-
-.ct-barcode-inline {
-  flex: 1;
-  min-width: 0;
-
-  .barcode-line {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--section-bg);
-    border: 1px solid var(--border-color);
-    border-radius: var(--r-sm);
-    padding: 8px 12px;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--text-dark);
-    letter-spacing: 0.3px;
-    font-family: 'Courier New', monospace;
-
-    ion-icon {
-      color: var(--primary);
-      font-size: 16px;
-      flex-shrink: 0;
-    }
-
-    &.empty {
-      color: var(--gray-accent);
-      font-family: inherit;
-      font-weight: 500;
-    }
-  }
-}
-
-.ct-actions-buttons {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+.tl-tat-pill {
+  background: var(--success);
   flex-shrink: 0;
 }
 
-.refund-badge {
-  --background: var(--success-bg);
-  --color: var(--success);
-  font-weight: 700;
-  padding: 8px 12px;
-  border-radius: var(--r-sm);
-  font-size: 11px;
-
-  &.pending {
-    --background: var(--warning-bg);
-    --color: var(--warning);
-  }
-}
-
-.resend-btn {
-  --border-radius: var(--r-sm);
-  --color: #fff;
-  --box-shadow: var(--shadow-glow);
-  height: 34px;
-  font-size: 12.5px;
-  font-weight: 800;
-  margin: 0;
-
-  &::part(native) {
-    background: var(--brand-gradient);
-    color: #fff;
-  }
-
-  ion-spinner {
-    width: 15px;
-    height: 15px;
-  }
-}
-
-/* ---------- reason + cancel date ---------- */
-.ct-reason-row {
+/* ---------- sample type / source — labeled chips ---------- */
+.tl-chip-row {
   display: flex;
-  align-items: flex-start;
-  gap: 6px;
-  background: var(--danger-bg);
-  color: var(--danger);
-  border-radius: var(--r-sm);
-  padding: 8px 10px;
-  font-size: 12px;
-  font-weight: 600;
-  margin-bottom: var(--sp-3);
-  line-height: 1.4;
-
-  ion-icon {
-    font-size: 14px;
-    flex-shrink: 0;
-    margin-top: 1px;
-  }
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
 }
 
-.ct-footer-line {
+.tl-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tl-chip-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--gray-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.tl-chip-value {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+/* ---------- price row — compact chips instead of boxes ---------- */
+.tl-price-row {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  gap: 8px;
 }
 
-.ct-footer-value {
-  font-size: 12px;
+.tl-price-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  border: 1px solid var(--border-color);
+  font-size: 10.5px;
   font-weight: 600;
-  color: var(--text-dark);
+  color: var(--gray-accent);
+
+  b {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--primary);
+  }
+
+  &.tl-price-b2b b {
+    color: var(--success);
+  }
 }
 
-/* ---------- empty / skeleton (same as booking status) ---------- */
+/* ---------- empty / skeleton (same as cancel-test) ---------- */
 .empty-state {
   display: flex;
   flex-direction: column;
@@ -520,15 +395,60 @@
   100% { background-position: 0 50%; }
 }
 
+/* ---------- load more footer ---------- */
+.tl-loadmore-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.tl-pg-info {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-accent);
+  text-align: center;
+}
+
+.tl-loadmore-btn {
+  --border-radius: var(--r-pill);
+  --border-width: 1.5px;
+  --border-color: var(--primary);
+  --color: var(--primary);
+  height: 38px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .refresh-btn {
+    width: 100%;
+  }
+}
+
 /* =========================================================
-   TEST PREVIEW MODAL — small centered popup (eye icon)
-   Same look as booking-status.page.scss .test-preview-popup
+   TEST DETAIL / SAMPLE REPORT PREVIEW POPUP (action/eye icon)
+   — small centered popup, same look as booking-status/cancel-test
+   test-preview-popup. Component styles are view-encapsulated per
+   page, so this block is duplicated here rather than shared.
+
+   NOTE: template uses `.rp-body`, `.rp-loading`, `.rp-ready`,
+   `.rp-error`, `.rp-doc-icon`, `.rp-ready-title`, `.rp-sub`,
+   `.rp-open-btn`, `.rp-retry-btn`, `.rp-footnote` — class names
+   below are matched exactly to those.
    ========================================================= */
 .test-preview-popup {
-  --width: 380px;
-  --max-width: 92vw;
+  --width: 400px;
+  --max-width: 94vw;
   --height: auto;
-  --max-height: 78vh;
+  --max-height: 85vh;
   --border-radius: 22px;
   align-items: center;
 
@@ -539,7 +459,7 @@
   }
 
   .modal-page {
-    max-height: 78vh;
+    max-height: 85vh;
     display: flex;
     flex-direction: column;
     background: #fff;
@@ -588,6 +508,116 @@
     }
   }
 
+  /* ---------- body wrapper (matches template's .rp-body) ---------- */
+  .rp-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    padding: 22px 20px 18px;
+    box-sizing: border-box;
+  }
+
+  /* ---------- shared state layout (loading / ready / error) ---------- */
+  .rp-loading,
+  .rp-ready,
+  .rp-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 26px 6px 10px;
+  }
+
+  .rp-loading {
+    color: var(--gray-accent);
+    font-size: 13.5px;
+    font-weight: 600;
+
+    ion-spinner {
+      width: 34px;
+      height: 34px;
+      color: var(--primary);
+    }
+  }
+
+  .rp-ready {
+    .rp-doc-icon {
+      font-size: 46px;
+      color: var(--primary);
+      background: var(--primary-light);
+      border-radius: 50%;
+      padding: 14px;
+    }
+  }
+
+  .rp-ready-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text-dark);
+  }
+
+  .rp-sub {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--gray-accent);
+    word-break: break-word;
+    margin: 0 0 4px;
+    max-width: 280px;
+  }
+
+  .rp-open-btn {
+    --background: var(--brand-gradient);
+    --background-activated: var(--brand-gradient);
+    --color: #ffffff;
+    --border-radius: var(--r-sm);
+    --box-shadow: var(--shadow-glow);
+    font-weight: 700;
+    font-size: 14px;
+    margin-top: 6px;
+    width: 100%;
+
+    ion-icon {
+      font-size: 17px;
+    }
+  }
+
+  .rp-error {
+    color: var(--danger);
+    font-size: 13px;
+    font-weight: 600;
+
+    ion-icon {
+      font-size: 34px;
+      color: var(--danger);
+    }
+  }
+
+  .rp-retry-btn {
+    --border-radius: var(--r-pill);
+    --border-color: var(--danger);
+    --color: var(--danger);
+    font-weight: 700;
+    font-size: 12.5px;
+    margin-top: 4px;
+  }
+
+  .rp-footnote {
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--gray-accent);
+    font-style: italic;
+    margin: 16px 0 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+  }
+
+  /* ---------- legacy 2-column detail grid (kept in case it's
+     reused elsewhere / by other templates sharing this popup
+     class) ---------- */
   .pkg-preview-table {
     flex: 1;
     overflow-y: auto;
@@ -595,28 +625,27 @@
     padding-bottom: 6px;
   }
 
-  .pkg-preview-header-full {
+  .tl-detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding: 10px 18px;
+  }
+
+  .pkg-preview-header-full.tl-detail-grid {
     position: sticky;
     top: 0;
     z-index: 1;
-    display: grid;
-    grid-template-columns: 0.4fr 2.2fr 1fr;
-    gap: 8px;
     background: #eef8f7;
     color: #075f5d;
     font-size: 10.5px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    padding: 10px 18px;
     border-bottom: 1px solid #d9f0ee;
   }
 
-  .pkg-preview-row-full {
-    display: grid;
-    grid-template-columns: 0.4fr 2.2fr 1fr;
-    gap: 8px;
-    padding: 10px 18px;
+  .pkg-preview-row-full.tl-detail-grid {
     font-size: 12.5px;
     color: #475569;
     border-bottom: 1px solid #f1f5f5;
@@ -626,70 +655,15 @@
       background: #fbfdfd;
     }
 
-    div:nth-child(2) {
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: anywhere;
+    div:first-child {
       font-weight: 600;
+      color: #64748b;
+    }
+
+    div:last-child {
+      font-weight: 700;
       color: #1e293b;
-      line-height: 1.35;
+      word-break: break-word;
     }
   }
-
-  .lab-picker-empty {
-    padding: 30px 16px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 13px;
-  }
-}
-
-@media (max-width: 480px) {
-  .filter-bar {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .filter-field,
-  .date-field-inline {
-    width: 100%;
-    flex: 1 1 100%;
-  }
-
-  .refresh-btn {
-    width: 100%;
-  }
-}
-
-.hidden-range-field {
-  position: absolute;
-  width: 0;
-  height: 0;
-  overflow: hidden;
-  pointer-events: none;
-  opacity: 0;
-}
-
-.date-field {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  cursor: pointer;
-  flex: 1;
-  min-width: 0;
-}
-
-.date-icon-badge {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.date-trigger-btn {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  font-size: 13px;
-  color: var(--ion-text-color, #333);
 }

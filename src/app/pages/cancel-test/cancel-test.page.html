@@ -1,7 +1,7 @@
 <ion-header>
   <ion-toolbar class="ct-header">
     <ion-buttons slot="start">
-      <ion-back-button defaultHref="/tabs/home" text=""></ion-back-button>
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
     </ion-buttons>
     <ion-title>Cancel Test</ion-title>
   </ion-toolbar>
@@ -89,24 +89,21 @@
           </div>
         </div>
 
-        <!-- stats: test name + lab/doctor -->
+        <!-- stats: lab/doctor + test eye-icon pill in one row -->
         <div class="ct-stats">
-          <div class="ct-stat">
-            <div class="ct-stat-row-with-eye">
-              <span class="bcs-label">Test</span>
-              <div class="ct-tests-row" (click)="openTestPreview(item, $event)">
-                <span class="ct-tests-label">Tests :-</span>
-                <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
-              </div>
+          <div class="ct-stat ct-stat-row-with-eye">
+            <div class="ct-text-col">
+              <span class="bcs-label">Lab / Doctor</span>
+              <span class="bcs-value">
+                {{ item.labName }} / <ng-container *ngIf="item.doctorName !== 'N/A'">Dr. </ng-container>{{ item.doctorName
+                }}
+              </span>
             </div>
-            <span class="bcs-value">{{ item.testName || '-' }}</span>
-          </div>
-          <div class="ct-stat">
-            <span class="bcs-label">Lab / Doctor</span>
-            <span class="bcs-value">
-              {{ item.labName }} / <ng-container *ngIf="item.doctorName !== 'N/A'">Dr. </ng-container>{{ item.doctorName
-              }}
-            </span>
+
+            <div class="ct-tests-row" (click)="openTestPreview(item, $event)">
+              <span class="ct-tests-label">Tests :-</span>
+              <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
+            </div>
           </div>
         </div>
 

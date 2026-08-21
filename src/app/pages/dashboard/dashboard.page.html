@@ -855,46 +855,46 @@
             </div>
           </div>
 
-          <div class="services-grid">
-            <div class="service-card" (click)="goToPage('add-patient')">
-              <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
-              <span class="service-name">New Booking</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+          <div class="services-grid-v2">
+            <div class="service-item" (click)="goToPage('add-patient')">
+              <span class="service-circle teal">
+                <ion-icon name="person-add-outline"></ion-icon>
+              </span>
+              <span class="service-label">New Booking</span>
             </div>
 
-            <div class="service-card" (click)="goToPage('booking-status')">
-              <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
-              <span class="service-name">Booking Status</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+            <div class="service-item" (click)="goToPage('booking-status')">
+              <span class="service-circle violet">
+                <ion-icon name="clipboard-outline"></ion-icon>
+              </span>
+              <span class="service-label">Booking Status</span>
             </div>
 
-            <div class="service-card" (click)="goToPage('reports')">
-              <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
-              <span class="service-name">Download Reports</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+            <div class="service-item" (click)="goToPage('reports')">
+              <span class="service-circle blue">
+                <ion-icon name="download-outline"></ion-icon>
+              </span>
+              <span class="service-label">Download Reports</span>
             </div>
 
-            <div class="service-card" [class.locked-card]="isPageLocked('bookings')" (click)="goToPage('bookings')">
-              <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
-              <span class="service-name">Test List</span>
-              <span class="service-arrow" *ngIf="!isPageLocked('bookings')" aria-hidden="true">›</span>
-              <ion-icon *ngIf="isPageLocked('bookings')" name="lock-closed-outline"
-                class="service-lock-icon"></ion-icon>
+            <div class="service-item" (click)="goToPage('test-list')">
+              <span class="service-circle amber">
+                <ion-icon name="list-outline"></ion-icon>
+              </span>
+              <span class="service-label">Test List</span>
             </div>
 
-            <div class="service-card" [class.locked-card]="isPageLocked('samples')" (click)="goToPage('samples')">
-              <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
-              <span class="service-name">Profile List</span>
-              <span class="service-arrow" *ngIf="!isPageLocked('samples')" aria-hidden="true">›</span>
-              <ion-icon *ngIf="isPageLocked('samples')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
+            <div class="service-item" (click)="goToPage('profile-list')">
+              <span class="service-circle rose">
+                <ion-icon name="person-circle-outline"></ion-icon>
+              </span>
+              <span class="service-label">Profile List</span>
             </div>
-
-            <div class="service-card" [class.locked-card]="isPageLocked('outsource')" (click)="goToPage('outsource')">
-              <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
-              <span class="service-name">Client History</span>
-              <span class="service-arrow" *ngIf="!isPageLocked('outsource')" aria-hidden="true">›</span>
-              <ion-icon *ngIf="isPageLocked('outsource')" name="lock-closed-outline"
-                class="service-lock-icon"></ion-icon>
+            <div class="service-item" (click)="goToPage('outsource')">
+              <span class="service-circle indigo">
+                <ion-icon name="time-outline"></ion-icon>
+              </span>
+              <span class="service-label">Client History</span>
             </div>
           </div>
         </section>
@@ -983,58 +983,60 @@
             <p class="section-note">Get things done</p>
           </div>
 
-          <div class="services-grid">
-            <div class="service-card" (click)="goToPage('add-patient')">
-              <span class="service-icon teal"><ion-icon name="person-add-outline"></ion-icon></span>
-              <span class="service-name">New Booking</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+          <div class="services-grid-v2">
+            <div class="service-item" (click)="goToPage('add-patient')">
+              <span class="service-circle teal">
+                <ion-icon name="person-add-outline"></ion-icon>
+              </span>
+              <span class="service-label">New Booking</span>
             </div>
 
-            <div class="service-card" (click)="goToPage('booking-status')">
-              <span class="service-icon violet"><ion-icon name="clipboard-outline"></ion-icon></span>
-              <span class="service-name">Booking Status</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+            <div class="service-item" (click)="goToPage('booking-status')">
+              <span class="service-circle violet">
+                <ion-icon name="clipboard-outline"></ion-icon>
+              </span>
+              <span class="service-label">Booking Status</span>
             </div>
 
-            <div class="service-card" (click)="goToPage('reports')">
-              <span class="service-icon blue"><ion-icon name="download-outline"></ion-icon></span>
-              <span class="service-name">Download Reports</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+            <div class="service-item" (click)="goToPage('reports')">
+              <span class="service-circle blue">
+                <ion-icon name="download-outline"></ion-icon>
+              </span>
+              <span class="service-label">Download Reports</span>
             </div>
 
-            <div class="service-card" [class.locked-card]="isPageLocked('bookings')" (click)="goToPage('bookings')">
-              <span class="service-icon amber"><ion-icon name="list-outline"></ion-icon></span>
-              <span class="service-name">Test List</span>
-              <span class="service-arrow" *ngIf="!isPageLocked('bookings')" aria-hidden="true">›</span>
-              <ion-icon *ngIf="isPageLocked('bookings')" name="lock-closed-outline"
-                class="service-lock-icon"></ion-icon>
+            <div class="service-item" (click)="goToPage('test-list')">
+              <span class="service-circle amber">
+                <ion-icon name="list-outline"></ion-icon>
+              </span>
+              <span class="service-label">Test List</span>
+            </div>
+            <div class="service-item" (click)="goToPage('profile-list')">
+              <span class="service-circle rose">
+                <ion-icon name="person-circle-outline"></ion-icon>
+              </span>
+              <span class="service-label">Profile List</span>
             </div>
 
-            <div class="service-card" [class.locked-card]="isPageLocked('samples')" (click)="goToPage('samples')">
-              <span class="service-icon rose"><ion-icon name="person-circle-outline"></ion-icon></span>
-              <span class="service-name">Profile List</span>
-              <span class="service-arrow" *ngIf="!isPageLocked('samples')" aria-hidden="true">›</span>
-              <ion-icon *ngIf="isPageLocked('samples')" name="lock-closed-outline" class="service-lock-icon"></ion-icon>
+            <div class="service-item" (click)="goToPage('outsource')">
+              <span class="service-circle indigo">
+                <ion-icon name="time-outline"></ion-icon>
+              </span>
+              <span class="service-label">Client History</span>
             </div>
 
-            <div class="service-card" [class.locked-card]="isPageLocked('outsource')" (click)="goToPage('outsource')">
-              <span class="service-icon indigo"><ion-icon name="time-outline"></ion-icon></span>
-              <span class="service-name">Client History</span>
-              <span class="service-arrow" *ngIf="!isPageLocked('outsource')" aria-hidden="true">›</span>
-              <ion-icon *ngIf="isPageLocked('outsource')" name="lock-closed-outline"
-                class="service-lock-icon"></ion-icon>
+            <div class="service-item" (click)="goToPage('cancel-test')">
+              <span class="service-circle danger">
+                <ion-icon name="close-circle-outline"></ion-icon>
+              </span>
+              <span class="service-label">Cancel Test</span>
             </div>
 
-            <div class="service-card" (click)="goToPage('cancel-test')">
-              <span class="service-icon danger"><ion-icon name="close-circle-outline"></ion-icon></span>
-              <span class="service-name">Cancel Test</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
-            </div>
-
-            <div class="service-card" (click)="goToPage('clinical-history')">
-              <span class="service-icon cyan"><ion-icon name="document-text-outline"></ion-icon></span>
-              <span class="service-name">Clinical History</span>
-              <span class="service-arrow" aria-hidden="true">›</span>
+            <div class="service-item" (click)="goToPage('clinical-history')">
+              <span class="service-circle cyan">
+                <ion-icon name="document-text-outline"></ion-icon>
+              </span>
+              <span class="service-label">Clinical History</span>
             </div>
           </div>
         </section>

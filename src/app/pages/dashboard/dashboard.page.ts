@@ -1866,7 +1866,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // NAVIGATION
   // ============================================================
-  private readonly LOCKED_PAGES = ['bookings', 'samples', 'outsource'];
+ private readonly LOCKED_PAGES = ['outsource'];
 
   isPageLocked(page: string): boolean {
     return this.LOCKED_PAGES.includes(page);
