@@ -1,0 +1,799 @@
+// Uses global premium tokens (--primary, --brand-gradient, --r-*, --sp-*,
+// --shadow-*, --border-color, --section-bg, --card-bg, --success,
+// --danger, --warning, --gray-accent, --text-dark) — same as
+// test-list.page.scss / cancel-test.page.scss / booking-status.page.scss,
+// so visuals stay identical across pages.
+
+:host {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.tl-header {
+  --background: var(--brand-gradient);
+  --color: #ffffff;
+  padding-top: env(safe-area-inset-top, 0);
+  box-shadow: 0 2px 14px rgba(6, 58, 56, 0.18);
+
+  ion-title {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.2px;
+  }
+
+  ion-back-button {
+    --color: #ffffff;
+  }
+}
+
+.tl-content {
+  --background: #ffffff;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.form-card {
+  background: transparent;
+  padding: var(--sp-4) 0 var(--sp-5);
+  box-sizing: border-box;
+}
+
+/* ---------- summary bar (Total Profiles badge + PDF export button) ---------- */
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 2px var(--sp-3) var(--sp-5);
+}
+
+.total-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--brand-gradient);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  box-shadow: var(--shadow-glow);
+  letter-spacing: 0.1px;
+
+  ion-icon { font-size: 15px; }
+}
+
+/* ---------- PDF export button (now lives inside summary-bar, right side) ---------- */
+.pdf-export-btn {
+  --background: #f5a623;
+  --background-activated: #e0951c;
+  --background-hover: #e0951c;
+  --color: #ffffff;
+  --border-radius: var(--r-sm);
+  --box-shadow: 0 4px 12px rgba(245, 166, 35, 0.35);
+  height: 42px;
+  width: 48px;
+  margin: 0;
+  flex-shrink: 0;
+
+  ion-icon {
+    font-size: 19px;
+  }
+
+  &[disabled] {
+    opacity: 0.5;
+  }
+}
+
+/* ---------- filter bar ---------- */
+.filter-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-3) var(--sp-5);
+}
+
+.filter-field {
+  flex: 1 1 220px;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  padding: 0 var(--sp-4);
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  box-sizing: border-box;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+
+  input {
+    border: none !important;
+    background: transparent !important;
+    outline: none !important;
+    width: 100%;
+    min-width: 0;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    font-size: 15px;
+    font-weight: 600;
+    line-height: normal;
+    color: var(--text-dark);
+    box-shadow: none !important;
+  }
+
+  &:focus-within {
+    border-color: var(--primary);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+  }
+}
+
+.search-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--primary-light);
+  flex-shrink: 0;
+
+  ion-icon {
+    color: var(--primary);
+    font-size: 18px;
+    margin: 0;
+  }
+}
+
+.search-field input::placeholder {
+  color: #9aabae;
+  font-weight: 500;
+}
+
+.refresh-btn {
+  --border-radius: var(--r-sm);
+  --color: #fff;
+  margin: 0;
+  height: 56px !important;
+  min-height: 56px !important;
+  max-height: 56px !important;
+  width: 56px;
+  flex-shrink: 0;
+  --box-shadow: var(--shadow-glow);
+
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
+    height: 56px !important;
+    min-height: 56px !important;
+  }
+
+  &:active::part(native) {
+    transform: scale(0.94);
+  }
+}
+
+/* ---------- card list ---------- */
+.tl-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3, 12px);
+  padding: 0 var(--sp-3) var(--sp-4);
+}
+
+.tl-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-md, 12px);
+  box-shadow: var(--shadow-xs);
+  padding: 10px 12px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+
+  &:hover {
+    box-shadow: var(--shadow-sm);
+  }
+}
+
+.tl-row-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tl-row-top-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.tl-name-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+
+.tl-name-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.tl-name {
+  font-weight: 700;
+  font-size: 13.5px;
+  color: var(--text-dark);
+  line-height: 1.25;
+  word-break: break-word;
+}
+
+/* ---------- action button (eye icon) ---------- */
+.tl-action-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary-light);
+  flex-shrink: 0;
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 15px;
+    color: var(--primary);
+  }
+
+  &:active {
+    opacity: 0.7;
+  }
+}
+
+/* ---------- pills (shared base) ---------- */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 9px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  color: #fff;
+  white-space: nowrap;
+  box-shadow: 0 2px 6px rgba(6, 58, 56, 0.12);
+}
+
+.tl-tat-pill {
+  background: var(--success);
+  flex-shrink: 0;
+}
+
+/* ---------- sample type — multiple chips per profile ---------- */
+.tl-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.tl-chip-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--gray-accent);
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+  margin-right: 2px;
+}
+
+.tl-chip-value {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.tl-chip-empty {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-accent);
+}
+
+/* ---------- tests-included preview line on card ---------- */
+.tl-tests-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  p {
+    margin: 0;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--text-dark);
+    line-height: 1.4;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+}
+
+/* ---------- price row — compact chips ---------- */
+.tl-price-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tl-price-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  border: 1px solid var(--border-color);
+  font-size: 10.5px;
+  font-weight: 600;
+  color: var(--gray-accent);
+
+  b {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--primary);
+  }
+
+  &.tl-price-b2b b {
+    color: var(--success);
+  }
+}
+
+/* ---------- empty / skeleton ---------- */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--text-light);
+
+  ion-icon {
+    font-size: 48px;
+    color: #c3d3d2;
+  }
+
+  span {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-mid);
+  }
+
+  .empty-sub {
+    font-size: 12.5px;
+    color: var(--gray-accent);
+    margin: 0;
+  }
+}
+
+.table-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.skeleton-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--r-sm);
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
+  background-size: 400% 100%;
+  animation: skeletonShine 1.2s ease-in-out infinite;
+}
+
+@keyframes skeletonShine {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+/* ---------- load more footer ---------- */
+.tl-loadmore-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sp-2);
+  padding: var(--sp-3) var(--sp-3) calc(16px + env(safe-area-inset-bottom, 0px));
+}
+
+.tl-pg-info {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--gray-accent);
+  text-align: center;
+}
+
+.tl-loadmore-btn {
+  --border-radius: var(--r-pill);
+  --border-width: 1.5px;
+  --border-color: var(--primary);
+  --color: var(--primary);
+  height: 38px;
+  font-size: 13px;
+  font-weight: 700;
+  margin: 0;
+}
+
+@media (max-width: 480px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .refresh-btn {
+    width: 100%;
+  }
+}
+
+/* =========================================================
+   "TESTS INCLUDED" PREVIEW POPUP (eye action button)
+   — same popup shell as test-list.page.scss's
+   test-preview-popup, body content swapped for a scrollable
+   numbered test list instead of the report-preview state.
+   ========================================================= */
+.test-preview-popup {
+  --width: 400px;
+  --max-width: 94vw;
+  --height: auto;
+  --max-height: 85vh;
+  --border-radius: 22px;
+  align-items: center;
+
+  &::part(content) {
+    border-radius: 22px;
+    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+    overflow: hidden;
+  }
+
+  .modal-page {
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+    border-radius: 22px;
+    overflow: hidden;
+  }
+
+  .modal-header {
+    background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+    border-bottom: none;
+    border-top-left-radius: 22px;
+    border-top-right-radius: 22px;
+    padding: 18px 20px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    h2 {
+      color: #fff;
+      font-size: 16px;
+      font-weight: 800;
+      letter-spacing: 0.2px;
+      margin: 0;
+      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    }
+
+    ion-button {
+      margin: 0;
+      --color: #fff;
+      width: 32px;
+      height: 32px;
+      --box-shadow: none;
+
+      &::part(native) {
+        background: rgba(255, 255, 255, 0.2);
+        border-radius: 10px;
+        width: 32px;
+        height: 32px;
+        padding: 0;
+      }
+
+      ion-icon {
+        font-size: 18px;
+      }
+    }
+  }
+
+  .rp-body {
+    flex: 1;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: flex;
+    flex-direction: column;
+    padding: 14px 20px 18px;
+    box-sizing: border-box;
+  }
+
+  /* ---------- numbered tests-included list ---------- */
+  .rp-tests-list {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .rp-tests-row {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 9px 4px;
+    border-bottom: 1px solid #f1f5f5;
+    font-size: 12.5px;
+
+    &:nth-child(even) {
+      background: #fbfdfd;
+    }
+  }
+
+  .rp-tests-idx {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--primary-light);
+    color: var(--primary);
+    font-size: 10.5px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .rp-tests-name {
+    font-weight: 600;
+    color: var(--text-dark);
+    word-break: break-word;
+  }
+
+  .rp-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+    padding: 26px 6px 10px;
+    color: var(--gray-accent);
+    font-size: 13px;
+    font-weight: 600;
+
+    ion-icon {
+      font-size: 34px;
+      color: #c3d3d2;
+    }
+  }
+
+  .rp-footnote {
+    text-align: center;
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--gray-accent);
+    font-style: italic;
+    margin: 14px 0 0;
+    padding-top: 10px;
+    border-top: 1px dashed var(--border-color);
+  }
+}/* =========================================================
+   PDF DOWNLOAD SUCCESS POPUP
+   ========================================================= */
+
+.pdf-success-popup {
+  position: fixed;
+  top: calc(env(safe-area-inset-top, 0px) + 14px);
+  left: 50%;
+
+  width: calc(100% - 32px);
+  max-width: 390px;
+
+  transform: translateX(-50%) translateY(-24px);
+
+  display: flex;
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 13px 14px;
+
+  background: #ffffff;
+
+  border: 1px solid rgba(8, 125, 120, 0.16);
+  border-radius: 14px;
+
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.14),
+    0 3px 10px rgba(8, 125, 120, 0.10);
+
+  z-index: 99999;
+
+  box-sizing: border-box;
+
+  animation:
+    pdfSuccessPopupIn 0.28s ease-out forwards,
+    pdfSuccessPopupOut 0.3s ease-in 2.7s forwards;
+}
+
+
+/* =========================================================
+   ICON
+   ========================================================= */
+
+.pdf-success-icon {
+  width: 38px;
+  height: 38px;
+
+  min-width: 38px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 11px;
+
+  background: var(--primary-light, #e8f7f5);
+
+  color: var(--primary, #087d78);
+
+  ion-icon {
+    font-size: 21px;
+  }
+}
+
+
+/* =========================================================
+   CONTENT
+   ========================================================= */
+
+.pdf-success-content {
+  min-width: 0;
+
+  flex: 1;
+
+  display: flex;
+  flex-direction: column;
+
+  gap: 3px;
+}
+
+
+.pdf-success-title {
+  display: block;
+
+  color: var(--text-dark, #1e293b);
+
+  font-size: 14px;
+  font-weight: 800;
+
+  line-height: 1.25;
+}
+
+
+.pdf-success-message {
+  display: block;
+
+  color: var(--gray-accent, #64748b);
+
+  font-size: 11.5px;
+  font-weight: 500;
+
+  line-height: 1.35;
+
+  word-break: break-word;
+}
+
+
+/* =========================================================
+   CLOSE BUTTON
+   ========================================================= */
+
+.pdf-success-close {
+  width: 30px;
+  height: 30px;
+
+  min-width: 30px;
+
+  margin: 0;
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border: none;
+  border-radius: 9px;
+
+  background: transparent;
+
+  color: #7a8a89;
+
+  cursor: pointer;
+
+  -webkit-tap-highlight-color: transparent;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
+
+  ion-icon {
+    font-size: 17px;
+  }
+
+  &:active {
+    background: #eef5f4;
+    transform: scale(0.90);
+  }
+}
+
+
+/* =========================================================
+   ANIMATION
+   ========================================================= */
+
+@keyframes pdfSuccessPopupIn {
+
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-24px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+}
+
+
+@keyframes pdfSuccessPopupOut {
+
+  from {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-18px);
+  }
+
+}

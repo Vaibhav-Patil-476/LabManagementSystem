@@ -33,4 +33,9 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+
+    <!-- ✅ NEW: required on Android 13+ (API 33+) to show the
+         download-complete notification. Without this, notify()
+         silently does nothing on Android 13+. -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

@@ -2851,11 +2851,53 @@ addPackage(pkg: any): void {
         pt?.test?.testId ?? pt?.test?.id ?? pt?.id ?? 0
       );
 
-      const test = this.allTests.find((t: any) => Number(t.id) === testId);
+      let test = this.allTests.find((t: any) => Number(t.id) === testId);
 
       if (!test) {
-        console.warn('PACKAGE TEST NOT MATCHED IN allTests:', pt);
-        return;
+
+        // ✅ FIX: testId `allTests` (getTests() cha active/franchise
+        // list) madhe sapadla nahi (bahuteka inactive/deleted test —
+        // profile-list.page.ts madhe same testId sathi confirm zalay,
+        // e.g. testId 46951 "LIVER FUNCTION TESTS") mhanun aadhi ithe
+        // silently `return` hot hote ani to test bill madhe kadhach
+        // yet navhta (count ani names donhi kami distayche, exactly
+        // profile-list.page.ts sarkhach issue, pan ithe patient cha
+        // bill madhe). Pan raw package item (`pt`) madheच
+        // testName/price/tat/sampleType aadhichach astat, tyamule to
+        // drop na karता, ekach synthetic test object banवून pudhe
+        // vaparaycha — barobar tyachach pattern jasa
+        // profile-list.page.ts madhe fallback lावlay.
+        const fallbackName = String(
+          pt?.testName ?? pt?.test_name ?? ''
+        ).trim();
+
+        if (!fallbackName) {
+          console.warn('PACKAGE TEST NOT MATCHED IN allTests (no fallback name available, skipping):', pt);
+          return;
+        }
+
+        const fallbackSampleType = String(
+          pt?.sampleTypeName ?? pt?.sample_type_name ?? pt?.sampleType
+          ?? (typeof pt?.sample_type === 'string' ? pt.sample_type : '') ?? 'OTHER'
+        ).trim().toUpperCase() || 'OTHER';
+
+        test = {
+          id: testId,
+          sampleId: pt?.sampleTypeId ?? pt?.sample_type ?? 0,
+          name: fallbackName,
+          b2b: Number(pt?.price2 ?? pt?.b2b ?? pt?.assignedPrice ?? 0),
+          tat: String(pt?.tat ?? 'N/A'),
+          mrp: Number(pt?.test_price ?? pt?.mrp ?? 0),
+          dis: 0,
+          fluid: fallbackSampleType,
+          sampleType: fallbackSampleType,
+          color: pt?.sampleColor ?? '#a855f7'
+        };
+
+        console.warn(
+          `PACKAGE TEST NOT MATCHED IN allTests — using fallback name "${fallbackName}" from raw item:`,
+          pt
+        );
       }
 
       matchedTestsForPreview.push({

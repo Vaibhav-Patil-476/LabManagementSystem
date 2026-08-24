@@ -23,6 +23,20 @@ import { AuthService } from '../../core/services/auth';
 import { RoleService } from '../../core/services/role';
 import { ToastService } from '../../core/services/toast';
 
+// ✅ NEW: native PDF download + system "Download complete" notification support
+import { Capacitor, registerPlugin } from '@capacitor/core';
+
+interface PdfDownloadPlugin {
+  savePdf(options: { fileName: string; data: string }): Promise<{
+    success: boolean;
+    uri: string;
+    fileName: string;
+    location: string;
+  }>;
+}
+
+const PdfDownload = registerPlugin<PdfDownloadPlugin>('PdfDownload');
+
 export type ReportTabKey = 'ALL' | 'COMPLETE' | 'CLINICAL' | 'PARTIALLY_COMPLETE' | 'PENDING' | 'SNR' | 'CANCEL';
 
 export interface ReportTestRow {
@@ -728,7 +742,28 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       );
 
       if (res?.success && res?.downloadUrl) {
-        window.open(res.downloadUrl, '_blank');
+
+        const fileName = res.fileName || `report-${bookingIds[0]}.pdf`;
+
+        if (Capacitor.isNativePlatform()) {
+          // ✅ ANDROID: fetch PDF bytes from S3, convert to base64,
+          // save via native PdfDownload plugin -> lands in Downloads folder
+          // + fires the system "Download complete" notification (same flow as profile-list PDF export)
+          const response = await fetch(res.downloadUrl);
+          const blob = await response.blob();
+          const base64Pdf = await this.blobToBase64(blob);
+
+          const result = await PdfDownload.savePdf({ fileName, data: base64Pdf });
+
+          if (!result || result.success !== true) {
+            throw new Error('Unable to download PDF');
+          }
+
+        } else {
+          // ✅ WEB: unchanged browser-tab behavior
+          window.open(res.downloadUrl, '_blank');
+        }
+
         this.toast.success('Success', `${bookingIds.length} report(s) downloaded successfully.`);
         this.selectedIds.clear();
       } else {
@@ -739,6 +774,16 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     } finally {
       this.isGenerating = false;
     }
+  }
+
+  // ✅ NEW: converts fetched PDF blob to raw base64 (no data: prefix) for PdfDownload plugin
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = reject;
+      reader.onload = () => resolve((reader.result as string).split(',')[1]);
+      reader.readAsDataURL(blob);
+    });
   }
 
   onFranchiseBlur(): void {

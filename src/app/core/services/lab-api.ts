@@ -410,26 +410,25 @@ export class LabApiService {
     const bookingApi = `${this.BASE_URL}/api/v1/lab/booking/patient/get-bookings/${labId}?bookingIds=${bookingIds.join(',')}`;
     const labSettingsApi = `${this.BASE_URL}/api/v1/lab/settings/${labId}`;
 
-    const payload = {
-      templateName: 'template1',
-      params: {
-        letterHead: options?.letterHead ?? true,
-        domain,
-        fLetterHead: options?.fLetterHead ?? false,
-        waterMark: options?.waterMark ?? false,
-        single: options?.single ?? (bookingIds.length === 1),
-        bookings: bookingIds,
-        bookingApi,
-        labSettingsApi,
-        token,
-        reportTestId: 'null',   // ✅ हे मिसिंग होतं — company code मध्ये हे नेहमी पाठवलं जातं
-        cancelTest: '0'          // ✅ हेही मिसिंग होतं
-      }
-    };
+   const payload = {
+  templateName: 'igen',
+  params: {
+    letterHead: options?.letterHead ?? true,
+    domain,
+    fLetterHead: options?.fLetterHead ?? false,
+    waterMark: options?.waterMark ?? false,
+    single: false,   // ✅ company web नेहमी false पाठवते, count काहीही असो
+    bookings: bookingIds,
+    bookingApi,
+    labSettingsApi,
+    token,
+    reportTestId: 'null',
+    cancelTest: 'null'   // ✅ '0' नाही, company 'null' पाठवते
+  }
+};
 
     return this.http.post('https://pdf.hypatholab.in/simple-pdf', payload);
   }
-
 
   printBill(payload: any): Observable<any> {
     return this.http.post(this.billUrl, payload);

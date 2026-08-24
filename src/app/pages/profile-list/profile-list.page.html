@@ -1,13 +1,142 @@
-<ion-header [translucent]="true">
-  <ion-toolbar>
-    <ion-title>profile-list</ion-title>
+<ion-header>
+  <ion-toolbar class="tl-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Test Profile List</ion-title>
   </ion-toolbar>
 </ion-header>
 
-<ion-content [fullscreen]="true">
-  <ion-header collapse="condense">
-    <ion-toolbar>
-      <ion-title size="large">profile-list</ion-title>
-    </ion-toolbar>
-  </ion-header>
+<ion-content class="tl-content">
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="form-card">
+
+    <!-- ===================== TOP SUMMARY BAR (Total Profiles + PDF export) ===================== -->
+    <div class="summary-bar">
+      <div class="total-badge">
+        <ion-icon name="list-outline"></ion-icon>
+        <span>Total Profiles: {{ totalEntries }}</span>
+      </div>
+
+      <ion-button class="pdf-export-btn" fill="solid" (click)="exportPdf()" [disabled]="isLoading || totalEntries === 0">
+        <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+      </ion-button>
+    </div>
+
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
+
+      <div class="filter-field search-field">
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
+        </span>
+        <input type="text" placeholder="Type & Search Profile Name" [(ngModel)]="searchTerm"
+          (ngModelChange)="onSearchChange()" />
+      </div>
+
+      <ion-button class="refresh-btn" fill="solid" (click)="loadProfiles()" [disabled]="isLoading">
+        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+      </ion-button>
+
+    </div>
+
+    <!-- ===================== PROFILE CARD LIST ===================== -->
+    <div class="tl-card-list">
+
+      <div class="tl-card" *ngFor="let item of pagedProfiles">
+
+        <div class="tl-row-top">
+          <div class="tl-name-col">
+            <div class="tl-name-row">
+              <span class="tl-chip-label">Profile Name :- </span>
+              <span class="tl-name">{{ item.profileName }}</span>
+            </div>
+          </div>
+          <div class="tl-row-top-right">
+            <span class="pill tl-tat-pill">{{ item.testCount }} Tests</span>
+            <button class="tl-action-btn" (click)="openDetail(item)" aria-label="View tests included">
+              <ion-icon name="eye-outline"></ion-icon>
+            </button>
+          </div>
+        </div>
+
+        <div class="tl-chip-row" *ngIf="item.sampleTypes.length">
+          <span class="tl-chip-label">Sample Type :- </span>
+          <span class="tl-chip-value" *ngFor="let st of item.sampleTypes" [ngStyle]="{ background: sampleColor(st) }">
+            {{ st }}
+          </span>
+        </div>
+        <div class="tl-chip-row" *ngIf="!item.sampleTypes.length">
+          <span class="tl-chip-label">Sample Type</span>
+          <span class="tl-chip-empty">-</span>
+        </div>
+
+        <div class="tl-price-row" *ngIf="canViewAmount">
+          <span class="tl-price-chip">Assigned <b>₹{{ item.assignedPrice }}</b></span>
+          <span class="tl-price-chip tl-price-b2b">MRP <b>₹{{ item.mrp }}</b></span>
+        </div>
+
+      </div>
+
+      <div class="empty-state" *ngIf="!isLoading && pagedProfiles.length === 0">
+        <ion-icon name="list-outline"></ion-icon>
+        <span>No profiles found</span>
+        <p class="empty-sub">Try a different search term.</p>
+      </div>
+
+      <div class="table-skeleton" *ngIf="isLoading">
+        <div class="skeleton-card" *ngFor="let s of [1,2,3]">
+          <div class="skeleton-line" style="width:55%"></div>
+          <div class="skeleton-line" style="width:75%"></div>
+          <div class="skeleton-line" style="width:40%"></div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- ===================== LOAD MORE FOOTER ===================== -->
+    <div class="tl-loadmore-wrap" *ngIf="!isLoading && totalEntries > 0">
+      <span class="tl-pg-info">Showing {{ pagedProfiles.length }} of {{ totalEntries }} profiles</span>
+
+      <ion-button *ngIf="hasMore" fill="outline" class="tl-loadmore-btn" (click)="loadMore()">
+        Load More
+      </ion-button>
+    </div>
+
+  </div>
+
+  <!-- ===================== "TESTS INCLUDED" PREVIEW POPUP (eye action button) ===================== -->
+  <ion-modal [isOpen]="isDetailModalOpen" cssClass="test-preview-popup" (didDismiss)="closeDetail()">
+    <ng-template>
+      <div class="modal-page" *ngIf="selectedProfile as p">
+        <div class="modal-header">
+          <h2>{{ p.profileName }}</h2>
+          <ion-button fill="clear" (click)="closeDetail()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="rp-body">
+          <div class="rp-tests-list" *ngIf="p.testNames.length; else noTests">
+            <div class="rp-tests-row" *ngFor="let t of p.testNames; let i = index">
+              <span class="rp-tests-idx">{{ i + 1 }}</span>
+              <span class="rp-tests-name">{{ t }}</span>
+            </div>
+          </div>
+          <ng-template #noTests>
+            <div class="rp-error">
+              <ion-icon name="document-text-outline"></ion-icon>
+              <span>No tests found in this profile.</span>
+            </div>
+          </ng-template>
+
+          <p class="rp-footnote">{{ p.testCount }} tests · Sample: {{ p.sampleTypes.join(', ') || '-' }}</p>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+ 
 </ion-content>
