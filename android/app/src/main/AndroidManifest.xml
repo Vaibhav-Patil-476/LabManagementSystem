@@ -38,4 +38,8 @@
          download-complete notification. Without this, notify()
          silently does nothing on Android 13+. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- ✅ NEW: required for barcode scanner camera access -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
 </manifest>

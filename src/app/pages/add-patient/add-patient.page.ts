@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular/standalone';
+import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import {
   IonHeader,
   IonToolbar,
@@ -4324,7 +4325,7 @@ private buildInvoiceAndShow(
     // GET /api/v1/lab/booking/patient/{labId}/{bookingId} cha
     // response madhe TOP-LEVEL "patientId" field madhech asto —
     // confirm zala console log varun. UHID var fallback purna
-    // kadhla, kारण UHID rikami thevli tari he ID yetach (backend
+    // kadhla, कारण UHID rikami thevli tari he ID yetach (backend
     // auto-generate karto).
     // ============================================================
 
@@ -4705,16 +4706,84 @@ private buildInvoiceAndShow(
   }
 
   // ============================================================
-  // BARCODE
+  // BARCODE SCAN (camera)
+  //
+  // ✅ FIX: previously this just showed a static warning toast and
+  // never actually opened the camera. Now it uses
+  // @capacitor-mlkit/barcode-scanning (already installed in the
+  // project) to check/request camera permission, open the scanner,
+  // and write the scanned value straight into this sample group's
+  // barcode + confirmBarcode fields — both of which already flow
+  // into savePatient()/updateSampleBarcode() with zero extra wiring.
   // ============================================================
 
   async scanBarcode(
     sample: any
   ) {
 
-    this.toastService.warning(
-      'Scanner',
-      'Please enter barcode manually. Camera works on real device.'
-    );
+    try {
+
+      const { camera } = await BarcodeScanner.checkPermissions();
+
+      if (camera !== 'granted' && camera !== 'limited') {
+
+        const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+
+        if (newStatus !== 'granted' && newStatus !== 'limited') {
+
+          this.toastService.error(
+            'Permission Denied',
+            'Camera permission is required to scan barcode.'
+          );
+
+          return;
+        }
+      }
+
+      const { barcodes } = await BarcodeScanner.scan();
+
+      if (barcodes && barcodes.length > 0) {
+
+        const scannedValue = String(
+          barcodes[0].rawValue ||
+          barcodes[0].displayValue ||
+          ''
+        ).trim();
+
+        if (!scannedValue) {
+
+          this.toastService.warning(
+            'Empty Barcode',
+            'Scanned barcode was empty. Please try again.'
+          );
+
+          return;
+        }
+
+        this.ngZone.run(() => {
+
+          sample.barcode = scannedValue;
+
+          sample.confirmBarcode = scannedValue;
+        });
+
+        this.toastService.success(
+          'Barcode Scanned',
+          'Barcode set to ' + scannedValue + '.'
+        );
+      }
+
+    } catch (err) {
+
+      console.error(
+        'SCAN BARCODE ERROR:',
+        err
+      );
+
+      this.toastService.error(
+        'Scan Failed',
+        'Could not scan barcode. Please try again.'
+      );
+    }
   }
 }

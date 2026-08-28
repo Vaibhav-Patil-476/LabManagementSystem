@@ -2828,20 +2828,24 @@ ion-content.menu-content {
   }
 }
 
+/* ============================================================
+   Dashboard mini wallet card — restyled to match "Available
+   Balance" style (top label + icon badge, divider, amount left /
+   Add Funds pill right, "As of" date).
+   ============================================================ */
 .wallet-mini-card {
   position: relative;
   display: flex;
-  align-items: center;
-  gap: 14px;
-  min-height: 78px;
-  margin-top: 16px;
-  padding: 18px 20px;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px 16px 15px;
   overflow: hidden;
-  border-radius: 22px;
+  border-radius: 18px;
   color: #fff;
   background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
-  box-shadow: 0 12px 25px rgba(0, 107, 102, .18);
-  cursor: pointer;
+  box-shadow: 0 8px 18px rgba(0, 107, 102, .16);
+  cursor: default;
 }
 
 .wallet-mini-card>*:not(.wallet-orb) {
@@ -2849,86 +2853,106 @@ ion-content.menu-content {
   z-index: 1;
 }
 
+.wm-top-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.wm-label {
+  color: rgba(255, 255, 255, .92);
+  font-size: 10.5px;
+  font-weight: 750;
+  letter-spacing: .07em;
+  text-transform: uppercase;
+}
+
 .wm-icon-badge {
-  width: 42px;
-  height: 42px;
+  width: 28px;
+  height: 28px;
   flex-shrink: 0;
   display: grid;
   place-items: center;
-  border-radius: 14px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, .16);
 
   ion-icon {
-    font-size: 21px;
+    font-size: 14px;
     color: #fff;
   }
 }
 
-.wm-clickable {
+.wm-divider {
+  height: 1px;
+  width: 100%;
+  background: rgba(255, 255, 255, .2);
+}
+
+.wm-bottom-row {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
+  justify-content: space-between;
   gap: 10px;
-  flex: 1;
-  cursor: pointer;
 }
 
-.wm-info {
+.wm-amount-block {
   min-width: 0;
-}
-
-.wm-label {
-  display: block;
-  color: #c3ece8;
-  font-size: 10.5px;
-  font-weight: 750;
-  text-transform: uppercase;
-  letter-spacing: .08em;
 }
 
 .wm-amount {
   display: block;
-  margin-top: 4px;
   font-size: 20px;
-  font-weight: 800;
-  letter-spacing: -.03em;
+  font-weight: 750;
+  letter-spacing: -.02em;
   color: #fff;
+  line-height: 1.15;
+}
+
+.wm-asof {
+  display: block;
+  margin-top: 4px;
+  font-size: 10px;
+  font-weight: 550;
+  color: rgba(255, 255, 255, .68);
 }
 
 .wm-add-btn {
-  margin-left: auto;
-  width: 38px;
-  height: 38px;
   flex-shrink: 0;
-  border: 1.5px solid rgba(255, 255, 255, .35);
-  border-radius: 50%;
-  background: rgba(255, 255, 255, .12);
-  display: grid;
-  place-items: center;
-  color: #fff;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 999px;
+  background: #fff;
+  color: var(--brand-deep, #075f5d);
+  font-size: 11.5px;
+  font-weight: 750;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: transform .12s ease;
 
-  ion-icon {
-    font-size: 20px;
+  &:active {
+    transform: scale(.96);
   }
 }
 
 .wallet-orb {
   position: absolute;
-  border: 1px solid rgba(255, 255, 255, .12);
+  border: 1px solid rgba(255, 255, 255, .1);
   border-radius: 50%;
 }
 
 .wm-orb-one {
-  width: 120px;
-  height: 120px;
-  top: -70px;
-  right: -40px;
+  width: 90px;
+  height: 90px;
+  top: -55px;
+  right: -30px;
 }
 
 .wm-orb-two {
-  width: 70px;
-  height: 70px;
-  right: 40px;
-  bottom: -50px;
+  width: 55px;
+  height: 55px;
+  right: 30px;
+  bottom: -38px;
 }
 
 .wallet-filter-row {

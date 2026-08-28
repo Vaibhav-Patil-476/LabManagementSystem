@@ -370,6 +370,10 @@ export class DashboardPage implements OnInit, OnDestroy {
     return new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
   }
 
+  get today(): Date {
+    return new Date();
+  }
+
   get downloadingReportIdRef(): any {
     return this.downloadingReportId;
   }
@@ -1866,7 +1870,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // NAVIGATION
   // ============================================================
- private readonly LOCKED_PAGES = ['outsource'];
+  private readonly LOCKED_PAGES = ['outsource'];
 
   isPageLocked(page: string): boolean {
     return this.LOCKED_PAGES.includes(page);

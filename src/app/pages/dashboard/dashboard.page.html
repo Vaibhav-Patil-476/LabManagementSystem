@@ -958,18 +958,25 @@
         </section>
 
         <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
-          <span class="wm-icon-badge">
-            <ion-icon name="wallet-outline"></ion-icon>
-          </span>
-
-          <div class="wm-info">
-            <span class="wm-label">Balance</span>
-            <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+          <div class="wm-top-row">
+            <span class="wm-label">AVAILABLE BALANCE</span>
+            <span class="wm-icon-badge">
+              <ion-icon name="wallet-outline"></ion-icon>
+            </span>
           </div>
 
-          <button type="button" class="wm-add-btn" (click)="openWalletModal()">
-            <ion-icon name="add-circle-outline"></ion-icon>
-          </button>
+          <div class="wm-divider"></div>
+
+          <div class="wm-bottom-row">
+            <div class="wm-amount-block">
+              <strong class="wm-amount">₹{{ wallet?.balance | number:'1.2-2' }}</strong>
+              <span class="wm-asof">As of {{ today | date:'dd-MMM-yyyy' }}</span>
+            </div>
+
+            <button type="button" class="wm-add-btn" (click)="openWalletModal()">
+              Add Funds
+            </button>
+          </div>
 
           <span class="wallet-orb wm-orb-one"></span>
           <span class="wallet-orb wm-orb-two"></span>
@@ -1018,11 +1025,11 @@
               <span class="service-label">Profile List</span>
             </div>
 
-            <div class="service-item" (click)="goToPage('outsource')">
+            <div class="service-item" (click)="goToPage('clinical-history')">
               <span class="service-circle indigo">
                 <ion-icon name="time-outline"></ion-icon>
               </span>
-              <span class="service-label">Client History</span>
+              <span class="service-label">Clinical History</span>
             </div>
 
             <div class="service-item" (click)="goToPage('cancel-test')">
