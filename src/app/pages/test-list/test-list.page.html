@@ -20,6 +20,15 @@
         <ion-icon name="list-outline"></ion-icon>
         <span>Total Tests: {{ totalEntries }}</span>
       </div>
+
+      <ion-button
+        class="tl-download-btn"
+        (click)="exportTestPortfolioPdf()"
+        [disabled]="isExportingPdf">
+        <ion-spinner *ngIf="isExportingPdf" name="crescent" slot="start"></ion-spinner>
+        <ion-icon *ngIf="!isExportingPdf" slot="start" name="document-text-outline"></ion-icon>
+        <span *ngIf="!isExportingPdf">Download</span>
+      </ion-button>
     </div>
 
     <!-- ===================== FILTER BAR ===================== -->
@@ -49,11 +58,15 @@
             <span class="tl-name">{{ item.testName }}</span>
             <span class="tl-code" *ngIf="item.testCode">{{ item.testCode }}</span>
           </div>
+          <!--
+            ✅ REMOVED: eye icon action button. तो फक्त
+            exportTestPortfolioPdf() ला duplicate call करत होता — वरचं
+            "Download Test Portfolio" बटण आधीच तेच काम करतं, त्यामुळे हा
+            per-card icon काढून टाकलाय (tl-action-btn CSS सुद्धा
+            styles मधून काढलंय).
+          -->
           <div class="tl-row-top-right">
             <span class="pill tl-tat-pill">{{ item.tat }} min</span>
-            <button class="tl-action-btn" (click)="openDetail(item)" aria-label="View test details">
-              <ion-icon name="eye-outline"></ion-icon>
-            </button>
           </div>
         </div>
 
@@ -106,45 +119,13 @@
 
   </div>
 
-  <!-- ===================== SAMPLE REPORT PREVIEW POPUP (action button) ===================== -->
-  <ion-modal [isOpen]="isDetailModalOpen" cssClass="test-preview-popup" (didDismiss)="closeDetail()">
-    <ng-template>
-      <div class="modal-page" *ngIf="selectedTest as t">
-        <div class="modal-header">
-          <h2>{{ t.testName }}</h2>
-          <ion-button fill="clear" (click)="closeDetail()">
-            <ion-icon name="close-outline"></ion-icon>
-          </ion-button>
-        </div>
-
-        <div class="rp-body">
-          <div class="rp-loading" *ngIf="previewState === 'loading'">
-            <ion-spinner name="crescent"></ion-spinner>
-            <span>Generating sample report…</span>
-            <p class="rp-sub">Building a dummy PDF with this test's actual report format.</p>
-          </div>
-
-          <div class="rp-ready" *ngIf="previewState === 'ready'">
-            <ion-icon name="document-text-outline" class="rp-doc-icon"></ion-icon>
-            <span class="rp-ready-title">Sample report is ready</span>
-            <p class="rp-sub" *ngIf="previewFileName">{{ previewFileName }}</p>
-            <ion-button expand="block" class="rp-open-btn" (click)="openReport()">
-              <ion-icon slot="start" name="open-outline"></ion-icon>
-              Open Report
-            </ion-button>
-          </div>
-
-          <div class="rp-error" *ngIf="previewState === 'error'">
-            <ion-icon name="alert-circle-outline"></ion-icon>
-            <span>Could not generate the sample report.</span>
-            <ion-button fill="outline" size="small" class="rp-retry-btn" (click)="retryPreview()">
-              Try Again
-            </ion-button>
-          </div>
-
-          <p class="rp-footnote">This is a dummy report generated for preview purposes only.</p>
-        </div>
-      </div>
-    </ng-template>
-  </ion-modal>
+  <!--
+    ✅ REMOVED: "Sample Report Preview Popup" (ion-modal block).
+    हा जुना modal backend च्या dummy-report preview साठी होता
+    (isDetailModalOpen, selectedTest, previewState, openReport,
+    closeDetail, retryPreview — हे सगळे properties/methods आता
+    test-list.page.ts मधून काढून टाकले आहेत). नवीन flow मध्ये PDF
+    थेट client-side generate होऊन डाउनलोड होतो, त्यामुळे intermediate
+    "loading / ready / error" popup ची गरज उरली नाही.
+  -->
 </ion-content>

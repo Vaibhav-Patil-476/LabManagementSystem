@@ -1,4 +1,4 @@
-  <ion-header>
+<ion-header>
     <ion-toolbar class="report-header">
       <ion-buttons slot="start">
         <ion-back-button defaultHref="/dashboard"></ion-back-button>
@@ -99,11 +99,10 @@
         </mat-form-field>
 
 
-        <!-- Refresh -->
+          <!-- Refresh -->
         <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
-          <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+          <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="isLoading"></ion-icon>
         </ion-button>
-
       </div>
 
 
@@ -209,11 +208,15 @@
               </div>
             </div>
 
+            <!-- ✅ Barcode row — tap-to-copy added (same behaviour as
+              Booking Status page): trackBy + click handler + copy icon. -->
             <div class="bcard-stat">
               <div class="bcard-barcode-inline">
-                <div class="barcode-line" *ngFor="let b of item.barcodes">
+                <div class="barcode-line" *ngFor="let b of item.barcodes; trackBy: trackByBarcode"
+                  (click)="copyBarcode(b); $event.stopPropagation()">
                   <ion-icon name="qr-code-outline"></ion-icon>
                   <span>{{ b }}</span>
+                  <ion-icon name="copy-outline" class="barcode-line-copy-icon"></ion-icon>
                 </div>
                 <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
               </div>

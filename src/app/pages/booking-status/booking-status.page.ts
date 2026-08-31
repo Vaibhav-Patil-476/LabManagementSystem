@@ -1,6 +1,7 @@
 import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
@@ -14,11 +15,12 @@ import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline , copyOutline  
 } from 'ionicons/icons';
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
 import { AuthService } from '../../core/services/auth';
+import { Router } from '@angular/router';
 
 export interface BookingSample {
   accessionId?: number;
@@ -404,13 +406,15 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
     private alertController: AlertController,
-    private authService: AuthService
+    private authService: AuthService,
+     private router: Router,
+      private toastService: ToastService
   ) {
     addIcons({
       flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
       addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
       documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline
+      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline , 'copy-outline': copyOutline 
     });
   }
 
@@ -1913,4 +1917,59 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.isBillHistoryModalOpen = false;
     this.billHistoryBooking = null;
   }
+
+  // ============================================================
+// COPY BARCODE TO CLIPBOARD
+// ============================================================
+
+async copyBarcode(barcode: string): Promise<void> {
+
+  const value = String(barcode || '').trim();
+
+  if (!value || value === '—') {
+    this.toastService.warning(
+      'Nothing to Copy',
+      'No barcode available.'
+    );
+    return;
+  }
+
+  try {
+
+    await navigator.clipboard.writeText(value);
+
+    this.toastService.success(
+      'Copied',
+      'Barcode ' + value + ' copied to clipboard.'
+    );
+
+  } catch (err) {
+
+    console.error('COPY BARCODE ERROR:', err);
+
+    // Fallback for older WebViews where navigator.clipboard is unavailable
+    const tempInput = document.createElement('textarea');
+    tempInput.value = value;
+    tempInput.style.position = 'fixed';
+    tempInput.style.opacity = '0';
+    document.body.appendChild(tempInput);
+    tempInput.focus();
+    tempInput.select();
+
+    try {
+      document.execCommand('copy');
+      this.toastService.success(
+        'Copied',
+        'Barcode ' + value + ' copied to clipboard.'
+      );
+    } catch {
+      this.toastService.error(
+        'Copy Failed',
+        'Could not copy barcode. Please copy manually.'
+      );
+    } finally {
+      document.body.removeChild(tempInput);
+    }
+  }
+}
 }

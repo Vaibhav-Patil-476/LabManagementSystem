@@ -86,7 +86,7 @@
 
       <!-- REFRESH -->
       <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
-        <ion-icon slot="icon-only" name="refresh-outline"></ion-icon>
+        <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="isLoading"></ion-icon>
       </ion-button>
 
     </div>
@@ -173,11 +173,13 @@
         <div class="bcard-actions">
 
           <div class="bcard-barcode-inline bcard-barcode-inline-actions">
-            <div class="barcode-line" *ngFor="let s of item.samples; trackBy: trackByBarcode">
-              <ion-icon name="qr-code-outline"></ion-icon>
-              <span>{{ s.barcode }} </span>
-              <small *ngIf="s.sampleType">{{ s.sampleType }}</small>
-            </div>
+<div class="barcode-line" *ngFor="let s of item.samples; trackBy: trackByBarcode"
+  (click)="copyBarcode(s.barcode); $event.stopPropagation()">
+  <ion-icon name="qr-code-outline"></ion-icon>
+  <span>{{ s.barcode }} </span>
+  <small *ngIf="s.sampleType">{{ s.sampleType }}</small>
+  <ion-icon name="copy-outline" class="barcode-line-copy-icon"></ion-icon>
+</div>
             <div class="barcode-line empty" *ngIf="!item.samples?.length">—</div>
           </div>
 

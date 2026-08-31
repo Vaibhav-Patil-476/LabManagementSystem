@@ -72,20 +72,20 @@
         </div>
         <div class="input-group" style="flex: 1;">
           <label>Patient Full Name <span class="required">*</span></label>
-          <div class="input-wrap">
-            <ion-input type="text" placeholder="Patient Full Name" maxlength="60"
-              [(ngModel)]="patient.name"></ion-input>
-          </div>
+<div class="input-wrap" [class.field-error]="fieldErrors.name">
+  <ion-input type="text" placeholder="Patient Full Name" maxlength="60"
+    [(ngModel)]="patient.name" (ionInput)="clearFieldError('name')"></ion-input>
+</div>
         </div>
       </div>
 
       <div class="input-row">
         <div class="input-group" style="flex: 1;">
           <label>Age <span class="required">*</span></label>
-          <div class="input-wrap">
-            <ion-input type="number" inputmode="numeric" placeholder="Age" maxlength="3" min="0" max="120"
-              [(ngModel)]="patient.age"></ion-input>
-          </div>
+<div class="input-wrap" [class.field-error]="fieldErrors.age">
+  <ion-input type="number" inputmode="numeric" placeholder="Age" maxlength="3" min="0" max="120"
+    [(ngModel)]="patient.age" (ionInput)="clearFieldError('age')"></ion-input>
+</div>
         </div>
         <div class="input-group" style="flex: 1;">
           <label>Age Type</label>
@@ -135,13 +135,11 @@
 
           <div class="doctor-input-row">
 
-            <div class="input-wrap">
-
-              <ion-input type="text" placeholder="Search Doctor Name" maxlength="60" [(ngModel)]="doctorSearch"
-                (ionInput)="searchDoctorInput()" (click)="$event.stopPropagation()">
-              </ion-input>
-
-            </div>
+   <div class="input-wrap" [class.field-error]="fieldErrors.doctor">
+  <ion-input type="text" placeholder="Search Doctor Name" maxlength="60" [(ngModel)]="doctorSearch"
+    (ionInput)="searchDoctorInput(); clearFieldError('doctor')" (click)="$event.stopPropagation()">
+  </ion-input>
+</div>
 
             <ion-button class="add-btn" fill="solid" (click)="openAddDoctor(); $event.stopPropagation()">
               <ion-icon name="add-outline"></ion-icon>
@@ -215,13 +213,13 @@
       </div>
 
       <div class="input-row">
-        <div class="input-group" style="flex: 1;">
-          <label>MOB. NO.</label>
-          <div class="input-wrap phone-wrap">
-            <span class="phone-flag">🇮🇳 +91</span>
-            <ion-input type="tel" inputmode="numeric" placeholder="Mobile Number" maxlength="10"
-              [(ngModel)]="patient.phone"></ion-input>
-          </div>
+<div class="input-group" style="flex: 1;">
+  <label>MOB. NO. <span class="required">*</span></label>
+<div class="input-wrap phone-wrap" [class.field-error]="fieldErrors.mobile">
+  <span class="phone-flag">🇮🇳 +91</span>
+  <ion-input type="tel" inputmode="numeric" placeholder="Mobile Number" maxlength="10"
+    [(ngModel)]="patient.phone" (ionInput)="clearFieldError('mobile')"></ion-input>
+</div>
         </div>
         <div class="input-group" style="flex: 1;">
           <label>AADHAAR NUMBER</label>

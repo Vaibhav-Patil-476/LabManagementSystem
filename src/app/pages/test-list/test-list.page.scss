@@ -50,6 +50,7 @@
   display: flex;
   flex-wrap: wrap;
   align-items: center;
+  justify-content: space-between;
   gap: var(--sp-3);
   padding: 2px var(--sp-3) var(--sp-5);
 }
@@ -69,6 +70,39 @@
   letter-spacing: 0.1px;
 
   ion-icon { font-size: 15px; }
+}
+
+/* ---------- download portfolio button — small pill, next to
+   total-badge (page brand style, NOT full-width) ---------- */
+.tl-download-btn {
+  --background: var(--brand-gradient);
+  --background-activated: var(--brand-gradient);
+  --background-hover: var(--brand-gradient);
+  --color: #ffffff;
+  --border-radius: var(--r-pill);
+  --box-shadow: var(--shadow-glow);
+  --padding-start: 14px;
+  --padding-end: 14px;
+  height: 34px;
+  margin: 0;
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.1px;
+  text-transform: none;
+  flex-shrink: 0;
+
+  ion-icon {
+    font-size: 14px;
+  }
+
+  ion-spinner {
+    width: 14px;
+    height: 14px;
+  }
+
+  &:active {
+    --box-shadow: none;
+  }
 }
 
 /* ---------- filter bar ---------- */
@@ -231,29 +265,6 @@
   font-weight: 600;
   color: var(--gray-accent);
   letter-spacing: 0.2px;
-}
-
-/* ---------- action button (eye icon) ---------- */
-.tl-action-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border: none;
-  border-radius: 8px;
-  background: var(--primary-light);
-  flex-shrink: 0;
-  cursor: pointer;
-
-  ion-icon {
-    font-size: 15px;
-    color: var(--primary);
-  }
-
-  &:active {
-    opacity: 0.7;
-  }
 }
 
 /* ---------- pills (shared base) ---------- */
@@ -434,10 +445,11 @@
 }
 
 /* =========================================================
-   TEST DETAIL / SAMPLE REPORT PREVIEW POPUP (action/eye icon)
-   — small centered popup, same look as booking-status/cancel-test
-   test-preview-popup. Component styles are view-encapsulated per
-   page, so this block is duplicated here rather than shared.
+   TEST DETAIL / SAMPLE REPORT PREVIEW POPUP
+   — kept intentionally (legacy, may be reused elsewhere by other
+   templates sharing this popup class), even though this page no
+   longer opens it itself. Component styles are view-encapsulated
+   per page, so this block is duplicated here rather than shared.
 
    NOTE: template uses `.rp-body`, `.rp-loading`, `.rp-ready`,
    `.rp-error`, `.rp-doc-icon`, `.rp-ready-title`, `.rp-sub`,

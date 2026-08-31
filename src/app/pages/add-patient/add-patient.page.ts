@@ -126,6 +126,31 @@ export class AddPatientComponent {
     homeCollection: false
   };
 
+  // ============================================================
+  // FIELD-LEVEL VALIDATION ERRORS
+  //
+  // Each key here maps to one input's [class.field-error] binding
+  // in the HTML. validatePatientForm() sets these to `true` for
+  // whichever field fails first (and resets all of them at the
+  // start of every validation run). clearFieldError() is wired to
+  // each input's (ionInput) so the red border disappears the
+  // moment the user starts typing again.
+  // ============================================================
+
+  fieldErrors: any = {
+    name: false,
+    age: false,
+    doctor: false,
+    mobile: false,
+    aadhaar: false,
+    uhid: false,
+    address: false,
+    history: false,
+    otherCharges: false,
+    customFranchise: false,
+    tests: false
+  };
+
   billing = {
     discountType: 'percent' as 'percent' | 'fixed',
     discountValue: 0,
@@ -458,6 +483,36 @@ get displayTestRows(): any[] {
     this.filteredDoctors = [];
   }
 
+  // ============================================================
+  // ✅ FIELD ERROR HELPERS
+  //
+  // clearFieldError(field) is bound to (ionInput) on every required
+  // input in the HTML. The moment the user types, the red border
+  // for that specific field disappears — no need to re-submit the
+  // form to see it clear.
+  // ============================================================
+
+  clearFieldError(field: string): void {
+    if (this.fieldErrors[field]) {
+      this.fieldErrors[field] = false;
+    }
+  }
+
+  private resetFieldErrors(): void {
+    this.fieldErrors = {
+      name: false,
+      age: false,
+      doctor: false,
+      mobile: false,
+      aadhaar: false,
+      uhid: false,
+      address: false,
+      history: false,
+      otherCharges: false,
+      customFranchise: false,
+      tests: false
+    };
+  }
 
   private doctorSearchTimer: any = null;
   private extractDoctorsResponse(res: any): any[] {
@@ -3364,6 +3419,10 @@ getSubTotal() {
       homeCollection: false
     };
 
+    // ✅ Field-level red-border errors reset karाycha, nahitar
+    // reset form नंतर पण जुने errors dikhat rahtil.
+    this.resetFieldErrors();
+
     this.selectedTests =
       [];
 
@@ -3486,6 +3545,10 @@ getSubTotal() {
     this.patient.homeCollection =
       false;
 
+    // ✅ Field-level red-border errors reset karाycha next booking
+    // suरू करताना.
+    this.resetFieldErrors();
+
     this.selectedTests =
       [];
 
@@ -3532,12 +3595,12 @@ getSubTotal() {
   //      • Patient Full Name
   //      • Age
   //      • Ref. Doctor (selected or typed)
+  //      • Mobile Number
   //      • At least 1 Test selected
   //
   //  - OPTIONAL (fine to leave blank — but if the user DOES fill
   //    it in, the value must match the correct format/length for
   //    that field type):
-  //      • Mobile Number  -> exactly 10 digits, starts 6-9
   //      • Aadhaar Number -> exactly 12 digits, numeric only
   //      • UHID           -> 2-30 chars (letters/numbers/-//)
   //      • Address        -> max 200 chars
@@ -3545,20 +3608,29 @@ getSubTotal() {
   //      • Other Charges  -> valid non-negative number
   //      • Custom Franchise (Admin) -> max 60 chars
   //
+  // Every failing field also flips its `fieldErrors.xxx` flag to
+  // `true` so the matching input gets a red border in the HTML.
+  // All flags are reset at the very start of every validation run.
+  //
   // Returns the first validation error message found, or null if
   // the form is valid.
   // ============================================================
 
   private validatePatientForm(): string | null {
 
+    // ✅ Sagle field-level errors reset karा suरुवातीला
+    this.resetFieldErrors();
+
     // ---------- Patient Name (REQUIRED) ----------
     const name = String(this.patient?.name || '').trim();
 
     if (!name) {
+      this.fieldErrors.name = true;
       return 'Please enter patient full name.';
     }
 
     if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(name)) {
+      this.fieldErrors.name = true;
       return 'Patient name should contain only letters and be 2-60 characters long.';
     }
 
@@ -3566,10 +3638,12 @@ getSubTotal() {
     const ageRaw = String(this.patient?.age ?? '').trim();
 
     if (!ageRaw) {
+      this.fieldErrors.age = true;
       return 'Please enter patient age.';
     }
 
     if (!/^\d+$/.test(ageRaw)) {
+      this.fieldErrors.age = true;
       return 'Age must contain numbers only.';
     }
 
@@ -3577,14 +3651,17 @@ getSubTotal() {
     const ageType = this.patient?.ageType || 'years';
 
     if (ageType === 'years' && (ageNum < 1 || ageNum > 120)) {
+      this.fieldErrors.age = true;
       return 'Age (in years) must be between 1 and 120.';
     }
 
     if (ageType === 'months' && (ageNum < 1 || ageNum > 11)) {
+      this.fieldErrors.age = true;
       return 'Age (in months) must be between 1 and 11.';
     }
 
     if (ageType === 'days' && (ageNum < 1 || ageNum > 31)) {
+      this.fieldErrors.age = true;
       return 'Age (in days) must be between 1 and 31.';
     }
 
@@ -3594,17 +3671,25 @@ getSubTotal() {
     ).trim();
 
     if (!doctorTyped) {
+      this.fieldErrors.doctor = true;
       return 'Please select or enter Ref. Doctor name.';
     }
 
     if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(doctorTyped)) {
+      this.fieldErrors.doctor = true;
       return 'Doctor name should contain only letters and be 2-60 characters long.';
     }
 
-    // ---------- Mobile Number (OPTIONAL, format checked if filled) ----------
+    // ---------- Mobile Number (REQUIRED) ----------
     const mobile = String(this.patient?.phone || '').trim();
 
-    if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
+    if (!mobile) {
+      this.fieldErrors.mobile = true;
+      return 'Please enter mobile number.';
+    }
+
+    if (!/^[6-9]\d{9}$/.test(mobile)) {
+      this.fieldErrors.mobile = true;
       return 'Mobile number must be exactly 10 digits and start with 6-9.';
     }
 
@@ -3612,6 +3697,7 @@ getSubTotal() {
     const aadhaar = String(this.patient?.aadhaar || '').trim();
 
     if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
+      this.fieldErrors.aadhaar = true;
       return 'Aadhaar number must be exactly 12 digits.';
     }
 
@@ -3619,6 +3705,7 @@ getSubTotal() {
     const uhid = String(this.patient?.uhid || '').trim();
 
     if (uhid && !/^[A-Za-z0-9\-\/]{2,30}$/.test(uhid)) {
+      this.fieldErrors.uhid = true;
       return 'UHID should be 2-30 characters (letters, numbers, - or / only).';
     }
 
@@ -3626,6 +3713,7 @@ getSubTotal() {
     const address = String(this.patient?.address || '').trim();
 
     if (address && address.length > 200) {
+      this.fieldErrors.address = true;
       return 'Address should not exceed 200 characters.';
     }
 
@@ -3633,6 +3721,7 @@ getSubTotal() {
     const history = String(this.patient?.history || '').trim();
 
     if (history && history.length > 500) {
+      this.fieldErrors.history = true;
       return 'Clinical history should not exceed 500 characters.';
     }
 
@@ -3646,6 +3735,7 @@ getSubTotal() {
       Number(otherChargesRaw) !== 0
     ) {
       if (isNaN(Number(otherChargesRaw)) || Number(otherChargesRaw) < 0) {
+        this.fieldErrors.otherCharges = true;
         return 'Other charges must be a valid positive number.';
       }
     }
@@ -3658,12 +3748,14 @@ getSubTotal() {
       ).trim();
 
       if (customFranchise && customFranchise.length > 60) {
+        this.fieldErrors.customFranchise = true;
         return 'Custom franchise name should not exceed 60 characters.';
       }
     }
 
     // ---------- Tests (REQUIRED — at least 1) ----------
     if (!this.selectedTests || this.selectedTests.length === 0) {
+      this.fieldErrors.tests = true;
       return 'Please select at least one test.';
     }
 
@@ -3680,7 +3772,9 @@ getSubTotal() {
     // ✅ CENTRALIZED VALIDATION (industry-style)
     // Required fields are always checked. Optional fields are only
     // checked for correct format/length WHEN the user has filled
-    // them in — leaving them blank is fine.
+    // them in — leaving them blank is fine. Whichever field fails
+    // first also gets `fieldErrors.xxx = true`, which the HTML
+    // uses to show a red border on that input.
     // ============================================================
     const validationError = this.validatePatientForm();
 
@@ -3735,6 +3829,7 @@ getSubTotal() {
         : 3916;
 
     if (!hasExistingDoctor && !hasCustomDoctor) {
+      this.fieldErrors.doctor = true;
       this.toastService.error(
         'Validation Error',
         'Please select or enter doctor.'
@@ -3743,6 +3838,7 @@ getSubTotal() {
     }
 
     if (!finalDoctorId || finalDoctorId <= 0) {
+      this.fieldErrors.doctor = true;
       this.toastService.error(
         'Doctor Error',
         'Doctor is required please reload or select doctor.'

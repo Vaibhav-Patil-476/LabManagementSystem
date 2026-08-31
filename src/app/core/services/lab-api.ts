@@ -224,20 +224,7 @@ export class LabApiService {
     );
   }
 
-  // FAST endpoint — company app pramane server-side date + franchise
-  // filtering karto, tyamule payload halka ani jalad yeto.
-  // booking-status page ani dashboard doghansathi hach vaparla jato.
-  //
-  // NOTE 1: 'page' 0-INDEXED AHE (Spring Pageable — response cha
-  // pageable.pageNumber / offset confirm karto). Pahili/ekmev page sathi
-  // 0 pathva, 1 nahi — nahitar backend "dusri page" (records 21-40)
-  // magto ani thoda data aslelya divsansathi content rikama yeto.
-  //
-  // NOTE 2: 'createdBy' backend support karat nahi (real company
-  // network request madhe to param nahiye) — pathvla tar backend
-  // content rikama parat karto. Staff-specific filtering client-side
-  // (dashboard.page.ts cha applyOverrideFilter) karaycha.
-  getBookingStatusNew(
+   getBookingStatusNew(
     labId: number,
     page: number,
     size: number,
@@ -245,7 +232,13 @@ export class LabApiService {
     endDate: string,
     franchiseId?: any
   ): Observable<any> {
+    // ✅ FIX: '_t' cache-buster add kela (getBookingsPage() sarkha).
+    // Ha nastana WebView same GET URL sathi cached response return
+    // karat hota — mhanun Refresh click kelyavarhi navin booking /
+    // status update disat navhta (date range same asel tar URL exact
+    // sameच rahायचा, browser/WebView ekach cached reply detach).
     let params = new HttpParams()
+      .set('_t', Date.now().toString())
       .set('optimize', 'false')
       .set('page', page.toString())
       .set('size', size.toString())

@@ -21,8 +21,14 @@
         <span>Total Profiles: {{ totalEntries }}</span>
       </div>
 
-      <ion-button class="pdf-export-btn" fill="solid" (click)="exportPdf()" [disabled]="isLoading || totalEntries === 0">
-        <ion-icon slot="icon-only" name="download-outline"></ion-icon>
+      <!--
+        ✅ RESTYLE: test-list.page.html च्या Download button सारखाच —
+        छोटं pill-style button (icon-only square ऐवजी), page brand
+        gradient/glow style सोबत match.
+      -->
+      <ion-button class="pdf-export-btn" (click)="exportPdf()" [disabled]="isLoading || totalEntries === 0">
+        <ion-icon slot="start" name="download-outline"></ion-icon>
+        <span>Download</span>
       </ion-button>
     </div>
 

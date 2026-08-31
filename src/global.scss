@@ -24,6 +24,11 @@
  *   ion-modal.invoice-modal-cls now stretches to full viewport width/height
  *   instead of Ionic's default centered floating card, so the invoice no
  *   longer looks like a small card floating with gaps around it.
+ *
+ * ✅ FIX ADDED (one-hand touch-jump on scrollbar):
+ *   The scrollbar track is now hidden (scrolling itself still works via
+ *   swipe/drag). Previously the visible track caught accidental thumb
+ *   touches during one-hand phone use and jump-scrolled the page.
  */
 
 /* Core CSS required for Ionic components to work properly */
@@ -208,51 +213,40 @@ h3,
 }
 
 /* =====================================================================
-   ✅ SLIM PREMIUM SCROLLBARS
+   ✅ HIDDEN SCROLLBARS (one-hand touch-jump fix)
+   -----------------------------------------------------------------
+   The old design used a visible 8px colored scrollbar track. On
+   mobile, resting/swiping a thumb near the right edge (normal
+   one-hand grip) would land on that track and the browser would
+   treat it as a "click-to-scroll" — jumping the page to a random
+   position. Scrolling itself (swipe/drag anywhere on the content)
+   still works exactly the same; only the visible, tappable track
+   is removed.
 ===================================================================== */
 ion-content {
   --overflow: auto;
 }
 
 ion-content::part(scroll) {
-  scrollbar-width: thin;
-  scrollbar-color: var(--brand-300) transparent;
+  scrollbar-width: none;      /* Firefox */
+  -ms-overflow-style: none;   /* old Edge/IE */
 }
 
 ion-content::part(scroll)::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  display: none;              /* Chrome, Safari, WebView (Android/iOS) */
+  width: 0;
+  height: 0;
 }
 
-ion-content::part(scroll)::-webkit-scrollbar-track {
-  background: transparent;
+* {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 
-ion-content::part(scroll)::-webkit-scrollbar-thumb {
-  background: var(--brand-300);
-  border-radius: var(--radius-pill);
-}
-
-ion-content::part(scroll)::-webkit-scrollbar-thumb:hover {
-  background: var(--brand-500);
-}
-
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: var(--brand-300);
-  border-radius: var(--radius-pill);
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: var(--brand-500);
+*::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -476,4 +470,8 @@ ion-modal.invoice-modal-cls .modal-shadow {
 
 ion-modal.invoice-modal-cls {
   --backdrop-opacity: 0 !important;
+}
+
+html {
+  background-color: #087b76;
 }

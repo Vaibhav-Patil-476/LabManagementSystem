@@ -1613,3 +1613,12 @@
     font-size: 13px;
   }
 }
+
+.spin-icon {
+  animation: tl-spin 0.8s linear infinite;
+}
+
+@keyframes tl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

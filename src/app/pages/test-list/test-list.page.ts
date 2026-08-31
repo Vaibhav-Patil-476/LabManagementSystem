@@ -3,21 +3,34 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent,
-  IonRefresher, IonRefresherContent, IonIcon, IonButton, IonSpinner, IonModal
+  IonRefresher, IonRefresherContent, IonIcon, IonButton, IonSpinner
 } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   searchOutline, listOutline, refreshOutline, eyeOutline, closeOutline,
-  alertCircleOutline, documentTextOutline, openOutline
+  alertCircleOutline, documentTextOutline, openOutline, downloadOutline
 } from 'ionicons/icons';
-import { Browser } from '@capacitor/browser';
-import { of } from 'rxjs';
-import { catchError } from 'rxjs/operators';
+import { registerPlugin, Capacitor } from '@capacitor/core';
 
 import { LabApiService } from '../../core/services/lab-api';
 import { AuthService } from '../../core/services/auth';
 import { RoleService } from '../../core/services/role';
-import { environment } from '../../../environments/environment';
+
+import pdfMake from 'pdfmake/build/pdfmake';
+import pdfFonts from 'pdfmake/build/vfs_fonts';
+
+// ✅ pdfmake 0.2.x ची vfs सेट करण्याची पद्धत (कंपनीच्या वेब कोडप्रमाणे)
+pdfMake.vfs = pdfFonts.pdfMake ? pdfFonts.pdfMake.vfs : pdfFonts.vfs;
+
+// Native Android plugin (PdfDownloadPlugin.java) register करणे
+interface PdfDownloadPlugin {
+  savePdf(options: { fileName: string; data: string }): Promise<{
+    success: boolean;
+    fileName: string;
+    uri: string;
+  }>;
+}
+const PdfDownload = registerPlugin<PdfDownloadPlugin>('PdfDownload');
 
 /** Mapped shape used only by this page's template. */
 interface TestListItem {
@@ -30,8 +43,6 @@ interface TestListItem {
   source: string;
   tat: string;
 }
-
-type PreviewState = 'loading' | 'ready' | 'error';
 
 // Same role constants/rule dashboard.page.ts madhe vaparleli.
 const ROLE = {
@@ -50,7 +61,7 @@ const ROLE = {
     CommonModule,
     FormsModule,
     IonHeader, IonToolbar, IonButtons, IonBackButton, IonTitle, IonContent,
-    IonRefresher, IonRefresherContent, IonIcon, IonButton, IonSpinner, IonModal
+    IonRefresher, IonRefresherContent, IonIcon, IonButton, IonSpinner
   ]
 })
 export class TestListPage implements OnInit {
@@ -70,14 +81,9 @@ export class TestListPage implements OnInit {
   visibleCount = this.batchSize;
 
   // ============================================================
-  // ACTION BUTTON (eye icon) — Dummy Report Preview (actual company PDF)
+  // PDF EXPORT (client-side, backend ला call नाही)
   // ============================================================
-  isDetailModalOpen = false;
-  selectedTest: TestListItem | null = null;
-
-  previewState: PreviewState = 'loading';
-  previewDownloadUrl: string | null = null;
-  previewFileName: string | null = null;
+  isExportingPdf = false;
 
   constructor(
     private labApi: LabApiService,
@@ -92,7 +98,8 @@ export class TestListPage implements OnInit {
       'close-outline': closeOutline,
       'alert-circle-outline': alertCircleOutline,
       'document-text-outline': documentTextOutline,
-      'open-outline': openOutline
+      'open-outline': openOutline,
+      'download-outline': downloadOutline
     });
   }
 
@@ -118,7 +125,25 @@ export class TestListPage implements OnInit {
   // ============================================================
   loadTests(): void {
     this.isLoading = true;
-    const franchiseId = this.authService.franchiseId;
+
+    // ✅ FIX: franchiseId फक्त तेव्हाच backend ला पाठवा जेव्हा login
+    // केलेली entity प्रत्यक्ष एखादी franchise आहे (ROLE_FRANCHISE /
+    // ROLE_FRANCHISE_STAFF). आधी role कुठलाही असो, नेहमी
+    // authService.franchiseId पाठवला जायचा — त्यामुळे LAB_ADMIN /
+    // STAFF login केल्यावरही backend तो franchiseId वापरून तिथल्या
+    // franchise पुरताच (चुकीचा/मर्यादित) tests subset return करत होता,
+    // आणि web वर दिसणाऱ्या full lab-wide count पेक्षा mobile वर कमी
+    // count दिसत होता. आता LAB_ADMIN / STAFF साठी franchiseId
+    // undefined राहील, त्यामुळे backend पूर्ण lab-wide master list
+    // देईल (web शी match होईल), आणि franchise login चं जुनं
+    // filtered behavior तसंच सुरक्षित राहील.
+    const role = this.authService.role;
+    const isFranchiseRole =
+      role === ROLE.FRANCHISE || role === ROLE.FRANCHISE_STAFF;
+
+    const franchiseId = isFranchiseRole
+      ? this.authService.franchiseId
+      : undefined;
 
     this.labApi.getTests(franchiseId).subscribe({
       next: (res: any) => {
@@ -193,230 +218,156 @@ export class TestListPage implements OnInit {
   }
 
   // ============================================================
-  // ACTION BUTTON — Dummy Report Preview
+  // PDF EXPORT — सगळ्या टेस्ट्सची यादी client-side (pdfmake) generate
+  // करून डिव्हाइसवर डाउनलोड करते.
   // ============================================================
-  openDetail(item: TestListItem): void {
-    this.selectedTest = item;
-    this.isDetailModalOpen = true;
-    this.previewState = 'loading';
-    this.previewDownloadUrl = null;
-    this.previewFileName = null;
+  async exportTestPortfolioPdf(): Promise<void> {
+    console.log('EXPORT CLICKED');
+    if (this.isExportingPdf) return;
+    this.isExportingPdf = true;
 
-    const labId = this.authService.labId;
+    try {
+      const showMRP = this.canViewAmount;
+      const showB2B = this.canViewAmount;
 
-    // test-ranges nahi milale tarihi dummy report banवायचा prayatna karto
-    // (fakt tya test cha parameters/results table rikama disel).
-    this.labApi.getTestRanges(labId, item.testId).pipe(
-      catchError(() => of([]))
-    ).subscribe((ranges: any[]) => {
-      const payload = this.buildDummyPreviewPayload(item, labId, Array.isArray(ranges) ? ranges : []);
+      // ===== TABLE HEADER =====
+      const headerRow: any[] = [
+        { text: 'Sr. No.', style: 'tableHeader', alignment: 'center' },
+        { text: 'Test Name', style: 'tableHeader', alignment: 'left' },
+      ];
+      if (showMRP) {
+        headerRow.push({ text: 'MRP (₹)', style: 'tableHeader', alignment: 'right' });
+      }
+      if (showB2B) {
+        headerRow.push({ text: 'B2B (₹)', style: 'tableHeader', alignment: 'right' });
+      }
+      headerRow.push(
+        { text: 'Sample Type', style: 'tableHeader', alignment: 'center' },
+        { text: 'TAT (min)', style: 'tableHeader', alignment: 'center' }
+      );
 
-      this.labApi.previewDummyReport(payload).subscribe({
-        next: (res: any) => {
-          if (res?.success && res?.downloadUrl) {
-            this.previewDownloadUrl = res.downloadUrl;
-            this.previewFileName = res.fileName ?? null;
-            this.previewState = 'ready';
-          } else {
-            this.previewState = 'error';
-          }
-        },
-        error: (err) => {
-          console.error('DUMMY REPORT PREVIEW ERROR:', err);
-          this.previewState = 'error';
+      const tableBody: any[] = [headerRow];
+
+      // ===== TABLE ROWS =====
+      this.filteredTests.forEach((test: TestListItem, index: number) => {
+        const row: any[] = [
+          { text: (index + 1).toString(), style: 'tableCell', alignment: 'center' },
+          { text: test.testName || '-', style: 'tableCell', alignment: 'left' },
+        ];
+        if (showMRP) {
+          row.push({ text: `₹ ${test.mrp ?? '-'}`, style: 'tableCell', alignment: 'right' });
         }
+        if (showB2B) {
+          row.push({ text: `₹ ${test.b2b ?? '-'}`, style: 'tableCell', alignment: 'right' });
+        }
+        row.push(
+          { text: test.sampleType || '-', style: 'tableCell', alignment: 'center' },
+          { text: test.tat ?? '-', style: 'tableCell', alignment: 'center' }
+        );
+        tableBody.push(row);
       });
-    });
-  }
 
-  async openReport(url?: string | null): Promise<void> {
-    const target = url ?? this.previewDownloadUrl;
-    if (!target) return;
-    await Browser.open({ url: target });
-  }
+      // ===== DYNAMIC COLUMN WIDTHS =====
+      const tableWidths: any[] = ['auto', '*'];
+      if (showMRP) tableWidths.push('auto');
+      if (showB2B) tableWidths.push('auto');
+      tableWidths.push('auto', 'auto');
 
-  closeDetail(): void {
-    this.isDetailModalOpen = false;
-    this.selectedTest = null;
-    this.previewState = 'loading';
-    this.previewDownloadUrl = null;
-    this.previewFileName = null;
-  }
+      // ===== PDF DEFINITION =====
+      const docDefinition: any = {
+        pageSize: 'A4',
+        pageOrientation: 'landscape',
+        pageMargins: [30, 60, 30, 60],
 
-  retryPreview(): void {
-    if (this.selectedTest) this.openDetail(this.selectedTest);
-  }
+        header: [
+          {
+            text: 'Lab Test Portfolio Report',
+            style: 'mainHeader',
+            alignment: 'center',
+            margin: [0, 10, 0, 4],
+          },
+        ],
 
-  // ============================================================
-  // DUMMY PAYLOAD BUILDER
-  // ============================================================
-  // ⚠️ NOTE: real booking object cha full shape (doctor/franchise/bill/user)
-  // Network capture varun ghetla ahe. Ithe fakt values generic/dummy
-  // theवlya ahet, structure exact same ठेवला ahे jenekarun backend/PDF
-  // service la valid vatel.
-  private buildDummyPreviewPayload(item: TestListItem, labId: number, ranges: any[]): any {
-    const now = Date.now();
-    const barcode = now.toString().slice(-10);
+        footer: (currentPage: number, pageCount: number) => ({
+          columns: [
+            {
+              text: `Generated on: ${new Date().toLocaleDateString()}`,
+              alignment: 'left',
+              margin: [30, 5, 0, 5],
+              fontSize: 8,
+            },
+            {
+              text: `Page ${currentPage} of ${pageCount}`,
+              alignment: 'right',
+              margin: [0, 5, 30, 5],
+              fontSize: 8,
+            },
+          ],
+        }),
 
-    const reportValues = ranges.map((tr: any) => ({ testRange: tr, value: null }));
+        content: [
+          {
+            table: {
+              headerRows: 1,
+              widths: tableWidths,
+              body: tableBody,
+            },
+            layout: {
+              fillColor: (rowIndex: number) => (rowIndex === 0 ? '#e0e0e0' : null),
+              hLineWidth: () => 0.75,
+              vLineWidth: () => 0.5,
+              hLineColor: () => '#aaa',
+              vLineColor: () => '#aaa',
+              paddingLeft: () => 6,
+              paddingRight: () => 6,
+              paddingTop: () => 4,
+              paddingBottom: () => 4,
+            },
+          },
+        ],
 
-    const dummyBooking = {
-      bookingId: 0,
-      patientId: null,
-      qrcode: null,
-      title: 'mr',
-      qrUrl: '',
-      customerName: 'John Doe',
-      age: 28,
-      ageType: 'years',
-      gender: 'male',
-      dob: null,
-      mobileNumber: null,
-      aadhaarNumber: '',
-      address: '',
-      history: '',
-      uploadDoc: '',
-      transfer: false,
-      repeatId: 0,
-      height: '',
-      weight: '',
-      urgent: false,
-      onlineReport: false,
-      homeCollection: false,
-      membershipNo: '',
-      subTotalAmount: item.mrp,
-      totalAmount: item.mrp,
-      discountType: null,
-      discountAmount: 0,
-      paymentCash: true,
-      cashAmount: item.mrp,
-      paymentUPI: false,
-      upiAmount: 0,
-      paymentOnline: false,
-      onlineAmount: 0,
-      paidAmount: item.mrp,
-      dueAmount: 0,
-      discountedAmount: 0,
-      rateListDiscount: 0,
-      discountFrom: 0,
-      remark: '',
-      bookingComment: null,
-      paymentTransactionId: '',
-      labId,
-      createdBy: 0,
-      createdOn: now,
-      lastModifiedBy: 0,
-      lastUpdatedOn: now,
-      properties: null,
-      version: 0,
-      paymentmode: null,
-      franchiseId: 0,
-      doctorid: 0,
-      customDoctorName: '',
-      customFranchiseLabId: null,
-      customFranchiseLab: '',
-      customFranchiseLabData: null,
+        styles: {
+          mainHeader: { fontSize: 16, bold: true, color: '#333' },
+          tableHeader: { bold: true, fontSize: 11, color: '#000', fillColor: '#f5f5f5' },
+          tableCell: { fontSize: 10, color: '#333' },
+        },
 
-      tests: [{
-        testMappingId: 0,
-        testId: item.testId,
-        testName: item.testName,
-        testCode: item.testCode,
-        tat: item.tat,
-        testPrice: item.mrp,
-        labPrice: 0,
-        superFranchisePrice: 0,
-        franchisePrice: 0,
-        subFranchisePrice: 0,
-        fluidId: 0,
-        testMrp: item.mrp,
-        isNew: false,
-        testRepeat: false,
-        testRepeated: false,
-        discount: 0,
-        samples: [{
-          accessionId: 0,
-          sampleId: barcode,
-          sampleType: item.sampleType,
-          status: 'RECEIVED'
-        }],
-        department: { departmentId: 0, departmentName: '' }
-      }],
+        defaultStyle: { font: 'Roboto' },
+      };
 
-      samples: [{
-        sampleAccessionId: 0,
-        barcode,
-        barcodeFile: '',
-        bookingId: 0,
-        sampleTypeId: 0,
-        sampleType: item.sampleType,
-        status: 'RECEIVED'
-      }],
+      // ===== GENERATE PDF (client-side) =====
+      console.log('DOC DEFINITION READY');
+      console.log('DOC DEFINITION READY');
+console.log('VFS CHECK:', pdfMake.vfs ? Object.keys(pdfMake.vfs).length + ' fonts loaded' : 'VFS EMPTY');
 
-      bill: {
-        billingId: 0, bookingId: 0, status: 'PAID', labId,
-        createdBy: 0, createdOn: now, lastModifiedBy: 0, lastUpdatedOn: now,
-        properties: null, version: 0, cancelled: false
-      },
+      const fileName = `Test-Portfolio-${Date.now()}.pdf`;
+      console.log('PLATFORM:', Capacitor.getPlatform());
 
-      transactions: [{
-        billingTransactionMappingId: 0, billingId: 0,
-        subTotalAmount: item.mrp, totalAmount: item.mrp, totalPaidAmount: item.mrp,
-        currentPaidAmount: 0, currentDiscountAmount: 0, totalDueAmount: 0,
-        paymentMode: null, labId, createdBy: 0, createdOn: now,
-        lastModifiedBy: 0, lastUpdatedOn: now, properties: null, version: 0
-      }],
-
-      reports: [{
-        reportId: 0,
-        bookingId: 0,
-        qcStatus: null,
-        testId: item.testId,
-        reportRepeat: false,
-        profileId: 0,
-        editing: true,
-        reportValues,
-        updateValues: null,
-        labId,
-        createdBy: 0,
-        createdOn: now,
-        lastModifiedBy: 0,
-        lastUpdatedOn: now,
-        properties: null,
-        version: null,
-        reportStatus: 'PENDING'
-      }],
-
-      user: { id: 0, username: 'demo', firstname: 'Demo', labId, labIds: String(labId), assingedLabs: null },
-      doctor: { doctorId: 0, doctor_name: 'SELF', departmentId: '', labId },
-      franchise: {
-        franchiseId: 0, franchiseName: 'SELF', centerCode: '', lockReport: false, lockReportAmount: 0,
-        accessMode: 'false', balanceNegative: false, paidType: null, wallet: null,
-        superFranchiseActive: false, superFranchise: null,
-        parentSuperFranchiseName: null, parentSuperFranchiseCenterCode: null,
-        parentFranchiseName: null, parentFranchiseCenterCode: null,
-        franchiseActive: false, franchise: null, subFranchiseActive: false, subFranchise: null, labId
-      }
-    };
-
-    return {
-      templateName: environment.reportTemplateName,
-      params: {
-        letterHead: true,
-        domain: environment.domain,
-        fLetterHead: false,
-        waterMark: true,
-        single: true,
-        bookings: 0,
-        token: this.authService.getToken(),
-        bookingApi: null,
-        labSettingsApi: `${environment.BASE_URL}/api/v1/lab/settings/${labId}`,
-        reportTestId: 'null',
-        cancelTest: '0',
-        bookingData: [dummyBooking],
-        preview: true
-      }
-    };
+      if (Capacitor.getPlatform() === 'android') {
+        // ✅ Native Android — 0.2.x callback-style getBase64()
+        const base64Data: string = await new Promise((resolve, reject) => {
+          try {
+            pdfMake.createPdf(docDefinition).getBase64((data: string) => {
+              console.log('BASE64 GENERATED, length:', data?.length);
+              resolve(data);
+            });
+          } catch (e) {
+            console.error('createPdf THREW:', e);
+            reject(e);
+          }
+        });
+        const result = await PdfDownload.savePdf({ fileName, data: base64Data });
+        console.log('NATIVE SAVE RESULT:', result);
+     } else {
+  console.log('CALLING createPdf().open()');
+  pdfMake.createPdf(docDefinition).open();
+  console.log('open() CALLED');
+}
+    } catch (err) {
+      console.error('PDF EXPORT ERROR:', err);
+    } finally {
+      this.isExportingPdf = false;
+    }
   }
 
   // ============================================================

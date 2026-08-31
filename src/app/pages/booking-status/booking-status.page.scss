@@ -3482,3 +3482,28 @@ ion-content.menu-open {
     font-size: 13px;
   }
 }
+
+.barcode-line {
+  cursor: pointer;
+  transition: opacity 0.15s ease;
+
+  &:active {
+    opacity: 0.6;
+  }
+}
+
+.barcode-line-copy-icon {
+  font-size: 14px;
+  color: var(--text-faint, #93a9a4);
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.spin-icon {
+  animation: tl-spin 0.8s linear infinite;
+}
+
+@keyframes tl-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}

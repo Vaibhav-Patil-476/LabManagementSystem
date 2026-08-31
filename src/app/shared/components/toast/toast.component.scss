@@ -1,6 +1,12 @@
 .toast-container {
   position: fixed;
-  top: 20px;
+
+  // ✅ FIX: status bar + header cha खाली push करा, फक्त 20px नाही.
+  // env(safe-area-inset-top) notch/status-bar सांभाळतो, +60px header
+  // cha खाली येण्यासाठी (तुमच्या header cha actual height नुसार
+  // adjust करा, साधारण header 56-64px असतो).
+  top: calc(env(safe-area-inset-top) + 64px);
+
   right: 16px;
   z-index: 99999;
   display: flex;
@@ -14,7 +20,11 @@
 .toast-card {
   display: flex;
   align-items: stretch;
-  background: var(--card-bg);
+
+  // ✅ FIX: --card-bg transparent असण्याची शक्यता आहे, म्हणून
+  // इथे direct solid fallback द्या — bleed-through बंद होईल.
+  background: var(--card-bg, #ffffff);
+
   border-radius: 14px;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
   overflow: hidden;
@@ -30,6 +40,10 @@
   .toast-content {
     flex: 1;
     padding: 14px 14px 12px;
+
+    // ✅ background इथेही explicit द्या, जेणेकरून parent cha कुठलाही
+    // opacity/blend issue असला तरी content block पूर्ण solid राहील
+    background: inherit;
   }
 
   .toast-header {
@@ -63,19 +77,16 @@
     line-height: 1.5;
   }
 
-  /* Success */
   &.toast-success {
     .toast-bar { background: #22c55e; }
     .toast-title { color: #16a34a; }
   }
 
-  /* Error */
   &.toast-error {
     .toast-bar { background: #ef4444; }
     .toast-title { color: #dc2626; }
   }
 
-  /* Warning */
   &.toast-warning {
     .toast-bar { background: #f59e0b; }
     .toast-title { color: #d97706; }

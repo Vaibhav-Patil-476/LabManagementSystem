@@ -1736,3 +1736,13 @@ ion-modal {
   align-items: center;
   gap: 6px;
 }
+
+.input-wrap.field-error {
+  border: 1.5px solid #ef4444 !important;
+  border-radius: 8px;
+  background: rgba(239, 68, 68, 0.04);
+
+  ion-input, ion-select {
+    --highlight-color: #ef4444;
+  }
+}

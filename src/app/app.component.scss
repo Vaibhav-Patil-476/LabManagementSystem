@@ -1,0 +1,74 @@
+.splash-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  pointer-events: none; // background click-through नंतर होईल, animation ला अडथळा नको
+
+  &.leaving {
+    // ✅ overlay स्वतः लगेच transparent होत नाही — फक्त bg आणि logo
+    // वेगळे animate होतील, म्हणून हे इथे रिकामं ठेवलं
+  }
+}
+
+.splash-bg {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+  transition: opacity .5s ease .3s; // ✅ logo आधी move होईल, मग bg fade (.3s delay)
+
+  &.leaving {
+    opacity: 0;
+  }
+}
+
+.logo-box {
+  position: absolute;
+
+  // ✅ STEP 1: सुरुवातीला screen cha exact center var
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+
+  width: 100px;
+  height: 100px;
+  border-radius: 26px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 30px rgba(8, 123, 118, .20);
+
+  animation: floatUpDown 2s ease-in-out infinite;
+
+  img {
+    width: 54px;
+    height: auto;
+  }
+
+  // ✅ STEP 2: 3 sec नंतर हा class लागतो -> logo center पासून
+  // login page cha logo-ring cha exact जागी (top: 6vh + अर्धा
+  // logo-ring height) smoothly move + shrink होतो
+  &.leaving {
+    animation: none; // float थांबवा
+    top: calc(6vh + 42px);   // ✅ login .hero { padding-top: 6vh } + logo-ring(84px)/2
+    left: 50%;
+    width: 84px;              // ✅ login cha .logo-ring exact size
+    height: 84px;
+    border-radius: 24px;
+    transition:
+      top .7s cubic-bezier(.4, 0, .2, 1),
+      width .7s cubic-bezier(.4, 0, .2, 1),
+      height .7s cubic-bezier(.4, 0, .2, 1),
+      border-radius .7s ease;
+
+    img {
+      width: 46px; // ✅ login cha logo image size
+      transition: width .7s ease;
+    }
+  }
+}
+
+@keyframes floatUpDown {
+  0%, 100% { transform: translate(-50%, -50%) translateY(0); }
+  50%      { transform: translate(-50%, -50%) translateY(-10px); }
+}

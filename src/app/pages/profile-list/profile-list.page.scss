@@ -72,21 +72,32 @@
   ion-icon { font-size: 15px; }
 }
 
-/* ---------- PDF export button (now lives inside summary-bar, right side) ---------- */
+/* ---------- PDF export button — small pill, matches test-list.page.scss's
+   .tl-download-btn (brand gradient, pill radius, NOT a big square
+   icon-only button anymore) ---------- */
 .pdf-export-btn {
-  --background: #f5a623;
-  --background-activated: #e0951c;
-  --background-hover: #e0951c;
+  --background: var(--brand-gradient);
+  --background-activated: var(--brand-gradient);
+  --background-hover: var(--brand-gradient);
   --color: #ffffff;
-  --border-radius: var(--r-sm);
-  --box-shadow: 0 4px 12px rgba(245, 166, 35, 0.35);
-  height: 42px;
-  width: 48px;
+  --border-radius: var(--r-pill);
+  --box-shadow: var(--shadow-glow);
+  --padding-start: 14px;
+  --padding-end: 14px;
+  height: 34px;
   margin: 0;
+  font-weight: 700;
+  font-size: 11.5px;
+  letter-spacing: 0.1px;
+  text-transform: none;
   flex-shrink: 0;
 
   ion-icon {
-    font-size: 19px;
+    font-size: 14px;
+  }
+
+  &:active {
+    --box-shadow: none;
   }
 
   &[disabled] {

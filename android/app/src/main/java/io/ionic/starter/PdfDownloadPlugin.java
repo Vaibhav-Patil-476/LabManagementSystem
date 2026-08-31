@@ -25,8 +25,12 @@ import java.io.OutputStream;
 @CapacitorPlugin(name = "PdfDownload")
 public class PdfDownloadPlugin extends Plugin {
 
-    // ✅ NEW: dedicated channel for download-complete notifications
-    private static final String CHANNEL_ID = "pdf_downloads";
+    // ✅ FIX: naveen channel id — jुना "pdf_downloads" phone var aधीच
+    // DEFAULT importance sobat save zalela ahे, ani Android channel
+    // importance ekada create zala ki code varun परत badalत नाही.
+    // Naveen id vaparlyavar fresh channel HIGH importance sobat
+    // tayar hoईल.
+    private static final String CHANNEL_ID = "pdf_downloads_v2";
     private static final String CHANNEL_NAME = "PDF Downloads";
     private static int notificationIdCounter = 1000;
 
@@ -103,7 +107,7 @@ public class PdfDownloadPlugin extends Plugin {
                 resolver.update(uri, completedValues, null, null);
             }
 
-            // ✅ NEW: fire the Android status-bar "Download complete" notification,
+            // ✅ Fires the Android heads-up "Download complete" notification,
             // tapping it opens the PDF (same UX as Chrome/other apps' downloads)
             showDownloadNotification(fileName, uri);
 
@@ -124,7 +128,7 @@ public class PdfDownloadPlugin extends Plugin {
     }
 
     // ============================================================
-    // ✅ NEW: shows the system notification for a completed download
+    // Shows the system heads-up notification for a completed download
     // ============================================================
     private void showDownloadNotification(String fileName, Uri fileUri) {
 
@@ -142,12 +146,18 @@ public class PdfDownloadPlugin extends Plugin {
             NotificationChannel channel = notificationManager.getNotificationChannel(CHANNEL_ID);
 
             if (channel == null) {
+
+                // ✅ FIX: IMPORTANCE_HIGH — heads-up banner sathi required.
+                // IMPORTANCE_DEFAULT fakta silent tray entry deto.
                 channel = new NotificationChannel(
                         CHANNEL_ID,
                         CHANNEL_NAME,
-                        NotificationManager.IMPORTANCE_DEFAULT
+                        NotificationManager.IMPORTANCE_HIGH
                 );
                 channel.setDescription("Notifications for completed PDF downloads");
+                channel.enableVibration(true);
+                channel.enableLights(true);
+
                 notificationManager.createNotificationChannel(channel);
             }
         }
@@ -174,7 +184,13 @@ public class PdfDownloadPlugin extends Plugin {
                 .setSmallIcon(android.R.drawable.stat_sys_download_done)
                 .setContentTitle("Download complete")
                 .setContentText(fileName)
-                .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+                // ✅ FIX: PRIORITY_HIGH — channel importance sobat he pan
+                // HIGH asayla lagते heads-up trigger honyasathi (Android 7
+                // ani khालच्या versions sathi backward-compat, Android 8+
+                // var channel importance च primarily matter karto).
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setCategory(NotificationCompat.CATEGORY_STATUS)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setAutoCancel(true)
                 .setContentIntent(pendingIntent);
 
