@@ -126,15 +126,209 @@ ion-content.menu-content {
 .menu-trigger-avatar ion-icon {
   font-size: 18px;
 }
+/* ============================================================
+   PREMIUM GRADIENT DASHBOARD HEADER — placed OUTSIDE ion-content
+   (directly inside ion-page, above <ion-content>)
+   ============================================================ */
+.app-header-premium {
+  position: relative;
+  z-index: 10;
+  width: 100%;
+  margin: 0 0 12px;              /* आधी 20px होतं — आता कमी */
+  padding: calc(16px + env(safe-area-inset-top)) 18px 14px;   /* safe-area तसंच */
+  overflow: hidden;
+  border-radius: 0 0 24px 24px;
+  color: #fff;
+  background: linear-gradient(135deg, #0a8a84 0%, #055f5d 100%);
+  box-shadow: 0 16px 34px rgba(6, 95, 93, .28);
+  box-sizing: border-box;
+}
+.ahp-top-row {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.app-header-premium .header-intro {
+  min-width: 0;
+}
+
+.app-header-premium .eyebrow {
+  margin: 0 0 3px;
+  font-size: 9.5px;
+  letter-spacing: .1em;
+  color: rgba(255, 255, 255, .82);
+}
+
+.app-header-premium .header-intro h1 {
+  margin: 0;
+  font-size: clamp(18px, 5.5vw, 22px);
+  line-height: 1.15;
+  letter-spacing: -.03em;
+  font-weight: 750;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, .1);
+}
+
+.app-header-premium .header-email {
+  margin: 3px 0 0;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .74);
+  max-width: 220px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-header-premium .header-actions {
+  flex-shrink: 0;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.app-header-premium .icon-button,
+.app-header-premium .menu-trigger {
+  width: 36px;
+  height: 36px;
+  background: rgba(255, 255, 255, .18);
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, .12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .1);
+  backdrop-filter: blur(4px);
+}
+
+.app-header-premium .icon-button ion-icon {
+  font-size: 16px;
+}
+
+.app-header-premium .icon-button:active,
+.app-header-premium .menu-trigger:active {
+  background: rgba(255, 255, 255, .26);
+}
+
+.app-header-premium .menu-trigger-avatar {
+  width: 24px;
+  height: 24px;
+  background: rgba(255, 255, 255, .28);
+  color: #fff;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .3);
+}
+
+.app-header-premium .menu-trigger-avatar ion-icon {
+  font-size: 14px;
+}
+
+.app-header-premium .notification-pulse {
+  border-color: var(--brand-deep, #075f5d);
+}
+
+.ahp-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  margin-top: 7px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .14);
+  backdrop-filter: blur(4px);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  position: relative;
+  z-index: 1;
+}
+
+.ahp-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #4ade80;
+  box-shadow: 0 0 0 3px rgba(74, 222, 128, .25);
+}
+
+.ahp-orb {
+  position: absolute;
+  z-index: 0;
+  border: 1px solid rgba(255, 255, 255, .14);
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ahp-orb-one {
+  width: 150px;
+  height: 150px;
+  top: -95px;
+  right: -50px;
+}
+
+.ahp-orb-two {
+  width: 90px;
+  height: 90px;
+  right: 55px;
+  bottom: -65px;
+}
+
+.app-header-premium .ahp-search-inline {
+  position: relative;
+  z-index: 1;
+  height: 44px;
+  padding: 0 6px;
+  margin: 0;
+  border: none;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .14);
+}
+
+.app-header-premium .ahp-search-inline .gs-icon-badge {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+}
+
+.app-header-premium .ahp-search-inline .gs-icon-badge ion-icon {
+  font-size: 14px;
+}
+
+.app-header-premium .ahp-search-inline input {
+  font-size: 12.5px;
+}
+
+.app-header-premium .ahp-search-inline .gs-search-btn {
+  width: 30px;
+  height: 30px;
+}
+
+.app-header-premium .ahp-search-inline .gs-search-btn ion-icon {
+  font-size: 14px;
+}
+
+@media (max-width: 360px) {
+  .app-header-premium {
+    padding: calc(12px + env(safe-area-inset-top)) 14px 12px;
+    border-radius: 0 0 20px 20px;
+  }
+
+  .app-header-premium .header-email {
+    max-width: 160px;
+  }
+}
 
 .filter-panel {
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  padding: 13px 14px;
-  margin-bottom: 22px;
+  gap: 8px;
+  padding: 7px 10px;
+  margin-bottom: 14px;     /* आधी 10px होतं — आता जवळपास नाहीच */
+  margin-top: 1px;
   border: 1px solid #e4eeee;
-  border-radius: 18px;
+  border-radius: 14px;
   background: #eef8f7;
   position: relative;
   z-index: 5;
@@ -143,43 +337,44 @@ ion-content.menu-content {
 
 .filter-copy {
   display: flex;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .filter-icon {
-  width: 34px;
-  height: 34px;
+  width: 30px;
+  height: 30px;
   display: grid;
   place-items: center;
-  border-radius: 11px;
+  border-radius: 10px;
   color: var(--brand);
   background: #d6efed;
 }
 
 .filter-icon ion-icon {
-  font-size: 18px;
+  font-size: 16px;
 }
 
 .filter-copy p,
 .filter-copy strong {
   display: block;
   margin: 0;
+  line-height: 1.2;    /* दोन ओळींत असूनही उंची कमी राहते */
 }
 
 .filter-copy p {
   color: #64807f;
-  font-size: 11px;
+  font-size: 10.5px;
 }
 
 .filter-copy strong {
-  margin-top: 2px;
-  font-size: 13px;
+  margin-top: 1px;
+  font-size: 12px;
 }
 
 .filter-controls {
   align-items: center;
-  gap: 7px;
+  gap: 6px;
 }
 
 /* Single-date picker button (Material datepicker underneath), matching
@@ -2624,7 +2819,6 @@ ion-content.menu-content {
       height: 52px !important;
       min-height: 52px !important;
       padding: 0 15px !important;
-      border-radius: 15px !important;
       font-size: 18px !important;
     }
 

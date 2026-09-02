@@ -839,4 +839,19 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.showFranchiseDropdown = false;
     this.onFranchiseChange(null);
   }
+
+  // ---------- barcode row (trackBy + tap-to-copy) ----------
+  trackByBarcode(index: number, barcode: string): string {
+    return barcode ?? String(index);
+  }
+
+  async copyBarcode(barcode: string): Promise<void> {
+    if (!barcode) return;
+    try {
+      await navigator.clipboard.writeText(barcode);
+      this.toast.success('Copied', `Barcode copied: ${barcode}`);
+    } catch {
+      this.toast.error('Error', 'Unable to copy barcode.');
+    }
+  }
 }

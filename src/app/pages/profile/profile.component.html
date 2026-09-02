@@ -15,7 +15,7 @@
 
     <ng-container *ngIf="!loading && user">
 
-      <!-- Personal Information -->
+      <!-- Personal Information
       <section class="profile-card">
         <div class="card-title">
           <ion-icon name="person-outline"></ion-icon>
@@ -51,35 +51,53 @@
           <ion-icon name="lock-closed-outline" slot="start"></ion-icon>
           Update Password
         </ion-button>
-      </section>
+      </section> -->
 
-      <!-- Lab Information -->
-      <section class="profile-card" *ngIf="user.lab">
+      <!-- Organization Information (Franchise / Sub-Franchise / Super-Franchise / Lab) -->
+      <!-- Admin panel च्या "Lab" form प्रमाणे फक्त हेच fields दाखवायचे -->
+      <section class="profile-card" *ngIf="displayInfo">
         <div class="card-title">
           <ion-icon name="business-outline"></ion-icon>
-          <h2>Lab Information</h2>
+          <h2>{{ displayInfo.sectionTitle }}</h2>
         </div>
 
         <div class="info-row">
           <span class="info-label">Lab Name</span>
-          <span class="info-value">{{ user.lab.lab_name }}</span>
+          <span class="info-value">{{ displayInfo.name }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Owner Name</span>
+          <span class="info-value">{{ displayInfo.ownerName }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Mobile Number</span>
+          <span class="info-value">{{ displayInfo.mobileNumber }}</span>
+        </div>
+        <div class="info-row">
+          <span class="info-label">Email</span>
+          <span class="info-value">{{ displayInfo.email }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Lab Address</span>
-          <span class="info-value">{{ user.lab.city }}{{ user.lab.pincode ? ', ' + user.lab.pincode : '' }}</span>
+          <span class="info-value">{{ displayInfo.address }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Lab Owner Name</span>
-          <span class="info-value">{{ user.lab.lab_owner_name }}</span>
+          <span class="info-label">Pincode</span>
+          <span class="info-value">{{ displayInfo.pincode }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Lab Owner Contact Number</span>
-          <span class="info-value">{{ user.lab.owner_contact_number || '-' }}</span>
+          <span class="info-label">State</span>
+          <span class="info-value">{{ displayInfo.state }}</span>
         </div>
         <div class="info-row">
-          <span class="info-label">Lab Email</span>
-          <span class="info-value">{{ user.lab.email }}</span>
+          <span class="info-label">City</span>
+          <span class="info-value">{{ displayInfo.city }}</span>
         </div>
+      </section>
+
+      <!-- कोणताही org data (franchise/lab) नसेल तर -->
+      <section class="profile-card" *ngIf="!displayInfo">
+        <p class="no-plan-text">No organization information found.</p>
       </section>
 
       <!-- Active Plan -->

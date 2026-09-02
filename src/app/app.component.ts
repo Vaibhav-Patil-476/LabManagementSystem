@@ -15,32 +15,14 @@ import { Capacitor } from '@capacitor/core';
 })
 export class AppComponent implements OnInit {
 
-  // ✅ Overlay logic — login page आधीच खाली render होत असतो,
-  // हा overlay फक्त वरती दिसतो आणि नंतर fade होतो.
-  showSplash = true;
-  splashLeaving = false;
-
   async ngOnInit() {
 
     if (Capacitor.isNativePlatform()) {
       await StatusBar.setOverlaysWebView({ overlay: false });
 
-      // ✅ FIX: Angular चा हा component पूर्ण ready झाल्यावरच native
-      // splash hide करा — capacitor.config.ts madhе launchAutoHide:
-      // false केल्यामुळे हे आता गरजेचं आहे, नाहीतर native splash
-      // कधीच जाणार नाही आणि app तसाच अडकून राहील.
+      // ✅ Angular ready zalyavar native splash lगेच hide -
+      // custom overlay/delay ata nahi, tyamule lगेच hide karायचा.
       await SplashScreen.hide();
     }
-
-    // 3 sec सामान्य float animation दाखवा
-    setTimeout(() => {
-      this.splashLeaving = true; // ✅ lift-off + fade-out animation सुरू
-
-      // Animation पूर्ण झाल्यावर (600ms) overlay पूर्ण काढून टाका
-      setTimeout(() => {
-        this.showSplash = false;
-      }, 600);
-
-    }, 3000);
   }
 }

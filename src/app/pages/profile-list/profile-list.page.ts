@@ -610,24 +610,13 @@ export class ProfileListPage
 
           }
 
-
-          console.warn(
-            'PROFILE TEST NOT MATCHED:',
-            {
-              profileId:
-                p.profileId ??
-                p.profile_id ??
-                p.id,
-
-              profileName:
-                p.profileName ??
-                p.profile_name ??
-                p.name,
-
-              testItem:
-                pt
-            }
-          );
+          // ✅ FIX: he test getTests() (active franchise list) madhe
+          // sapadla nahi (bahuteka inactive/deleted test), pan fallback
+          // varun (pt cha raw testName/sampleType) tyala aadhich
+          // testNames/sampleTypesSet madhe jodla ahe — tyamule
+          // testCount/sample types barobarच rahtat. Ha ek expected
+          // case ahe, error nahi, tyamule console.warn spam (jya
+          // mule DevTools madhe khup "Issues" distat) kadhun taklay.
 
         }
 

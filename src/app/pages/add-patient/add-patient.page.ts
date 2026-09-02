@@ -1777,92 +1777,83 @@ get displayTestRows(): any[] {
       return;
     }
 
-    this.labApi
-      .getFranchises()
-      .subscribe({
+this.labApi
+  .getFranchises()
+  .subscribe({
 
-        next: (res: any) => {
+    next: (res: any) => {
 
-          this.labs =
-            res?.content ||
-            res ||
-            [];
+      this.labs =
+        res?.content ||
+        res ||
+        [];
 
-          this.filteredLabs =
-            [
-              ...this.labs
-            ];
+      this.filteredLabs =
+        [
+          ...this.labs
+        ];
 
-          let defaultLab =
-            this.labs.find(
-              (x: any) =>
-                Number(
-                  x?.franchiseId ??
-                  x?.id ??
-                  0
-                ) ===
-                Number(
-                  this.DEFAULT_FRANCHISE
-                    .franchiseId
-                )
-            );
+      // ✅ FIX: DEFAULT_FRANCHISE (franchiseId 2541) हा फक्त
+      // development DB मध्ये valid आहे — production मध्ये असा
+      // franchise नसल्यास booking चा test-search चुकीच्या/invalid
+      // franchiseId ला जाऊन तिथे tests रिकामे यायचे. आता backend
+      // कडून आलेल्या list मधला 2541 सापडला तरच तो वापरायचा,
+      // नाहीतर त्याच list मधला पहिला खरा franchise निवडायचा —
+      // हार्डकोडेड dummy franchise कधीच inject करायचा नाही.
+      let defaultLab =
+        this.labs.find(
+          (x: any) =>
+            Number(
+              x?.franchiseId ??
+              x?.id ??
+              0
+            ) ===
+            Number(
+              this.DEFAULT_FRANCHISE
+                .franchiseId
+            )
+        );
 
-          if (!defaultLab) {
+      if (!defaultLab) {
+        defaultLab = this.labs[0] || null;
+      }
 
-            defaultLab =
-              this.DEFAULT_FRANCHISE;
+      this.selectedLab =
+        defaultLab;
 
-            this.labs = [
+      this.labSearch =
+        defaultLab?.franchiseName || '';
 
-              defaultLab,
+      this.staffLabSearch =
+        defaultLab?.franchiseName || '';
 
-              ...this.labs
-            ];
+      this.patient.lab =
+        defaultLab?.franchiseName || '';
+    },
 
-            this.filteredLabs = [
-              ...this.labs
-            ];
-          }
+    error: () => {
 
-          this.selectedLab =
-            defaultLab;
+      // ✅ FIX: API fail झाली तरी DEFAULT_FRANCHISE (dev-only id)
+      // silently select करू नये — production मध्ये तो चुकीचा
+      // franchise ठरतो आणि पुढे tests/booking चुकीच्या ठिकाणी जातात.
+      this.labs = [];
 
-          this.labSearch =
-            defaultLab.franchiseName;
+      this.filteredLabs = [];
 
-          this.staffLabSearch =
-            defaultLab.franchiseName;
+      this.selectedLab = null;
 
-          this.patient.lab =
-            defaultLab.franchiseName;
-        },
+      this.labSearch = '';
 
-        error: () => {
+      this.staffLabSearch = '';
 
-          this.labs = [
-            this.DEFAULT_FRANCHISE
-          ];
+      this.patient.lab = '';
 
-          this.filteredLabs = [
-            ...this.labs
-          ];
-
-          this.selectedLab =
-            this.DEFAULT_FRANCHISE;
-
-          this.labSearch =
-            this.DEFAULT_FRANCHISE
-              .franchiseName;
-
-          this.staffLabSearch =
-            this.DEFAULT_FRANCHISE
-              .franchiseName;
-
-          this.patient.lab =
-            this.DEFAULT_FRANCHISE
-              .franchiseName;
-        }
-      });
+      this.toastService.error(
+        'Error',
+        'Failed to load collection centers. Please refresh.'
+      );
+    }
+  });
   }
 
   selectLab(lab: any): void {
@@ -2834,46 +2825,94 @@ updateSampleBarcode(sample: any): void {
 
   private packageSearchTimer: any = null;
 
-  searchPackage(): void {
-    const q = String(this.packageSearch || '').trim();
+  //devlopment code 
+  // searchPackage(): void {
+  //   const q = String(this.packageSearch || '').trim();
 
-    if (this.packageSearchTimer) {
-      clearTimeout(this.packageSearchTimer);
-    }
+  //   if (this.packageSearchTimer) {
+  //     clearTimeout(this.packageSearchTimer);
+  //   }
 
-    if (!q) {
-      this.filteredPackages = [];
-      this.showPackageSuggestions = false;
-      return;
-    }
+  //   if (!q) {
+  //     this.filteredPackages = [];
+  //     this.showPackageSuggestions = false;
+  //     return;
+  //   }
 
-    this.packageSearchTimer = setTimeout(() => {
+  //   this.packageSearchTimer = setTimeout(() => {
 
-      const labId = this.labApi.getCurrentLabId();
+  //     const labId = this.labApi.getCurrentLabId();
 
-      const franchiseId =
-        this.selectedLab?.franchiseId ??
-        this.selectedLab?.id ??
-        undefined;
+  //     const franchiseId =
+  //       this.selectedLab?.franchiseId ??
+  //       this.selectedLab?.id ??
+  //       undefined;
 
-      this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
-        next: (res: any) => {
-          this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
-          this.showPackageSuggestions = this.filteredPackages.length > 0;
-        },
-        error: () => {
-          this.filteredPackages = [];
-          this.showPackageSuggestions = false;
-        }
-      });
+  //     this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
+  //       next: (res: any) => {
+  //         this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
+  //         this.showPackageSuggestions = this.filteredPackages.length > 0;
+  //       },
+  //       error: () => {
+  //         this.filteredPackages = [];
+  //         this.showPackageSuggestions = false;
+  //       }
+  //     });
 
-    }, 250);
-  }
+  //   }, 250);
+  // }
 
   // ============================================================
   // ✅ PACKAGE PREVIEW (eye icon click -> shows bundled tests)
   // ============================================================
 
+  //production code 
+
+//production code 
+
+  // ============================================================
+  // ✅ PACKAGE PREVIEW (eye icon click -> shows bundled tests)
+  // ============================================================
+
+  searchPackage(): void {
+    const q = String(this.packageSearch || '').trim().toLowerCase();
+
+    if (!q) {
+      this.filteredPackages = [];
+          
+      this.showPackageSuggestions = false;
+      return;
+    }
+
+    this.filteredPackages = this.allPackages
+      .filter((p: any) => {
+        const name = String(
+          p?.profileName ||
+          p?.profile_name ||
+          p?.name ||
+          ''
+        ).trim().toLowerCase();
+
+        return name.includes(q);
+      })
+    .map((p: any) => {
+   
+      const realPrice = Number(p?.profileAssignedPrice || 0) > 0
+        ? Number(p.profileAssignedPrice)
+        : Number(p?.total_amount || 0);
+
+      return {
+        ...p,
+        profileAssignedPrice: realPrice,
+        b2b: realPrice,
+        assignedPrice: realPrice
+      };
+    });
+console.log('DEBUG FILTERED PACKAGES:', JSON.stringify(this.filteredPackages[0], null, 2));
+
+    this.showPackageSuggestions = this.filteredPackages.length > 0;
+    this.showPackageSuggestions = this.filteredPackages.length > 0;
+  }
 addPackage(pkg: any): void {
 
     const packageName = String(

@@ -1,293 +1,287 @@
 <ion-header>
-    <ion-toolbar class="report-header">
-      <ion-buttons slot="start">
-        <ion-back-button defaultHref="/dashboard"></ion-back-button>
-      </ion-buttons>
+  <ion-toolbar class="report-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
 
-      <ion-title>
-        {{ roleService.canDownloadReports ? 'Report Download' : 'Download Reports' }}
-      </ion-title>
-    </ion-toolbar>
-  </ion-header>
+    <ion-title>
+      {{ roleService.canDownloadReports ? 'Report Download' : 'Download Reports' }}
+    </ion-title>
+  </ion-toolbar>
+</ion-header>
 
-  <ion-content class="report-content">
+<ion-content class="report-content">
 
-    <div class="report-container">
+  <div class="report-container">
 
-      <!-- ===================== TOP BAR ===================== -->
-      <div class="top-bar">
+    <!-- ===================== TOP BAR ===================== -->
+    <div class="top-bar">
 
-        <span class="total-pill">
-          <ion-icon name="calendar-clear-outline"></ion-icon>
-          Total Bookings: {{ totalBookings }}
-        </span>
+      <span class="total-pill">
+        <ion-icon name="calendar-clear-outline"></ion-icon>
+        Total Bookings: {{ totalBookings }}
+      </span>
 
-        <span class="refresh-hint" *ngIf="!isSearchMode">
-          <ion-icon name="information-circle-outline"></ion-icon>
-          "Please refresh to see the latest data."
-        </span>
+      <span class="refresh-hint">
+        <ion-icon name="information-circle-outline"></ion-icon>
+        Please refer to see the latest data.
+      </span>
 
-        <span class="refresh-hint search-mode-hint" *ngIf="isSearchMode">
+    </div>
+
+
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
+
+      <!-- Quick Search -->
+      <div class="filter-field search-field">
+        <span class="search-icon-badge">
           <ion-icon name="search-outline"></ion-icon>
-          Searching all dates for "{{ quickSearch }}" (date filter ignored)
         </span>
 
+        <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch"
+          (ngModelChange)="onQuickSearchChange()" />
       </div>
 
 
-      <!-- ===================== FILTER BAR ===================== -->
-      <div class="filter-bar">
+      <!-- Franchise Search -->
+      <div class="filter-field search-field franchise-field">
+        <span class="search-icon-badge">
+          <ion-icon name="business-outline"></ion-icon>
+        </span>
 
-        <!-- Quick Search -->
-        <div class="filter-field search-field">
-          <span class="search-icon-badge">
-            <ion-icon name="search-outline"></ion-icon>
-          </span>
+        <input type="text" placeholder="Type franchise name" [(ngModel)]="franchiseSearchTerm"
+          (ngModelChange)="onFranchiseSearch()" (focus)="showFranchiseDropdown = true" (blur)="onFranchiseBlur()" />
 
-          <input type="text" placeholder="Quick search" [(ngModel)]="quickSearch"
-            (ngModelChange)="onQuickSearchChange()" />
-        </div>
+        <ion-icon *ngIf="franchiseSearchTerm" name="close-circle-outline" class="clear-franchise"
+          (click)="clearFranchise(); $event.stopPropagation()"></ion-icon>
 
-
-        <!-- Franchise Search -->
-        <div class="filter-field search-field franchise-field">
-          <span class="search-icon-badge">
-            <ion-icon name="business-outline"></ion-icon>
-          </span>
-
-          <input type="text" placeholder="Type franchise name" [(ngModel)]="franchiseSearchTerm"
-            (ngModelChange)="onFranchiseSearch()" (focus)="showFranchiseDropdown = true" (blur)="onFranchiseBlur()" />
-
-          <ion-icon *ngIf="franchiseSearchTerm" name="close-circle-outline" class="clear-franchise"
-            (click)="clearFranchise(); $event.stopPropagation()"></ion-icon>
-
-          <div class="franchise-dropdown" *ngIf="showFranchiseDropdown && filteredFranchiseList.length > 0">
-            <div class="franchise-dropdown-item" *ngFor="let f of filteredFranchiseList" (click)="selectFranchise(f)">
-              {{ f.franchiseName || f.name }}
-            </div>
+        <div class="franchise-dropdown" *ngIf="showFranchiseDropdown && filteredFranchiseList.length > 0">
+          <div class="franchise-dropdown-item" *ngFor="let f of filteredFranchiseList" (click)="selectFranchise(f)">
+            {{ f.franchiseName || f.name }}
           </div>
         </div>
-
-
-        <!-- Date Range -->
-        <div class="filter-field date-field" (click)="openDateRangePicker()">
-          <span class="date-icon-badge">
-            <ion-icon name="calendar-outline"></ion-icon>
-          </span>
-
-          <span class="date-trigger-btn">
-            {{ fromDate ? (fromDate | date:'MM/dd/yyyy') : 'From' }}
-            –
-            {{ toDate ? (toDate | date:'MM/dd/yyyy') : 'To' }}
-          </span>
-        </div>
-
-
-        <!-- Hidden Material Date Range Picker -->
-        <mat-form-field class="hidden-range-field" appearance="fill">
-          <mat-date-range-input [rangePicker]="rangePicker">
-
-            <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
-              (dateChange)="onRangeStartChange($event)" readonly />
-
-            <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
-              (dateChange)="onRangeEndChange($event)" readonly />
-
-          </mat-date-range-input>
-
-          <mat-date-range-picker #rangePicker></mat-date-range-picker>
-        </mat-form-field>
-
-
-          <!-- Refresh -->
-        <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
-          <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="isLoading"></ion-icon>
-        </ion-button>
       </div>
 
 
-      <!-- ===================== STATUS TABS ===================== -->
-      <div class="status-tabs-wrapper" *ngIf="!isSearchMode">
-        <div class="status-tabs">
+      <!-- Date Range -->
+      <div class="filter-field date-field" (click)="openDateRangePicker()">
+        <span class="date-icon-badge">
+          <ion-icon name="calendar-outline"></ion-icon>
+        </span>
 
-          <div *ngFor="let tab of tabs" class="status-tab" [class.active]="activeTab === tab.key" [class.active-cancel]="
+        <span class="date-trigger-btn">
+          {{ fromDate ? (fromDate | date:'MM/dd/yyyy') : 'From' }}
+          –
+          {{ toDate ? (toDate | date:'MM/dd/yyyy') : 'To' }}
+        </span>
+      </div>
+
+
+      <!-- Hidden Material Date Range Picker -->
+      <mat-form-field class="hidden-range-field" appearance="fill">
+        <mat-date-range-input [rangePicker]="rangePicker">
+
+          <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeStartChange($event)" readonly />
+
+          <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeEndChange($event)" readonly />
+
+        </mat-date-range-input>
+
+        <mat-date-range-picker #rangePicker></mat-date-range-picker>
+      </mat-form-field>
+
+
+      <!-- Refresh -->
+      <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
+        <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="isLoading"></ion-icon>
+      </ion-button>
+    </div>
+
+
+    <!-- ===================== STATUS TABS ===================== -->
+    <div class="status-tabs-wrapper" *ngIf="!isSearchMode">
+      <div class="status-tabs">
+
+        <div *ngFor="let tab of tabs" class="status-tab" [class.active]="activeTab === tab.key" [class.active-cancel]="
               activeTab === tab.key &&
               tab.badgeClass === 'badge-cancel'
             " (click)="setTab(tab.key)">
 
-            <span class="tab-dot" [ngClass]="tab.badgeClass"></span>
-            <span class="tab-label">{{ tab.label }}</span>
-            <span class="tab-count" [ngClass]="tab.badgeClass">{{ bucketCount[tab.key] }}</span>
-
-          </div>
+          <span class="tab-dot" [ngClass]="tab.badgeClass"></span>
+          <span class="tab-label">{{ tab.label }}</span>
+          <span class="tab-count" [ngClass]="tab.badgeClass">{{ bucketCount[tab.key] }}</span>
 
         </div>
+
       </div>
+    </div>
 
 
-      <!-- ===================== DOWNLOAD ACTION BAR ===================== -->
-      <div class="download-action-bar" *ngIf="canShowDownloadControls && selectedIds.size > 0">
-        <span class="selected-count">{{ selectedIds.size }} selected</span>
+    <!-- ===================== DOWNLOAD ACTION BAR ===================== -->
+    <div class="download-action-bar" *ngIf="canShowDownloadControls && selectedIds.size > 0">
+      <span class="selected-count">{{ selectedIds.size }} selected</span>
 
-        <ion-button size="small" fill="solid" [disabled]="isGenerating" (click)="downloadSelected()">
-          <ion-icon slot="start" name="download-outline"></ion-icon>
-          {{ isGenerating ? 'Generating...' : 'Download' }}
-        </ion-button>
-      </div>
+      <ion-button size="small" fill="solid" [disabled]="isGenerating" (click)="downloadSelected()">
+        <ion-icon slot="start" name="download-outline"></ion-icon>
+        {{ isGenerating ? 'Generating...' : 'Download' }}
+      </ion-button>
+    </div>
 
 
-      <!-- ===================== BOOKING CARD LIST ===================== -->
-      <div class="booking-card-list">
+    <!-- ===================== BOOKING CARD LIST ===================== -->
+    <div class="booking-card-list">
 
-        <!-- Booking Card -->
-        <div class="booking-card" *ngFor="let item of rowsForActiveTab" [class.row-selected]="isSelected(item)">
+      <!-- Booking Card -->
+      <div class="booking-card" *ngFor="let item of rowsForActiveTab" [class.row-selected]="isSelected(item)">
 
-          <!-- ✅ Card header: no click / no expand anymore -->
-          <div class="bcard-header">
+        <!-- ✅ Card header: no click / no expand anymore -->
+        <div class="bcard-header">
 
-            <div class="bcard-header-left">
+          <div class="bcard-header-left">
 
-              <div class="bcard-id-row">
+            <div class="bcard-id-row">
 
-                <!-- Checkbox -->
-                <label class="bcard-checkbox-wrap" *ngIf="canShowDownloadControls" (click)="$event.stopPropagation()">
-                  <input type="checkbox" class="bcard-checkbox" [checked]="isSelected(item)" (change)="
+              <!-- Checkbox -->
+              <label class="bcard-checkbox-wrap" *ngIf="canShowDownloadControls" (click)="$event.stopPropagation()">
+                <input type="checkbox" class="bcard-checkbox" [checked]="isSelected(item)" (change)="
                       toggleSelect(
                         item,
                         $any($event.target).checked
                       )
                     " />
-                </label>
+              </label>
 
-                <!-- Booking ID -->
-                <a class="id-link">#{{ item.bookingId }}</a>
+              <!-- Booking ID -->
+              <a class="id-link">#{{ item.bookingId }}</a>
 
-                <!-- Booking Date -->
-                <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
-
-              </div>
-
-              <!-- Patient Name -->
-              <div class="bcard-name-row">
-                <span class="bcard-name">{{ item.title | titlecase }} {{ item.name }}</span>
-                <span class="sub-text" *ngIf="item.genderAge">
-                  ({{ item.genderAge }}) · {{ item.patientId }}
-                </span>
-              </div>
+              <!-- Booking Date -->
+              <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
 
             </div>
 
-            <!-- ✅ Right side: only the counts now, kept compact (matches Booking Status card) -->
-            <div class="bcard-header-right">
-              <div class="bcard-count-box">
-                <span class="count-line" [ngClass]="getTestCountStatusClass(item)">
-                  Test Count: {{ reportsFraction(item) }}
-                </span>
-                <span class="count-line">
-                  Sample Count: {{ item.sampleCount }}
-                </span>
-              </div>
+            <!-- Patient Name -->
+            <div class="bcard-name-row">
+              <span class="bcard-name">{{ item.title | titlecase }} {{ item.name }}</span>
+              <span class="sub-text" *ngIf="item.genderAge">
+                ({{ item.genderAge }}) · {{ item.patientId }}
+              </span>
             </div>
 
           </div>
 
+          <!-- ✅ Right side: only the counts now, kept compact (matches Booking Status card) -->
+          <div class="bcard-header-right">
+            <div class="bcard-count-box">
+              <span class="count-line" [ngClass]="getTestCountStatusClass(item)">
+                Test Count: {{ reportsFraction(item) }}
+              </span>
+              <span class="count-line">
+                Sample Count: {{ item.sampleCount }}
+              </span>
+            </div>
+          </div>
 
-          <!-- Card Stats -->
-          <div class="bcard-stats">
+        </div>
 
-            <div class="bcard-stat bcard-stat-with-tests">
-              <div class="bcs-text">
-                <span class="bcs-label">Client / Doctor</span>
-                <span class="bcs-value">{{ item.doctorName }}</span>
-              </div>
 
-              <!-- Tests row with eye icon, aligned next to Client/Doctor (matches Booking Status card) -->
-              <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
-                <span class="bcard-tests-label">Tests :-</span>
-                <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
-              </div>
+        <!-- Card Stats -->
+        <div class="bcard-stats">
+
+          <div class="bcard-stat bcard-stat-with-tests">
+            <div class="bcs-text">
+              <span class="bcs-label">Client / Doctor</span>
+              <span class="bcs-value">{{ item.doctorName }}</span>
             </div>
 
-            <!-- ✅ Barcode row — tap-to-copy added (same behaviour as
+            <!-- Tests row with eye icon, aligned next to Client/Doctor (matches Booking Status card) -->
+            <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
+              <span class="bcard-tests-label">Tests :-</span>
+              <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
+            </div>
+          </div>
+
+          <!-- ✅ Barcode row — tap-to-copy added (same behaviour as
               Booking Status page): trackBy + click handler + copy icon. -->
-            <div class="bcard-stat">
-              <div class="bcard-barcode-inline">
-                <div class="barcode-line" *ngFor="let b of item.barcodes; trackBy: trackByBarcode"
-                  (click)="copyBarcode(b); $event.stopPropagation()">
-                  <ion-icon name="qr-code-outline"></ion-icon>
-                  <span>{{ b }}</span>
-                  <ion-icon name="copy-outline" class="barcode-line-copy-icon"></ion-icon>
-                </div>
-                <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
+          <div class="bcard-stat">
+            <div class="bcard-barcode-inline">
+              <div class="barcode-line" *ngFor="let b of item.barcodes; trackBy: trackByBarcode"
+                (click)="copyBarcode(b); $event.stopPropagation()">
+                <ion-icon name="qr-code-outline"></ion-icon>
+                <span>{{ b }}</span>
+                <ion-icon name="copy-outline" class="barcode-line-copy-icon"></ion-icon>
               </div>
+              <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
             </div>
-
           </div>
 
-        </div>
-
-
-        <!-- Loading -->
-        <div class="loading-inline" *ngIf="isLoading">
-          <ion-spinner name="dots"></ion-spinner>
-          <span>Loading...</span>
-        </div>
-
-
-        <!-- Empty -->
-        <div class="empty-state" *ngIf="!isLoading && rowsForActiveTab.length === 0">
-          <ion-icon name="document-text-outline"></ion-icon>
-          <span>No data available</span>
-          <p class="empty-sub">Try adjusting the date range or search term.</p>
-        </div>
-
-
-        <!-- Load More -->
-        <div class="load-more-row" *ngIf="hasMoreForActiveTab">
-          <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreActiveTab()">
-            {{ isLoadingMore ? 'Loading...' : 'Load More' }}
-          </ion-button>
         </div>
 
       </div>
 
-      <!-- ===================== TEST PREVIEW MODAL (eye icon) ===================== -->
-      <ion-modal [isOpen]="showTestPreview" cssClass="test-preview-popup"
-        (didDismiss)="closeTestPreview()">
-        <ng-template>
-          <div class="modal-page">
-            <div class="modal-header">
-              <h2>{{ previewItem?.name }} – Tests</h2>
-              <ion-button fill="clear" (click)="closeTestPreview()">
-                <ion-icon name="close-outline"></ion-icon>
-              </ion-button>
-            </div>
 
-            <div class="pkg-preview-table">
-              <div class="pkg-preview-header-full">
-                <div>#</div>
-                <div>Test Name</div>
-                <div>Status</div>
-              </div>
+      <!-- Loading -->
+      <div class="loading-inline" *ngIf="isLoading">
+        <ion-spinner name="dots"></ion-spinner>
+        <span>Loading...</span>
+      </div>
 
-              <div class="pkg-preview-row-full" *ngFor="let t of previewItem?.tests; let i = index">
-                <div>{{ i + 1 }}</div>
-                <div>{{ t.name }}</div>
-                <div>
-                  <span class="status-pill" [ngClass]="testStatusClass(t.status)">
-                    {{ testStatusLabel(t.status) }}
-                  </span>
-                </div>
-              </div>
 
-              <div class="lab-picker-empty" *ngIf="!previewItem?.tests?.length">
-                No tests found in this booking.
-              </div>
-            </div>
-          </div>
-        </ng-template>
-      </ion-modal>
+      <!-- Empty -->
+      <div class="empty-state" *ngIf="!isLoading && rowsForActiveTab.length === 0">
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>No data available</span>
+        <p class="empty-sub">Try adjusting the date range or search term.</p>
+      </div>
+
+
+      <!-- Load More -->
+      <div class="load-more-row" *ngIf="hasMoreForActiveTab">
+        <ion-button fill="outline" [disabled]="isLoadingMore" (click)="loadMoreActiveTab()">
+          {{ isLoadingMore ? 'Loading...' : 'Load More' }}
+        </ion-button>
+      </div>
 
     </div>
 
-  </ion-content>
+    <!-- ===================== TEST PREVIEW MODAL (eye icon) ===================== -->
+    <ion-modal [isOpen]="showTestPreview" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">
+      <ng-template>
+        <div class="modal-page">
+          <div class="modal-header">
+            <h2>{{ previewItem?.name }} – Tests</h2>
+            <ion-button fill="clear" (click)="closeTestPreview()">
+              <ion-icon name="close-outline"></ion-icon>
+            </ion-button>
+          </div>
+
+          <div class="pkg-preview-table">
+            <div class="pkg-preview-header-full">
+              <div>#</div>
+              <div>Test Name</div>
+              <div>Status</div>
+            </div>
+
+            <div class="pkg-preview-row-full" *ngFor="let t of previewItem?.tests; let i = index">
+              <div>{{ i + 1 }}</div>
+              <div>{{ t.name }}</div>
+              <div>
+                <span class="status-pill" [ngClass]="testStatusClass(t.status)">
+                  {{ testStatusLabel(t.status) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="lab-picker-empty" *ngIf="!previewItem?.tests?.length">
+              No tests found in this booking.
+            </div>
+          </div>
+        </div>
+      </ng-template>
+    </ion-modal>
+
+  </div>
+
+</ion-content>
