@@ -680,4 +680,103 @@ getTestRanges(labId: number, testId: number): Observable<any[]> {
     `${this.BASE_URL}/api/v1/lab/report-master/master-report/test-ranges/getAllRanges/${labId}/${testId}`
   );
 }
+
+// ============================================================
+// FRANCHISE APIs — add these methods inside LabApiService
+// (paste them anywhere inside the class, e.g. right after
+// getFranchisesWithWallet() / getFranchises())
+// ============================================================
+
+// 1) Get All Franchise (paged, with search) — Primary API
+//    GET /api/v1/lab/franchise/:labId?wallet=true&page=&size=&searchFranchiseId=
+getFranchisesPage(
+  labId: number,
+  page: number = 0,
+  size: number = 20,
+  search?: string
+): Observable<any> {
+  let params = new HttpParams()
+    .set('wallet', 'true')
+    .set('page', page.toString())
+    .set('size', size.toString());
+
+  if (search) {
+    params = params.set('searchFranchiseId', search);
+  }
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/franchise/${labId}`,
+    { params }
+  );
+}
+
+// 2) Get Single Franchise (used by the "eye" view button)
+//    GET /api/v1/lab/franchise/:franchiseId
+getSingleFranchise(franchiseId: number): Observable<any> {
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/franchise/${franchiseId}`
+  );
+}
+
+// 3) Inactive Franchises (optionally date-ranged + paged)
+//    GET /api/v1/lab/franchise/inactive?startdate=&enddate=&page=&size=
+getInactiveFranchises(
+  startDate?: string,
+  endDate?: string,
+  page?: number,
+  size?: number
+): Observable<any> {
+  let params = new HttpParams();
+
+  if (startDate) params = params.set('startdate', startDate);
+  if (endDate) params = params.set('enddate', endDate);
+  if (page !== undefined) params = params.set('page', page.toString());
+  if (size !== undefined) params = params.set('size', size.toString());
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/franchise/inactive`,
+    { params }
+  );
+}
+
+// 4) Inactive for 7 Days
+//    GET /api/v1/lab/franchise/inactive-for-seven-days/:labId?endDate=
+getInactiveForSevenDays(labId: number, endDate: string): Observable<any> {
+  const params = new HttpParams().set('endDate', endDate);
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/franchise/inactive-for-seven-days/${labId}`,
+    { params }
+  );
+}
+
+// 5) Franchise Analysis (dashboard)
+//    GET /api/v1/lab/dashboard/franchise-analysis?labId=&franchiseId=
+getFranchiseAnalysis(labId: number, franchiseId: number): Observable<any> {
+  const params = new HttpParams()
+    .set('labId', labId.toString())
+    .set('franchiseId', franchiseId.toString());
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/lab/dashboard/franchise-analysis`,
+    { params }
+  );
+}
+
+// 6) Franchise Analytics (date range)
+//    GET /api/v1/analytics/franchise-analysis/:labId?startDate=&endDate=
+getFranchiseAnalytics(
+  labId: number,
+  startDate: string,
+  endDate: string
+): Observable<any> {
+  const params = new HttpParams()
+    .set('startDate', startDate)
+    .set('endDate', endDate);
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/analytics/franchise-analysis/${labId}`,
+    { params }
+  );
+}
 }

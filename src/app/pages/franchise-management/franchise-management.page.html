@@ -1,0 +1,306 @@
+<ion-header>
+  <ion-toolbar class="fr-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard"></ion-back-button>
+    </ion-buttons>
+    <ion-title>Franchise List</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="fr-content">
+
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="form-card">
+
+    <!-- ===================== TOP SUMMARY BAR (Total + PDF export) ===================== -->
+    <div class="summary-bar">
+      <div class="total-badge">
+        <ion-icon name="list-outline"></ion-icon>
+        <span>Total : {{ total }}</span>
+      </div>
+
+      <ion-button class="pdf-export-btn" (click)="exportPdf()" [disabled]="loading || total === 0">
+        <ion-icon slot="start" name="download-outline"></ion-icon>
+        <span>Download</span>
+      </ion-button>
+    </div>
+
+    <!-- ===================== FILTER BAR ===================== -->
+    <div class="filter-bar">
+
+      <!-- SEARCH -->
+      <div class="filter-field search-field">
+        <span class="search-icon-badge">
+          <ion-icon name="search-outline"></ion-icon>
+        </span>
+        <input
+          type="text"
+          placeholder="Type & Search Franchise"
+          [ngModel]="searchTerm"
+          (ngModelChange)="onSearchInput($event)"
+        />
+      </div>
+
+      <!-- ===== DATE RANGE (single "From – To" trigger, same look as Download Reports page) ===== -->
+      <div
+        class="filter-field date-field"
+        style="background:#ffffff; border:1px solid #d1d5db; border-radius:10px;"
+        (click)="openDateRangePicker()"
+      >
+        <span class="date-icon-badge">
+          <ion-icon name="calendar-outline"></ion-icon>
+        </span>
+
+        <span
+          class="date-trigger-btn"
+          [style.fontWeight]="(startDate || endDate) ? 700 : 500"
+          [style.color]="(startDate || endDate) ? '#111827' : '#6b7280'"
+        >
+          {{ startDate ? (startDate | date:'MM/dd/yyyy') : 'From' }}
+          –
+          {{ endDate ? (endDate | date:'MM/dd/yyyy') : 'To' }}
+        </span>
+
+        <ion-icon
+          *ngIf="startDate || endDate"
+          name="close-circle-outline"
+          class="clear-franchise"
+          (click)="clearDateRange(); $event.stopPropagation()"
+        ></ion-icon>
+      </div>
+
+      <!-- Hidden Material Date Range Picker (opened via the trigger above) -->
+      <mat-form-field
+        class="hidden-range-field"
+        appearance="fill"
+        style="display:none;"
+      >
+        <mat-date-range-input [rangePicker]="rangePicker">
+
+          <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeStartChange($event)" readonly />
+
+          <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+            (dateChange)="onRangeEndChange($event)" readonly />
+
+        </mat-date-range-input>
+
+        <mat-date-range-picker #rangePicker></mat-date-range-picker>
+      </mat-form-field>
+
+      <!-- TYPE -->
+      <div class="filter-field select-field type-field">
+        <span class="select-icon-badge">
+          <ion-icon name="business-outline"></ion-icon>
+        </span>
+
+        <button type="button" class="type-trigger-btn" (click)="showTypeDropdown = !showTypeDropdown; $event.stopPropagation()">
+          {{ typeFilterLabel }}
+          <ion-icon name="chevron-down-outline" class="type-chevron" [class.open]="showTypeDropdown"></ion-icon>
+        </button>
+
+        <div class="type-dropdown-panel" *ngIf="showTypeDropdown" (click)="$event.stopPropagation()">
+          <div class="type-dropdown-item"
+               *ngFor="let opt of typeOptions"
+               [class.selected]="typeFilter === opt.value"
+               (click)="selectType(opt)">
+            {{ opt.label }}
+          </div>
+        </div>
+      </div>
+
+      <div class="type-dropdown-backdrop" *ngIf="showTypeDropdown" (click)="showTypeDropdown = false"></div>
+
+      <!-- REFRESH -->
+      <ion-button class="refresh-btn" fill="solid" (click)="refresh()" [disabled]="loading">
+        <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="loading"></ion-icon>
+      </ion-button>
+
+    </div>
+
+    <!-- ===================== BADGE LEGEND ===================== -->
+    <div class="badge-legend">
+      <span class="legend-label">Note :</span>
+
+      <span class="legend-item">
+        <span class="count-line badge-super">Super</span>
+        <ion-icon name="arrow-forward-outline"></ion-icon>
+        <span class="legend-text">Super Franchise</span>
+      </span>
+
+      <span class="legend-item">
+        <span class="count-line badge-clinical">Franchise</span>
+        <ion-icon name="arrow-forward-outline"></ion-icon>
+        <span class="legend-text">Franchise</span>
+      </span>
+
+      <span class="legend-item">
+        <span class="count-line badge-complete">Sub</span>
+        <ion-icon name="arrow-forward-outline"></ion-icon>
+        <span class="legend-text">Sub Franchise</span>
+      </span>
+    </div>
+
+    <!-- ===================== STATUS TABS ===================== -->
+    <div class="status-tabs-wrapper">
+      <div class="status-tabs">
+
+        <div
+          class="status-tab"
+          [class.active]="statusFilter === 'ALL'"
+          [ngClass]="{ 'active-all': statusFilter === 'ALL' }"
+          (click)="statusFilter = 'ALL'; onStatusChange()"
+        >
+          <span class="tab-dot badge-all"></span>
+          <span class="tab-label">All</span>
+          <span class="tab-count badge-all">{{ total }}</span>
+        </div>
+
+        <div
+          class="status-tab"
+          [class.active]="statusFilter === 'ACTIVE'"
+          [ngClass]="{ 'active-complete': statusFilter === 'ACTIVE' }"
+          (click)="statusFilter = 'ACTIVE'; onStatusChange()"
+        >
+          <span class="tab-dot badge-complete"></span>
+          <span class="tab-label">Active</span>
+        </div>
+
+        <div
+          class="status-tab"
+          [class.active]="statusFilter === 'INACTIVE'"
+          [ngClass]="{ 'active-cancel': statusFilter === 'INACTIVE' }"
+          (click)="statusFilter = 'INACTIVE'; onStatusChange()"
+        >
+          <span class="tab-dot badge-cancel"></span>
+          <span class="tab-label">Inactive</span>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ===================== ERROR / LOADING / EMPTY ===================== -->
+    <div class="error-banner" *ngIf="errorMsg">{{ errorMsg }}</div>
+
+    <div class="table-skeleton" *ngIf="loading">
+      <div class="skeleton-card" *ngFor="let s of [1,2,3]">
+        <div class="skeleton-line" style="width:40%"></div>
+        <div class="skeleton-line" style="width:70%"></div>
+        <div class="skeleton-line" style="width:55%"></div>
+      </div>
+    </div>
+
+
+    <div class="empty-state" *ngIf="!loading && franchises.length === 0 && !errorMsg">
+      <ion-icon name="business-outline"></ion-icon>
+      <span>No franchises found</span>
+      <p class="empty-sub">Try adjusting the filters or search term.</p>
+    </div>
+
+
+    <!-- ===================== FRANCHISE CARD LIST ===================== -->
+    <div class="franchise-card-list" *ngIf="!loading">
+      <div
+        class="franchise-card"
+        *ngFor="let f of franchises; trackBy: trackByFranchiseId"
+      >
+
+        <!-- Header: hierarchy / name (left)  +  type & paid pills (right) -->
+        <div class="fcard-header">
+          <div class="fcard-header-left">
+            <div class="fcard-id-row">
+              <span class="fcard-field-label">Franchise :</span>
+              <span class="hierarchy-link">{{ hierarchyPath(f) }}</span>
+            </div>
+            <div class="fcard-name-row">
+              <span class="fcard-field-label">Name :</span>
+              <span class="fcard-name">{{ f.franchiseName }} / {{ f.centerCode }}</span>
+            </div>
+            <span class="sub-text me-tag" *ngIf="isMe(f)">
+              <ion-icon name="ribbon-outline"></ion-icon> It's Me
+            </span>
+          </div>
+
+          <div class="fcard-header-right">
+            <div class="fcard-count-box">
+              <span
+                class="count-line"
+                [ngClass]="badgeFor(f) === 'Super' ? 'badge-super' : badgeFor(f) === 'Sub' ? 'badge-complete' : badgeFor(f) === 'Franchise' ? 'badge-clinical' : 'badge-all'"
+              >{{ badgeFor(f) | uppercase }}</span>
+              <span class="count-line badge-paid" *ngIf="f.paidType">{{ f.paidType }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Info trigger — toggles inline expand now, no popup -->
+        <div class="fcard-info-trigger" (click)="toggleInfo(f); $event.stopPropagation()">
+          <span class="info-trigger-label">Info</span>
+          <ion-icon
+            [name]="isExpanded(f.franchiseId) ? 'chevron-up-outline' : 'chevron-down-outline'"
+            class="info-trigger-icon"
+          ></ion-icon>
+        </div>
+
+        <!-- Expandable details block (replaces popup) -->
+        <div class="fcard-expand-content" *ngIf="isExpanded(f.franchiseId)">
+          <div class="fr-info-row">
+            <span class="info-label">Created On</span>
+            <span class="info-value">{{ formattedCreatedOn(f) }}</span>
+          </div>
+          <div class="fr-info-row">
+            <span class="info-label">Balance</span>
+            <span class="info-value" [ngClass]="balanceClass(f)">{{ formatBalance(f) }}</span>
+          </div>
+          <div class="fr-info-row">
+            <span class="info-label">Login</span>
+            <span class="info-value">{{ usernameValue(f) || '—' }}</span>
+          </div>
+          <div class="fr-info-row">
+            <span class="info-label">Password</span>
+            <span class="info-value password-value">
+              <span class="password-text">
+                {{ isPasswordVisible(f.franchiseId) ? (passwordValue(f) || '—') : '••••••••' }}
+              </span>
+              <ion-icon
+                [name]="isPasswordVisible(f.franchiseId) ? 'eye-off-outline' : 'eye-outline'"
+                class="password-eye-icon"
+                (click)="togglePasswordVisibility(f.franchiseId); $event.stopPropagation()"
+              ></ion-icon>
+            </span>
+          </div>
+          <div class="fr-info-row">
+            <span class="info-label">Report Credit</span>
+            <span class="info-value" [ngClass]="creditClass(f)">{{ formatCredit(f) }}</span>
+          </div>
+          <div class="fr-info-row">
+            <span class="info-label">Expiry Date</span>
+            <span class="info-value-stack">
+              <span class="info-value">{{ formatExpiry(f) }}</span>
+              <span class="expired-badge" *ngIf="isExpired(f)">Expired</span>
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="load-more-row" *ngIf="hasMore">
+        <ion-button fill="outline" [disabled]="loadingMore" (click)="loadMore()">
+          {{ loadingMore ? 'Loading...' : 'Load More' }}
+        </ion-button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Infinite scroll (auto-load, works alongside the Load More button) -->
+  <ion-infinite-scroll (ionInfinite)="handleLoadMore($event)" [disabled]="!hasMore || loading">
+    <ion-infinite-scroll-content
+      loadingSpinner="crescent"
+      loadingText="Loading more franchises…"
+    ></ion-infinite-scroll-content>
+  </ion-infinite-scroll>
+
+</ion-content>

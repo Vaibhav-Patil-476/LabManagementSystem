@@ -105,7 +105,7 @@
                   <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
                   <span>Edit Tests</span>
                 </div>
-                <div class="sc-action-item" *ngIf="canEditPatient" (click)="onEditPatientClick(item)">
+               <div class="sc-action-item" *ngIf="canEditPatientForItem(item)" (click)="onEditPatientClick(item)">
                   <span class="sc-action-icon"><ion-icon name="person-outline"></ion-icon></span>
                   <span>Edit Patient</span>
                 </div>
@@ -357,8 +357,8 @@
                 <div class="field-row">
                   <div class="summary-field narrow">
                     <label>Title</label>
-                    <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
-                      class="premium-select">
+                                        <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
+                      class="premium-select" (ionChange)="onEditTitleChange()">
                       <ion-select-option value="mr">Mr</ion-select-option>
                       <ion-select-option value="mrs">Mrs</ion-select-option>
                       <ion-select-option value="ms">Ms</ion-select-option>
@@ -1051,7 +1051,15 @@
               </span>
               <span class="service-label">Cancel Test</span>
             </div>
+
+            <div class="service-item" *ngIf="isAdminRole" (click)="goToPage('franchise-management')">
+              <span class="service-circle amber">
+                <ion-icon name="business-outline"></ion-icon>
+              </span>
+              <span class="service-label">Franchise</span>
+            </div>
           </div>
+
         </section>
 
         <section class="content-section bookings-section">

@@ -358,6 +358,12 @@ export class AddPatientComponent {
     return this.isAdminRole
   }
 
+  get hasHistopathologyTest(): boolean {
+  return this.selectedTests.some((t: any) =>
+    String(t?.name || '').toLowerCase().includes('histopathology')
+  );
+}
+
   get isFranchiseRole(): boolean {
     return (
       this.role === this.ROLE_FRANCHISE ||
@@ -770,7 +776,6 @@ get displayTestRows(): any[] {
   // ============================================================
   // SAVE DOCTOR
   // ============================================================
-
   saveDoctor(): void {
     const doctorName = String(
       this.newDoctor?.name || ''
@@ -788,10 +793,10 @@ get displayTestRows(): any[] {
       return;
     }
 
-    if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(doctorName)) {
+    if (!/^[A-Za-z][A-Za-z\s.()]{1,59}$/.test(doctorName)) {
       this.toastService.error(
         'Validation Error',
-        'Doctor name should contain only letters and be 2-60 characters long.'
+        'Doctor name should contain only letters, spaces, dots or brackets, and be 2-60 characters long.'
       );
       return;
     }
@@ -1363,6 +1368,17 @@ get displayTestRows(): any[] {
       false;
 
   }
+
+  onTitleChange(): void {
+  const title = String(this.patient?.title || '').toLowerCase();
+
+  if (title === 'mr') {
+    this.patient.gender = 'male';
+  } else if (title === 'mrs' || title === 'ms') {
+    this.patient.gender = 'female';
+  }
+  // 'dr' -> gender untouched
+}
 
   searchDoctorInput(): void {
     const searchTerm = String(
@@ -3654,7 +3670,6 @@ getSubTotal() {
   // Returns the first validation error message found, or null if
   // the form is valid.
   // ============================================================
-
   private validatePatientForm(): string | null {
 
     // ✅ Sagle field-level errors reset karा suरुवातीला
@@ -3714,9 +3729,9 @@ getSubTotal() {
       return 'Please select or enter Ref. Doctor name.';
     }
 
-    if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(doctorTyped)) {
+     if (!/^[A-Za-z][A-Za-z\s.()]{1,59}$/.test(doctorTyped)) {
       this.fieldErrors.doctor = true;
-      return 'Doctor name should contain only letters and be 2-60 characters long.';
+      return 'Doctor name should contain only letters, spaces, dots or brackets, and be 2-60 characters long.';
     }
 
     // ---------- Mobile Number (REQUIRED) ----------
@@ -3796,6 +3811,12 @@ getSubTotal() {
     if (!this.selectedTests || this.selectedTests.length === 0) {
       this.fieldErrors.tests = true;
       return 'Please select at least one test.';
+    }
+
+    // ---------- Document (REQUIRED only for Histopathology tests) ----------
+    if (this.hasHistopathologyTest && !String(this.selectedFileBase64 || '').trim()) {
+      this.fieldErrors.tests = true;
+      return 'Please upload a document — required for Histopathology test.';
     }
 
     return null;

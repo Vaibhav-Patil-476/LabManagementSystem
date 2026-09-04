@@ -62,7 +62,7 @@
         <div class="input-group" style="flex: 0 0 80px;">
           <label>Title</label>
           <div class="input-wrap">
-            <ion-select [(ngModel)]="patient.title" placeholder="." interface="popover">
+            <ion-select [(ngModel)]="patient.title" placeholder="." interface="popover" (ionChange)="onTitleChange()">
               <ion-select-option value="mr">Mr.</ion-select-option>
               <ion-select-option value="mrs">Mrs.</ion-select-option>
               <ion-select-option value="ms">Ms.</ion-select-option>
@@ -248,7 +248,6 @@
           </div>
         </div>
       </div>
-
       <div class="checkbox-row">
         <div class="check-item">
           <ion-checkbox [(ngModel)]="patient.eReport"></ion-checkbox>
@@ -261,11 +260,16 @@
         <div class="check-item">
           <ion-checkbox [(ngModel)]="patient.file"></ion-checkbox>
           <span>FILE</span>
+         <span *ngIf="hasHistopathologyTest" class="required" style="margin-left:4px; color:#eb445a;">*</span>
         </div>
         <div class="check-item">
           <ion-checkbox [(ngModel)]="patient.homeCollection"></ion-checkbox>
           <span>HOME-COLLECTION</span>
         </div>
+      </div>
+
+      <div class="file-required-msg" *ngIf="hasHistopathologyTest && !selectedFileBase64" style="color:#eb445a; font-size:12px; margin-top:4px; margin-left:4px;">
+        Required.
       </div>
 
       <div class="extra-field" *ngIf="patient.clinical">
@@ -278,7 +282,7 @@
         </div>
       </div>
 
-      <div class="extra-field" *ngIf="patient.file">
+            <div class="extra-field" *ngIf="patient.file || hasHistopathologyTest">
 
         <input type="file" id="fileInput" style="display: none" accept="image/*,application/pdf"
           (change)="onFileSelected($event)">

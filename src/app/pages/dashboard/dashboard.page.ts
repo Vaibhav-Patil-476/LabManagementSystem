@@ -306,6 +306,16 @@ export class DashboardPage implements OnInit, OnDestroy {
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
   }
 
+  isSampleReceivedForBooking(item: any): boolean {
+  return (item?.samples || []).some((s: any) => (s.status || '').toString().toUpperCase() === 'RECEIVED');
+}
+
+canEditPatientForItem(item: any): boolean {
+  if (!this.canEditPatient) return false;
+  if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
+  return true;
+}
+
   get canViewAmount(): boolean {
     return this.roleService.isLabAdmin || this.isFranchiseOnlyRole;
   }
@@ -1119,11 +1129,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // EDIT PATIENT MODAL
   // ============================================================
-  onEditPatientClick(item: any): void {
-    if (!this.canEditPatient) return;
-    this.isSearchModalOpen = false;
-    this.editPatientFromSearch(item);
-  }
+onEditPatientClick(item: any): void {
+  if (!this.canEditPatientForItem(item)) return;
+  this.isSearchModalOpen = false;
+  this.editPatientFromSearch(item);
+}
 
   editPatientFromSearch(item: any): void {
     this.editPatientData = null;
@@ -1170,6 +1180,21 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.filteredCustomLabs = [];
     this.showCustomLabDropdown = false;
     if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true;
+  }
+
+    onEditTitleChange(): void {
+    if (!this.editPatientData) {
+      return;
+    }
+
+    const title = String(this.editPatientData?.title || '').toLowerCase();
+
+    if (title === 'mr') {
+      this.editPatientData.gender = 'male';
+    } else if (title === 'mrs' || title === 'ms') {
+      this.editPatientData.gender = 'female';
+    }
+    // 'dr' / 'master' / 'baby' -> gender untouched
   }
 
   savePatientChanges(): void {

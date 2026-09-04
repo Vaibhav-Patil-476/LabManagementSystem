@@ -1,0 +1,846 @@
+// FRANCHISE LIST — built on the SAME premium design tokens as
+// Booking Status (--primary, --brand-gradient, --shadow-*, --r-*,
+// --sp-*, --card-bg, --border-color, --section-bg, --text-dark,
+// --gray-accent, --success, --warning, --danger, --info, --purple).
+// Those are defined globally in src/theme/premium-tokens.scss —
+// nothing new to register here, this file only adds layout, exactly
+// like booking-status.page.scss does.
+
+:host {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: hidden;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.fr-header {
+  --background: var(--brand-gradient);
+  --color: #ffffff;
+  padding-top: env(safe-area-inset-top, 0);
+  box-shadow: 0 2px 14px rgba(6, 58, 56, 0.18);
+
+  ion-title {
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 17px;
+    letter-spacing: -0.2px;
+  }
+
+  ion-back-button {
+    --color: #ffffff;
+  }
+}
+
+.fr-content {
+  --background: #ffffff;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+}
+
+.form-card {
+  background: transparent;
+  border-radius: 0;
+  margin: 0;
+  padding: var(--sp-4) 0 var(--sp-5);
+  box-shadow: none;
+  border: none;
+  box-sizing: border-box;
+}
+
+// ---------- Summary bar ----------
+.summary-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+   justify-content: space-between;
+  gap: var(--sp-3);
+  padding: 2px var(--sp-3) var(--sp-5);
+}
+
+.total-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  background: var(--brand-gradient);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 10px 20px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+  box-shadow: var(--shadow-glow);
+  letter-spacing: 0.1px;
+
+  ion-icon {
+    font-size: 15px;
+  }
+}
+.pdf-export-btn {
+  --border-radius: var(--r-pill);
+  --background: var(--brand-gradient);
+  --color: #ffffff;
+  --box-shadow: var(--shadow-glow);
+  margin: 0;
+  height: 40px;
+  font-weight: 700;
+  font-size: 13px;
+
+  ion-icon {
+    font-size: 16px;
+  }
+
+  &[disabled] {
+    opacity: 0.6;
+  }
+}
+
+// ---------- Filter bar (identical structure to Booking Status) ----------
+.filter-bar {
+  position: relative;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-3) var(--sp-5);
+}
+
+.filter-field {
+  flex: 1 1 220px;
+  min-width: 160px;
+  max-width: 100%;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  padding: 0 var(--sp-4);
+  height: 56px;
+  box-sizing: border-box;
+  transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
+
+  select,
+  input {
+    border: none;
+    background: transparent;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-dark);
+  }
+
+  select {
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+  }
+
+  &:focus-within {
+    border-color: var(--primary);
+    background: #ffffff;
+    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+  }
+}
+
+.search-icon-badge,
+.select-icon-badge,
+.date-icon-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 11px;
+  background: var(--primary-light);
+  flex-shrink: 0;
+
+  ion-icon {
+    color: var(--primary);
+    font-size: 18px;
+    margin: 0;
+  }
+}
+
+.search-field input::placeholder {
+  color: #9aabae;
+  font-weight: 500;
+}
+
+.select-field {
+  overflow: hidden;
+}
+
+.date-field {
+  height: 58px;
+  padding: 0 16px;
+  gap: 12px;
+}
+
+.clear-franchise {
+  color: var(--gray-accent);
+  cursor: pointer;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.refresh-btn {
+  --border-radius: var(--r-sm);
+  --color: #fff;
+  margin: 0;
+  height: 56px;
+  width: 56px;
+  flex-shrink: 0;
+  --box-shadow: var(--shadow-glow);
+
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
+  }
+
+  &:active::part(native) {
+    transform: scale(0.94);
+  }
+}
+
+.spin-icon {
+  animation: fr-spin 0.8s linear infinite;
+}
+
+@keyframes fr-spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+
+// ---------- Status tabs (identical structure to Booking Status) ----------
+.status-tabs-wrapper {
+  padding: 4px var(--sp-3) 8px;
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+}
+
+.status-tabs {
+  display: flex;
+  align-items: stretch;
+  gap: 10px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 4px 2px 10px;
+  scroll-snap-type: x proximity;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+.status-tab {
+  scroll-snap-align: start;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 11px 18px;
+  border-radius: var(--r-pill);
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  box-shadow: var(--shadow-xs);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+
+  .tab-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+
+    &.badge-all { background: var(--primary); }
+    &.badge-complete { background: var(--success); }
+    &.badge-cancel { background: var(--danger); }
+  }
+
+  .tab-label {
+    font-weight: 700;
+    font-size: 12.5px;
+    color: #56696c;
+  }
+
+  .tab-count {
+    min-width: 22px;
+    height: 22px;
+    padding: 0 7px;
+    border-radius: var(--r-pill);
+    color: #ffffff;
+    font-size: 11px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+
+    &.badge-all { background: var(--primary); }
+  }
+
+  &:hover {
+    border-color: rgba(8, 123, 118, 0.35);
+    box-shadow: var(--shadow-sm);
+  }
+
+  &:active {
+    transform: scale(0.97);
+  }
+
+  &.active {
+    border-color: transparent !important;
+
+    .tab-dot { background: #ffffff !important; }
+    .tab-label { color: #ffffff !important; }
+
+    .tab-count {
+      background: rgba(255, 255, 255, 0.22) !important;
+      color: #ffffff !important;
+      box-shadow: none !important;
+    }
+  }
+
+  &.active.active-all {
+    background: #087b76 !important;
+    border-color: #087b76 !important;
+    box-shadow: 0 8px 22px rgba(8, 123, 118, 0.28) !important;
+  }
+
+  &.active.active-complete {
+    background: var(--success) !important;
+    border-color: var(--success) !important;
+  }
+
+  &.active.active-cancel {
+    background: var(--danger) !important;
+    border-color: var(--danger) !important;
+  }
+}
+
+// ---------- States ----------
+.error-banner {
+  margin: 0 var(--sp-3) var(--sp-4);
+  padding: 10px 14px;
+  background: var(--danger-bg);
+  color: var(--danger);
+  border-radius: var(--r-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--sp-2);
+  padding: var(--sp-7) var(--sp-4);
+  color: var(--text-light);
+
+  ion-icon {
+    font-size: 48px;
+    color: #c3d3d2;
+  }
+
+  span {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--text-mid);
+  }
+
+  .empty-sub {
+    font-size: 12.5px;
+    color: var(--gray-accent);
+    margin: 0;
+  }
+}
+
+.table-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+  padding: 0 var(--sp-3);
+}
+
+.skeleton-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  padding: var(--sp-4);
+}
+
+.skeleton-line {
+  height: 14px;
+  border-radius: var(--r-sm);
+  margin-bottom: 10px;
+  background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
+  background-size: 400% 100%;
+  animation: fr-skeleton-shine 1.2s ease-in-out infinite;
+}
+
+@keyframes fr-skeleton-shine {
+  0% { background-position: 100% 50%; }
+  100% { background-position: 0 50%; }
+}
+
+// ---------- Franchise card list ----------
+.franchise-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3, 12px);
+  margin-top: var(--sp-3);
+  padding: 0 var(--sp-3);
+}
+
+.franchise-card {
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-xs);
+  box-sizing: border-box;
+  transition: box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.fcard-header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--sp-3);
+  padding: var(--sp-4);
+}
+
+.fcard-header-left {
+  min-width: 0;
+  flex: 1;
+}
+
+.fcard-field-label {
+  display: block;
+  color: var(--gray-accent);
+  font-weight: 600;
+  font-size: 11.5px;
+  margin-bottom: 2px;
+}
+
+.fcard-id-row {
+  margin-bottom: 8px;
+
+  .hierarchy-link {
+    display: block;
+    color: var(--primary);
+    font-weight: 800;
+    font-size: 13.5px;
+    line-height: 1.3;
+  }
+}
+
+.fcard-name-row {
+  display: flex;
+  flex-direction: column;
+}
+
+.fcard-name {
+  display: block;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--text-dark);
+  overflow-wrap: anywhere;
+}
+.sub-text.me-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--danger);
+  margin-top: 4px;
+
+  ion-icon {
+    font-size: 13px;
+  }
+}
+.fcard-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.fcard-count-box {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+
+// Same pill "tag" look as Booking Status's .count-line
+.count-line {
+  font-size: 10px;
+  font-weight: 700;
+  color: var(--primary-dark);
+  background: var(--primary-light);
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  white-space: nowrap;
+
+  &.badge-super {
+    background: var(--warning-bg);
+    color: var(--warning);
+  }
+
+  &.badge-clinical {
+    background: var(--info-bg, #e3f0fb);
+    color: var(--info);
+  }
+
+  &.badge-complete {
+    background: var(--success-bg);
+    color: var(--success);
+  }
+
+  &.badge-paid {
+    background: var(--section-bg);
+    color: var(--gray-accent);
+  }
+}
+
+// ---------- Actions row (identical to Booking Status action-icon-btn) ----------
+.fcard-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border-color);
+  padding: var(--sp-3) var(--sp-4);
+}
+
+.fcard-actions-buttons {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.action-icon-btn {
+  --border-radius: var(--r-xs);
+  --color: var(--primary);
+  --background: var(--card-bg, #fff);
+  --background-hover: var(--primary-lighter);
+  margin: 0;
+  height: 38px;
+  width: 38px;
+
+  &::part(native) {
+    background: var(--card-bg, #fff);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-xs);
+  }
+
+  &:active::part(native) {
+    background: var(--primary-lighter);
+  }
+}
+
+// ---------- Load more ----------
+.load-more-row {
+  display: flex;
+  justify-content: center;
+  padding: var(--sp-4);
+
+  ion-button {
+    --border-radius: var(--r-pill);
+    --border-color: var(--primary);
+    --color: var(--primary);
+    font-weight: 700;
+    height: 44px;
+    min-width: 160px;
+
+    &::part(native) {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    &[disabled]::part(native) {
+      opacity: 0.6;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .filter-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-field {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .refresh-btn {
+    width: 100%;
+  }
+}
+
+// ==========================================================
+// TYPE DROPDOWN — click-to-open custom card list (replaces
+// native <select>), same style family as add-patient's
+// lab-dropdown-panel.
+// ==========================================================
+.type-field {
+  position: relative !important;
+  cursor: pointer;
+  overflow: visible !important;
+
+  .type-trigger-btn {
+    all: unset;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    height: 100%;
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-dark);
+    cursor: pointer;
+    box-sizing: border-box;
+    position: relative;
+    z-index: 1;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+}
+
+.type-chevron {
+  font-size: 16px;
+  color: var(--gray-accent);
+  transition: transform 0.15s ease;
+
+  &.open {
+    transform: rotate(180deg);
+  }
+}
+
+.type-dropdown-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  right: 0;
+  z-index: 999;
+  background: var(--card-bg, #fff);
+  border: 1.5px solid var(--border-color);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-lg);
+  padding: 6px;
+  max-height: 260px;
+  overflow-y: auto;
+  box-sizing: border-box;
+}
+
+.type-dropdown-item {
+  padding: 12px 14px;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dark);
+  cursor: pointer;
+
+  &:hover {
+    background: var(--section-bg);
+  }
+
+  &.selected {
+    background: var(--primary-light);
+    color: var(--primary-dark);
+    font-weight: 700;
+  }
+}
+
+.type-dropdown-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 998;
+  background: transparent;
+}
+
+.badge-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-3, 12px);
+  padding: 4px var(--sp-3) var(--sp-4);
+  font-size: 13px;
+}
+
+.legend-label {
+  font-weight: 700;
+  color: var(--text-dark);
+  flex-shrink: 0;
+}
+
+.legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+
+  ion-icon {
+    font-size: 13px;
+    color: var(--gray-accent);
+  }
+}
+
+.legend-text {
+  font-weight: 600;
+  color: var(--text-dark);
+  white-space: nowrap;
+}
+
+@media (max-width: 480px) {
+  .badge-legend {
+    gap: 8px;
+  }
+}
+
+// ---------- Info trigger row (replaces always-visible stats) ----------
+.fcard-info-trigger {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 var(--sp-4) var(--sp-3);
+  padding: 10px 14px;
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  border: 1px solid var(--border-color);
+  cursor: pointer;
+  transition: background 0.12s ease;
+
+  .info-trigger-label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--text-dark);
+  }
+
+  .info-trigger-icon {
+    font-size: 18px;
+    color: var(--primary);
+  }
+
+  &:active {
+    background: var(--primary-lighter, var(--primary-light));
+  }
+}
+
+// ---------- Inline expand content (replaces popup) ----------
+.fcard-expand-content {
+  margin: 0 var(--sp-4) var(--sp-3);
+  padding: 6px 14px 4px;
+  border-radius: var(--r-sm);
+  background: var(--section-bg);
+  border: 1px solid var(--border-color);
+  animation: fr-expand-in 0.18s ease;
+
+  .info-value-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.expired-badge {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--r-pill, 999px);
+  background: #e53935;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+  .fr-info-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 10px 0;
+
+    & + .fr-info-row {
+      border-top: 1px dashed var(--border-color);
+    }
+  }
+
+  .info-label {
+    color: var(--gray-accent);
+    font-weight: 600;
+    font-size: 12.5px;
+    flex-shrink: 0;
+  }
+
+.info-value {
+  color: var(--text-dark);
+  font-weight: 700;
+  font-size: 13px;
+  text-align: right;
+
+  &.text-positive,
+  &.text-negative {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--r-sm, 8px);
+    font-weight: 800;
+  }
+
+  &.text-positive {
+    color: #0f9d58 !important;
+    background: rgba(15, 157, 88, 0.12) !important;
+  }
+
+  &.text-negative {
+    color: #e53935 !important;
+    background: rgba(229, 57, 53, 0.12) !important;
+  }
+}
+
+  .password-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    justify-content: flex-end;
+  }
+
+  .password-text {
+    font-family: 'Courier New', monospace;
+    letter-spacing: 1px;
+  }
+
+  .password-eye-icon {
+    font-size: 16px;
+    color: var(--primary);
+    cursor: pointer;
+    flex-shrink: 0;
+
+    &:active {
+      opacity: 0.6;
+    }
+  }
+}
+
+@keyframes fr-expand-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

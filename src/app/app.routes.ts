@@ -116,6 +116,28 @@ export const routes: Routes = [
       )
   },
 
+ // ✅ moved ABOVE the '**' wildcard — routes after '**' are unreachable
+  {
+    path: 'franchise-management',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/franchise-management/franchise-management.page').then(
+        m => m.FranchiseManagementPage
+      )
+  },
+
+  // ✅ alias — so goToPage('franchise') also works without changing the dashboard click handler
+  {
+    path: 'franchise',
+    redirectTo: 'franchise-management',
+    pathMatch: 'full'
+  },
+
+  {
+    path: '**',
+    redirectTo: 'login'
+  },
+
   {
     path: '**',
     redirectTo: 'login'

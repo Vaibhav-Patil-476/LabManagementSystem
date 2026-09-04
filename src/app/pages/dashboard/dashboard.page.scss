@@ -334,6 +334,9 @@ ion-content.menu-content {
   z-index: 5;
   overflow: visible;
 }
+.service-circle.amber {
+  background: linear-gradient(135deg, #f5a623, #f7b955); // tumchya existing teal/violet gradient style sarkha adjust kara
+}
 
 .filter-copy {
   display: flex;

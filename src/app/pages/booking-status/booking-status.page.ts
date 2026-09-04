@@ -297,6 +297,15 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   get isFranchiseOnlyRole(): boolean { return this.role === this.ROLE_FRANCHISE; }
 
   get canEditPatient(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
+  isSampleReceivedForBooking(item: BookingListItem): boolean {
+  return (item.samples || []).some(s => (s.status || '').toString().toUpperCase() === 'RECEIVED');
+}
+
+canEditPatientForItem(item: BookingListItem): boolean {
+  if (!this.canEditPatient) return false;
+  if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
+  return true;
+}
   get canViewAmount(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
   get canEditBilling(): boolean { return this.isAdminRole || this.isStaffRole; }
   get canViewPayment(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
@@ -1421,6 +1430,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   // ---------- edit patient ----------
   editPatient(item: BookingListItem): void {
+    if (!this.canEditPatientForItem(item)) return;
     if (!this.canEditPatient) return;
     this.closeActionMenu();
     this.editPatientData = null;
@@ -1457,6 +1467,21 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.customLabSearch = '';
     this.filteredCustomLabs = [];
     this.showCustomLabDropdown = false;
+  }
+
+    onEditTitleChange(): void {
+    if (!this.editPatientData) {
+      return;
+    }
+
+    const title = String(this.editPatientData?.title || '').toLowerCase();
+
+    if (title === 'mr') {
+      this.editPatientData.gender = 'male';
+    } else if (title === 'mrs' || title === 'ms') {
+      this.editPatientData.gender = 'female';
+    }
+    // 'dr' / 'master' / 'baby' -> gender untouched
   }
 
   updatePatient(): void {
