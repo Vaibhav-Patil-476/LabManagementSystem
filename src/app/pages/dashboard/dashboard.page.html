@@ -1,4 +1,4 @@
-<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
+?<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
   <ion-content class="menu-content">
     <div class="menu-shell">
       <div class="menu-brand">
@@ -15,18 +15,7 @@
         </div>
       </div>
 
-      <ion-list lines="none" class="menu-list">
-        <ion-item button detail="false" (click)="goToProfile()">
-          <span class="menu-item-icon" slot="start"><ion-icon name="person-outline"></ion-icon></span>
-          <ion-label>My profile</ion-label>
-          <span slot="end" class="menu-arrow" aria-hidden="true">›</span>
-        </ion-item>
 
-        <ion-item button detail="false" class="logout-item" (click)="logout()">
-          <span class="menu-item-icon" slot="start"><ion-icon name="log-out-outline"></ion-icon></span>
-          <ion-label>Log out</ion-label>
-        </ion-item>
-      </ion-list>
 
       <p class="menu-footer">Secure healthcare operations</p>
     </div>
@@ -1135,4 +1124,23 @@
       </ng-template>
     </main>
   </ion-content>
+  <!-- ================= BOTTOM NAVIGATION BAR ================= -->
+  <nav class="app-bottom-nav" role="navigation" aria-label="Primary">
+    <button type="button" class="bn-item" [class.active]="isActiveTab('/dashboard')" (click)="goToPage('dashboard')">
+      <ion-icon name="home-outline"></ion-icon>
+      <span>Home</span>
+    </button>
+
+    <button type="button" class="bn-item" [class.active]="isActiveTab('/account')" (click)="goToPage('account')">
+      <ion-icon name="wallet-outline"></ion-icon>
+      <span>Account</span>
+    </button>
+
+    <button type="button" class="bn-item" [class.active]="isActiveTab('/profile')" (click)="goToProfile()">
+      <ion-icon name="person-outline"></ion-icon>
+      <span>Profile</span>
+    </button>
+  </nav>
+  <!-- =========================================================== -->
+
 </div>

@@ -1,0 +1,202 @@
+<ion-header [translucent]="true">
+  <ion-toolbar class="report-header">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Search Ledger</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="ledger-content">
+
+  <!-- Search box: franchise + date range -->
+  <div class="search-card">
+    <div class="franchise-field">
+      <ion-item lines="none" class="franchise-item" *ngIf="!franchiseId" (click)="openFranchisePicker()">
+        <ion-icon name="business-outline" slot="start"></ion-icon>
+        <ion-input placeholder="Franchise nivda (e.g. dar1/dar1)" readonly></ion-input>
+        <ion-icon name="chevron-down-outline" slot="end"></ion-icon>
+      </ion-item>
+
+      <ion-item lines="none" class="franchise-item" *ngIf="franchiseId">
+        <ion-icon name="business-outline" slot="start"></ion-icon>
+        <ion-label>{{ franchiseLabel }}</ion-label>
+        <ion-icon name="close-outline" slot="end" (click)="clearFranchise()"></ion-icon>
+      </ion-item>
+
+      <!-- Real franchise picker, backed by LabApiService.getFranchisesPage() -->
+      <div class="click-catcher" *ngIf="franchiseDropdownOpen" (click)="closeFranchisePicker()"></div>
+
+      <div class="franchise-dropdown" *ngIf="franchiseDropdownOpen">
+        <ion-searchbar
+          placeholder="Franchise shodha..."
+          [(ngModel)]="franchisePickerQuery"
+          (ionInput)="onFranchiseQueryChange($event.detail.value)"
+          show-clear-button="focus">
+        </ion-searchbar>
+
+        <div class="franchise-dropdown-loading" *ngIf="franchiseLoading">
+          <ion-spinner name="crescent"></ion-spinner>
+          <span>Loading franchises...</span>
+        </div>
+
+        <ng-container *ngIf="!franchiseLoading">
+          <div
+            class="franchise-dropdown-item"
+            *ngFor="let f of franchiseOptions"
+            (click)="selectFranchise(f)">
+            {{ f.label }}
+          </div>
+
+          <div class="franchise-dropdown-empty" *ngIf="!franchiseOptions.length">
+            Franchise sapadli nahi.
+          </div>
+        </ng-container>
+      </div>
+    </div>
+
+    <ion-item lines="none" class="date-item">
+      <ion-icon name="calendar-outline" slot="start"></ion-icon>
+      <ion-input
+        type="date"
+        [(ngModel)]="startDate"
+        placeholder="Start date">
+      </ion-input>
+      <ion-text class="date-sep">-</ion-text>
+      <ion-input
+        type="date"
+        [(ngModel)]="endDate"
+        placeholder="End date">
+      </ion-input>
+    </ion-item>
+
+    <ion-button expand="block" class="search-btn" (click)="searchLedger()" [disabled]="loading">
+      <ion-icon name="search-outline" slot="start"></ion-icon>
+      Search Ledger
+    </ion-button>
+  </div>
+
+  <ion-text color="danger" *ngIf="errorMessage">
+    <p class="ion-padding-horizontal error-text">{{ errorMessage }}</p>
+  </ion-text>
+
+  <ng-container *ngIf="ledger as l">
+    <h2 class="section-title">
+      Ledger ({{ l.startDate || startDate }} - {{ l.endDate || endDate }})
+    </h2>
+
+    <ion-list class="summary-list" lines="full">
+      <ion-item>
+        <ion-label>Opening Balance</ion-label>
+        <ion-note slot="end">₹{{ l.openingBalance | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Closing Balance</ion-label>
+        <ion-note slot="end">₹{{ l.closingBalance | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Booking Amount</ion-label>
+        <ion-note slot="end">₹{{ l.bookingAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Cancellation / Refund</ion-label>
+        <ion-note slot="end">₹{{ l.cancellationRefundAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Commission Amount</ion-label>
+        <ion-note slot="end">₹{{ l.commissionAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Deposit Amount</ion-label>
+        <ion-note slot="end">₹{{ l.depositAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Razorpay Deposit Amount</ion-label>
+        <ion-note slot="end">₹{{ l.razorpayDepositAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Cashfree Deposit Amount</ion-label>
+        <ion-note slot="end">₹{{ l.cashfreeDepositAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Inventory Debit</ion-label>
+        <ion-note slot="end">₹{{ l.inventoryDebitAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+      <ion-item>
+        <ion-label>Debited / Adjusted Amount</ion-label>
+        <ion-note slot="end">₹{{ l.debitedAdjustedAmount | number:'1.2-2' }}</ion-note>
+      </ion-item>
+    </ion-list>
+
+        <!-- NET BUSINESS bar — dynamic, recalculates whenever the date
+         range / franchise changes and the Past Ledger reloads. -->
+    <div class="net-business-bar">
+      <div class="nb-label">Net Business</div>
+      <div class="nb-segment nb-debit">- ₹{{ netDebitTotal | number:'1.2-2' }}</div>
+      <div class="nb-segment nb-credit">+ ₹{{ netCreditTotal | number:'1.2-2' }}</div>
+      <div class="nb-segment nb-net">
+        {{ netBusinessTotal < 0 ? '-' : '+' }} ₹{{ (netBusinessTotal < 0 ? -netBusinessTotal : netBusinessTotal) | number:'1.2-2' }}
+      </div>
+    </div>
+    
+    <div class="past-ledger-header">
+      <h2 class="section-title">Past Ledger</h2>
+
+      <div class="past-ledger-toolbar">
+        <ion-select
+          interface="popover"
+          placeholder="Sort By"
+          [(ngModel)]="selectedSort">
+          <ion-select-option *ngFor="let opt of sortOptions" [value]="opt.value">
+            {{ opt.label }}
+          </ion-select-option>
+        </ion-select>
+
+        <ion-searchbar
+          placeholder="Type & Search Franchise"
+          [(ngModel)]="franchiseSearchText"
+          show-clear-button="focus">
+        </ion-searchbar>
+
+        <ion-buttons class="export-buttons">
+          <ion-button fill="solid" class="export-btn export-pdf" (click)="exportPdf()">
+            <ion-icon name="document-text-outline"></ion-icon>
+          </ion-button>
+          <ion-button fill="solid" class="export-btn export-excel" (click)="exportExcel()">
+            <ion-icon name="grid-outline"></ion-icon>
+          </ion-button>
+        </ion-buttons>
+      </div>
+    </div>
+
+    <ion-grid class="past-ledger-table">
+      <ion-row class="table-head">
+        <ion-col size="1">Sr.No</ion-col>
+        <ion-col size="3">Booking Date</ion-col>
+        <ion-col size="2">Type</ion-col>
+        <ion-col size="6">Remark</ion-col>
+      </ion-row>
+
+      <ion-row *ngFor="let entry of sortedPastLedger; let i = index" class="table-row">
+        <ion-col size="1">{{ i + 1 }}</ion-col>
+        <ion-col size="3">
+          <a>{{ entry.bookingId }}</a>
+          <div class="booking-date">{{ entry.bookingDate }}</div>
+        </ion-col>
+        <ion-col size="2">
+          <ion-badge class="type-badge" [ngClass]="entry.type === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
+            {{ entry.type }}
+          </ion-badge>
+        </ion-col>
+        <ion-col size="6">{{ entry.remark }}</ion-col>
+      </ion-row>
+
+      <ion-row *ngIf="!sortedPastLedger.length">
+        <ion-col size="12" class="ion-text-center">Nivadlelya date range sathi kahi entries nahit.</ion-col>
+      </ion-row>
+    </ion-grid>
+
+
+  </ng-container>
+
+</ion-content>

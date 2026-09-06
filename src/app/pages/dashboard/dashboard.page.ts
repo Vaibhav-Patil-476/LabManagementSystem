@@ -30,7 +30,7 @@ import {
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, attachOutline,
   checkmarkOutline, walletOutline, cardOutline,
-  addCircleOutline, lockClosedOutline, eyeOutline
+  addCircleOutline, lockClosedOutline, eyeOutline,homeOutline 
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -289,6 +289,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       'add-circle-outline': addCircleOutline,
       'lock-closed-outline': lockClosedOutline,
       'eye-outline': eyeOutline,
+      'home-outline': homeOutline,
     });
   }
 
@@ -1908,6 +1909,13 @@ onEditPatientClick(item: any): void {
 
     this.menuCtrl.close();
     this.router.navigate(['/' + page]);
+  }
+
+  // ============================================================
+  // BOTTOM NAV — active tab highlight
+  // ============================================================
+  isActiveTab(path: string): boolean {
+    return this.router.url === path || this.router.url.startsWith(path + '/');
   }
 
   goToProfile(): void {

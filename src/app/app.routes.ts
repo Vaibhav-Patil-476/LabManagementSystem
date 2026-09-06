@@ -116,7 +116,7 @@ export const routes: Routes = [
       )
   },
 
- // ✅ moved ABOVE the '**' wildcard — routes after '**' are unreachable
+  // ✅ moved ABOVE the '**' wildcard — routes after '**' are unreachable
   {
     path: 'franchise-management',
     canActivate: [authGuard],
@@ -133,11 +133,32 @@ export const routes: Routes = [
     pathMatch: 'full'
   },
 
+  // ============================================================
+  // ACCOUNT section — ledger / wallet
+  // ============================================================
   {
-    path: '**',
-    redirectTo: 'login'
+    path: 'ledger-search',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./pages/account/ledger-search/ledger-search.page').then(
+        m => m.LedgerSearchPage
+      )
   },
 
+  
+
+  // ✅ bottom-nav cha goToPage('account') hyach route la hit karto.
+  // Ata temporarily ledger-search var alias kelay — pudhe ek separate
+  // "Account hub" page (accordion: Ledger Search / Wallet Summary) banवायचं
+  // asel tar tyala point kar, tovar he alias thevu shakto.
+  {
+    path: 'account',
+    redirectTo: 'ledger-search',
+    pathMatch: 'full'
+  },
+
+  // ✅ wildcard — EKACH, ani sagLyaat SHEVATI. Yachya khali kahihi
+  // add kelas tar te kadhihi trigger honar nahi.
   {
     path: '**',
     redirectTo: 'login'

@@ -21,56 +21,64 @@ export class WalletService {
     return this.authService.franchiseId;
   }
 
-  // GET /api/v1/wallet/:labId/:franchiseId
-  // getWallet(labId?: any, franchiseId?: any, page?: any, size?: any, transaction?: any, paymentMode?: any): Observable<any> {
-  //   const lId = labId ?? this.getLabId();
-  //   const fId = franchiseId ?? this.getFranchiseId();
-  //   let url = `${this.BASE_URL}/api/v1/wallet/${lId}/${fId}?`;
-  //   if (page != null) url += `page=${page}&`;
-  //   if (size != null) url += `size=${size}&`;
-  //   if (transaction != null && transaction !== '') url += `transaction=${transaction}&`;
-  //   if (paymentMode != null && paymentMode !== '') url += `paymentMode=${paymentMode}&`;
-  //   url = url.replace(/&$/, '');
-  //   return this.http.get(url);
-  // }
-
-
+  // GET /api/v1/wallet/:labId/:franchiseId  (transactions)
   getWallet(
-  labId?: any,
-  franchiseId?: any,
-  page?: any,
-  size?: any,
-  transaction?: any,
-  paymentMode?: any
-): Observable<any> {
+    labId?: any,
+    franchiseId?: any,
+    page?: any,
+    size?: any,
+    transaction?: any,
+    paymentMode?: any,
+    startDate?: any,
+    endDate?: any,
+    groupByCommissionDate?: any
+  ): Observable<any> {
 
-  const lId = labId ?? this.getLabId();
-  const fId = franchiseId ?? this.getFranchiseId();
+    const lId = labId ?? this.getLabId();
+    const fId = franchiseId ?? this.getFranchiseId();
 
-  let url = `${this.BASE_URL}/api/v1/wallet/summary/${lId}/${fId}?`;
+    // ✅ FIX: he 'summary/' na jodta transactions cha actual endpoint
+    // vaparte, getWalletSummary() peksha vegla.
+    let url = `${this.BASE_URL}/api/v1/wallet/${lId}/${fId}?`;
 
-  if (transaction != null && transaction !== '') {
-    url += `transaction=${transaction}&`;
+    if (transaction != null && transaction !== '') {
+      url += `transaction=${transaction}&`;
+    }
+
+    if (page != null) {
+      url += `page=${page}&`;
+    }
+
+    if (size != null) {
+      url += `size=${size}&`;
+    }
+
+    if (paymentMode != null && paymentMode !== '') {
+      url += `paymentMode=${paymentMode}&`;
+    }
+
+    // ✅ FIX: startDate/endDate/groupByCommissionDate were missing
+    // entirely before, so this call could never be date-filtered.
+    // The company web app calls this exact endpoint with these three
+    // params to populate the "Past Ledger" transaction list for a
+    // date range — getLedger() alone only returns summary totals
+    // with no transaction list at all.
+    if (startDate) {
+      url += `startDate=${startDate}&`;
+    }
+
+    if (endDate) {
+      url += `endDate=${endDate}&`;
+    }
+
+    if (groupByCommissionDate != null) {
+      url += `groupByCommissionDate=${groupByCommissionDate}&`;
+    }
+
+    url = url.replace(/&$/, '');
+
+    return this.http.get(url);
   }
-
-  if (page != null) {
-    url += `page=${page}&`;
-  }
-
-  if (size != null) {
-    url += `size=${size}&`;
-  }
-
-  if (paymentMode != null && paymentMode !== '') {
-    url += `paymentMode=${paymentMode}&`;
-  }
-
-  url = url.replace(/&$/, '');
-
-
-
-  return this.http.get(url);
-}
 
   // GET /api/v1/wallet/summary/:labId/:franchiseId
   getWalletSummary(labId?: any, franchiseId?: any, startDate?: any, endDate?: any, page?: any, size?: any): Observable<any> {
@@ -116,13 +124,36 @@ export class WalletService {
     return this.http.post(`${this.BASE_URL}/api/v1/order/approve-offline-order/${paymentId}`, null);
   }
 
-// PUT /api/v1/order/update/{razorpayPaymentId}/{orderId}  (Verify wallet recharge payment)
-verifyWalletPayment(razorpayPaymentId: any, orderId: any, labId?: any, walletId?: any): Observable<any> {
-  const lId = labId ?? this.getLabId();
-  const body: any = { labId: lId };
-  if (walletId != null) {
-    body.walletId = walletId;
+  // PUT /api/v1/order/update/{razorpayPaymentId}/{orderId}  (Verify wallet recharge payment)
+  verifyWalletPayment(razorpayPaymentId: any, orderId: any, labId?: any, walletId?: any): Observable<any> {
+    const lId = labId ?? this.getLabId();
+    const body: any = { labId: lId };
+    if (walletId != null) {
+      body.walletId = walletId;
+    }
+    return this.http.put(`${this.BASE_URL}/api/v1/order/update/${razorpayPaymentId}/${orderId}`, body);
   }
-  return this.http.put(`${this.BASE_URL}/api/v1/order/update/${razorpayPaymentId}/${orderId}`, body);
-}
+
+  // GET /api/v1/wallet/get-ledger/:franchiseId
+  getLedger(params: {
+    franchiseId: any;
+    startDate?: any;
+    endDate?: any;
+    page?: any;
+    size?: any;
+    search?: any;
+  }): Observable<any> {
+    const fId = params.franchiseId ?? this.getFranchiseId();
+    let url = `${this.BASE_URL}/api/v1/wallet/get-ledger/${fId}?`;
+
+    if (params.startDate) url += `startDate=${params.startDate}&`;
+    if (params.endDate) url += `endDate=${params.endDate}&`;
+    if (params.page != null) url += `page=${params.page}&`;
+    if (params.size != null) url += `size=${params.size}&`;
+    if (params.search) url += `search=${params.search}&`;
+
+    url = url.replace(/&$/, '');
+
+    return this.http.get(url);
+  }
 }
