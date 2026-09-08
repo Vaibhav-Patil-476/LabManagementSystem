@@ -1,4 +1,4 @@
-?<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
+﻿?<ion-menu contentId="main-content" side="start" menuId="main-menu" type="overlay">
   <ion-content class="menu-content">
     <div class="menu-shell">
       <div class="menu-brand">
@@ -13,6 +13,14 @@
           <h2>{{ user.name }}</h2>
           <p>{{ user.email }}</p>
         </div>
+      </div>
+
+      <!-- ADD THIS: Logout button -->
+      <div class="menu-logout-section">
+        <button type="button" class="menu-logout-btn" (click)="logout()">
+          <span class="menu-logout-icon"><ion-icon name="log-out-outline"></ion-icon></span>
+          <span>Logout</span>
+        </button>
       </div>
 
 
@@ -94,7 +102,7 @@
                   <span class="sc-action-icon"><ion-icon name="cash-outline"></ion-icon></span>
                   <span>Edit Tests</span>
                 </div>
-               <div class="sc-action-item" *ngIf="canEditPatientForItem(item)" (click)="onEditPatientClick(item)">
+                <div class="sc-action-item" *ngIf="canEditPatientForItem(item)" (click)="onEditPatientClick(item)">
                   <span class="sc-action-icon"><ion-icon name="person-outline"></ion-icon></span>
                   <span>Edit Patient</span>
                 </div>
@@ -346,7 +354,7 @@
                 <div class="field-row">
                   <div class="summary-field narrow">
                     <label>Title</label>
-                                        <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
+                    <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
                       class="premium-select" (ionChange)="onEditTitleChange()">
                       <ion-select-option value="mr">Mr</ion-select-option>
                       <ion-select-option value="mrs">Mrs</ion-select-option>
@@ -741,32 +749,32 @@
     <header class="app-header-premium">
       <span class="ahp-orb ahp-orb-one" aria-hidden="true"></span>
       <span class="ahp-orb ahp-orb-two" aria-hidden="true"></span>
-    
+
       <div class="ahp-top-row">
         <div class="header-intro">
           <!-- <p class="eyebrow">Operations overview</p> -->
           <h1>Good Day, {{ user.name }} <span aria-hidden="true">👋</span></h1><br>
           <!-- <p class="header-email">{{ user.email }}</p> -->
-    
+
           <span class="ahp-status-chip">
             <span class="ahp-status-dot"></span>
             Active Today
           </span>
         </div>
-    
+
         <div class="header-actions">
           <button type="button" class="icon-button notification-button" aria-label="Open notifications"
             (click)="goToNotifications()">
             <ion-icon name="notifications-outline"></ion-icon>
             <span class="notification-pulse"></span>
           </button>
-    
+
           <ion-menu-button menu="main-menu" class="menu-trigger" aria-label="Open account menu">
             <span class="menu-trigger-avatar"><ion-icon name="person-outline"></ion-icon></span>
           </ion-menu-button>
         </div>
       </div>
-    
+
       <section class="global-search-bar ahp-search-inline">
         <span class="gs-icon-badge"><ion-icon name="search-outline"></ion-icon></span>
         <input type="text" placeholder="Search booking ID, patient, doctor..." [(ngModel)]="globalSearchTerm"
@@ -1041,7 +1049,7 @@
               <span class="service-label">Cancel Test</span>
             </div>
 
-            <div class="service-item" *ngIf="isAdminRole" (click)="goToPage('franchise-management')">
+            <div class="service-item" (click)="goToPage('franchise-management')">
               <span class="service-circle amber">
                 <ion-icon name="business-outline"></ion-icon>
               </span>
@@ -1125,7 +1133,7 @@
     </main>
   </ion-content>
   <!-- ================= BOTTOM NAVIGATION BAR ================= -->
-  <nav class="app-bottom-nav" role="navigation" aria-label="Primary">
+  <!-- <nav class="app-bottom-nav" role="navigation" aria-label="Primary">
     <button type="button" class="bn-item" [class.active]="isActiveTab('/dashboard')" (click)="goToPage('dashboard')">
       <ion-icon name="home-outline"></ion-icon>
       <span>Home</span>
@@ -1140,7 +1148,41 @@
       <ion-icon name="person-outline"></ion-icon>
       <span>Profile</span>
     </button>
-  </nav>
+  </nav> -->
   <!-- =========================================================== -->
+  <!-- ================= BOTTOM NAVIGATION BAR ================= -->
+  <div class="app-bottom-nav-wrap">
 
+    <!-- Dimmed + blurred backdrop, tapping it closes the popup -->
+    <div class="bn-backdrop" *ngIf="accountMenuOpen" (click)="closeAccountMenu()"></div>
+
+    <!-- Centered floating card, sits directly above the Account tab -->
+    <div class="account-submenu-card" [class.open]="accountMenuOpen">
+      <button *ngFor="let opt of accountSubOptions" type="button" class="bn-sub-option" (click)="goToAccountSub(opt)">
+        <span class="bn-sub-circle"><ion-icon [name]="opt.icon"></ion-icon></span>
+        <span class="bn-sub-label">{{ opt.label }}</span>
+      </button>
+    </div>
+
+    <nav class="app-bottom-nav" role="navigation" aria-label="Primary">
+      <button type="button" class="bn-item" [class.active]="isActiveTab('/dashboard')" (click)="goToPage('dashboard')">
+        <ion-icon name="home-outline"></ion-icon>
+        <span>Home</span>
+      </button>
+
+      <!-- Account toggles the popup instead of navigating directly -->
+      <button type="button" class="bn-item account-bn-item" [class.active]="accountMenuOpen"
+        (click)="toggleAccountMenu()">
+        <ion-icon name="wallet-outline"></ion-icon>
+        <span>Account</span>
+      </button>
+
+      <button type="button" class="bn-item" [class.active]="isActiveTab('/profile')" (click)="goToProfile()">
+        <ion-icon name="person-outline"></ion-icon>
+        <span>Profile</span>
+      </button>
+    </nav>
+
+  </div>
+  <!-- =========================================================== -->
 </div>

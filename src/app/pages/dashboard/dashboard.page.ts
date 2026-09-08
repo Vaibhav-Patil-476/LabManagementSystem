@@ -2329,4 +2329,86 @@ onEditPatientClick(item: any): void {
       }
     });
   }
+
+  // ============================================================
+// 1) ADD these two ionicons imports to the existing import block
+//    from "ionicons/icons" (near the top of dashboard.page.ts):
+// ============================================================
+//
+//   receiptOutline, barChartOutline, pricetagsOutline
+//
+// So your import list becomes something like:
+//
+// import {
+//   beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
+//   logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
+//   personCircleOutline, personOutline, clipboardOutline,
+//   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
+//   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
+//   printOutline, cashOutline, qrCodeOutline, attachOutline,
+//   checkmarkOutline, walletOutline, cardOutline,
+//   addCircleOutline, lockClosedOutline, eyeOutline, homeOutline,
+//   receiptOutline, barChartOutline, pricetagsOutline
+// } from "ionicons/icons";
+
+
+// ============================================================
+// 2) ADD these 3 lines inside registerIcons()'s addIcons({...}) call,
+//    alongside the existing entries (e.g. right after 'home-outline'):
+// ============================================================
+//
+//   'receipt-outline': receiptOutline,
+//   'bar-chart-outline': barChartOutline,
+//   'pricetags-outline': pricetagsOutline,
+
+
+// ============================================================
+// 3) ADD these properties near your other bottom-nav state
+//    (e.g. right below the existing `downloadingReportId`/`printingId`
+//    fields, or anywhere in the class body):
+// ============================================================
+
+  // Whether the Account tab's 4-option popup is currently open.
+  accountMenuOpen = false;
+
+  // ✅ 1 already existed as "Ledger" per your note — added Summary,
+  // Payment, Commission alongside it. Adjust the `route` values to
+  // match your actual routing module paths.
+  accountSubOptions: { icon: string; label: string; route: string }[] = [
+    { icon: 'receipt-outline', label: 'Ledger', route: '/ledger-search' },
+    { icon: 'bar-chart-outline', label: 'Summary', route: '/account-summary' },
+    { icon: 'card-outline', label: 'Payment', route: '/account-payment' },
+    { icon: 'pricetags-outline', label: 'Commission', route: '/account-commission' }
+  ];
+
+
+// ============================================================
+// 4) ADD these 3 methods near your existing NAVIGATION section
+//    (right below goToPage() / isActiveTab() is a good spot):
+// ============================================================
+
+  toggleAccountMenu(): void {
+    this.accountMenuOpen = !this.accountMenuOpen;
+  }
+
+  closeAccountMenu(): void {
+    this.accountMenuOpen = false;
+  }
+
+  // Fires when one of the 4 popup circles is tapped.
+  goToAccountSub(opt: { route: string }): void {
+    this.closeAccountMenu();
+    this.menuCtrl.close();
+    this.router.navigate([opt.route]);
+  }
+
+
+// ============================================================
+// 5) The old Account bottom-nav button called goToPage('account')
+//    directly. That's no longer used by the Account button itself
+//    (it now toggles the popup — see the HTML patch), so you can
+//    either delete the '/account' route entirely, or keep it as a
+//    fallback page reachable some other way. No code change needed
+//    here — just noting the behavior change.
+// ============================================================
 }

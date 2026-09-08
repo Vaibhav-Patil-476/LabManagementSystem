@@ -162,5 +162,13 @@ export const routes: Routes = [
   {
     path: '**',
     redirectTo: 'login'
+  },
+  {
+    path: 'payment-history',
+    loadComponent: () => import('./pages/account/payment-history/payment-history.page').then( m => m.PaymentHistoryPage)
+  },
+  {
+    path: 'commission-list',
+    loadComponent: () => import('./pages/account/commission-list/commission-list.page').then( m => m.CommissionListPage)
   }
 ];

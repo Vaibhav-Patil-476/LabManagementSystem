@@ -9,6 +9,11 @@
 
 <ion-content [fullscreen]="true" class="ledger-content">
 
+  <!-- Pull-to-refresh -->
+  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+    <ion-refresher-content></ion-refresher-content>
+  </ion-refresher>
+
   <!-- Search box: franchise + date range -->
   <div class="search-card">
     <div class="franchise-field">
@@ -24,7 +29,6 @@
         <ion-icon name="close-outline" slot="end" (click)="clearFranchise()"></ion-icon>
       </ion-item>
 
-      <!-- Real franchise picker, backed by LabApiService.getFranchisesPage() -->
       <div class="click-catcher" *ngIf="franchiseDropdownOpen" (click)="closeFranchisePicker()"></div>
 
       <div class="franchise-dropdown" *ngIf="franchiseDropdownOpen">
@@ -80,123 +84,228 @@
     <p class="ion-padding-horizontal error-text">{{ errorMessage }}</p>
   </ion-text>
 
+  <!-- SKELETON LOADER -->
+  <div class="ledger-skeleton" *ngIf="loading">
+    <div class="skeleton-grid">
+      <div class="skeleton-tile" *ngFor="let s of [1,2,3,4,5,6]">
+        <div class="skeleton-icon"></div>
+        <div class="skeleton-lines">
+          <div class="skeleton-line" style="width:70%"></div>
+          <div class="skeleton-line" style="width:45%"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="skeleton-bar"></div>
+
+    <div class="skeleton-table">
+      <div class="skeleton-row" *ngFor="let r of [1,2,3,4]">
+        <div class="skeleton-line" style="width:15%"></div>
+        <div class="skeleton-line" style="width:25%"></div>
+        <div class="skeleton-line" style="width:20%"></div>
+        <div class="skeleton-line" style="width:35%"></div>
+      </div>
+    </div>
+  </div>
+
   <ng-container *ngIf="ledger as l">
-    <h2 class="section-title">
-      Ledger ({{ l.startDate || startDate }} - {{ l.endDate || endDate }})
-    </h2>
+    <ng-container *ngIf="!loading">
+      <h2 class="section-title section-title-accent section-title-ledger">
+        <ion-icon name="document-text-outline"></ion-icon>
+        <span>Ledger ({{ l.startDate || startDate }} - {{ l.endDate || endDate }})</span>
+      </h2>
 
-    <ion-list class="summary-list" lines="full">
-      <ion-item>
-        <ion-label>Opening Balance</ion-label>
-        <ion-note slot="end">₹{{ l.openingBalance | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Closing Balance</ion-label>
-        <ion-note slot="end">₹{{ l.closingBalance | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Booking Amount</ion-label>
-        <ion-note slot="end">₹{{ l.bookingAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Cancellation / Refund</ion-label>
-        <ion-note slot="end">₹{{ l.cancellationRefundAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Commission Amount</ion-label>
-        <ion-note slot="end">₹{{ l.commissionAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Deposit Amount</ion-label>
-        <ion-note slot="end">₹{{ l.depositAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Razorpay Deposit Amount</ion-label>
-        <ion-note slot="end">₹{{ l.razorpayDepositAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Cashfree Deposit Amount</ion-label>
-        <ion-note slot="end">₹{{ l.cashfreeDepositAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Inventory Debit</ion-label>
-        <ion-note slot="end">₹{{ l.inventoryDebitAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-      <ion-item>
-        <ion-label>Debited / Adjusted Amount</ion-label>
-        <ion-note slot="end">₹{{ l.debitedAdjustedAmount | number:'1.2-2' }}</ion-note>
-      </ion-item>
-    </ion-list>
+      <div class="summary-grid">
+        <div class="summary-tile">
+          <span class="st-icon st-icon-open"><ion-icon name="wallet-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Opening Balance</span>
+            <span class="st-value">₹{{ l.openingBalance | number:'1.2-2' }}</span>
+          </div>
+        </div>
 
-        <!-- NET BUSINESS bar — dynamic, recalculates whenever the date
-         range / franchise changes and the Past Ledger reloads. -->
-    <div class="net-business-bar">
-      <div class="nb-label">Net Business</div>
-      <div class="nb-segment nb-debit">- ₹{{ netDebitTotal | number:'1.2-2' }}</div>
-      <div class="nb-segment nb-credit">+ ₹{{ netCreditTotal | number:'1.2-2' }}</div>
-      <div class="nb-segment nb-net">
-        {{ netBusinessTotal < 0 ? '-' : '+' }} ₹{{ (netBusinessTotal < 0 ? -netBusinessTotal : netBusinessTotal) | number:'1.2-2' }}
+        <div class="summary-tile">
+          <span class="st-icon st-icon-close"><ion-icon name="wallet-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Closing Balance</span>
+            <span class="st-value">₹{{ l.closingBalance | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-book"><ion-icon name="calendar-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Booking Amount</span>
+            <span class="st-value">₹{{ l.bookingAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-refund"><ion-icon name="return-down-back-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Cancellation / Refund</span>
+            <span class="st-value">₹{{ l.cancellationRefundAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-comm"><ion-icon name="pricetags-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Commission Amount</span>
+            <span class="st-value">₹{{ l.commissionAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-dep"><ion-icon name="cash-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Deposit Amount</span>
+            <span class="st-value">₹{{ l.depositAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-rzp"><ion-icon name="card-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Razorpay Deposit</span>
+            <span class="st-value">₹{{ l.razorpayDepositAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-cf"><ion-icon name="card-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Cashfree Deposit</span>
+            <span class="st-value">₹{{ l.cashfreeDepositAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-inv"><ion-icon name="cube-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Inventory Debit</span>
+            <span class="st-value">₹{{ l.inventoryDebitAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
+
+        <div class="summary-tile">
+          <span class="st-icon st-icon-adj"><ion-icon name="swap-horizontal-outline"></ion-icon></span>
+          <div class="st-body">
+            <span class="st-label">Debited / Adjusted</span>
+            <span class="st-value">₹{{ l.debitedAdjustedAmount | number:'1.2-2' }}</span>
+          </div>
+        </div>
       </div>
-    </div>
-    
-    <div class="past-ledger-header">
-      <h2 class="section-title">Past Ledger</h2>
 
-      <div class="past-ledger-toolbar">
-        <ion-select
-          interface="popover"
-          placeholder="Sort By"
-          [(ngModel)]="selectedSort">
-          <ion-select-option *ngFor="let opt of sortOptions" [value]="opt.value">
-            {{ opt.label }}
-          </ion-select-option>
-        </ion-select>
+      <div class="net-business-card">
+        <div class="nb-heading">
+          <ion-icon name="bar-chart-outline"></ion-icon>
+          <span>Net Business</span>
+        </div>
 
-        <ion-searchbar
-          placeholder="Type & Search Franchise"
-          [(ngModel)]="franchiseSearchText"
-          show-clear-button="focus">
-        </ion-searchbar>
-
-        <ion-buttons class="export-buttons">
-          <ion-button fill="solid" class="export-btn export-pdf" (click)="exportPdf()">
-            <ion-icon name="document-text-outline"></ion-icon>
-          </ion-button>
-          <ion-button fill="solid" class="export-btn export-excel" (click)="exportExcel()">
-            <ion-icon name="grid-outline"></ion-icon>
-          </ion-button>
-        </ion-buttons>
+        <div class="nb-row">
+          <div class="nb-cell nb-debit">
+            <span class="nb-cell-label">Debit</span>
+            <span class="nb-cell-value">- ₹{{ netDebitTotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="nb-cell nb-credit">
+            <span class="nb-cell-label">Credit</span>
+            <span class="nb-cell-value">+ ₹{{ netCreditTotal | number:'1.2-2' }}</span>
+          </div>
+          <div class="nb-cell nb-net">
+            <span class="nb-cell-label">Net</span>
+            <span class="nb-cell-value">
+              {{ netBusinessTotal < 0 ? '-' : '+' }} ₹{{ (netBusinessTotal < 0 ? -netBusinessTotal : netBusinessTotal) | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
       </div>
-    </div>
 
-    <ion-grid class="past-ledger-table">
-      <ion-row class="table-head">
-        <ion-col size="1">Sr.No</ion-col>
-        <ion-col size="3">Booking Date</ion-col>
-        <ion-col size="2">Type</ion-col>
-        <ion-col size="6">Remark</ion-col>
-      </ion-row>
+      <div class="past-ledger-header">
+        <h2 class="section-title section-title-accent">
+          <ion-icon name="time-outline"></ion-icon>
+          <span>Past Ledger</span>
+        </h2>
 
-      <ion-row *ngFor="let entry of sortedPastLedger; let i = index" class="table-row">
-        <ion-col size="1">{{ i + 1 }}</ion-col>
-        <ion-col size="3">
-          <a>{{ entry.bookingId }}</a>
-          <div class="booking-date">{{ entry.bookingDate }}</div>
-        </ion-col>
-        <ion-col size="2">
-          <ion-badge class="type-badge" [ngClass]="entry.type === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
-            {{ entry.type }}
-          </ion-badge>
-        </ion-col>
-        <ion-col size="6">{{ entry.remark }}</ion-col>
-      </ion-row>
+        <div class="past-ledger-toolbar">
+          <div class="toolbar-row">
+            <ion-select
+              interface="popover"
+              placeholder="Sort By"
+              class="sort-select"
+              [(ngModel)]="selectedSort">
+              <ion-select-option *ngFor="let opt of sortOptions" [value]="opt.value">
+                {{ opt.label }}
+              </ion-select-option>
+            </ion-select>
 
-      <ion-row *ngIf="!sortedPastLedger.length">
-        <ion-col size="12" class="ion-text-center">Nivadlelya date range sathi kahi entries nahit.</ion-col>
-      </ion-row>
-    </ion-grid>
+            <ion-buttons class="export-buttons">
+              <ion-button fill="solid" class="export-btn export-pdf" (click)="exportPdf()">
+                <ion-icon name="document-text-outline"></ion-icon>
+              </ion-button>
+              <ion-button fill="solid" class="export-btn export-excel" (click)="exportExcel()">
+                <ion-icon name="grid-outline"></ion-icon>
+              </ion-button>
+            </ion-buttons>
+          </div>
 
+          <ion-searchbar
+            placeholder="Type & Search Franchise"
+            class="franchise-search"
+            [(ngModel)]="franchiseSearchText"
+            show-clear-button="focus">
+          </ion-searchbar>
+        </div>
+      </div>
 
+      <!-- ✅ NEW: plain HTML table, horizontally scrollable, row-select highlight -->
+      <div class="table-scroll-wrapper">
+        <table class="ledger-table">
+          <thead>
+            <tr>
+              <th>Sr.No</th>
+              <th>Booking Date</th>
+              <th>Type</th>
+              <th>Remark</th>
+              <th>Patient Name</th>
+              <th>Test Name</th>
+              <th>Barcode</th>
+              <th>Amount</th>
+              <th>Opening Balance</th>
+              <th>Closing Balance</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let entry of sortedPastLedger; let i = index"
+              [class.row-selected]="selectedRowIndex === i"
+              (click)="selectRow(i)">
+              <td>{{ i + 1 }}</td>
+              <td>
+                <a>{{ entry.bookingId }}</a>
+                <div class="booking-date">{{ entry.bookingDate }}</div>
+              </td>
+              <td>
+                <ion-badge class="type-badge" [ngClass]="entry.type === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
+                  {{ entry.type }}
+                </ion-badge>
+              </td>
+              <td class="remark-cell">{{ entry.remark }}</td>
+<td>{{ entry['patientName'] }}</td>
+<td class="wrap-cell">{{ entry['testName'] }}</td>
+<td class="wrap-cell">{{ entry['barcode'] }}</td>
+<td>₹{{ entry['amount'] | number:'1.2-2' }}</td>
+<td>₹{{ entry['openingBalance'] | number:'1.2-2' }}</td>
+<td>₹{{ entry['closingBalance'] | number:'1.2-2' }}</td>
+            </tr>
+
+            <tr *ngIf="!sortedPastLedger.length">
+              <td colspan="10" class="ion-text-center">Nivadlelya date range sathi kahi entries nahit.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </ng-container>
   </ng-container>
 
 </ion-content>
