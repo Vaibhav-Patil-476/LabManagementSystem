@@ -247,8 +247,8 @@
       </span>
       <span>{{ sharingWhatsappId === menuItem.bookingId ? 'Sharing...' : 'Share via WhatsApp' }}</span>
     </div>
-    <div class="action-item" [class.item-loading]="generatingBillId === menuItem.bookingId"
-      (click)="generatingBillId === menuItem.bookingId ? null : printBill(menuItem)">
+<div class="action-item" [class.item-loading]="generatingBillId === menuItem.bookingId"
+  (click)="generatingBillId === menuItem.bookingId ? null : openPrintBillModal(menuItem)">
       <span class="action-icon-wrap">
         <ion-spinner name="crescent" *ngIf="generatingBillId === menuItem.bookingId"></ion-spinner>
         <ion-icon name="print-outline" *ngIf="generatingBillId !== menuItem.bookingId"></ion-icon>
@@ -962,6 +962,49 @@
     </ng-template>
 
   </ion-modal>
+
+  <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal"
+  [keepContentsMounted]="false" [canDismiss]="true" (didDismiss)="closePrintBillModal()">
+  <ng-template>
+    <div class="printbill-modal-page">
+      <div class="printbill-modal-header">
+        <h2>Print Bill <span class="header-booking-tag">#{{ printBillItem?.bookingId }}</span></h2>
+        <button class="close-modal-btn" (click)="closePrintBillModal()">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+
+      <div class="printbill-modal-body">
+
+        <div class="input-group" style="margin-bottom:16px;">
+          <label>Price Type</label>
+          <div class="input-wrap">
+            <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
+              class="premium-select">
+              <ion-select-option value="myprice">My Price</ion-select-option>
+              <ion-select-option value="mrp">MRP</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+
+        <ion-button expand="block" fill="solid" class="modal-save-btn"
+          [disabled]="generatingBillId === printBillItem?.bookingId"
+          (click)="confirmPrintBill(true)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          With letterHead
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="modal-save-btn" style="margin-top:10px;"
+          [disabled]="generatingBillId === printBillItem?.bookingId"
+          (click)="confirmPrintBill(false)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          Without letterHead
+        </ion-button>
+
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
 
   <!-- ===================== TEST PREVIEW MODAL (eye icon) ===================== -->
   <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">

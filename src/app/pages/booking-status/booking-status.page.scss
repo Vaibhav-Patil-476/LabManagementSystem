@@ -3507,3 +3507,87 @@ ion-content.menu-open {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+// ===================== PRINT BILL — standalone centered popup =====================
+::ng-deep ion-modal.printbill-modal {
+  --width: 320px !important;
+  --height: auto !important;
+  --max-height: 90vh !important;
+  --border-radius: 16px !important;
+  --box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
+
+  &::part(content) {
+    display: block !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    margin: 0 auto !important;
+  }
+}
+
+::ng-deep .printbill-modal-page {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0 0 20px 0 !important;
+  overflow: hidden !important;
+}
+
+::ng-deep .printbill-modal-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 18px 18px !important;
+  background: linear-gradient(135deg, #0f5c4c, #1b7a63);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+
+  h2 {
+    margin: 0 !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+
+    .header-booking-tag {
+      font-weight: 500;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-left: 6px;
+    }
+  }
+
+  .close-modal-btn {
+    flex-shrink: 0 !important;
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon { color: #fff; font-size: 20px; }
+  }
+}
+
+::ng-deep .printbill-modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 18px !important;
+  gap: 0 !important;
+
+  ion-button {
+    width: 100% !important;
+    display: block !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}

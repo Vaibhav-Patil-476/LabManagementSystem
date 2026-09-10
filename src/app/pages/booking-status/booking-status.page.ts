@@ -15,7 +15,7 @@ import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline , copyOutline  
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline
 } from 'ionicons/icons';
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
@@ -144,7 +144,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   labs: any[] = [];
   selectedDoctorPick: any = null;
   selectedLabPick: any = null;
-
+  isPrintBillModalOpen = false;
+  printBillItem: BookingListItem | null = null;
+  selectedBillPriceType: string = 'myprice';
   isNoteModalOpen = false;
   noteBooking: BookingListItem | null = null;
   noteText = '';
@@ -298,14 +300,14 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   get canEditPatient(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
   isSampleReceivedForBooking(item: BookingListItem): boolean {
-  return (item.samples || []).some(s => (s.status || '').toString().toUpperCase() === 'RECEIVED');
-}
+    return (item.samples || []).some(s => (s.status || '').toString().toUpperCase() === 'RECEIVED');
+  }
 
-canEditPatientForItem(item: BookingListItem): boolean {
-  if (!this.canEditPatient) return false;
-  if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
-  return true;
-}
+  canEditPatientForItem(item: BookingListItem): boolean {
+    if (!this.canEditPatient) return false;
+    if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
+    return true;
+  }
   get canViewAmount(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
   get canEditBilling(): boolean { return this.isAdminRole || this.isStaffRole; }
   get canViewPayment(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
@@ -416,14 +418,14 @@ canEditPatientForItem(item: BookingListItem): boolean {
     private cdr: ChangeDetectorRef,
     private alertController: AlertController,
     private authService: AuthService,
-     private router: Router,
-      private toastService: ToastService
+    private router: Router,
+    private toastService: ToastService
   ) {
     addIcons({
       flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
       addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
       documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline , 'copy-outline': copyOutline 
+      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, 'copy-outline': copyOutline
     });
   }
 
@@ -1037,13 +1039,119 @@ canEditPatientForItem(item: BookingListItem): boolean {
     document.body.classList.remove('action-menu-open');
   }
 
+  // // ---------- print bill ----------
+  // printBill(item: BookingListItem): void {
+  //   this.closeActionMenu();
+  //   if (this.generatingBillId === item.bookingId) return;
+  //   this.generatingBillId = item.bookingId;
+
+  //   const payload = this.labApi.buildBillPayload(item.bookingId);
+  //   this.labApi.printBill(payload).subscribe({
+  //     next: (res: any) => this.ngZone.run(() => {
+  //       this.generatingBillId = null;
+  //       if (res?.downloadUrl) {
+  //         window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+  //         this.showToast('Bill ready', 'success');
+  //       } else {
+  //         this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
+  //       }
+  //       this.cdr.detectChanges();
+  //     }),
+  //     error: () => {
+  //       this.ngZone.run(() => {
+  //         this.generatingBillId = null;
+  //         this.showToast('Bill generate karnyat error aali', 'error');
+  //         this.cdr.detectChanges();
+  //       });
+  //     }
+  //   });
+  // }
+
+
+openPrintBillModal(item: BookingListItem): void {
+  this.closeActionMenu();
+  this.printBillItem = item;
+  this.selectedBillPriceType = 'myprice';
+  this.isPrintBillModalOpen = true;
+}
+
+closePrintBillModal(): void {
+  this.isPrintBillModalOpen = false;
+  this.printBillItem = null;
+}
+
+confirmPrintBill(letterHead: boolean): void {
+  const item = this.printBillItem;
+  if (!item) return;
+
+  if (this.generatingBillId === item.bookingId) return;
+  this.generatingBillId = item.bookingId;
+  this.isPrintBillModalOpen = false;
+
+  const payload = this.labApi.buildBillPayload(
+    item.bookingId,
+    this.selectedBillPriceType,
+    null,
+    letterHead
+  );
+
+  this.labApi.printBill(payload).subscribe({
+    next: (res: any) => this.ngZone.run(() => {
+      this.generatingBillId = null;
+      this.printBillItem = null;
+
+      if (res?.downloadUrl) {
+        window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+        this.showToast('Bill ready', 'success');
+      } else {
+        this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
+      }
+      this.cdr.detectChanges();
+    }),
+    error: () => {
+      this.ngZone.run(() => {
+        this.generatingBillId = null;
+        this.printBillItem = null;
+        this.showToast('Bill generate karnyat error aali', 'error');
+        this.cdr.detectChanges();
+      });
+    }
+  });
+}
+
   // ---------- print bill ----------
-  printBill(item: BookingListItem): void {
+  async openPrintBillOptions(item: BookingListItem): Promise<void> {
     this.closeActionMenu();
+
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Print Bill',
+      message: 'Select bill type',
+      buttons: [
+        {
+          text: 'My Price',
+          handler: () => this.printBill(item, 'myprice')
+        },
+        {
+          text: 'MRP',
+          handler: () => this.printBill(item, 'mrp')
+        },
+        {
+          text: 'Cancel',
+          role: 'cancel',
+          cssClass: 'alert-btn-cancel'
+        }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  printBill(item: BookingListItem, billType: string = 'myprice'): void {
     if (this.generatingBillId === item.bookingId) return;
     this.generatingBillId = item.bookingId;
 
-    const payload = this.labApi.buildBillPayload(item.bookingId);
+    const payload = this.labApi.buildBillPayload(item.bookingId, billType);
     this.labApi.printBill(payload).subscribe({
       next: (res: any) => this.ngZone.run(() => {
         this.generatingBillId = null;
@@ -1064,7 +1172,6 @@ canEditPatientForItem(item: BookingListItem): boolean {
       }
     });
   }
-
   // ---------- share report via whatsapp ----------
   shareViaWhatsApp(item: BookingListItem): void {
     this.closeActionMenu();
@@ -1469,7 +1576,7 @@ canEditPatientForItem(item: BookingListItem): boolean {
     this.showCustomLabDropdown = false;
   }
 
-    onEditTitleChange(): void {
+  onEditTitleChange(): void {
     if (!this.editPatientData) {
       return;
     }
@@ -1944,57 +2051,57 @@ canEditPatientForItem(item: BookingListItem): boolean {
   }
 
   // ============================================================
-// COPY BARCODE TO CLIPBOARD
-// ============================================================
+  // COPY BARCODE TO CLIPBOARD
+  // ============================================================
 
-async copyBarcode(barcode: string): Promise<void> {
+  async copyBarcode(barcode: string): Promise<void> {
 
-  const value = String(barcode || '').trim();
+    const value = String(barcode || '').trim();
 
-  if (!value || value === '—') {
-    this.toastService.warning(
-      'Nothing to Copy',
-      'No barcode available.'
-    );
-    return;
-  }
-
-  try {
-
-    await navigator.clipboard.writeText(value);
-
-    this.toastService.success(
-      'Copied',
-      'Barcode ' + value + ' copied to clipboard.'
-    );
-
-  } catch (err) {
-
-    console.error('COPY BARCODE ERROR:', err);
-
-    // Fallback for older WebViews where navigator.clipboard is unavailable
-    const tempInput = document.createElement('textarea');
-    tempInput.value = value;
-    tempInput.style.position = 'fixed';
-    tempInput.style.opacity = '0';
-    document.body.appendChild(tempInput);
-    tempInput.focus();
-    tempInput.select();
+    if (!value || value === '—') {
+      this.toastService.warning(
+        'Nothing to Copy',
+        'No barcode available.'
+      );
+      return;
+    }
 
     try {
-      document.execCommand('copy');
+
+      await navigator.clipboard.writeText(value);
+
       this.toastService.success(
         'Copied',
         'Barcode ' + value + ' copied to clipboard.'
       );
-    } catch {
-      this.toastService.error(
-        'Copy Failed',
-        'Could not copy barcode. Please copy manually.'
-      );
-    } finally {
-      document.body.removeChild(tempInput);
+
+    } catch (err) {
+
+      console.error('COPY BARCODE ERROR:', err);
+
+      // Fallback for older WebViews where navigator.clipboard is unavailable
+      const tempInput = document.createElement('textarea');
+      tempInput.value = value;
+      tempInput.style.position = 'fixed';
+      tempInput.style.opacity = '0';
+      document.body.appendChild(tempInput);
+      tempInput.focus();
+      tempInput.select();
+
+      try {
+        document.execCommand('copy');
+        this.toastService.success(
+          'Copied',
+          'Barcode ' + value + ' copied to clipboard.'
+        );
+      } catch {
+        this.toastService.error(
+          'Copy Failed',
+          'Could not copy barcode. Please copy manually.'
+        );
+      } finally {
+        document.body.removeChild(tempInput);
+      }
     }
   }
-}
 }

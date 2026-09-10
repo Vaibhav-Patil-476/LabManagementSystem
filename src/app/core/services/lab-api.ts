@@ -427,7 +427,31 @@ export class LabApiService {
     return this.http.post(this.billUrl, payload);
   }
 
-  buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmount: any = null): any {
+  // buildBillPayload(bookingId: number, billType: string = 'myprice', customBillAmount: any = null): any {
+  //   const labId = this.getLabId();
+  //   const token = this.authService.getToken();
+  //   const domain = environment.domain;
+
+  //   return {
+  //     params: {
+  //       bookingApi: `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`,
+  //       labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
+  //       currentUserApi: `${this.BASE_URL}/auth/current-user`,   // ✅ AuthService वरून confirm केलेला exact URL
+  //       billType: billType,
+  //       token,
+  //       customBillAmount,
+  //       domain
+  //     }
+  //   };
+  // }
+  // ✅ CONFIRMED Edit Barcode API — array payload accept karto
+
+  buildBillPayload(
+  bookingId: number,
+  billType: string = 'myprice',
+  customBillAmount: any = null,
+  letterHead: boolean = true
+): any {
     const labId = this.getLabId();
     const token = this.authService.getToken();
     const domain = environment.domain;
@@ -436,15 +460,15 @@ export class LabApiService {
       params: {
         bookingApi: `${this.BASE_URL}/api/v1/lab/booking/patient/${labId}/${bookingId}`,
         labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
-        currentUserApi: `${this.BASE_URL}/auth/current-user`,   // ✅ AuthService वरून confirm केलेला exact URL
+        currentUserApi: `${this.BASE_URL}/auth/current-user`,
         billType: billType,
+        letterHead: letterHead,   // ✅ NEW — company popup madhe "With/Without letterHead" sathi
         token,
         customBillAmount,
         domain
       }
     };
   }
-  // ✅ CONFIRMED Edit Barcode API — array payload accept karto
   updateBarcode(bookingId: number, payload: any[]): Observable<any> {
     return this.http.put(
       `${this.BASE_URL}/api/v1/sampleaccession/updateBarcode/${bookingId}`,
