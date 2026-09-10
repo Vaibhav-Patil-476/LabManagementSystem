@@ -1,0 +1,270 @@
+// commission-history.component.scss
+
+.page-bg {
+  --background: #eef1f4;
+}
+
+// ---------- Header ----------
+.app-toolbar {
+  --background: #0f766e;
+  --color: #fff;
+
+  ion-back-button {
+    --color: #fff;
+  }
+
+  ion-title {
+    font-weight: 700;
+    font-size: 18px;
+    letter-spacing: -0.2px;
+  }
+}
+
+// ---------- Filter card ----------
+.filter-card {
+  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  border-radius: 0 0 20px 20px;
+  padding: 16px;
+}
+
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 14px;
+  margin-bottom: 12px;
+  color: #fff;
+  position: relative;
+
+  ion-icon {
+    font-size: 20px;
+    color: #fff;
+  }
+
+  .filter-text {
+    flex: 1;
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .clear-icon {
+    font-size: 20px;
+    opacity: 0.85;
+  }
+
+  .hidden-select {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    pointer-events: none;
+  }
+}
+
+.search-btn {
+  --background: #fff;
+  --color: #0f766e;
+  --border-radius: 12px;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+// ---------- Section heading ----------
+.section-heading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 20px 16px 10px;
+
+  .accent-bar {
+    width: 4px;
+    height: 18px;
+    background: #0f766e;
+    border-radius: 2px;
+  }
+
+  ion-icon {
+    font-size: 18px;
+    color: #0f766e;
+  }
+
+  h2 {
+    font-size: 16px;
+    font-weight: 700;
+    margin: 0;
+    color: #1f2937;
+  }
+}
+
+// ---------- Stat cards ----------
+.stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  padding: 0 16px;
+}
+
+.stat-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.stat-icon {
+  width: 38px;
+  height: 38px;
+  min-width: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  ion-icon {
+    color: #fff;
+    font-size: 18px;
+  }
+
+  &.teal { background: #14b8a6; }
+  &.blue { background: #2563eb; }
+  &.gold { background: #d97706; }
+  &.purple { background: #7c3aed; }
+}
+
+.stat-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.stat-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: #6b7280;
+}
+
+.stat-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+// ---------- Commission table ----------
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  margin-top: 12px;
+}
+
+.commission-table {
+  border-collapse: collapse;
+  width: 100%;
+  min-width: 640px;
+  background: #fff;   // ✅ table ला पांढरा background दे
+
+  th,
+  td {
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 13px;
+    vertical-align: top;
+    border-bottom: 1px solid var(--ion-color-light-shade, #e0e0e0);
+  }
+
+thead th {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: none;       
+  letter-spacing: normal;      
+  color: #111827;              
+  white-space: nowrap;
+  background: #f8fafc;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+  tbody tr {
+    background: #fff;   // ✅ rows ला पांढरा
+    cursor: pointer;
+    transition: background-color 0.12s ease;
+
+    &:hover {
+      background: #f8fafc;
+    }
+
+    &.row-selected {
+      background: #e8f0fe;
+      box-shadow: inset 3px 0 0 #2563eb;
+    }
+  }
+}
+.nowrap-cell {
+  white-space: nowrap;
+}
+
+.wrap-cell {
+  max-width: 220px;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.booking-link {
+  color: #2563eb;
+  font-weight: 700;
+  display: block;
+}
+
+.booking-date {
+  font-size: 12px;
+  color: #6b7280;
+  margin-top: 2px;
+}
+
+.profile-name {
+  font-weight: 700;
+  color: #0f766e;
+}
+
+.commission-pill {
+  background: #dcfce7;
+  color: #15803d;
+  font-weight: 700;
+  font-size: 13px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+// ---------- Empty / loading states ----------
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #6b7280;
+
+  ion-icon {
+    font-size: 42px;
+    color: #d1d5db;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 0;
+  }
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  padding: 30px 0;
+}

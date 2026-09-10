@@ -2374,12 +2374,62 @@ onEditPatientClick(item: any): void {
   // ✅ 1 already existed as "Ledger" per your note — added Summary,
   // Payment, Commission alongside it. Adjust the `route` values to
   // match your actual routing module paths.
-  accountSubOptions: { icon: string; label: string; route: string }[] = [
-    { icon: 'receipt-outline', label: 'Ledger', route: '/ledger-search' },
-    { icon: 'bar-chart-outline', label: 'Summary', route: '/account-summary' },
-    { icon: 'card-outline', label: 'Payment', route: '/account-payment' },
-    { icon: 'pricetags-outline', label: 'Commission', route: '/account-commission' }
-  ];
+  // accountSubOptions: { icon: string; label: string; route: string }[] = [
+  //   { icon: 'receipt-outline', label: 'Ledger', route: '/ledger-search' },
+  //   { icon: 'bar-chart-outline', label: 'Summary', route: '/account-summary' },
+  //   { icon: 'card-outline', label: 'Payment', route: '/account-payment' },
+  //   { icon: 'pricetags-outline', label: 'Commission', route: '/account-commission' }
+  // ];
+
+
+accountSubOptions: {
+  icon: string;
+  label: string;
+  route: string;
+  locked: boolean;
+}[] = [
+  {
+    icon: 'receipt-outline',
+    label: 'Ledger',
+    route: '/ledger-search',
+    locked: false
+  },
+  {
+    icon: 'bar-chart-outline',
+    label: 'Summary',
+    route: '/account-summary',
+    locked: false
+  },
+  {
+    icon: 'pricetags-outline',
+    label: 'Commission',
+    route: '/account-commission',
+    locked: false
+    
+  },
+  {
+    icon: 'card-outline',
+    label: 'Payment',
+    route: '/account-payment',
+    locked: true
+  },
+];
+
+goToAccountSub(opt: {
+  route: string;
+  locked: boolean;
+}): void {
+
+  // Locked options do nothing
+  if (opt.locked) {
+    return;
+  }
+
+  // Only unlocked options navigate
+  this.closeAccountMenu();
+  this.menuCtrl.close();
+  this.router.navigate([opt.route]);
+}
 
 
 // ============================================================
@@ -2396,11 +2446,11 @@ onEditPatientClick(item: any): void {
   }
 
   // Fires when one of the 4 popup circles is tapped.
-  goToAccountSub(opt: { route: string }): void {
-    this.closeAccountMenu();
-    this.menuCtrl.close();
-    this.router.navigate([opt.route]);
-  }
+  // goToAccountSub(opt: { route: string }): void {
+  //   this.closeAccountMenu();
+  //   this.menuCtrl.close();
+  //   this.router.navigate([opt.route]);
+  // }
 
 
 // ============================================================

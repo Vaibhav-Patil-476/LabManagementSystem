@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient, HttpHeaders, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, firstValueFrom } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { AuthService } from './auth';
 
@@ -779,4 +779,111 @@ getFranchiseAnalytics(
     { params }
   );
 }
+
+// ============================================================
+// ✅ NEW: WALLET / ACCOUNT SUMMARY APIs (Commission, Booking,
+// Refund, Deposit etc.) — Account Summary screen sathi vaparले
+// jातात.
+// ============================================================
+
+// 1) Wallet Ledger Summary — Opening/Closing Balance, Booking
+//    Amount, Cancellation/Refund, Commission Amount, Deposit
+//    Amount, Razorpay Deposit, Inventory Debit, Debited/Adjusted
+//    Amount. Ha "Accounts Summary" box sathi vaparला jato.
+//    GET /api/v1/wallet/get-ledger/:franchiseId?startDate=&endDate=
+getWalletLedger(
+  franchiseId: number,
+  startDate: string,
+  endDate: string
+): Observable<any> {
+  const params = new HttpParams()
+    .set('startDate', startDate)
+    .set('endDate', endDate);
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/wallet/get-ledger/${franchiseId}`,
+    { params }
+  );
 }
+
+// 2) Wallet Summary + Transaction list — "Past Account Summary"
+//    table sathi vaparला jato (booking/refund/recharge history).
+//    GET /api/v1/wallet/summary/:labId/:franchiseId?transaction=true&startDate=&endDate=&page=&size=
+getWalletSummary(
+  labId: number,
+  franchiseId: number,
+  startDate: string,
+  endDate: string,
+  page: number = 0,
+  size: number = 100
+): Observable<any> {
+  const params = new HttpParams()
+    .set('transaction', 'true')
+    .set('startDate', startDate)
+    .set('endDate', endDate)
+    .set('page', page.toString())
+    .set('size', size.toString());
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/wallet/summary/${labId}/${franchiseId}`,
+    { params }
+  );
+}
+// ============================================================
+// ✅ NEW: COMMISSION HISTORY (grouped-by-booking wallet API)
+// "My Commission History" screen sathi. getWalletSummary()
+// pasun vegla — ha groupByBooking + commission flags pathvto,
+// je booking-wise commission breakdown detat (testList, bookedBy,
+// commissionDate, etc.), transaction ledger nahi.
+//
+// Backend page `size` la 2000 var cap karto (jast pathvla tari
+// response madhe max 2000 records/page yetat) — mhanun helper
+// method design madhech clamp kela ahe.
+// ============================================================
+
+private readonly COMMISSION_PAGE_SIZE = 2000;
+
+// Single page — infinite-scroll / lazy loading sathi vaparaycha
+// asel tar hach vapar.
+getCommissionHistoryPage(
+  franchiseId: number,
+  page: number = 0,
+  size: number = this.COMMISSION_PAGE_SIZE
+): Observable<any> {
+  const params = new HttpParams()
+    .set('transaction', 'true')
+    .set('groupByBooking', 'true')
+    .set('commission', 'true')
+    .set('page', page.toString())
+    .set('size', Math.min(size, this.COMMISSION_PAGE_SIZE).toString());
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/wallet/${this.getLabId()}/${franchiseId}`,
+    { params }
+  );
+}
+
+// Sagle pages loop karun (page=0..totalPages-1) ekatra records
+// return karto — Excel/PDF export sathi, jithe pura dataset
+// memory madhe lagto.
+//
+// ⚠️ NOTE: ha wallet endpoint records thet `content` madhe deत
+// nahi — te `groupedTransaction.content` chya aat nested aahet
+// (response root la walletId/balance/franchiseId/etc. asto,
+// aani records tyachya खाली groupedTransaction key madhe).
+async getAllCommissionHistory(franchiseId: number): Promise<any[]> {
+  const all: any[] = [];
+  let page = 0;
+  let totalPages = 1;
+
+  do {
+    const res: any = await firstValueFrom(this.getCommissionHistoryPage(franchiseId, page));
+    if (!res) break;
+    const grouped = res.groupedTransaction ?? {};
+    all.push(...(grouped.content ?? []));
+    totalPages = grouped.totalPages || 0;
+    page++;
+  } while (page < totalPages);
+
+  return all;
+}}

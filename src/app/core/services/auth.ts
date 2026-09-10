@@ -3,7 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { Observable, BehaviorSubject, tap } from 'rxjs';
 import { Preferences } from '@capacitor/preferences';
 import { environment } from '../../../environments/environment';
-import { CurrentUser } from '../../models/user.model';
+import { CurrentUser } from '../models/user.model';
 
 export type { CurrentUser };
 

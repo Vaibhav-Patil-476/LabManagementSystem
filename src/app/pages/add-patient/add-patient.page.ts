@@ -2394,12 +2394,18 @@ this.labApi
   // TESTS
   // ============================================================
 
-  loadTests() {
+ loadTests() {
 
-    const franchiseId =
-      this.selectedLab?.franchiseId ??
-      this.selectedLab?.id ??
-      undefined;
+    // ✅ FIX: Test List page प्रमाणेच — franchiseId फक्त franchise/staff
+    // roles साठी पाठवायचा. Admin (ROLE_LAB_ADMIN) साठी franchiseId
+    // undefined ठेवायचा, जेणेकरून backend पूर्ण lab-wide master test
+    // list देईल. आधी selectedLab (auto-selected franchise) चा
+    // franchiseId नेहमीच पाठवला जायचा — त्यामुळे Admin लाही त्या एका
+    // franchise पुरतेच (मर्यादित) tests दिसायचे, Test List / Company
+    // web सारखे पूर्ण lab-wide tests दिसत नव्हते.
+    const franchiseId = this.isAdminRole
+      ? undefined
+      : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
 
     this.labApi.getTests(franchiseId).subscribe({
       next: (res: any) => {
@@ -2424,7 +2430,7 @@ this.labApi
     });
   }
 
-  private testSearchTimer: any = null;
+private testSearchTimer: any = null;
 
   searchTest(): void {
     const q = String(this.testSearch || '').trim();
@@ -2443,10 +2449,12 @@ this.labApi
 
       const labId = this.labApi.getCurrentLabId();
 
-      const franchiseId =
-        this.selectedLab?.franchiseId ??
-        this.selectedLab?.id ??
-        undefined;
+      // ✅ FIX: Admin साठी franchiseId undefined पाठवायचा (Test List
+      // page सारखं) — जेणेकरून backend पूर्ण lab-wide test list
+      // search करेल, फक्त एका franchise पुरता मर्यादित subset नाही.
+      const franchiseId = this.isAdminRole
+        ? undefined
+        : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
 
       this.labApi.searchTests(labId, franchiseId, q).subscribe({
         next: (res: any) => {
@@ -3670,7 +3678,7 @@ getSubTotal() {
   // Returns the first validation error message found, or null if
   // the form is valid.
   // ============================================================
-  private validatePatientForm(): string | null {
+private validatePatientForm(): string | null {
 
     // ✅ Sagle field-level errors reset karा suरुवातीला
     this.resetFieldErrors();
@@ -3701,22 +3709,14 @@ getSubTotal() {
       return 'Age must contain numbers only.';
     }
 
+    // ✅ Company backend प्रमाणे — ageType (years/months/days) नुसार
+    // range-restriction काढला. कुठलाही नंबर + कुठलाही ageType चालेल,
+    // फक्त नंबर 0 पेक्षा जास्त असावा इतकंच बघतो.
     const ageNum = Number(ageRaw);
-    const ageType = this.patient?.ageType || 'years';
 
-    if (ageType === 'years' && (ageNum < 1 || ageNum > 120)) {
+    if (ageNum < 1) {
       this.fieldErrors.age = true;
-      return 'Age (in years) must be between 1 and 120.';
-    }
-
-    if (ageType === 'months' && (ageNum < 1 || ageNum > 11)) {
-      this.fieldErrors.age = true;
-      return 'Age (in months) must be between 1 and 11.';
-    }
-
-    if (ageType === 'days' && (ageNum < 1 || ageNum > 31)) {
-      this.fieldErrors.age = true;
-      return 'Age (in days) must be between 1 and 31.';
+      return 'Age must be greater than 0.';
     }
 
     // ---------- Ref. Doctor (REQUIRED) ----------
@@ -3821,7 +3821,6 @@ getSubTotal() {
 
     return null;
   }
-
   // ============================================================
   // SAVE PATIENT / BOOKING
   // ============================================================

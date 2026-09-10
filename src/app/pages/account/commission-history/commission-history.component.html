@@ -1,0 +1,168 @@
+<ion-header class="no-border">
+  <ion-toolbar class="app-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>My Commission History</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+
+  <!-- Filter card -->
+  <div class="filter-card">
+
+    <div class="filter-row" (click)="franchiseSelect.open($event)">
+      <ion-icon name="business-outline"></ion-icon>
+      <span class="filter-text">{{ selectedFranchiseLabel }}</span>
+      <ion-icon
+        *ngIf="selectedFranchiseId != null"
+        name="close-circle"
+        class="clear-icon"
+        (click)="$event.stopPropagation(); clearFranchise()">
+      </ion-icon>
+
+      <ion-select
+        #franchiseSelect
+        [(ngModel)]="selectedFranchiseId"
+        (ionChange)="onFranchiseSelectChange()"
+        interface="popover"
+        class="hidden-select">
+        <ion-select-option *ngFor="let f of franchises" [value]="f.franchiseId">
+          {{ f.franchiseName }}
+        </ion-select-option>
+      </ion-select>
+    </div>
+
+    <div class="filter-row date-range-row" #dateFieldTrigger (click)="rangePicker.open()">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <span class="filter-text">
+        {{ startDate ? (startDate | date:'dd/MM/yyyy') : 'From' }}
+        –
+        {{ endDate ? (endDate | date:'dd/MM/yyyy') : 'To' }}
+      </span>
+      <ion-icon
+        *ngIf="startDate || endDate"
+        name="close-circle"
+        class="clear-icon"
+        (click)="$event.stopPropagation(); clearDateFilter()">
+      </ion-icon>
+
+      <mat-date-range-input [rangePicker]="rangePicker" class="hidden-select">
+        <input matStartDate [(ngModel)]="pickedStartDate" (dateChange)="onRangeDateChange()">
+        <input matEndDate [(ngModel)]="pickedEndDate" (dateChange)="onRangeDateChange()">
+      </mat-date-range-input>
+      <mat-date-range-picker #rangePicker (opened)="onPickerOpened()"></mat-date-range-picker>
+    </div>
+
+    <ion-button expand="block" class="search-btn" (click)="search()">
+      <ion-icon name="search-outline" slot="start"></ion-icon>
+      SEARCH COMMISSION HISTORY
+    </ion-button>
+  </div>
+
+  <ng-container *ngIf="hasSearched">
+
+    <!-- Summary section -->
+    <div class="section-heading">
+      <span class="accent-bar"></span>
+      <ion-icon name="document-text-outline"></ion-icon>
+      <h2>Commission Summary ({{ dateRangeLabel }})</h2>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-icon teal"><ion-icon name="pricetag-outline"></ion-icon></div>
+        <div class="stat-body">
+          <span class="stat-label">TOTAL COMMISSION</span>
+          <span class="stat-value">₹{{ totalCommission | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon blue"><ion-icon name="calendar-outline"></ion-icon></div>
+        <div class="stat-body">
+          <span class="stat-label">TOTAL BOOKINGS</span>
+          <span class="stat-value">{{ totalBookings }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon gold"><ion-icon name="wallet-outline"></ion-icon></div>
+        <div class="stat-body">
+          <span class="stat-label">BOOKING AMOUNT</span>
+          <span class="stat-value">₹{{ totalBookingAmount | number:'1.2-2' }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-icon purple"><ion-icon name="stats-chart-outline"></ion-icon></div>
+        <div class="stat-body">
+          <span class="stat-label">AVG / BOOKING</span>
+          <span class="stat-value">₹{{ avgCommission | number:'1.2-2' }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Booking list -->
+    <div class="section-heading">
+      <span class="accent-bar"></span>
+      <ion-icon name="time-outline"></ion-icon>
+      <h2>Booking-wise Commission</h2>
+    </div>
+
+    <div *ngIf="isLoading" class="loading-state">
+      <ion-spinner name="crescent"></ion-spinner>
+    </div>
+
+    <ng-container *ngIf="!isLoading">
+      <div class="table-scroll-wrapper" *ngIf="visibleRows.length; else emptyTpl">
+        <table class="commission-table">
+          <thead>
+            <tr>
+              <th>Sr.No</th>
+              <th>Booking Date</th>
+              <th>Test / Profile</th>
+              <th>Booking Amount</th>
+              <th>Commission Date</th>
+              <th>Booked By</th>
+              <th>Commission</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of visibleRows; let i = index"
+              [class.row-selected]="selectedRowIndex === i"
+              (click)="selectRow(i)">
+              <td>{{ i + 1 }}</td>
+              <td class="nowrap-cell">
+                <a class="booking-link">{{ row.bookingId }}</a>
+                <div class="booking-date">{{ row.bookingDateLabel }}</div>
+              </td>
+              <td class="wrap-cell" [class.profile-name]="row.isProfile">{{ row.testsLabel }}</td>
+              <td class="nowrap-cell">{{ row.bookingAmountLabel }}</td>
+              <td class="nowrap-cell">{{ row.commissionDateLabel }}</td>
+              <td class="wrap-cell">{{ row.bookedByLabel }}</td>
+              <td class="nowrap-cell">
+                <span class="commission-pill">+ ₹{{ row.commission ?? 0 }}</span>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <ng-template #emptyTpl>
+        <div class="empty-state">
+          <ion-icon name="file-tray-outline"></ion-icon>
+          <p>या franchise / date-range साठी commission records सापडले नाहीत.</p>
+        </div>
+      </ng-template>
+    </ng-container>
+
+    <ion-infinite-scroll (ionInfinite)="loadMore($event)" *ngIf="visibleRows.length < filteredRows.length">
+      <ion-infinite-scroll-content loadingSpinner="bubbles"></ion-infinite-scroll-content>
+    </ion-infinite-scroll>
+
+  </ng-container>
+
+</ion-content>

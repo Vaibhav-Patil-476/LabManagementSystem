@@ -4339,3 +4339,17 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   transform: translateY(-2px) scale(1.1);
 }
 
+.bn-sub-option.locked {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.bn-sub-option.locked .bn-sub-circle {
+  filter: grayscale(1);
+}
+
+.locked-icon {
+  margin-left: auto;
+  font-size: 18px;
+  color: #8a94a6;
+}

@@ -3,29 +3,24 @@
     <ion-buttons slot="start">
       <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
     </ion-buttons>
-    <ion-title>Search Ledger</ion-title>
+    <ion-title>Search Account Summary</ion-title>
   </ion-toolbar>
 </ion-header>
 
 <ion-content [fullscreen]="true" class="ledger-content">
 
-  <!-- Pull-to-refresh -->
-  <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
-    <ion-refresher-content></ion-refresher-content>
-  </ion-refresher>
-
   <!-- Search box: franchise + date range -->
   <div class="search-card">
     <div class="franchise-field">
-      <ion-item lines="none" class="franchise-item" *ngIf="!franchiseId" (click)="openFranchisePicker()">
+      <ion-item lines="none" class="franchise-item" *ngIf="!selectedFranchise" (click)="openFranchisePicker()">
         <ion-icon name="business-outline" slot="start"></ion-icon>
         <ion-input placeholder="Franchise nivda (e.g. dar1/dar1)" readonly></ion-input>
         <ion-icon name="chevron-down-outline" slot="end"></ion-icon>
       </ion-item>
 
-      <ion-item lines="none" class="franchise-item" *ngIf="franchiseId">
+      <ion-item lines="none" class="franchise-item" *ngIf="selectedFranchise">
         <ion-icon name="business-outline" slot="start"></ion-icon>
-        <ion-label>{{ franchiseLabel }}</ion-label>
+        <ion-label>{{ selectedFranchise.franchiseName }}</ion-label>
         <ion-icon name="close-outline" slot="end" (click)="clearFranchise()"></ion-icon>
       </ion-item>
 
@@ -34,57 +29,57 @@
       <div class="franchise-dropdown" *ngIf="franchiseDropdownOpen">
         <ion-searchbar
           placeholder="Franchise shodha..."
-          [(ngModel)]="franchisePickerQuery"
-          (ionInput)="onFranchiseQueryChange($event.detail.value)"
+          [(ngModel)]="franchiseSearchTerm"
           show-clear-button="focus">
         </ion-searchbar>
 
-        <div class="franchise-dropdown-loading" *ngIf="franchiseLoading">
-          <ion-spinner name="crescent"></ion-spinner>
-          <span>Loading franchises...</span>
+        <div
+          class="franchise-dropdown-item"
+          *ngFor="let f of filteredFranchises"
+          (click)="selectFranchise(f)">
+          {{ f.franchiseName }}
         </div>
 
-        <ng-container *ngIf="!franchiseLoading">
-          <div
-            class="franchise-dropdown-item"
-            *ngFor="let f of franchiseOptions"
-            (click)="selectFranchise(f)">
-            {{ f.label }}
-          </div>
-
-          <div class="franchise-dropdown-empty" *ngIf="!franchiseOptions.length">
-            Franchise sapadli nahi.
-          </div>
-        </ng-container>
+        <div class="franchise-dropdown-empty" *ngIf="!filteredFranchises.length">
+          Franchise sapadli nahi.
+        </div>
       </div>
     </div>
-<div class="date-item" #dateFieldTrigger (click)="rangePicker.open()">
-  <ion-icon name="calendar-outline" slot="start"></ion-icon>
-  <span class="filter-text">
-    {{ startDate ? (startDate | date:'dd/MM/yyyy') : 'Start date' }}
-    –
-    {{ endDate ? (endDate | date:'dd/MM/yyyy') : 'End date' }}
-  </span>
 
-  <mat-date-range-input [rangePicker]="rangePicker" class="hidden-select">
-    <input matStartDate [(ngModel)]="pickedStartDate" (dateChange)="onRangeDateChange()">
-    <input matEndDate [(ngModel)]="pickedEndDate" (dateChange)="onRangeDateChange()">
-  </mat-date-range-input>
-  <mat-date-range-picker #rangePicker (opened)="onPickerOpened()"></mat-date-range-picker>
+<!-- Date Range -->
+<div class="filter-field date-field" #dateFieldTrigger (click)="openDateRangePicker()">
+  <span class="date-icon-badge">
+    <ion-icon name="calendar-outline"></ion-icon>
+  </span>
+  <span class="date-trigger-btn">
+    {{ startDate ? (startDate | date:'MM/dd/yyyy') : 'From' }}
+    –
+    {{ endDate ? (endDate | date:'MM/dd/yyyy') : 'To' }}
+  </span>
 </div>
 
-    <ion-button expand="block" class="search-btn" (click)="searchLedger()" [disabled]="loading">
+  <mat-form-field class="hidden-range-field" appearance="fill">
+    <mat-date-range-input [rangePicker]="rangePicker">
+      <input matStartDate [(ngModel)]="rangeStart" [ngModelOptions]="{standalone: true}"
+        (dateChange)="onRangeStartChange($event)" readonly />
+      <input matEndDate [(ngModel)]="rangeEnd" [ngModelOptions]="{standalone: true}"
+        (dateChange)="onRangeEndChange($event)" readonly />
+    </mat-date-range-input>
+   <mat-date-range-picker #rangePicker (opened)="onPickerOpened()"></mat-date-range-picker>
+  </mat-form-field>
+
+    <ion-button expand="block" class="search-btn" (click)="loadAll()" [disabled]="loadingSummary || loadingTransactions">
       <ion-icon name="search-outline" slot="start"></ion-icon>
-      Search Ledger
+      Search Account Summary
     </ion-button>
   </div>
 
-  <ion-text color="danger" *ngIf="errorMessage">
-    <p class="ion-padding-horizontal error-text">{{ errorMessage }}</p>
+  <ion-text color="danger" *ngIf="franchiseLoadError || summaryLoadError">
+    <p class="ion-padding-horizontal error-text">{{ franchiseLoadError || summaryLoadError }}</p>
   </ion-text>
 
   <!-- SKELETON LOADER -->
-  <div class="ledger-skeleton" *ngIf="loading">
+  <div class="ledger-skeleton" *ngIf="loadingSummary">
     <div class="skeleton-grid">
       <div class="skeleton-tile" *ngFor="let s of [1,2,3,4,5,6]">
         <div class="skeleton-icon"></div>
@@ -94,8 +89,6 @@
         </div>
       </div>
     </div>
-
-    <div class="skeleton-bar"></div>
 
     <div class="skeleton-table">
       <div class="skeleton-row" *ngFor="let r of [1,2,3,4]">
@@ -107,11 +100,12 @@
     </div>
   </div>
 
-  <ng-container *ngIf="ledger as l">
-    <ng-container *ngIf="!loading">
-      <h2 class="section-title section-title-accent section-title-ledger">
+  <ng-container *ngIf="ledgerSummary as l">
+    <ng-container *ngIf="!loadingSummary">
+
+      <h2 class="section-title-accent section-title-ledger">
         <ion-icon name="document-text-outline"></ion-icon>
-        <span>Ledger ({{ l.startDate || startDate }} - {{ l.endDate || endDate }})</span>
+        <span>Accounts Summary ({{ startDate }} - {{ endDate }})</span>
       </h2>
 
       <div class="summary-grid">
@@ -119,7 +113,7 @@
           <span class="st-icon st-icon-open"><ion-icon name="wallet-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Opening Balance</span>
-            <span class="st-value">₹{{ l.openingBalance | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.openingBalance) }}</span>
           </div>
         </div>
 
@@ -127,7 +121,7 @@
           <span class="st-icon st-icon-close"><ion-icon name="wallet-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Closing Balance</span>
-            <span class="st-value">₹{{ l.closingBalance | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.closingBalance) }}</span>
           </div>
         </div>
 
@@ -135,7 +129,7 @@
           <span class="st-icon st-icon-book"><ion-icon name="calendar-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Booking Amount</span>
-            <span class="st-value">₹{{ l.bookingAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.bookingAmount) }}</span>
           </div>
         </div>
 
@@ -143,7 +137,7 @@
           <span class="st-icon st-icon-refund"><ion-icon name="return-down-back-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Cancellation / Refund</span>
-            <span class="st-value">₹{{ l.cancellationRefundAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.cancellationRefund) }}</span>
           </div>
         </div>
 
@@ -151,7 +145,7 @@
           <span class="st-icon st-icon-comm"><ion-icon name="pricetags-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Commission Amount</span>
-            <span class="st-value">₹{{ l.commissionAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.commissionAmount) }}</span>
           </div>
         </div>
 
@@ -159,7 +153,7 @@
           <span class="st-icon st-icon-dep"><ion-icon name="cash-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Deposit Amount</span>
-            <span class="st-value">₹{{ l.depositAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.depositAmount) }}</span>
           </div>
         </div>
 
@@ -167,15 +161,7 @@
           <span class="st-icon st-icon-rzp"><ion-icon name="card-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Razorpay Deposit</span>
-            <span class="st-value">₹{{ l.razorpayDepositAmount | number:'1.2-2' }}</span>
-          </div>
-        </div>
-
-        <div class="summary-tile">
-          <span class="st-icon st-icon-cf"><ion-icon name="card-outline"></ion-icon></span>
-          <div class="st-body">
-            <span class="st-label">Cashfree Deposit</span>
-            <span class="st-value">₹{{ l.cashfreeDepositAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.razorpayDepositAmount) }}</span>
           </div>
         </div>
 
@@ -183,7 +169,7 @@
           <span class="st-icon st-icon-inv"><ion-icon name="cube-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Inventory Debit</span>
-            <span class="st-value">₹{{ l.inventoryDebitAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.inventoryDebit) }}</span>
           </div>
         </div>
 
@@ -191,7 +177,7 @@
           <span class="st-icon st-icon-adj"><ion-icon name="swap-horizontal-outline"></ion-icon></span>
           <div class="st-body">
             <span class="st-label">Debited / Adjusted</span>
-            <span class="st-value">₹{{ l.debitedAdjustedAmount | number:'1.2-2' }}</span>
+            <span class="st-value">{{ formatCurrency(l.debitedAdjustedAmount) }}</span>
           </div>
         </div>
       </div>
@@ -205,25 +191,25 @@
         <div class="nb-row">
           <div class="nb-cell nb-debit">
             <span class="nb-cell-label">Debit</span>
-            <span class="nb-cell-value">- ₹{{ netDebitTotal | number:'1.2-2' }}</span>
+            <span class="nb-cell-value">- {{ formatCurrency(netDebitTotal) }}</span>
           </div>
           <div class="nb-cell nb-credit">
             <span class="nb-cell-label">Credit</span>
-            <span class="nb-cell-value">+ ₹{{ netCreditTotal | number:'1.2-2' }}</span>
+            <span class="nb-cell-value">+ {{ formatCurrency(netCreditTotal) }}</span>
           </div>
           <div class="nb-cell nb-net">
             <span class="nb-cell-label">Net</span>
             <span class="nb-cell-value">
-              {{ netBusinessTotal < 0 ? '-' : '+' }} ₹{{ (netBusinessTotal < 0 ? -netBusinessTotal : netBusinessTotal) | number:'1.2-2' }}
+              {{ netBusinessTotal < 0 ? '-' : '+' }} {{ formatCurrency(netBusinessTotal < 0 ? -netBusinessTotal : netBusinessTotal) }}
             </span>
           </div>
         </div>
       </div>
 
       <div class="past-ledger-header">
-        <h2 class="section-title section-title-accent">
+        <h2 class="section-title-accent">
           <ion-icon name="time-outline"></ion-icon>
-          <span>Past Ledger</span>
+          <span>Past Account Summary</span>
         </h2>
 
         <div class="past-ledger-toolbar">
@@ -232,7 +218,8 @@
               interface="popover"
               placeholder="Sort By"
               class="sort-select"
-              [(ngModel)]="selectedSort">
+              [(ngModel)]="sortBy"
+              (ionChange)="onSortChange($event.detail.value)">
               <ion-select-option *ngFor="let opt of sortOptions" [value]="opt.value">
                 {{ opt.label }}
               </ion-select-option>
@@ -249,61 +236,89 @@
           </div>
 
           <ion-searchbar
-            placeholder="Type & Search Franchise"
+            placeholder="Search by booking Id"
             class="franchise-search"
-            [(ngModel)]="franchiseSearchText"
+            [(ngModel)]="searchBookingId"
             show-clear-button="focus">
           </ion-searchbar>
         </div>
       </div>
 
-      <!-- ✅ NEW: plain HTML table, horizontally scrollable, row-select highlight -->
       <div class="table-scroll-wrapper">
         <table class="ledger-table">
           <thead>
             <tr>
               <th>Sr.No</th>
-              <th>Booking Date</th>
+              <th>Booking Id</th>
+              <th>F.Id</th>
+              <th>Franchise Name</th>
               <th>Type</th>
+              <th>Amount</th>
               <th>Remark</th>
               <th>Patient Name</th>
               <th>Test Name</th>
-              <th>Barcode</th>
-              <th>Amount</th>
               <th>Opening Balance</th>
               <th>Closing Balance</th>
             </tr>
           </thead>
           <tbody>
             <tr
-              *ngFor="let entry of sortedPastLedger; let i = index"
+              *ngFor="let row of filteredTransactions; let i = index"
               [class.row-selected]="selectedRowIndex === i"
               (click)="selectRow(i)">
               <td>{{ i + 1 }}</td>
               <td>
-                <a>{{ entry.bookingId }}</a>
-                <div class="booking-date">{{ entry.bookingDate }}</div>
+                <a *ngIf="row.bookingId" [href]="'/booking/' + row.bookingId">{{ row.bookingId }}</a>
+                <span *ngIf="!row.bookingId">-</span>
+                <div class="booking-date">{{ formatDateTime(row.createdOn) }}</div>
               </td>
+              <td>{{ row.franchiseId ?? '-' }}</td>
+              <td>{{ row.franchiseName }}</td>
               <td>
-                <ion-badge class="type-badge" [ngClass]="entry.type === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
-                  {{ entry.type }}
+                <ion-badge class="type-badge" [ngClass]="row.transactionType === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
+                  {{ row.transactionType }}
                 </ion-badge>
               </td>
-              <td class="remark-cell">{{ entry.remark }}</td>
-<td>{{ entry['patientName'] }}</td>
-<td class="wrap-cell">{{ entry['testName'] }}</td>
-<td class="wrap-cell">{{ entry['barcode'] }}</td>
-<td>₹{{ entry['amount'] | number:'1.2-2' }}</td>
-<td>₹{{ entry['openingBalance'] | number:'1.2-2' }}</td>
-<td>₹{{ entry['closingBalance'] | number:'1.2-2' }}</td>
+              <td>{{ formatCurrency(row.balance) }}</td>
+              <td class="remark-cell">{{ row.description }}</td>
+              <td>{{ row.customerName }}</td>
+              <td class="wrap-cell">
+                <span *ngFor="let t of row.testNames">{{ t }}<br /></span>
+                <span class="add-badge" *ngIf="row.description?.includes('Add new test')">#ADD</span>
+                <span class="cancel-badge" *ngIf="row.description?.includes('cancelled')">CANCEL</span>
+              </td>
+              <td>{{ formatCurrency(row.openingBalance) }}</td>
+              <td>{{ formatCurrency(row.closingBalance) }}</td>
             </tr>
 
-            <tr *ngIf="!sortedPastLedger.length">
-              <td colspan="10" class="ion-text-center">Nivadlelya date range sathi kahi entries nahit.</td>
+            <tr *ngIf="!filteredTransactions.length && !loadingTransactions">
+              <td colspan="11" class="ion-text-center">Nivadlelya date range sathi kahi entries nahit.</td>
+            </tr>
+
+            <tr *ngIf="loadingTransactions">
+              <td colspan="11" class="ion-text-center">Loading transactions...</td>
             </tr>
           </tbody>
         </table>
       </div>
+
+      <div class="ion-text-center" *ngIf="transactionsLoadError">
+        <ion-text color="danger">{{ transactionsLoadError }}</ion-text>
+      </div>
+
+      <div class="load-more-wrapper">
+        <span class="entries-info">Showing {{ transactions.length }} of {{ totalEntries }} entries</span>
+
+        <ion-button
+          *ngIf="hasMore"
+          class="load-more-btn"
+          fill="solid"
+          (click)="loadMore()"
+          [disabled]="loadingMore">
+          {{ loadingMore ? 'Loading...' : 'Load More' }}
+        </ion-button>
+      </div>
+
     </ng-container>
   </ng-container>
 

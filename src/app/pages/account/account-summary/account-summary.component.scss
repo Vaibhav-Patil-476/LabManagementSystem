@@ -1,8 +1,5 @@
 // ==========================================================
-// PREMIUM ENTERPRISE DESIGN SYSTEM — Search Ledger
-// Recolored to match Report Download / Dashboard's teal identity
-// (--brand: #087b76). Same token set as booking-status.page.scss
-// and report-status.page.scss — keep in sync.
+// PREMIUM ENTERPRISE DESIGN SYSTEM — Account Summary
 // ==========================================================
 :host {
   --primary: #087b76;
@@ -35,9 +32,6 @@
   --r-pill: 999px;
 }
 
-// =========================
-// Header
-// =========================
 .report-header {
   --background: var(--brand-gradient);
   --color: #ffffff;
@@ -87,60 +81,6 @@
     font-weight: 600;
   }
 
-  // ✅ FIX: .hidden-select (mat-date-range-input hider) merged in HERE —
-  // this is the ACTUAL .date-item (the calendar box in the search card).
-  // It was previously duplicated as a stray rule nested inside
-  // .ledger-table further down, which compiled to
-  // ".ledger-table .date-item .hidden-select" and never matched this
-  // element — that's why the raw Material inputs were visible.
-  .date-item {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    padding: 12px 14px;
-    border-radius: var(--r-sm, 10px);
-    background: rgba(255, 255, 255, 0.14);
-    position: relative; // anchor for .hidden-select's absolute positioning
-
-    ion-icon {
-      color: #ffffff;
-      font-size: 18px;
-      flex-shrink: 0;
-    }
-
-    // ✅ FIX: this class was never styled in this file — it was
-    // inheriting default (black, left-aligned) text instead of the
-    // white/bold look used on the account-summary page.
-    .filter-text {
-      flex: 1;
-      color: #ffffff;
-      font-weight: 600;
-      font-size: 15px;
-    }
-
-    ion-input {
-      color: #ffffff;
-      font-weight: 600;
-
-      &::-webkit-calendar-picker-indicator {
-        filter: invert(1);
-        opacity: 0.9;
-      }
-    }
-
-    .date-sep {
-      margin: 0 6px;
-      color: #ffffff;
-    }
-
-    .hidden-select {
-      position: absolute;
-      inset: 0;
-      opacity: 0;
-      pointer-events: none; // opened programmatically via rangePicker.open()
-    }
-  }
-
   .search-btn {
     --background: #ffffff;
     --background-activated: #eef8f7;
@@ -153,6 +93,64 @@
   }
 }
 
+.date-field-wrapper {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.date-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.14);
+  border: none;
+  border-radius: var(--r-sm);
+  padding: 10px 14px;
+  cursor: pointer;
+  box-shadow: none;
+  position: relative;
+  z-index: 1;
+
+  .date-icon-badge {
+    display: flex;
+    align-items: center;
+    ion-icon {
+      font-size: 18px;
+      color: #ffffff;
+    }
+  }
+
+  .date-trigger-btn {
+    font-weight: 700;
+    font-size: 14px;
+    color: #ffffff;
+    white-space: nowrap;
+  }
+}
+
+// ✅ Hidden field ata visible box chya EXACT jagevar overlap hoto —
+// tyamule Material la accurate anchor point milto ani calendar
+// barobar box chya khali open hoto, center la ki page-top la nahi.
+.hidden-range-field {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  overflow: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  border: none !important;
+  z-index: 0;
+
+  ::ng-deep .mat-mdc-form-field-flex,
+  ::ng-deep .mat-mdc-text-field-wrapper,
+  ::ng-deep .mat-mdc-form-field-subscript-wrapper {
+    display: none !important;
+  }
+}
 // ==========================================================
 // FRANCHISE PICKER
 // ==========================================================
@@ -209,7 +207,6 @@
   }
 }
 
-.franchise-dropdown-loading,
 .franchise-dropdown-empty {
   display: flex;
   align-items: center;
@@ -219,10 +216,6 @@
   color: #8fa1a5;
   font-size: 13px;
   font-weight: 600;
-
-  ion-spinner {
-    color: var(--primary);
-  }
 }
 
 .error-text {
@@ -232,8 +225,7 @@
 }
 
 // ==========================================================
-// PROFESSIONAL SECTION HEADING — slim icon badge + bold title
-// + left accent bar. Compact version, not oversized.
+// SECTION HEADINGS
 // ==========================================================
 .section-title-accent {
   display: flex;
@@ -257,8 +249,6 @@
     background: var(--brand-gradient);
   }
 
-  padding-left: 16px;
-
   ion-icon {
     flex-shrink: 0;
     width: 22px;
@@ -280,11 +270,6 @@
   }
 }
 
-// ==========================================================
-// LEDGER HEADING — same slim accent style as Past Ledger, but
-// uses a document icon and allows the date-range text to wrap
-// on narrow screens instead of overflowing.
-// ==========================================================
 .section-title-ledger {
   font-size: 1.02rem;
   align-items: flex-start;
@@ -300,8 +285,7 @@
 }
 
 // ==========================================================
-// SUMMARY GRID — icon tiles in a responsive 2-column grid,
-// premium card look, replacing the old plain ion-list.
+// SUMMARY GRID
 // ==========================================================
 .summary-grid {
   display: grid;
@@ -364,8 +348,7 @@
     background: linear-gradient(135deg, #16866e, #106251);
   }
 
-  &.st-icon-rzp,
-  &.st-icon-cf {
+  &.st-icon-rzp {
     background: linear-gradient(135deg, #6a5acd, #4d3fa3);
   }
 
@@ -418,7 +401,7 @@
 }
 
 // ==========================================================
-// NET BUSINESS — card wrapper with heading + 3-cell strip
+// NET BUSINESS CARD
 // ==========================================================
 .net-business-card {
   margin: 0 12px 22px;
@@ -496,16 +479,12 @@
 }
 
 // =========================
-// Past ledger header / toolbar
+// Past summary toolbar
 // =========================
 .past-ledger-header {
   padding: 0 12px;
 }
 
-// ==========================================================
-// PAST LEDGER TOOLBAR — two-row layout: sort + export buttons
-// on top, full-width search below.
-// ==========================================================
 .past-ledger-toolbar {
   display: flex;
   flex-direction: column;
@@ -567,40 +546,8 @@
 }
 
 // =========================
-// Past ledger table
+// Type badge
 // =========================
-.past-ledger-table {
-  padding: 0 12px 24px;
-
-  .table-head {
-    font-weight: 700;
-    font-size: 0.72rem;
-    text-transform: uppercase;
-    letter-spacing: 0.3px;
-    color: var(--primary-dark);
-    background: var(--primary-light);
-    border-radius: var(--r-sm);
-    padding: 10px 4px;
-  }
-
-  .table-row {
-    border-bottom: 1px solid var(--border-color);
-    font-size: 0.85rem;
-    padding: 8px 4px;
-    color: #37474a;
-
-    a {
-      color: var(--primary);
-      font-weight: 700;
-    }
-
-    .booking-date {
-      font-size: 0.72rem;
-      color: #8fa1a5;
-    }
-  }
-}
-
 .type-badge {
   border-radius: var(--r-pill);
   font-size: 0.66rem;
@@ -620,6 +567,18 @@
   }
 }
 
+.add-badge,
+.cancel-badge {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  background: var(--danger);
+}
+
 @media (max-width: 480px) {
   .search-card {
     padding: 12px;
@@ -627,10 +586,7 @@
 }
 
 // ==========================================================
-// SKELETON LOADER — same shimmer-card pattern as
-// franchise-management.page.scss's .table-skeleton / .skeleton-card
-// / .skeleton-line, re-styled for the ledger page's summary-grid +
-// past-ledger-table shapes.
+// SKELETON LOADER
 // ==========================================================
 .ledger-skeleton {
   padding: 4px 12px 24px;
@@ -663,7 +619,7 @@
   border-radius: var(--r-sm);
   background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
   background-size: 400% 100%;
-  animation: ledger-skeleton-shine 1.2s ease-in-out infinite;
+  animation: acct-skeleton-shine 1.2s ease-in-out infinite;
 }
 
 .skeleton-lines {
@@ -679,16 +635,7 @@
   border-radius: var(--r-sm);
   background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
   background-size: 400% 100%;
-  animation: ledger-skeleton-shine 1.2s ease-in-out infinite;
-}
-
-.skeleton-bar {
-  height: 78px;
-  border-radius: var(--r-lg);
-  margin-bottom: 22px;
-  background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
-  background-size: 400% 100%;
-  animation: ledger-skeleton-shine 1.2s ease-in-out infinite;
+  animation: acct-skeleton-shine 1.2s ease-in-out infinite;
 }
 
 .skeleton-table {
@@ -711,7 +658,7 @@
   }
 }
 
-@keyframes ledger-skeleton-shine {
+@keyframes acct-skeleton-shine {
   0% { background-position: 100% 50%; }
   100% { background-position: 0 50%; }
 }
@@ -721,52 +668,10 @@
     grid-template-columns: 1fr;
   }
 }
+
 // ==========================================================
-// "Ledger data loading..." premium popup — GREEN spinner +
-// GREEN text, targets the ion-loading overlay via
-// cssClass: 'ledger-loading-popup' (wired in
-// ledger-search.page.ts's loadingCtrl.create()). ion-loading
-// renders outside this component's DOM (at app root), so
-// ::ng-deep is required to style it from here.
+// TABLE
 // ==========================================================
-::ng-deep ion-loading.ledger-loading-popup {
-  --backdrop-opacity: 0.55;
-
-  .loading-wrapper {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 16px;
-    padding: 32px 28px;
-    border-radius: var(--r-lg, 20px);
-    background: #ffffff;
-    box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16));
-    min-width: 240px;
-    max-width: 300px;
-  }
-
-  // ✅ FIX: ion-spinner has its OWN shadow root — a `circle { stroke }`
-  // selector can't pierce into it even through ::ng-deep. ion-spinner
-  // exposes `--color` as a CSS custom property specifically so it can
-  // be set from outside; that's the only reliable way to recolor it.
-  .loading-spinner,
-  ion-spinner {
-    --color: #087b76;
-    width: 46px;
-    height: 46px;
-    color: #087b76;
-  }
-
-  // ✅ Green text — bold, centered.
-  .loading-content {
-    text-align: center;
-    font-size: 15px;
-    font-weight: 700;
-    color: #087b76;
-    line-height: 1.4;
-  }
-}
-
 .table-scroll-wrapper {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -775,7 +680,7 @@
 }
 
 .ledger-table {
-  width: max-content;      // ✅ फक्त content इतकीच width — min-width: 100% काढून टाकलं
+  width: max-content;
   border-collapse: collapse;
   font-size: 14px;
 
@@ -783,7 +688,7 @@
     padding: 10px 12px;
     white-space: nowrap;
     text-align: left;
-    border-bottom: 1px solid var(--ion-color-light-shade, #e0e0e0);
+    border-bottom: 1px solid var(--border-color);
   }
 
   .remark-cell {
@@ -805,9 +710,20 @@
   th {
     position: sticky;
     top: 0;
-     background: #f8fafc;
+    background: #f8fafc;
     font-weight: 600;
     z-index: 1;
+  }
+
+  a {
+    color: var(--primary);
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .booking-date {
+    font-size: 0.72rem;
+    color: #8fa1a5;
   }
 
   tbody tr {
@@ -824,4 +740,29 @@
     background: #e6f0ff;
     box-shadow: inset 3px 0 0 var(--ion-color-primary, #3880ff);
   }
+}
+
+// ==========================================================
+// LOAD MORE FOOTER
+// ==========================================================
+.load-more-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 20px 16px 32px;
+}
+
+.entries-info {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #56696c;
+}
+
+.load-more-btn {
+  --background: var(--brand-gradient);
+  --color: #ffffff;
+  --border-radius: var(--r-pill);
+  --box-shadow: var(--shadow-glow);
+  font-weight: 700;
 }

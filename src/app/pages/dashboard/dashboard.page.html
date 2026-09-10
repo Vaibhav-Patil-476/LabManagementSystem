@@ -1157,12 +1157,33 @@
     <div class="bn-backdrop" *ngIf="accountMenuOpen" (click)="closeAccountMenu()"></div>
 
     <!-- Centered floating card, sits directly above the Account tab -->
-    <div class="account-submenu-card" [class.open]="accountMenuOpen">
-      <button *ngFor="let opt of accountSubOptions" type="button" class="bn-sub-option" (click)="goToAccountSub(opt)">
-        <span class="bn-sub-circle"><ion-icon [name]="opt.icon"></ion-icon></span>
-        <span class="bn-sub-label">{{ opt.label }}</span>
-      </button>
-    </div>
+
+<div class="account-submenu-card" [class.open]="accountMenuOpen">
+  <button
+    *ngFor="let opt of accountSubOptions"
+    type="button"
+    class="bn-sub-option"
+    [class.locked]="opt.locked"
+    (click)="goToAccountSub(opt)"
+  >
+    <span class="bn-sub-circle">
+      <ion-icon [name]="opt.icon"></ion-icon>
+    </span>
+
+    <span class="bn-sub-label">
+      {{ opt.label }}
+    </span>
+
+    <!-- Lock icon ONLY for locked options -->
+    <ion-icon
+      *ngIf="opt.locked"
+      name="lock-closed-outline"
+      class="locked-icon">
+    </ion-icon>
+  </button>
+</div>
+
+
 
     <nav class="app-bottom-nav" role="navigation" aria-label="Primary">
       <button type="button" class="bn-item" [class.active]="isActiveTab('/dashboard')" (click)="goToPage('dashboard')">

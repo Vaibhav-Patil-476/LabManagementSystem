@@ -1,7 +1,9 @@
-import { Component, OnDestroy } from '@angular/core';
+import { Component, OnDestroy, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { IonicModule, LoadingController, ToastController, RefresherCustomEvent } from '@ionic/angular';
+import { MatDatepickerModule } from '@angular/material/datepicker';
+import { MatNativeDateModule } from '@angular/material/core';
 import { finalize } from 'rxjs/operators';
 import { forkJoin } from 'rxjs';
 
@@ -19,7 +21,7 @@ interface FranchiseOption {
 @Component({
   selector: 'app-ledger-search',
   standalone: true,
-  imports: [CommonModule, FormsModule, IonicModule],
+  imports: [CommonModule, FormsModule, IonicModule, MatDatepickerModule, MatNativeDateModule],
   templateUrl: './ledger-search.page.html',
   styleUrls: ['./ledger-search.page.scss']
 })
@@ -27,8 +29,13 @@ export class LedgerSearchPage implements OnDestroy {
   franchiseId: number | null = null;
   franchiseLabel = '';
 
+  // ✅ UI मध्ये दाखवायला/API ला पाठवायला वापरले जाणारे ISO string dates (जुनं logic तसंच)
   startDate = '';
   endDate = '';
+
+  // ✅ NEW: mat-date-range-picker ला bind करण्यासाठी Date objects
+  pickedStartDate: Date | null = null;
+  pickedEndDate: Date | null = null;
 
   ledger: LedgerResponse | null = null;
   loading = false;
@@ -55,6 +62,9 @@ export class LedgerSearchPage implements OnDestroy {
   // ✅ NEW: कुठली row selected/highlighted आहे ते track करण्यासाठी
   selectedRowIndex: number | null = null;
 
+  // ✅ NEW: date-range field चा trigger box — calendar panel ला याच्याखाली position करण्यासाठी
+  @ViewChild('dateFieldTrigger') dateFieldTrigger!: ElementRef<HTMLElement>;
+
   constructor(
     private walletService: WalletService,
     private labApiService: LabApiService,
@@ -68,6 +78,8 @@ export class LedgerSearchPage implements OnDestroy {
     const first = new Date(today.getFullYear(), today.getMonth(), 1);
     this.startDate = this.toIsoDate(first);
     this.endDate = this.toIsoDate(today);
+    this.pickedStartDate = first;
+    this.pickedEndDate = today;
 
     if (this.hasInitialized && this.franchiseId) {
       return;
@@ -123,6 +135,36 @@ export class LedgerSearchPage implements OnDestroy {
     if (range.end) {
       this.endDate = range.end.slice(0, 10);
     }
+  }
+
+  // ✅ NEW: mat-date-range-input मधून (dateChange) आल्यावर pickedStartDate/pickedEndDate
+  // (Date objects) → startDate/endDate (ISO strings, जुनं logic वापरतं ते) sync कर
+  onRangeDateChange(): void {
+    if (this.pickedStartDate) {
+      this.startDate = this.toIsoDate(this.pickedStartDate);
+    }
+    if (this.pickedEndDate) {
+      this.endDate = this.toIsoDate(this.pickedEndDate);
+    }
+  }
+
+  // ✅ NEW: calendar overlay open झाल्यावर त्याची position manually
+  // date-field trigger box च्या खाली force करायची — Material च्या
+  // automatic (scroll-container-dependent) positioning ऐवजी.
+  onPickerOpened(): void {
+    setTimeout(() => {
+      const panel = document.querySelector('.cdk-overlay-pane') as HTMLElement;
+      const trigger = this.dateFieldTrigger?.nativeElement;
+      if (panel && trigger) {
+        const rect = trigger.getBoundingClientRect();
+        panel.style.position = 'fixed';
+        panel.style.top = `${rect.bottom + 6}px`;
+        panel.style.left = `${rect.left}px`;
+        panel.style.right = 'auto';
+        panel.style.transform = 'none';
+        panel.style.margin = '0';
+      }
+    });
   }
 
   toggleSummary(): void {
@@ -363,7 +405,7 @@ export class LedgerSearchPage implements OnDestroy {
     d.setDate(d.getDate() + 1);
     return this.toIsoDate(d);
   }
-
+ 
   private async presentToast(message: string): Promise<void> {
     const toast = await this.toastCtrl.create({ message, duration: 2500, position: 'bottom' });
     await toast.present();
