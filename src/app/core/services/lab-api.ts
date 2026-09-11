@@ -630,6 +630,29 @@ resendBarcode(payload: { bookingId: number; barcode: string; testMappingId?: num
   );
 }
 
+// getClinicalHistoryList(
+//   page: number = 0,
+//   size: number = 20,
+//   search?: string,
+//   startDate?: string,
+//   endDate?: string
+// ): Observable<any> {
+//   let params = new HttpParams()
+//     .set('page', page.toString())
+//     .set('size', size.toString());
+ 
+//   if (search) params = params.set('search', search);
+//   if (startDate) params = params.set('startDate', startDate);
+//   if (endDate) params = params.set('endDate', endDate);
+ 
+//   return this.http.get(
+//     `${this.BASE_URL}/api/v1/lab/booking/clinical/getAll`,
+//     { params }
+//   );
+// }
+ 
+// Ek specific booking + test chi full clinical-history thread
+
 getClinicalHistoryList(
   page: number = 0,
   size: number = 20,
@@ -638,20 +661,20 @@ getClinicalHistoryList(
   endDate?: string
 ): Observable<any> {
   let params = new HttpParams()
+    .set('labId', this.getLabId().toString())   // ✅ NEW — try as query param
     .set('page', page.toString())
     .set('size', size.toString());
- 
+
   if (search) params = params.set('search', search);
   if (startDate) params = params.set('startDate', startDate);
   if (endDate) params = params.set('endDate', endDate);
- 
+
   return this.http.get(
     `${this.BASE_URL}/api/v1/lab/booking/clinical/getAll`,
     { params }
   );
 }
- 
-// Ek specific booking + test chi full clinical-history thread
+
 getClinicalHistoryByBookingTest(bookingId: number, testId: number | string): Observable<any> {
   const params = new HttpParams()
     .set('bookingId', bookingId.toString())

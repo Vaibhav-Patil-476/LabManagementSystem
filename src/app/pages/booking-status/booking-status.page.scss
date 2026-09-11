@@ -3183,6 +3183,69 @@ ion-content.menu-open {
   border-left: 1px solid var(--border-color); // buttons ला barcode पासून वेगळं करणारी हलकी divider line
 }
 
+// ===================== COMPACT BARCODE LIST (senior-dev fix) =====================
+// Old design: one pill-box per barcode (border + padding each) → card
+// height grew unbounded with more samples. New design: single
+// comma-separated inline line — height stays near-constant regardless
+// of barcode count; wraps to max 2-3 lines only in extreme cases.
+.bcard-barcode-compact {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 6px 4px;
+}
+
+.barcode-compact-icon {
+  color: var(--primary);
+  font-size: 15px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-right: 2px;
+}
+
+.barcode-compact-label {
+  font-weight: 800;
+  color: var(--primary-dark);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.barcode-compact-list {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.barcode-compact-item {
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: var(--text-dark);
+  transition: color 0.15s ease, opacity 0.15s ease;
+
+  &:hover,
+  &:active {
+    color: var(--primary);
+    opacity: 0.75;
+  }
+}
+
+.barcode-compact-sep {
+  color: var(--gray-accent);
+  font-weight: 600;
+}
+
+.barcode-compact-empty {
+  color: var(--gray-accent);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 4px;
+}
+
 /* =========================================================
    BOOKING CARD BOTTOM CLIPPING FIX (mobile/APK)
    ---------------------------------------------------------

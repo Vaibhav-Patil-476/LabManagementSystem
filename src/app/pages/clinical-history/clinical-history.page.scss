@@ -38,7 +38,17 @@
     --padding-end: 0;
     --padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
 }
+.ch-status-icon {
+  font-size: 24px;
 
+  &.icon-unread {
+    color: #e67e22;   // orange/envelope रंग — screenshot सारखा
+  }
+
+  &.icon-read {
+    color: #2ecc71;   // green tick — screenshot सारखा
+  }
+}
 .form-card {
     background: transparent;
     padding: var(--sp-4) 0 var(--sp-5);

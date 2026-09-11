@@ -130,16 +130,16 @@
 
         <!-- ✅ Card header: no click / no expand anymore -->
         <div class="bcard-header">
-<div class="bcard-header-left">
-  <div class="bcard-id-row">
-    <a class="id-link">#{{ item.bookingId }}</a>
-    <span class="bcard-date">{{ item.bookingDate }}</span>
-  </div>
-  <div class="bcard-name-row">
-    <span class="bcard-name">{{ item.title | titlecase }} {{ item.customerName }}</span>
-    <span class="sub-text">({{ item.gender | titlecase }}/{{ item.age }}) · {{ item.patientId }}</span>
-  </div>
-</div>
+          <div class="bcard-header-left">
+            <div class="bcard-id-row">
+              <a class="id-link">#{{ item.bookingId }}</a>
+              <span class="bcard-date">{{ item.bookingDate }}</span>
+            </div>
+            <div class="bcard-name-row">
+              <span class="bcard-name">{{ item.title | titlecase }} {{ item.customerName }}</span>
+              <span class="sub-text">({{ item.gender | titlecase }}/{{ item.age }}) · {{ item.patientId }}</span>
+            </div>
+          </div>
 
           <!-- ✅ Right side: only counts now, no eye button, no chevron -->
           <div class="bcard-header-right">
@@ -151,39 +151,46 @@
           </div>
         </div>
 
-<div class="bcard-stats">
-  <div class="bcard-stat">
-    <div class="bcs-row-with-tests">
-      <div class="bcs-text-col">
-        <span class="bcs-label">Client / Doctor</span>
-        <span class="bcs-value">({{ item.franchise?.franchiseName || 'SELF' }}) Dr. {{ item.doctor?.doctor_name ||
-          'self' }}</span>
-      </div>
+        <div class="bcard-stats">
+          <div class="bcard-stat">
+            <div class="bcs-row-with-tests">
+              <div class="bcs-text-col">
+                <span class="bcs-label">Client / Doctor</span>
+                <span class="bcs-value">({{ item.franchise?.franchiseName || 'SELF' }}) Dr. {{ item.doctor?.doctor_name
+                  ||
+                  'self' }}</span>
+              </div>
 
-      <!-- ✅ Tests eye icon moved here, uses the empty space next to Client/Doctor -->
-      <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
-        <span class="bcard-tests-label">Tests :-</span>
-        <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
-      </div>
-    </div>
-  </div>
-</div>
+              <!-- ✅ Tests eye icon moved here, uses the empty space next to Client/Doctor -->
+              <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
+                <span class="bcard-tests-label">Tests :-</span>
+                <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <!-- ✅ Barcode (left, fills the empty space) + Action buttons (right) share one row -->
         <div class="bcard-actions">
 
-          <div class="bcard-barcode-inline bcard-barcode-inline-actions">
-<div class="barcode-line" *ngFor="let s of item.samples; trackBy: trackByBarcode"
-  (click)="copyBarcode(s.barcode); $event.stopPropagation()">
-  <ion-icon name="qr-code-outline"></ion-icon>
-  <span>{{ s.barcode }} </span>
-  <small *ngIf="s.sampleType">{{ s.sampleType }}</small>
-  <ion-icon name="copy-outline" class="barcode-line-copy-icon"></ion-icon>
-</div>
-            <div class="barcode-line empty" *ngIf="!item.samples?.length">—</div>
+          <div class="bcard-barcode-compact bcard-barcode-inline-actions"
+            *ngIf="item.samples?.length; else noBarcodeTpl">
+            <ion-icon name="qr-code-outline" class="barcode-compact-icon"></ion-icon>
+            <span class="barcode-compact-label">Barcode :-</span>
+            <span class="barcode-compact-list">
+              <ng-container *ngFor="let s of item.samples; let last = last; trackBy: trackByBarcode">
+                <span class="barcode-compact-item" (click)="copyBarcode(s.barcode); $event.stopPropagation()">{{
+                  s.barcode }}</span><span class="barcode-compact-sep" *ngIf="!last">, </span>
+              </ng-container>
+            </span>
           </div>
+          <ng-template #noBarcodeTpl>
+            <div class="bcard-barcode-compact bcard-barcode-inline-actions">
+              <span class="barcode-compact-empty">—</span>
+            </div>
+          </ng-template>
 
-                <div class="bcard-actions-buttons">
+          <div class="bcard-actions-buttons">
             <ion-button class="action-icon-btn" size="small" fill="clear"
               (click)="editTest(item); $event.stopPropagation()" title="Edit Tests">
               <ion-icon slot="icon-only" name="cash-outline"></ion-icon>
@@ -234,7 +241,7 @@
       <span class="action-icon-wrap"><ion-icon name="cash-outline"></ion-icon></span>
       <span>Edit Tests</span>
     </div>
-   <div class="action-item" *ngIf="canEditPatientForItem(menuItem)" (click)="editPatient(menuItem)">
+    <div class="action-item" *ngIf="canEditPatientForItem(menuItem)" (click)="editPatient(menuItem)">
       <span class="action-icon-wrap"><ion-icon name="person-outline"></ion-icon></span>
       <span>Edit Patient</span>
     </div>
@@ -247,8 +254,8 @@
       </span>
       <span>{{ sharingWhatsappId === menuItem.bookingId ? 'Sharing...' : 'Share via WhatsApp' }}</span>
     </div>
-<div class="action-item" [class.item-loading]="generatingBillId === menuItem.bookingId"
-  (click)="generatingBillId === menuItem.bookingId ? null : openPrintBillModal(menuItem)">
+    <div class="action-item" [class.item-loading]="generatingBillId === menuItem.bookingId"
+      (click)="generatingBillId === menuItem.bookingId ? null : openPrintBillModal(menuItem)">
       <span class="action-icon-wrap">
         <ion-spinner name="crescent" *ngIf="generatingBillId === menuItem.bookingId"></ion-spinner>
         <ion-icon name="print-outline" *ngIf="generatingBillId !== menuItem.bookingId"></ion-icon>
@@ -508,7 +515,7 @@
                 <div class="field-row">
                   <div class="summary-field narrow">
                     <label>Title</label>
-                                        <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
+                    <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
                       class="premium-select" (ionChange)="onEditTitleChange()">
                       <ion-select-option value="mr">Mr</ion-select-option>
                       <ion-select-option value="mrs">Mrs</ion-select-option>
@@ -963,48 +970,46 @@
 
   </ion-modal>
 
-  <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal"
-  [keepContentsMounted]="false" [canDismiss]="true" (didDismiss)="closePrintBillModal()">
-  <ng-template>
-    <div class="printbill-modal-page">
-      <div class="printbill-modal-header">
-        <h2>Print Bill <span class="header-booking-tag">#{{ printBillItem?.bookingId }}</span></h2>
-        <button class="close-modal-btn" (click)="closePrintBillModal()">
-          <ion-icon name="close-outline"></ion-icon>
-        </button>
-      </div>
-
-      <div class="printbill-modal-body">
-
-        <div class="input-group" style="margin-bottom:16px;">
-          <label>Price Type</label>
-          <div class="input-wrap">
-            <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
-              class="premium-select">
-              <ion-select-option value="myprice">My Price</ion-select-option>
-              <ion-select-option value="mrp">MRP</ion-select-option>
-            </ion-select>
-          </div>
+  <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal" [keepContentsMounted]="false"
+    [canDismiss]="true" (didDismiss)="closePrintBillModal()">
+    <ng-template>
+      <div class="printbill-modal-page">
+        <div class="printbill-modal-header">
+          <h2>Print Bill <span class="header-booking-tag">#{{ printBillItem?.bookingId }}</span></h2>
+          <button class="close-modal-btn" (click)="closePrintBillModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
         </div>
 
-        <ion-button expand="block" fill="solid" class="modal-save-btn"
-          [disabled]="generatingBillId === printBillItem?.bookingId"
-          (click)="confirmPrintBill(true)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          With letterHead
-        </ion-button>
+        <div class="printbill-modal-body">
 
-        <ion-button expand="block" fill="solid" class="modal-save-btn" style="margin-top:10px;"
-          [disabled]="generatingBillId === printBillItem?.bookingId"
-          (click)="confirmPrintBill(false)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          Without letterHead
-        </ion-button>
+          <div class="input-group" style="margin-bottom:16px;">
+            <label>Price Type</label>
+            <div class="input-wrap">
+              <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
+                class="premium-select">
+                <ion-select-option value="myprice">My Price</ion-select-option>
+                <ion-select-option value="mrp">MRP</ion-select-option>
+              </ion-select>
+            </div>
+          </div>
 
+          <ion-button expand="block" fill="solid" class="modal-save-btn"
+            [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(true)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            With letterHead
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="modal-save-btn" style="margin-top:10px;"
+            [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(false)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            Without letterHead
+          </ion-button>
+
+        </div>
       </div>
-    </div>
-  </ng-template>
-</ion-modal>
+    </ng-template>
+  </ion-modal>
 
   <!-- ===================== TEST PREVIEW MODAL (eye icon) ===================== -->
   <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">

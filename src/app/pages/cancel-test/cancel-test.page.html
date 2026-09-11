@@ -127,11 +127,11 @@
               Refund Pending
             </ion-badge>
 
-            <ion-button *ngIf="!item.refundStatus" size="small" fill="solid" class="resend-btn"
+            <!-- <ion-button *ngIf="!item.refundStatus" size="small" fill="solid" class="resend-btn"
               [disabled]="resendingId === item.bookingId" (click)="resend(item)">
               <ion-spinner *ngIf="resendingId === item.bookingId" name="crescent"></ion-spinner>
               <span *ngIf="resendingId !== item.bookingId">Resend</span>
-            </ion-button>
+            </ion-button> -->
           </div>
 
         </div>

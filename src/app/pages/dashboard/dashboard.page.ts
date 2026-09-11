@@ -219,6 +219,11 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   downloadingReportId: any = null;
   printingId: any = null;
+  clinicalUnseenCount = 0;
+  cancelUnseenCount = 0;
+
+  private readonly NOTIF_LOOKBACK_DAYS = 30; // how far back we scan for "new" items
+  private notifPollSub?: Subscription;
 
   // ============================================================
   // ROLE CONSTANTS
@@ -398,7 +403,10 @@ canEditPatientForItem(item: any): boolean {
       return;
     }
 
-    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => this.initDashboard());
+    this.refreshSub = this.bookingRefresh.refresh$.subscribe(() => {
+      this.initDashboard();
+      this.loadNotificationCounts();
+    });
 
     if (this.canViewWallet) {
       this.loadWallet();
@@ -410,12 +418,15 @@ canEditPatientForItem(item: any): boolean {
     this.refreshSub?.unsubscribe();
     this.pollSub?.unsubscribe();
     this.walletPollSub?.unsubscribe();
+    this.notifPollSub?.unsubscribe();     // ✅ NEW
     this.verifyLoading?.dismiss();
   }
 
   ionViewWillEnter(): void {
     this.initDashboard();
     this.startPolling();
+    this.loadNotificationCounts();        // ✅ NEW — initial fetch
+    this.startNotificationPolling();      // ✅ NEW — keep badges fresh
 
     if (this.canViewWallet) {
       this.startWalletPolling();
@@ -425,6 +436,7 @@ canEditPatientForItem(item: any): boolean {
   ionViewWillLeave(): void {
     this.pollSub?.unsubscribe();
     this.walletPollSub?.unsubscribe();
+    this.notifPollSub?.unsubscribe();     // ✅ NEW
   }
 
   private startPolling(): void {
@@ -438,6 +450,15 @@ canEditPatientForItem(item: any): boolean {
 
     this.walletPollSub = interval(WALLET_POLL_INTERVAL_MS).subscribe(() => {
       this.refreshWalletSilently();
+    });
+  }
+
+    private startNotificationPolling(): void {
+    this.notifPollSub?.unsubscribe();
+    // Reuses the same cadence as the main dashboard poll — no need
+    // for a separate/faster interval for a badge count.
+    this.notifPollSub = interval(DASHBOARD_POLL_INTERVAL_MS).subscribe(() => {
+      this.loadNotificationCounts();
     });
   }
 
@@ -2453,12 +2474,117 @@ goToAccountSub(opt: {
   // }
 
 
-// ============================================================
-// 5) The old Account bottom-nav button called goToPage('account')
-//    directly. That's no longer used by the Account button itself
-//    (it now toggles the popup — see the HTML patch), so you can
-//    either delete the '/account' route entirely, or keep it as a
-//    fallback page reachable some other way. No code change needed
-//    here — just noting the behavior change.
-// ============================================================
+
+  private notifStorageKey(category: 'clinical' | 'cancel'): string {
+    const labId = this.authService.currentUserValue?.raw?.labId ?? 'unknown';
+    return `notif_seen_${category}_${labId}`;
+  }
+
+  private getLastSeen(category: 'clinical' | 'cancel'): number {
+    const raw = localStorage.getItem(this.notifStorageKey(category));
+    const parsed = raw ? Number(raw) : 0;
+    return isNaN(parsed) ? 0 : parsed;
+  }
+
+  private setLastSeen(category: 'clinical' | 'cancel', ts: number): void {
+    localStorage.setItem(this.notifStorageKey(category), String(ts));
+  }
+
+private extractRecordTimestamp(record: any, category: 'clinical' | 'cancel' = 'clinical'): number {
+  const raw = category === 'cancel'
+    ? (record?.cancelDate ?? record?.created_on ?? record?.createdAt ?? record?.date ?? null)
+    : (record?.created_on ?? record?.cancelDate ?? record?.createdAt ?? record?.date ?? null);
+
+  if (raw === null || raw === undefined) return 0;
+
+  if (typeof raw === 'number') return raw;
+  const asNum = Number(raw);
+  if (!isNaN(asNum) && String(raw).trim() !== '') return asNum;
+
+  const parsed = new Date(raw).getTime();
+  return isNaN(parsed) ? 0 : parsed;
 }
+
+private countUnseen(records: any[], category: 'clinical' | 'cancel'): number {
+  const lastSeen = this.getLastSeen(category);
+  if (!Array.isArray(records)) return 0;
+
+  return records.filter((r: any) => this.extractRecordTimestamp(r, category) > lastSeen).length;
+}
+
+  /** Fetches both lists and updates the two badge counts. Silent —
+   * never shows an error toast, since this runs on every poll tick
+   * in the background and a transient failure shouldn't be noisy. */
+loadNotificationCounts(): void {
+  const today = new Date();
+  const endDate = this.nextDay(this.formatDateParam(today));   // ✅ आधीच nextDay वापरतंय, ठीक आहे
+  const lookback = new Date(today);
+  lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
+  const startDate = this.formatDateParam(lookback);
+
+  const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
+
+  this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate).subscribe({
+    next: (res: any) => {
+      const list = res?.content || res?.data || res || [];
+
+      // ✅ list page सारखंच booking+test नुसार group करून प्रत्येक
+      // group मध्ये खरंच "unread" (दुसऱ्याचं + not closed) आहे का बघा
+      const grouped = new Map<string, any[]>();
+      for (const raw of list) {
+        const bookingId = raw?.bookingId;
+        const testId = raw?.testId;
+        const key = `${bookingId}_${testId}`;
+        if (!grouped.has(key)) grouped.set(key, []);
+        grouped.get(key)!.push(raw);
+      }
+
+      let unreadBookingsCount = 0;
+      grouped.forEach((entries) => {
+        const hasUnread = entries.some((e: any) =>
+          Number(e?.created_by ?? e?.createdBy) !== currentUserId &&
+          String(e?.status || '').toLowerCase() !== 'closed'
+        );
+        if (hasUnread) unreadBookingsCount++;
+      });
+
+      this.ngZone.run(() => {
+        this.clinicalUnseenCount = unreadBookingsCount;
+        this.cdr.detectChanges();
+      });
+    },
+    error: () => { /* silent — badge just won't update this tick */ }
+  });
+
+  this.labApi.getCancelTests(startDate, endDate, 500).subscribe({
+    next: (res: any) => {
+      const list = res?.content || res?.data || res || [];
+      this.ngZone.run(() => {
+        this.cancelUnseenCount = this.countUnseen(list, 'cancel');
+        this.cdr.detectChanges();
+      });
+    },
+    error: () => { /* silent */ }
+  });
+}
+
+  /** Marks a category as "seen right now" — badge drops to 0
+   * immediately (no need to wait for the next poll tick). */
+  private markCategorySeen(category: 'clinical' | 'cancel'): void {
+    this.setLastSeen(category, Date.now());
+    if (category === 'clinical') this.clinicalUnseenCount = 0;
+    else this.cancelUnseenCount = 0;
+  }
+
+  openClinicalHistory(): void {
+   
+    this.goToPage('clinical-history');
+  }
+
+openCancelTest(): void {
+  this.markCategorySeen('cancel');   // ✅ क्लिक करताच count 0 होतो
+  this.goToPage('cancel-test');
+}
+}
+
+

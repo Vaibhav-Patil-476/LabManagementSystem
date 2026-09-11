@@ -1034,17 +1034,22 @@
               </span>
               <span class="service-label">Profile List</span>
             </div>
-
-            <div class="service-item" (click)="goToPage('clinical-history')">
+            <div class="service-item" (click)="openClinicalHistory()">
               <span class="service-circle indigo">
                 <ion-icon name="time-outline"></ion-icon>
+                <span class="notif-badge" *ngIf="clinicalUnseenCount > 0">
+                  {{ clinicalUnseenCount > 99 ? '99+' : clinicalUnseenCount }}
+                </span>
               </span>
               <span class="service-label">Clinical History</span>
             </div>
 
-            <div class="service-item" (click)="goToPage('cancel-test')">
+            <div class="service-item" (click)="openCancelTest()">
               <span class="service-circle danger">
                 <ion-icon name="close-circle-outline"></ion-icon>
+                <span class="notif-badge" *ngIf="cancelUnseenCount > 0">
+                  {{ cancelUnseenCount > 99 ? '99+' : cancelUnseenCount }}
+                </span>
               </span>
               <span class="service-label">Cancel Test</span>
             </div>

@@ -5,6 +5,17 @@
     </ion-buttons>
 
     <ion-title>Clinical History</ion-title>
+
+<ion-buttons slot="end">
+  <ion-icon 
+    name="chatbubble-ellipses-outline" 
+    style="font-size: 22px;" 
+    (click)="toggleUnreadFilter()">
+  </ion-icon>
+  <ion-badge color="danger" *ngIf="unreadThreadsCount > 0" style="margin-left:-8px; margin-top:-6px;">
+    {{ unreadThreadsCount }}
+  </ion-badge>
+</ion-buttons>
   </ion-toolbar>
 </ion-header>
 
@@ -88,21 +99,13 @@
 
           </div>
 
-          <div class="ch-header-right">
-
-            <span class="status-badge" [ngClass]="
-                item.status === 'closed'
-                  ? 'badge-closed'
-                  : 'badge-pending'
-              ">
-              {{ item.status }}
-            </span>
-
-            <ion-badge class="unread-badge" *ngIf="item.unreadCount > 0">
-              {{ item.unreadCount }}
-            </ion-badge>
-
-          </div>
+<div class="ch-header-right">
+  <ion-icon
+    class="ch-status-icon"
+    [name]="item.unreadCount > 0 ? 'mail-unread-outline' : 'checkmark-circle-outline'"
+    [ngClass]="item.unreadCount > 0 ? 'icon-unread' : 'icon-read'">
+  </ion-icon>
+</div>
 
         </div>
 
@@ -271,8 +274,6 @@
 
         </div>
 
-        <!-- CHAT INPUT (temporarily disabled - keep commented for future re-enable) -->
-        <!--
         <div class="chat-input-bar">
 
           <input type="text" placeholder="Type a message..." [(ngModel)]="newMessage" (keyup.enter)="sendMessage()"
@@ -288,7 +289,7 @@
           </ion-button>
 
         </div>
-        -->
+       
 
       </div>
 

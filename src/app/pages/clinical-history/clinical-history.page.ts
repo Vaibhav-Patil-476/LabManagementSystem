@@ -1,9 +1,11 @@
-import { Component, OnInit, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
+import { Component, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
+import { AuthService } from '../../core/services/auth';
+import { ClinicalHistoryBadgeService } from '../../core/services/clinical-history-badge';
 import {
   ToastController,
   IonHeader,
@@ -29,7 +31,8 @@ import {
   chatbubbleEllipsesOutline,
   closeOutline,
   sendOutline,
-  mailUnreadOutline
+  mailUnreadOutline,
+    checkmarkCircleOutline
 } from 'ionicons/icons';
 
 import { firstValueFrom } from 'rxjs';
@@ -75,7 +78,7 @@ import { LabApiService } from '../../core/services/lab-api';
     MatInputModule
   ]
 })
-export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
+export class ClinicalHistoryPage implements  AfterViewChecked {
 
   allThreads: any[] = [];
   filteredThreads: any[] = [];
@@ -105,7 +108,9 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
 
   constructor(
     private labApiService: LabApiService,
-    private toastCtrl: ToastController
+    private toastCtrl: ToastController,
+    private authService: AuthService,
+     private badgeService: ClinicalHistoryBadgeService
   ) {
     addIcons({
       searchOutline,
@@ -115,13 +120,14 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
       chatbubbleEllipsesOutline,
       closeOutline,
       sendOutline,
-      mailUnreadOutline
+      mailUnreadOutline,
+        checkmarkCircleOutline
     });
   }
 
-  ngOnInit(): void {
-    this.loadThreads();
-  }
+ionViewWillEnter(): void {
+  this.loadThreads();
+}
 
   ngAfterViewChecked(): void {
     if (this.shouldScrollToBottom) {
@@ -130,13 +136,17 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
     }
   }
 
-  firstDayOfMonth(): string {
-    const d = new Date();
-    return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
-  }
-  today(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
+get unreadThreadsCount(): number {
+  return this.allThreads.filter(t => t.unreadCount > 0).length;
+}
+
+firstDayOfMonth(): string {
+  const d = new Date();
+  return this.formatDateForInput(new Date(d.getFullYear(), d.getMonth(), 1));
+}
+today(): string {
+  return this.formatDateForInput(new Date());
+}
 
   // ---------- date range picker helpers (cancel-test sarkha) ----------
   private formatDateForInput(d: Date): string {
@@ -144,6 +154,8 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');
   }
+
+  
 
   private toDateObj(dateStr: string): Date | null {
     return dateStr ? new Date(dateStr + 'T00:00:00') : null;
@@ -186,100 +198,205 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
   }
 
   private mapMessageItem(raw: any): any {
+    
+    const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
+    const isMine = currentUserId > 0 && Number(raw?.created_by) === currentUserId;
+
     return {
       clinicalId: raw?.clinicalId ?? raw?.id,
       senderName: raw?.addedBy ?? raw?.senderName ?? raw?.userName ?? 'User',
       message: raw?.remark ?? raw?.history ?? raw?.message ?? raw?.comment ?? '',
       timestamp: this.formatDate(raw?.created_on ?? raw?.timestamp),
-      status: raw?.status ? String(raw.status).toLowerCase() : null, // 'closed' | 'pending' | null
-      isMine: !!raw?.isMine || raw?.senderType === 'LAB'
+      status: raw?.status ? String(raw.status).toLowerCase() : null,
+      isMine
     };
   }
 
-  // ✅ getAll ek "message row per entry" return kartoy — booking+test
-  // peksha. Mhanun list madhe card banवण्याआधी bookingId+testId var
-  // group karto, jenekarun ekach booking+test chi multiple entries
-  // (jasa "need data" + "done sir") EKACH card madhe combine hotil,
-  // preview la saglyat latest message dakhavla jail.
-  private extractEntry(raw: any): any {
-    return {
-      bookingId: raw?.bookingId,
-      testId: raw?.testId ?? (Array.isArray(raw?.tests) ? raw.tests[0]?.testId : undefined),
-      barcode: raw?.barcode ?? raw?.samples?.[0]?.sampleId ?? '',
-      testName: raw?.testName ?? '-',
-      patientName: raw?.customerName ?? raw?.patientName ?? raw?.name ?? '-',
-      message: raw?.history ?? raw?.message ?? raw?.comment ?? raw?.remark ?? raw?.bookingComment ?? '',
-      status: (raw?.status ?? 'pending').toString().toLowerCase(),
-      createdOn: raw?.created_on ?? raw?.createdOn ?? raw?.timestamp ?? 0,
-      senderName: raw?.senderName ?? raw?.userName ?? raw?.createdByName ?? raw?.createdBy ?? 'User'
-    };
-  }
+ private extractEntry(raw: any): any {
+  return {
+    bookingId: raw?.bookingId,
+    testId: raw?.testId ?? (Array.isArray(raw?.tests) ? raw.tests[0]?.testId : undefined),
+    barcode: raw?.barcode ?? raw?.samples?.[0]?.sampleId ?? '',
+    testName: raw?.testName ?? '-',
+    patientName: raw?.customerName ?? raw?.patientName ?? raw?.name ?? '-',
+    message: raw?.history ?? raw?.message ?? raw?.comment ?? raw?.remark ?? raw?.bookingComment ?? '',
+    status: (raw?.status ?? 'pending').toString().toLowerCase(),
+    createdOn: raw?.created_on ?? raw?.createdOn ?? raw?.timestamp ?? 0,
+    senderName: raw?.senderName ?? raw?.userName ?? raw?.createdByName ?? raw?.createdBy ?? 'User',
+    createdBy: raw?.created_by,               // ✅ NEW
+    clinicalId: raw?.clinicalId ?? raw?.id     // ✅ NEW
+  };
+}
+// async loadThreads() {
+//   this.isLoading = true;
+//   try {
+//     const res: any = await firstValueFrom(
+//       this.labApiService.getClinicalHistoryList(0, 500, undefined, this.startDate, this.endDate)
+//     );
+
+//     console.log('CLINICAL HISTORY RAW RESPONSE:', res);
+
+//     let rawList: any[] = [];
+//     if (Array.isArray(res)) rawList = res;
+//     else if (Array.isArray(res?.data)) rawList = res.data;
+//     else if (Array.isArray(res?.content)) rawList = res.content;
+//     else if (Array.isArray(res?.data?.content)) rawList = res.data.content;
+
+//     const grouped = new Map<string, any[]>();
+//     for (const raw of rawList) {
+//       const entry = this.extractEntry(raw);
+//       const key = `${entry.bookingId}_${entry.testId}`;
+//       if (!grouped.has(key)) grouped.set(key, []);
+//       grouped.get(key)!.push(entry);
+//     }
+
+//     const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
+
+//     this.allThreads = Array.from(grouped.values()).map(entries => {
+//       entries.sort((a, b) => new Date(a.createdOn).getTime() - new Date(b.createdOn).getTime());
+//       const latest = entries[entries.length - 1];
+
+//       const unreadCount = entries.filter(e =>
+//         Number(e.createdBy) !== currentUserId &&
+//         e.status !== 'closed'
+//       ).length;
+
+//       console.log(
+//         'Booking', latest.bookingId,
+//         '| currentUserId:', currentUserId,
+//         '| unreadCount:', unreadCount,
+//         '| entries:', entries.map(e => ({ createdBy: e.createdBy, status: e.status }))
+//       );
+
+//       return {
+//         bookingId: latest.bookingId,
+//         testId: latest.testId,
+//         barcode: entries.find(e => e.barcode)?.barcode || '',
+//         testName: entries.find(e => e.testName && e.testName !== '-')?.testName || '-',
+//         patientName: entries.find(e => e.patientName && e.patientName !== '-')?.patientName || '-',
+//         lastMessage: latest.message,
+//         lastMessageTime: this.formatDate(latest.createdOn),
+//         status: latest.status,
+//         unreadCount,
+//         lastCreatedOn: latest.createdOn   // ✅ NEW — sorting साठी वापरतो
+//       };
+//     });
+
+//     // ✅ NEW — unread threads सगळ्यात वर (top ला) दाखवा, बाकीचे नवीन-ते-जुने
+//     this.allThreads.sort((a, b) => {
+//       if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+//       if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+//       return new Date(b.lastCreatedOn).getTime() - new Date(a.lastCreatedOn).getTime();
+//     });
+
+//     this.applySearch();
+
+//     // ✅ NEW — dashboard tile साठी total unread (unique bookings) push कर
+//     this.badgeService.setUnreadCount(
+//       this.allThreads.filter(t => t.unreadCount > 0).length
+//     );
+
+//   } catch (err) {
+//     console.error('Clinical history list fetch failed', err);
+//     this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
+//   } finally {
+//     this.isLoading = false;
+//   }
+// }
+  // applySearch() {
+  //   if (!Array.isArray(this.allThreads)) this.allThreads = [];
+  //   const term = this.searchTerm.trim().toLowerCase();
+  //   if (!term) {
+  //     this.filteredThreads = [...this.allThreads];
+  //     return;
+  //   }
+  //   this.filteredThreads = this.allThreads.filter(t =>
+  //     t.patientName?.toLowerCase().includes(term) ||
+  //     t.testName?.toLowerCase().includes(term) ||
+  //     t.barcode?.toLowerCase().includes(term) ||
+  //     String(t.bookingId).includes(term)
+  //   );
+  // }
 
   async loadThreads() {
-    this.isLoading = true;
-    try {
-      const res: any = await firstValueFrom(
-        this.labApiService.getClinicalHistoryList(0, 500, undefined, this.startDate, this.endDate)
+  this.isLoading = true;
+  try {
+    const res: any = await firstValueFrom(
+      this.labApiService.getClinicalHistoryList(
+        0, 500, undefined,
+        this.startDate,
+        this.nextDay(this.endDate)   // ✅ NEW — end date + 1 day पाठवा, जेणेकरून
+                                      //    timezone मुळे उशिरा पडणारे entries सुटणार नाहीत
+      )
+    );
+
+    console.log('CLINICAL HISTORY RAW RESPONSE:', res);
+
+    let rawList: any[] = [];
+    if (Array.isArray(res)) rawList = res;
+    else if (Array.isArray(res?.data)) rawList = res.data;
+    else if (Array.isArray(res?.content)) rawList = res.content;
+    else if (Array.isArray(res?.data?.content)) rawList = res.data.content;
+
+    const grouped = new Map<string, any[]>();
+    for (const raw of rawList) {
+      const entry = this.extractEntry(raw);
+      const key = `${entry.bookingId}_${entry.testId}`;
+      if (!grouped.has(key)) grouped.set(key, []);
+      grouped.get(key)!.push(entry);
+    }
+
+    const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
+
+    this.allThreads = Array.from(grouped.values()).map(entries => {
+      entries.sort((a, b) => new Date(a.createdOn).getTime() - new Date(b.createdOn).getTime());
+      const latest = entries[entries.length - 1];
+
+      const unreadCount = entries.filter(e =>
+        Number(e.createdBy) !== currentUserId &&
+        e.status !== 'closed'
+      ).length;
+
+      console.log(
+        'Booking', latest.bookingId,
+        '| currentUserId:', currentUserId,
+        '| unreadCount:', unreadCount,
+        '| entries:', entries.map(e => ({ createdBy: e.createdBy, status: e.status }))
       );
 
-      // 👇 DEBUG: he console.log ughdun, tumcha actual field-names
-      // baghun mala paste kara — mग mapping exact karto.
-      console.log('CLINICAL HISTORY RAW RESPONSE:', res);
+      return {
+        bookingId: latest.bookingId,
+        testId: latest.testId,
+        barcode: entries.find(e => e.barcode)?.barcode || '',
+        testName: entries.find(e => e.testName && e.testName !== '-')?.testName || '-',
+        patientName: entries.find(e => e.patientName && e.patientName !== '-')?.patientName || '-',
+        lastMessage: latest.message,
+        lastMessageTime: this.formatDate(latest.createdOn),
+        status: latest.status,
+        unreadCount,
+        lastCreatedOn: latest.createdOn
+      };
+    });
 
-      let rawList: any[] = [];
-      if (Array.isArray(res)) rawList = res;
-      else if (Array.isArray(res?.data)) rawList = res.data;
-      else if (Array.isArray(res?.content)) rawList = res.content;
-      else if (Array.isArray(res?.data?.content)) rawList = res.data.content;
+    this.allThreads.sort((a, b) => {
+      if (a.unreadCount > 0 && b.unreadCount === 0) return -1;
+      if (a.unreadCount === 0 && b.unreadCount > 0) return 1;
+      return new Date(b.lastCreatedOn).getTime() - new Date(a.lastCreatedOn).getTime();
+    });
 
-      // ---- group by bookingId + testId ----
-      const grouped = new Map<string, any[]>();
-      for (const raw of rawList) {
-        const entry = this.extractEntry(raw);
-        const key = `${entry.bookingId}_${entry.testId}`;
-        if (!grouped.has(key)) grouped.set(key, []);
-        grouped.get(key)!.push(entry);
-      }
+    this.applySearch();
 
-      this.allThreads = Array.from(grouped.values()).map(entries => {
-        entries.sort((a, b) => new Date(a.createdOn).getTime() - new Date(b.createdOn).getTime());
-        const latest = entries[entries.length - 1];
-        return {
-          bookingId: latest.bookingId,
-          testId: latest.testId,
-          barcode: entries.find(e => e.barcode)?.barcode || '',
-          testName: entries.find(e => e.testName && e.testName !== '-')?.testName || '-',
-          patientName: entries.find(e => e.patientName && e.patientName !== '-')?.patientName || '-',
-          lastMessage: latest.message,
-          lastMessageTime: this.formatDate(latest.createdOn),
-          status: latest.status,
-          unreadCount: 0
-        };
-      });
-
-      this.applySearch();
-    } catch (err) {
-      console.error('Clinical history list fetch failed', err);
-      this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
-  applySearch() {
-    if (!Array.isArray(this.allThreads)) this.allThreads = [];
-    const term = this.searchTerm.trim().toLowerCase();
-    if (!term) {
-      this.filteredThreads = [...this.allThreads];
-      return;
-    }
-    this.filteredThreads = this.allThreads.filter(t =>
-      t.patientName?.toLowerCase().includes(term) ||
-      t.testName?.toLowerCase().includes(term) ||
-      t.barcode?.toLowerCase().includes(term) ||
-      String(t.bookingId).includes(term)
+    this.badgeService.setUnreadCount(
+      this.allThreads.filter(t => t.unreadCount > 0).length
     );
+
+  } catch (err) {
+    console.error('Clinical history list fetch failed', err);
+    this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
+  } finally {
+    this.isLoading = false;
   }
+}
 
   async doRefresh(event: any) {
     await this.loadThreads();
@@ -287,7 +404,34 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
   }
 
   // ---------- open thread (card tap) ----------
-  async openThread(item: any) {
+  // async openThread(item: any) {
+  //   this.activeThread = item;
+  //   this.isThreadModalOpen = true;
+  //   this.threadMessages = [];
+  //   this.isThreadLoading = true;
+
+  //   try {
+  //     const res: any = await firstValueFrom(
+  //       this.labApiService.getClinicalHistoryByBookingTest(item.bookingId, item.testId)
+  //     );
+
+  //     let rawList: any[] = [];
+  //     if (Array.isArray(res)) rawList = res;
+  //     else if (Array.isArray(res?.data)) rawList = res.data;
+  //     else if (Array.isArray(res?.content)) rawList = res.content;
+  //     else if (res && typeof res === 'object' && !Array.isArray(res)) rawList = [res]; // single-object fallback
+
+  //     this.threadMessages = rawList.map(raw => this.mapMessageItem(raw));
+  //     this.shouldScrollToBottom = true;
+  //   } catch (err) {
+  //     console.error('Clinical history thread fetch failed', err);
+  //     this.showToast('Thread load karta ala nahi.', 'danger');
+  //   } finally {
+  //     this.isThreadLoading = false;
+  //   }
+  // }
+
+    async openThread(item: any) {
     this.activeThread = item;
     this.isThreadModalOpen = true;
     this.threadMessages = [];
@@ -302,10 +446,16 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
       if (Array.isArray(res)) rawList = res;
       else if (Array.isArray(res?.data)) rawList = res.data;
       else if (Array.isArray(res?.content)) rawList = res.content;
-      else if (res && typeof res === 'object' && !Array.isArray(res)) rawList = [res]; // single-object fallback
+      else if (res && typeof res === 'object' && !Array.isArray(res)) rawList = [res];
 
       this.threadMessages = rawList.map(raw => this.mapMessageItem(raw));
       this.shouldScrollToBottom = true;
+
+      // ✅ NEW: दुसऱ्या बाजूने पाठवलेले "pending" messages — आत्ता
+      // बघितले गेले, म्हणून त्यांना "closed" मार्क करायचं (SMS
+      // "seen" सारखं).
+      this.markIncomingMessagesSeen(rawList, item.bookingId, item.testId);
+
     } catch (err) {
       console.error('Clinical history thread fetch failed', err);
       this.showToast('Thread load karta ala nahi.', 'danger');
@@ -314,6 +464,81 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
     }
   }
 
+private async markIncomingMessagesSeen(rawList: any[], bookingId: number, testId: number): Promise<void> {
+  const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
+  if (!currentUserId) return;
+
+  // 👇 DEBUG — कोण बंद होणार आहे ते आधी बघ, फील्ड नाव confirm करण्यासाठी
+  console.log('markIncomingMessagesSeen | currentUserId:', currentUserId);
+  console.log('rawList:', rawList.map(r => ({
+    clinicalId: r.clinicalId ?? r.id,
+    created_by: r.created_by,
+    createdBy: r.createdBy,
+    status: r.status
+  })));
+
+const toClose = rawList.filter((raw: any) => {
+  const rawCreatedBy = Number(raw?.created_by ?? raw?.createdBy ?? NaN);
+  const isOpen = String(raw?.status || '').toLowerCase() !== 'closed';
+  const isMine = !isNaN(rawCreatedBy) && rawCreatedBy === currentUserId;
+  return !isMine && !isNaN(rawCreatedBy) && isOpen;
+});
+  console.log('toClose (यांना बंद करणार):', toClose);   // 👈 DEBUG
+
+  if (toClose.length === 0) return;
+
+  for (const raw of toClose) {
+    try {
+      const existingText = raw?.remark ?? raw?.history ?? raw?.message ?? raw?.comment ?? '';
+      await firstValueFrom(
+        this.labApiService.updateClinicalHistory(bookingId, raw.clinicalId, {
+          status: 'closed',
+          remark: existingText,
+          history: existingText,
+          comment: existingText,
+          message: existingText
+        })
+      );
+    } catch (err) {
+      console.error('Mark-as-seen failed for clinicalId', raw?.clinicalId, err);
+    }
+  }
+
+  // Local UI मध्ये लगेच reflect करा (परत fetch ची वाट न बघता)
+  const closedIds = new Set(toClose.map((r: any) => r.clinicalId));
+  this.threadMessages = this.threadMessages.map(m =>
+    closedIds.has(m.clinicalId) ? { ...m, status: 'closed' } : m
+  );
+
+  this.patchThreadPreview(bookingId, testId);
+}
+
+ private patchThreadPreview(bookingId: number, testId: number): void {
+  const idx = this.allThreads.findIndex(
+    (t: any) => t.bookingId === bookingId && t.testId === testId
+  );
+  if (idx === -1) return;
+
+  const last = this.threadMessages[this.threadMessages.length - 1];
+  if (!last) return;
+
+  const updated = {
+    ...this.allThreads[idx],
+    lastMessage: last.message,
+    lastMessageTime: last.timestamp,
+    status: last.status || this.allThreads[idx].status,
+    unreadCount: 0   // ✅ NEW — thread opened/seen, clear its badge
+  };
+
+  this.allThreads = [
+    ...this.allThreads.slice(0, idx),
+    updated,
+    ...this.allThreads.slice(idx + 1)
+  ];
+
+  this.applySearch();
+}
+
   closeThread(): void {
     this.isThreadModalOpen = false;
     this.activeThread = null;
@@ -321,39 +546,86 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
     this.newMessage = '';
   }
 
-  async sendMessage() {
-    const text = this.newMessage.trim();
-    if (!text || !this.activeThread || this.isSending) return;
+//  async sendMessage() {
+//   const text = this.newMessage.trim();
+//   if (!text || !this.activeThread || this.isSending) return;
 
-    this.isSending = true;
-    try {
-      await firstValueFrom(
-        this.labApiService.createClinicalHistory({
-          bookingId: this.activeThread.bookingId,
-          testId: this.activeThread.testId,
-          history: text
-        })
-      );
+//   const { bookingId, testId } = this.activeThread;
 
-      // optimistic UI — apla message lagech thread madhe dakhav
-      this.threadMessages.push({
-        clinicalId: Date.now(),
-        senderName: 'You',
-        message: text,
-        timestamp: this.formatDate(Date.now()),
-        status: 'pending',
-        isMine: true
-      });
-      this.newMessage = '';
-      this.shouldScrollToBottom = true;
-    } catch (err) {
-      console.error('Send clinical history failed', err);
-      this.showToast('Message pathvta ala nahi. Parat try kara.', 'danger');
-    } finally {
-      this.isSending = false;
-    }
+//   this.isSending = true;
+//   try {
+//     await firstValueFrom(
+//       this.labApiService.createClinicalHistory({
+//         bookingId,
+//         testId,
+//         remark: text,
+//         history: text,
+//         comment: text,
+//         message: text
+//       })
+//     );
+
+//     // optimistic UI — apla message lagech thread madhe dakhav
+//     this.threadMessages.push({
+//       clinicalId: Date.now(),
+//       senderName: 'You',
+//       message: text,
+//       timestamp: this.formatDate(Date.now()),
+//       status: 'pending',
+//       isMine: true
+//     });
+//     this.newMessage = '';
+//     this.shouldScrollToBottom = true;
+//   } catch (err) {
+//     console.error('Send clinical history failed', err);
+//     this.showToast('Message pathvta ala nahi. Parat try kara.', 'danger');
+//   } finally {
+//     this.isSending = false;
+//   }
+// }
+
+async sendMessage() {
+  const text = this.newMessage.trim();
+  if (!text || !this.activeThread || this.isSending) return;
+
+  const { bookingId, testId } = this.activeThread;
+
+  this.isSending = true;
+  try {
+    const res: any = await firstValueFrom(
+      this.labApiService.createClinicalHistory({
+        bookingId,
+        testId,
+        remark: text,
+        history: text,
+        comment: text,
+        message: text
+      })
+    );
+
+    console.log('SEND MESSAGE RESPONSE:', res);
+
+    this.threadMessages.push({
+      clinicalId: Date.now(),
+      senderName: 'You',
+      message: text,
+      timestamp: this.formatDate(Date.now()),
+      status: 'pending',
+      isMine: true
+    });
+    this.newMessage = '';
+    this.shouldScrollToBottom = true;
+
+    // ✅ NEW — list card चा preview लगेच update करा
+    this.patchThreadPreview(bookingId, testId);
+
+  } catch (err) {
+    console.error('Send clinical history failed', err);
+    this.showToast('Message pathvta ala nahi. Parat try kara.', 'danger');
+  } finally {
+    this.isSending = false;
   }
-
+}
   private scrollChatToBottom(): void {
     try {
       const el = this.chatScroll?.nativeElement;
@@ -365,4 +637,38 @@ export class ClinicalHistoryPage implements OnInit, AfterViewChecked {
     const toast = await this.toastCtrl.create({ message, duration: 2000, color, position: 'top' });
     toast.present();
   }
+
+  showOnlyUnread = false;
+
+toggleUnreadFilter(): void {
+  this.showOnlyUnread = !this.showOnlyUnread;
+  this.applySearch();
+}
+
+applySearch() {
+  if (!Array.isArray(this.allThreads)) this.allThreads = [];
+  const term = this.searchTerm.trim().toLowerCase();
+
+  let base = this.allThreads;
+  if (this.showOnlyUnread) {
+    base = base.filter(t => t.unreadCount > 0);   // ✅ NEW
+  }
+
+  if (!term) {
+    this.filteredThreads = [...base];
+    return;
+  }
+  this.filteredThreads = base.filter(t =>
+    t.patientName?.toLowerCase().includes(term) ||
+    t.testName?.toLowerCase().includes(term) ||
+    t.barcode?.toLowerCase().includes(term) ||
+    String(t.bookingId).includes(term)
+  );
+}
+
+private nextDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return this.formatDateForInput(d);
+}
 }

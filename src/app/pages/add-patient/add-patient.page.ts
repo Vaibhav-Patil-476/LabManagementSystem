@@ -2535,7 +2535,7 @@ private testSearchTimer: any = null;
   // Every add/remove now routes through these two functions only.
   // ============================================================
 
-  private addTestToSampleGroup(test: any): void {
+private addTestToSampleGroup(test: any): void {
 
     const sampleId = Number(test?.sampleId || 0);
     const sampleType = String(test?.sampleType || 'OTHER');
@@ -2546,20 +2546,21 @@ private testSearchTimer: any = null;
 
     if (!group) {
 
-      const generatedBarcode = this.generateBarcode();
-
+      // ✅ FIX: barcode auto-generate करायचा नाही — user manually
+      // टाकेल तेव्हाच भरायचा. textbox रिकामाच दिसेल.
       group = {
         sampleId: test?.sampleId,
         sampleType,
         color: test?.color,
-        barcode: generatedBarcode,
-        confirmBarcode: generatedBarcode,
+        barcode: '',
+        confirmBarcode: '',
         testNames: [],
         testIds: []
       };
 
       this.selectedSampleTests.push(group);
     }
+    
 
     const testId = Number(test?.id ?? test?.testId ?? 0);
 
@@ -3734,19 +3735,13 @@ private validatePatientForm(): string | null {
       return 'Doctor name should contain only letters, spaces, dots or brackets, and be 2-60 characters long.';
     }
 
-    // ---------- Mobile Number (REQUIRED) ----------
-    const mobile = String(this.patient?.phone || '').trim();
+// ---------- Mobile Number (OPTIONAL, format checked only if filled) ----------
+const mobile = String(this.patient?.phone || '').trim();
 
-    if (!mobile) {
-      this.fieldErrors.mobile = true;
-      return 'Please enter mobile number.';
-    }
-
-    if (!/^[6-9]\d{9}$/.test(mobile)) {
-      this.fieldErrors.mobile = true;
-      return 'Mobile number must be exactly 10 digits and start with 6-9.';
-    }
-
+if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
+  this.fieldErrors.mobile = true;
+  return 'Mobile number must be exactly 10 digits and start with 6-9.';
+}
     // ---------- Aadhaar Number (OPTIONAL, format checked if filled) ----------
     const aadhaar = String(this.patient?.aadhaar || '').trim();
 

@@ -122,9 +122,9 @@ export class CancelTestPage implements OnInit {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
   }
-  today(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
+today(): string {
+  return new Date().toISOString().slice(0, 10);
+}
 
   /** epoch millis -> "12 Aug, 2026, 09:05 PM" sarkha readable format */
   private formatDate(ms: number | null | undefined): string {
@@ -145,6 +145,12 @@ export class CancelTestPage implements OnInit {
       String(d.getMonth() + 1).padStart(2, '0') + '-' +
       String(d.getDate()).padStart(2, '0');
   }
+
+  private nextDay(dateStr: string): string {
+  const d = new Date(dateStr + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return this.formatDateForInput(d);
+}
 
   private toDateObj(dateStr: string): Date | null {
     return dateStr ? new Date(dateStr + 'T00:00:00') : null;
@@ -224,47 +230,38 @@ export class CancelTestPage implements OnInit {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
   }
 
-  async loadCancelTests() {
-    this.isLoading = true;
-    try {
-      const res: any = await this.labApiService
-        .getCancelTests(this.startDate, this.endDate, 500)
-        .toPromise();
+async loadCancelTests() {
+  this.isLoading = true;
+  try {
+    const res: any = await this.labApiService
+      .getCancelTests(this.startDate, this.nextDay(this.endDate), 500)   // ✅ NEW — end date + 1 day
+      .toPromise();
 
-      console.log('CANCEL TESTS RAW RESPONSE:', res);
+    console.log('CANCEL TESTS RAW RESPONSE:', res);
 
-      // ⚠️ Backend chya response cha exact shape confirm nahi ahe,
-      // mhanun common Spring/REST patterns sagle try karto:
-      // 1) thet array          -> [...]
-      // 2) { data: [...] }
-      // 3) { content: [...] }  -> Spring Pageable cha default
-      // 4) { data: { content: [...] } }
-      let rawList: any[] = [];
-      if (Array.isArray(res)) {
-        rawList = res;
-      } else if (Array.isArray(res?.data)) {
-        rawList = res.data;
-      } else if (Array.isArray(res?.content)) {
-        rawList = res.content;
-      } else if (Array.isArray(res?.data?.content)) {
-        rawList = res.data.content;
-      } else {
-        console.warn('CANCEL TESTS: recognized array sapadli nahi response madhe.');
-        rawList = [];
-      }
-
-      // ✅ Actual backend fields (console varun confirm kelele) template
-      // la lagnarya sopya field-names madhe map karto.
-      this.allTests = rawList.map(raw => this.mapRawItem(raw));
-      this.applySearch();
-    } catch (err) {
-      console.error('Cancel test list fetch failed', err);
-      this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
-    } finally {
-      this.isLoading = false;
+    let rawList: any[] = [];
+    if (Array.isArray(res)) {
+      rawList = res;
+    } else if (Array.isArray(res?.data)) {
+      rawList = res.data;
+    } else if (Array.isArray(res?.content)) {
+      rawList = res.content;
+    } else if (Array.isArray(res?.data?.content)) {
+      rawList = res.data.content;
+    } else {
+      console.warn('CANCEL TESTS: recognized array sapadli nahi response madhe.');
+      rawList = [];
     }
-  }
 
+    this.allTests = rawList.map(raw => this.mapRawItem(raw));
+    this.applySearch();
+  } catch (err) {
+    console.error('Cancel test list fetch failed', err);
+    this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
+  } finally {
+    this.isLoading = false;
+  }
+}
   onDateChange() {
     this.loadCancelTests();
   }

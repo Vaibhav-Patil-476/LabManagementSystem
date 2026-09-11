@@ -4353,3 +4353,26 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   font-size: 18px;
   color: #8a94a6;
 }
+
+// ===================== NOTIFICATION BADGE (Clinical / Cancel Test) =====================
+.service-circle {
+  position: relative; // badge ला absolute-position करण्यासाठी anchor
+}
+
+.notif-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #dc3545;
+  color: #ffffff;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 18px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #ffffff;
+  z-index: 2;
+}
