@@ -4867,73 +4867,127 @@ private buildInvoiceAndShow(
   // into savePatient()/updateSampleBarcode() with zero extra wiring.
   // ============================================================
 
-  async scanBarcode(
-    sample: any
-  ) {
+async scanBarcode(
+  sample: any
+) {
 
-    try {
+  try {
 
-      const { camera } = await BarcodeScanner.checkPermissions();
+    const { camera } = await BarcodeScanner.checkPermissions();
 
-      if (camera !== 'granted' && camera !== 'limited') {
+    if (camera !== 'granted' && camera !== 'limited') {
 
-        const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+      const { camera: newStatus } = await BarcodeScanner.requestPermissions();
 
-        if (newStatus !== 'granted' && newStatus !== 'limited') {
+      if (newStatus !== 'granted' && newStatus !== 'limited') {
 
-          this.toastService.error(
-            'Permission Denied',
-            'Camera permission is required to scan barcode.'
-          );
-
-          return;
-        }
-      }
-
-      const { barcodes } = await BarcodeScanner.scan();
-
-      if (barcodes && barcodes.length > 0) {
-
-        const scannedValue = String(
-          barcodes[0].rawValue ||
-          barcodes[0].displayValue ||
-          ''
-        ).trim();
-
-        if (!scannedValue) {
-
-          this.toastService.warning(
-            'Empty Barcode',
-            'Scanned barcode was empty. Please try again.'
-          );
-
-          return;
-        }
-
-        this.ngZone.run(() => {
-
-          sample.barcode = scannedValue;
-
-          sample.confirmBarcode = scannedValue;
-        });
-
-        this.toastService.success(
-          'Barcode Scanned',
-          'Barcode set to ' + scannedValue + '.'
+        this.toastService.error(
+          'Permission Denied',
+          'Camera permission is required to scan barcode.'
         );
+
+        return;
+      }
+    }
+
+    const { barcodes } = await BarcodeScanner.scan();
+
+    if (barcodes && barcodes.length > 0) {
+
+      const scannedValue = String(
+        barcodes[0].rawValue ||
+        barcodes[0].displayValue ||
+        ''
+      ).trim();
+
+      if (!scannedValue) {
+
+        this.toastService.warning(
+          'Empty Barcode',
+          'Scanned barcode was empty. Please try again.'
+        );
+
+        return;
       }
 
-    } catch (err) {
+      // ✅ FIX: dusaऱ्या sample-type group madhe haच barcode aधीच
+      // vaparla asel tar save karण्याआधीच block karaycha — user la
+      // parat jaun manually badalava lagू nay.
+      if (this.isBarcodeDuplicate(scannedValue, sample)) {
 
-      console.error(
-        'SCAN BARCODE ERROR:',
-        err
-      );
+        this.toastService.error(
+          'Duplicate Barcode',
+          'This barcode is already used for another sample. Please scan a different one.'
+        );
 
-      this.toastService.error(
-        'Scan Failed',
-        'Could not scan barcode. Please try again.'
+        return;
+      }
+
+      this.ngZone.run(() => {
+
+        sample.barcode = scannedValue;
+
+        sample.confirmBarcode = scannedValue;
+
+        sample.barcodeError = false;
+      });
+
+      this.toastService.success(
+        'Barcode Scanned',
+        'Barcode set to ' + scannedValue + '.'
       );
     }
+
+  } catch (err) {
+
+    console.error(
+      'SCAN BARCODE ERROR:',
+      err
+    );
+
+    this.toastService.error(
+      'Scan Failed',
+      'Could not scan barcode. Please try again.'
+    );
   }
+}
+
+  private isBarcodeDuplicate(value: string, currentSample: any): boolean {
+
+  const v = String(value || '').trim();
+
+  if (!v) {
+    return false;
+  }
+
+  return this.selectedSampleTests.some(
+    (s: any) => s !== currentSample && String(s?.barcode || '').trim() === v
+  );
+}
+
+onBarcodeManualInput(sample: any): void {
+
+  const value = String(sample?.barcode || '').trim();
+
+  sample.barcodeError = false;
+
+  if (!value) {
+    return;
+  }
+
+  if (this.isBarcodeDuplicate(value, sample)) {
+
+    sample.barcodeError = true;
+
+    this.toastService.error(
+      'Duplicate Barcode',
+      'This barcode is already used for another sample. Please enter a different one.'
+    );
+
+    // Lगेच clear — duplicate value tithech theवत nahi, user la
+    // save karayla जाईपर्यंत wait करावं लागत नाही.
+    sample.barcode = '';
+    sample.confirmBarcode = '';
+  }
+}
 }

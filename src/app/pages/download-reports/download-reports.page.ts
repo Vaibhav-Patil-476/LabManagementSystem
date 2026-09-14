@@ -61,6 +61,7 @@ export interface ReportBookingRow {
   remark?: string;
   file?: string;
   bucket?: ReportTabKey;
+  franchiseId?: number;
 }
 
 @Component({
@@ -205,7 +206,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return new Date().toISOString().slice(0, 10);
   }
 
-  private loadFilterFranchises(): void {
+private loadFilterFranchises(): void {
     const currentRole = this.authService?.role;
     const currentFranchiseId = this.authService?.franchiseId;
     const currentFranchiseName = this.authService?.franchiseName;
@@ -224,6 +225,17 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
         this.franchises = Array.isArray(res?.content)
           ? res.content
           : (Array.isArray(res) ? res : []);
+
+        // ✅ NEW: reportLock map build — backend cha franchise.reportLock
+        // flag, company side change zala ki hyaच fetch madhun automatically
+        // reflect hoईल.
+        this.franchiseReportLock = {};
+        this.franchises.forEach((f: any) => {
+          const fId = Number(f?.franchiseId);
+          if (fId) {
+            this.franchiseReportLock[fId] = !!f?.reportLock;
+          }
+        });
 
         /*
          * =========================================================
@@ -283,6 +295,10 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       error: () => this.ngZone.run(() => {
 
         this.franchises = [];
+
+        // ✅ NEW: franchise fetch fail zali tar lock map pan reset —
+        // stale/wrong lock state var download block/allow honar nahi.
+        this.franchiseReportLock = {};
 
         if (
           isFranchiseUser &&
@@ -583,7 +599,9 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       reportId: rawTestMappings.find((t: any) => !!t.reportId)?.reportId,
       remark: raw.remark,
       file: raw.reportUrl || raw.pdfUrl || raw.file || raw.fileUrl,
+      franchiseId: Number(raw.franchiseId ?? raw.franchise?.franchiseId ?? 0) || undefined,
       bucket: this.deriveBucket(tests)
+
     };
   }
   private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
@@ -699,9 +717,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return normalizedStatus.includes('complete') || normalizedStatus.includes('ready');
   }
 
-  // ---------- role gates ----------
   get canShowDownloadControls(): boolean {
-    return this.roleService.canDownloadReports && this.activeTab === 'COMPLETE';
+    return this.activeTab === 'COMPLETE';
   }
 
   // ---------- selection ----------
@@ -710,7 +727,10 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   toggleSelect(item: ReportBookingRow, checked: boolean): void {
-    if (!this.canShowDownloadControls) return;
+    if (this.isReportLocked(item)) {
+      this.toast.warning('Report Locked', 'This report is locked and cannot be downloaded.');
+      return;
+    }
     const id = String(item.bookingId);
     if (checked) this.selectedIds.add(id);
     else this.selectedIds.delete(id);
@@ -721,19 +741,22 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- download ----------
-  async downloadSelected(): Promise<void> {
-    if (!this.canShowDownloadControls) {
-      this.toast.error('Not Allowed', 'Downloads are only available to Admin users on the Complete tab.');
-      return;
-    }
+async downloadSelected(): Promise<void> {
 
-    const selected = this.selectedReports;
-    if (selected.length === 0) {
-      this.toast.warning('Selection Required', 'Please select at least one report to download.');
-      return;
-    }
+  const selected = this.selectedReports;
+  if (selected.length === 0) {
+    this.toast.warning('Selection Required', 'Please select at least one report to download.');
+    return;
+  }
 
-    this.isGenerating = true;
+  // ✅ FIX: locked report chukun select झाला असेल tar block kara.
+  const lockedSelected = selected.filter(r => this.isReportLocked(r));
+  if (lockedSelected.length > 0) {
+    this.toast.error('Locked Reports', 'Some selected reports are locked. Please deselect them.');
+    return;
+  }
+
+  this.isGenerating = true;
 
     try {
       const bookingIds = selected.map(r => Number(r.bookingId));
@@ -853,5 +876,18 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     } catch {
       this.toast.error('Error', 'Unable to copy barcode.');
     }
+  }
+
+  // ✅ NEW: franchiseId -> reportLock map (company/backend cha
+  // franchise settings varun). Role-based check ऐवजी yach नुसार
+  // prati-booking download allow/deny ठरवायचं.
+  franchiseReportLock: Record<number, boolean> = {};
+
+  isReportLocked(item: ReportBookingRow): boolean {
+    const fId = Number(item?.franchiseId);
+    if (!fId) {
+      return false;
+    }
+    return !!this.franchiseReportLock[fId];
   }
 }

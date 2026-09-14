@@ -330,8 +330,8 @@
 
       <!-- ✅ PACKAGE / PROFILE SEARCH -->
       <!-- Ekach package select karun tya package madhle sagle tests
-             ekach click var bill madhe add hotat. Test search cha khali
-             baghitla tar donhi separate rahtat, mix hot nahi. -->
+              ekach click var bill madhe add hotat. Test search cha khali
+              baghitla tar donhi separate rahtat, mix hot nahi. -->
       <div class="input-wrap search-test-wrap">
         <ion-icon name="search-outline"></ion-icon>
         <ion-input type="text" placeholder="Search Package..." [(ngModel)]="packageSearch"
@@ -671,12 +671,11 @@
         Select a test to show sample details
       </div>
 
-      <!-- ✅ One barcode per SAMPLE TYPE (not per test) — matches company
-           web: all tests sharing a sample type (e.g. all SERUM tests)
-           use the same barcode, listed together in the last column. -->
+
       <div class="sample-row" *ngFor="let s of selectedSampleTests; let i = index">
-        <div class="barcode-box">
-          <ion-input type="text" placeholder="Enter barcode" maxlength="40" [(ngModel)]="s.barcode"></ion-input>
+        <div class="barcode-box" [class.field-error]="s.barcodeError">
+          <ion-input type="text" placeholder="Enter barcode" maxlength="40" [(ngModel)]="s.barcode"
+            (ionInput)="onBarcodeManualInput(s)"></ion-input>
           <ion-button fill="clear" size="small" color="primary" (click)="scanBarcode(s)">
             <ion-icon name="scan-outline"></ion-icon>
           </ion-button>
@@ -855,8 +854,8 @@
   </ion-modal>
 
   <!-- ✅ Package "eye" preview — click the eye icon on a collapsed
-       package row in the test table to see every test bundled inside
-       it, without expanding them all into the main bill table. -->
+        package row in the test table to see every test bundled inside
+        it, without expanding them all into the main bill table. -->
   <ion-modal [isOpen]="showPackageTestsModal" cssClass="pkg-preview-popup" (didDismiss)="showPackageTestsModal = false">
     <ng-template>
       <div class="modal-page">

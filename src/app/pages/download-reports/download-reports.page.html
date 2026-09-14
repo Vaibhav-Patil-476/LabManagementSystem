@@ -145,14 +145,14 @@
             <div class="bcard-id-row">
 
               <!-- Checkbox -->
-              <label class="bcard-checkbox-wrap" *ngIf="canShowDownloadControls" (click)="$event.stopPropagation()">
-                <input type="checkbox" class="bcard-checkbox" [checked]="isSelected(item)" (change)="
-                      toggleSelect(
-                        item,
-                        $any($event.target).checked
-                      )
-                    " />
-              </label>
+<label class="bcard-checkbox-wrap" *ngIf="canShowDownloadControls" (click)="$event.stopPropagation()">
+  <input type="checkbox" class="bcard-checkbox" [checked]="isSelected(item)" [disabled]="isReportLocked(item)" (change)="
+        toggleSelect(
+          item,
+          $any($event.target).checked
+        )
+      " />
+</label>
 
               <!-- Booking ID -->
               <a class="id-link">#{{ item.bookingId }}</a>
