@@ -726,15 +726,11 @@ private loadFilterFranchises(): void {
     return this.selectedIds.has(String(item.bookingId));
   }
 
-  toggleSelect(item: ReportBookingRow, checked: boolean): void {
-    if (this.isReportLocked(item)) {
-      this.toast.warning('Report Locked', 'This report is locked and cannot be downloaded.');
-      return;
-    }
-    const id = String(item.bookingId);
-    if (checked) this.selectedIds.add(id);
-    else this.selectedIds.delete(id);
-  }
+toggleSelect(item: ReportBookingRow, checked: boolean): void {
+  const id = String(item.bookingId);
+  if (checked) this.selectedIds.add(id);
+  else this.selectedIds.delete(id);
+}
 
   get selectedReports(): ReportBookingRow[] {
     return this.rowsForActiveTab.filter(r => this.selectedIds.has(String(r.bookingId)));
@@ -749,10 +745,19 @@ async downloadSelected(): Promise<void> {
     return;
   }
 
-  // ✅ FIX: locked report chukun select झाला असेल tar block kara.
+  // ✅ FIX: checkbox var block nahi — selection zाल्यावरच, download
+  // click cha veli locked report असेल tar exception dakhavायचा.
   const lockedSelected = selected.filter(r => this.isReportLocked(r));
+
   if (lockedSelected.length > 0) {
-    this.toast.error('Locked Reports', 'Some selected reports are locked. Please deselect them.');
+
+    const names = lockedSelected.map(r => `#${r.bookingId}`).join(', ');
+
+    this.toast.error(
+      'Download Report Locked',
+      `Report download is locked, Please contact admin.`
+    );
+
     return;
   }
 
