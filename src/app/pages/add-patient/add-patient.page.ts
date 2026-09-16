@@ -2425,7 +2425,7 @@ this.labApi
         }));
       },
       error: () => {
-        this.toastService.error('Error', 'Failed to load tests from server.');
+        this.toastService.error('Error', 'Rate list not assigned to this franchise.');
       }
     });
   }

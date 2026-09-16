@@ -1986,10 +1986,16 @@ confirmPrintBill(letterHead: boolean): void {
 
               const freshSamples = freshRes?.sampleAccessions || freshRes?.samples || [];
 
+              // ✅ FIX: match only by testId — testId already uniquely
+              // identifies one sampleAccession record. The earlier extra
+              // sampleTypeId check used reversed field-priority compared to
+              // mapBookingItem() (sampleTypeData?.sample_type_id ?? sampleTypeId
+              // there, vs sampleTypeId ?? sampleTypeData?.sample_type_id here),
+              // so a genuinely-updated record could fail to match and show a
+              // false "already used" error even when the backend had saved
+              // it correctly — which is exactly the bug reported.
               const matchedFreshSample = freshSamples.find(
-                (s: any) =>
-                  Number(s?.testId) === Number(row.testId) &&
-                  Number(s?.sampleTypeId ?? s?.sampleTypeData?.sample_type_id) === Number(row.sampleTypeId)
+                (s: any) => Number(s?.testId) === Number(row.testId)
               );
 
               const savedBarcode = String(

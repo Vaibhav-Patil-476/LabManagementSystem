@@ -2426,13 +2426,12 @@ accountSubOptions: {
     label: 'Commission',
     route: '/account-commission',
     locked: false
-    
   },
   {
     icon: 'card-outline',
     label: 'Payment',
-    route: '/account-payment',
-    locked: true
+    route: '/account-payments',   // ✅ FIX: plural — matches app.routes.ts
+    locked: false
   },
 ];
 

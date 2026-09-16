@@ -168,7 +168,14 @@ export const routes: Routes = [
 },
 
 
-
+{
+  path: 'account-payments',
+  canActivate: [authGuard],
+  loadComponent: () =>
+    import('./pages/account/payment-history/payment-history.component').then(
+      m => m.PaymentHistoryPage
+    )
+},
 
   {
     path: '**',

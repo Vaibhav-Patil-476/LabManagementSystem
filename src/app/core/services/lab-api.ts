@@ -933,4 +933,79 @@ async getAllCommissionHistory(franchiseId: number): Promise<any[]> {
   } while (page < totalPages);
 
   return all;
-}}
+}
+
+// ============================================================
+// ✅ NEW: ONLINE PAYMENT TRANSACTIONS (Razorpay/Cashfree)
+// "Payment History" screen sathi.
+// GET /api/v1/order/payments?startDate=&endDate=&franchiseId=&size=
+// ============================================================
+
+getOrderPayments(
+  startDate: string,
+  endDate: string,
+  franchiseId?: number | string,
+  size: number = 1000
+): Observable<any> {
+  let params = new HttpParams()
+    .set('startDate', startDate)
+    .set('endDate', endDate)
+    .set('size', size.toString());
+
+  if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+    params = params.set('franchiseId', franchiseId.toString());
+  }
+
+  // ✅ TRY: company cha इतर काही endpoints ना हा header लागतो
+  const headers = new HttpHeaders().set('requestlabid', this.getLabId().toString());
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/order/payments`,
+    { params, headers }
+  );
+}
+
+getLabPayments(
+  startDate: string,
+  endDate: string,
+  franchiseId?: number | string,
+  byUser: string = 'all',      // ✅ NEW
+  size: number = 1000
+): Observable<any> {
+  let params = new HttpParams()
+    .set('paymentMode', 'From Lab')
+    .set('transaction', 'true')
+    .set('byUser', byUser);    // ✅ NEW
+
+  if (startDate) params = params.set('startDate', startDate);
+  if (endDate) params = params.set('endDate', endDate);
+
+  if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+    params = params.set('franchiseId', franchiseId.toString());
+  }
+
+  return this.http.get(
+    `${this.BASE_URL}/api/v1/wallet/${this.getLabId()}`,
+    { params }
+  );
+}
+
+getOrderAnalysis(
+  startDate: string,
+  endDate: string,
+  franchiseId?: number | string,
+  size: number = 10000
+): Observable<any> {
+  let params = new HttpParams()
+    .set('startDate', startDate)
+    .set('endDate', endDate)
+    .set('size', size.toString());
+
+  if (franchiseId !== undefined && franchiseId !== null && franchiseId !== '') {
+    params = params.set('franchiseId', franchiseId.toString());
+  }
+
+  return this.http.get<any[]>(`${this.BASE_URL}/api/v1/order/order-analysis`, { params });
+}
+
+}

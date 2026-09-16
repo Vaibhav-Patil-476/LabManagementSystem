@@ -1,0 +1,295 @@
+<ion-header class="no-border">
+  <ion-toolbar class="app-toolbar">
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/dashboard" text=""></ion-back-button>
+    </ion-buttons>
+    <ion-title>Payment History</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content [fullscreen]="true" class="page-bg">
+
+  <!-- Filter card -->
+  <div class="filter-card">
+
+    <div class="filter-row" (click)="franchiseSelect.open($event)">
+      <ion-icon name="business-outline"></ion-icon>
+      <span class="filter-text">{{ selectedFranchiseLabel }}</span>
+      <ion-icon *ngIf="selectedFranchiseId != null" name="close-circle" class="clear-icon"
+        (click)="$event.stopPropagation(); clearFranchise()">
+      </ion-icon>
+
+      <ion-select #franchiseSelect [(ngModel)]="selectedFranchiseId" (ionChange)="onFranchiseSelectChange()"
+        interface="popover" class="hidden-select">
+        <ion-select-option [value]="null">All Franchises</ion-select-option>
+        <ion-select-option *ngFor="let f of franchises" [value]="f.franchiseId">
+          {{ f.franchiseName }}
+        </ion-select-option>
+      </ion-select>
+    </div>
+
+    <div class="filter-row date-range-row" #dateFieldTrigger (click)="rangePicker.open()">
+      <ion-icon name="calendar-outline"></ion-icon>
+      <span class="filter-text">
+        {{ startDate ? (startDate | date:'dd/MM/yyyy') : 'From' }}
+        –
+        {{ endDate ? (endDate | date:'dd/MM/yyyy') : 'To' }}
+      </span>
+      <ion-icon *ngIf="startDate || endDate" name="close-circle" class="clear-icon"
+        (click)="$event.stopPropagation(); clearDateFilter()">
+      </ion-icon>
+
+      <mat-date-range-input [rangePicker]="rangePicker" class="hidden-date-input">
+        <input matStartDate [(ngModel)]="pickedStartDate" placeholder="From" readonly>
+        <input matEndDate [(ngModel)]="pickedEndDate" placeholder="To" readonly>
+      </mat-date-range-input>
+
+      <mat-date-range-picker #rangePicker (opened)="onPickerOpened()" (closed)="onDateRangeClosed()">
+      </mat-date-range-picker>
+    </div>
+
+    <ion-button expand="block" class="search-btn" (click)="search()">
+      <ion-icon name="search-outline" slot="start"></ion-icon>
+      SEARCH PAYMENT TRANSACTIONS
+    </ion-button>
+  </div>
+
+  <ng-container *ngIf="hasSearched">
+
+    <!-- Main tabs -->
+    <div class="main-tab-bar">
+      <button type="button" class="main-tab-btn" [class.active]="activeTab === 'ONLINE'" (click)="setTab('ONLINE')">
+        Online Payments
+      </button>
+      <button type="button" class="main-tab-btn" [class.active]="activeTab === 'LAB'" (click)="setTab('LAB')">
+        From Lab
+      </button>
+    </div>
+
+    <!-- ✅ Gateway summary cards — दोन्ही tabs वर कायम दिसतील, फक्त display, क्लिक नाही -->
+<div class="gateway-grid" *ngIf="gatewaySummaries.length">
+  <div class="gateway-card" *ngFor="let gw of gatewaySummaries">
+    <img *ngIf="getGatewayLogo(gw.pgName)" [src]="getGatewayLogo(gw.pgName)"
+         [alt]="gw.pgName" class="gateway-logo">
+    <div class="gateway-name" *ngIf="!getGatewayLogo(gw.pgName)">{{ gw.pgName }}</div>
+<div class="gateway-stats">
+  <div class="gw-row" *ngFor="let row of gw.rows">
+    <span class="gw-label">{{ row.label }}</span>
+    <span class="gw-value">{{ formatGatewayAmount(row.amount) }}</span>
+  </div>
+  <div class="gw-row gw-row-total">
+    <span class="gw-label">Total</span>
+    <span class="gw-value">{{ formatGatewayAmount(gw.total) }}</span>
+  </div>
+</div>
+  </div>
+</div>
+
+    <!-- ===================== ONLINE PAYMENTS TAB ===================== -->
+    <ng-container *ngIf="activeTab === 'ONLINE'">
+
+      <div class="section-heading">
+        <span class="accent-bar"></span>
+        <ion-icon name="card-outline"></ion-icon>
+        <h2>Online Payment Transactions ({{ dateRangeLabel }})</h2>
+      </div>
+
+      <div class="toolbar-row">
+        <div class="toolbar-search">
+          <ion-icon name="search-outline"></ion-icon>
+          <input type="text" placeholder="Type & Search" [(ngModel)]="quickSearchOnline"
+            (ngModelChange)="onQuickSearchOnlineChange()">
+        </div>
+
+        <div class="toolbar-select" (click)="statusSelect.open($event)">
+          <span>{{ getLabelFor(statusOptions, statusFilter) }}</span>
+          <ion-icon *ngIf="statusFilter !== 'ALL'" name="close-circle-outline" class="toolbar-clear"
+            (click)="$event.stopPropagation(); clearStatusFilter()"></ion-icon>
+          <ion-icon name="chevron-down-outline" class="toolbar-chevron"></ion-icon>
+          <ion-select #statusSelect [(ngModel)]="statusFilter" (ionChange)="onStatusFilterChange()" interface="popover"
+            class="hidden-select">
+            <ion-select-option *ngFor="let opt of statusOptions" [value]="opt.value">{{ opt.label }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <div class="toolbar-select" (click)="modeSelect.open($event)">
+          <span>{{ getLabelFor(paymentModeOptions, paymentModeFilter) }}</span>
+          <ion-icon *ngIf="paymentModeFilter !== 'ALL'" name="close-circle-outline" class="toolbar-clear"
+            (click)="$event.stopPropagation(); clearPaymentModeFilter()"></ion-icon>
+          <ion-icon name="chevron-down-outline" class="toolbar-chevron"></ion-icon>
+          <ion-select #modeSelect [(ngModel)]="paymentModeFilter" (ionChange)="onPaymentModeFilterChange()"
+            interface="popover" class="hidden-select">
+            <ion-select-option *ngFor="let opt of paymentModeOptions" [value]="opt.value">{{ opt.label
+              }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <div class="toolbar-select" (click)="sortSelect.open($event)">
+          <span>{{ getLabelFor(sortOptions, sortOrder) }}</span>
+          <ion-icon name="chevron-down-outline" class="toolbar-chevron"></ion-icon>
+          <ion-select #sortSelect [(ngModel)]="sortOrder" (ionChange)="onSortOrderChange()" interface="popover"
+            class="hidden-select">
+            <ion-select-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <!-- <button type="button" class="export-btn export-pdf" (click)="exportPdf()">
+          <ion-icon name="document-text-outline"></ion-icon>
+        </button>
+        <button type="button" class="export-btn export-excel" (click)="exportExcel()">
+          <ion-icon name="grid-outline"></ion-icon>
+        </button> -->
+      </div>
+
+
+      <ng-container *ngIf="!isLoading">
+       <!-- ONLINE tab -->
+<div class="table-scroll-wrapper" #tableScroll *ngIf="onlineVisibleRows.length; else emptyOnlineTpl">
+          <table class="commission-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>C.Code</th>
+                <th>Order Id</th>
+                <th>Status</th>
+                <th>PG Name</th>
+                <th>Transaction Id</th>
+                <th>Razorpay Payment Id</th>
+                <th>Approved By</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+<tbody>
+  <tr *ngFor="let row of onlineVisibleRows; let i = index"
+      [class.row-selected]="selectedOnlineRowIndex === i"
+      (click)="selectOnlineRow(i)">
+    <td class="nowrap-cell">{{ row.dateLabel }}</td>
+    <td class="nowrap-cell">{{ row.amountLabel }}</td>
+    <td class="nowrap-cell">{{ row.centerCode }}</td>
+    <td class="wrap-cell">{{ row.orderId }}</td>
+    <td class="nowrap-cell">
+      <span class="commission-pill" [ngClass]="statusClass(row.status)">{{ row.status }}</span>
+    </td>
+    <td class="nowrap-cell">{{ row.pgName }}</td>
+    <td class="wrap-cell">{{ row.transactionId }}</td>
+    <td class="wrap-cell">{{ row.gatewayPaymentId }}</td>
+    <td class="wrap-cell">{{ row.approvedBy }}</td>
+    <td class="nowrap-cell">—</td>
+  </tr>
+</tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyOnlineTpl>
+          <div class="empty-state">
+            <ion-icon name="file-tray-outline"></ion-icon>
+            <p>No Data Found</p>
+          </div>
+        </ng-template>
+      </ng-container>
+
+    </ng-container>
+
+    <!-- ===================== FROM LAB TAB ===================== -->
+    <ng-container *ngIf="activeTab === 'LAB'">
+
+      <div class="section-heading">
+        <span class="accent-bar"></span>
+        <ion-icon name="business-outline"></ion-icon>
+        <h2>Lab Payment Transactions ({{ dateRangeLabel }})</h2>
+      </div>
+
+      <div class="toolbar-row">
+        <div class="toolbar-search">
+          <ion-icon name="search-outline"></ion-icon>
+          <input type="text" placeholder="Type & Search" [(ngModel)]="quickSearchLab"
+            (ngModelChange)="onQuickSearchLabChange()">
+        </div>
+
+        <div class="toolbar-select" (click)="sortLabSelect.open($event)">
+          <span>{{ getLabelFor(sortOptions, sortOrderLab) }}</span>
+          <ion-icon name="chevron-down-outline" class="toolbar-chevron"></ion-icon>
+          <ion-select #sortLabSelect [(ngModel)]="sortOrderLab" (ionChange)="onSortOrderLabChange()" interface="popover"
+            class="hidden-select">
+            <ion-select-option *ngFor="let opt of sortOptions" [value]="opt.value">{{ opt.label }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <div class="toolbar-select" (click)="roleSelect.open($event)">
+          <span>{{ getLabelFor(userRoleOptions, userRoleFilter) }}</span>
+          <ion-icon name="chevron-down-outline" class="toolbar-chevron"></ion-icon>
+          <ion-select #roleSelect [(ngModel)]="userRoleFilter" (ionChange)="onUserRoleFilterChange()"
+            interface="popover" class="hidden-select">
+            <ion-select-option *ngFor="let opt of userRoleOptions" [value]="opt.value">{{ opt.label
+              }}</ion-select-option>
+          </ion-select>
+        </div>
+
+        <button type="button" class="export-btn export-pdf" (click)="exportPdf()">
+          <ion-icon name="document-text-outline"></ion-icon>
+        </button>
+        <button type="button" class="export-btn export-excel" (click)="exportExcel()">
+          <ion-icon name="grid-outline"></ion-icon>
+        </button>
+      </div>
+
+      <!-- ✅ Skeleton loader (ledger style) -->
+      <div *ngIf="isLoading" class="table-skeleton">
+        <div class="skeleton-toolbar">
+          <div class="skeleton-pill" *ngFor="let s of [1,2,3]"></div>
+        </div>
+        <div class="skeleton-table">
+          <div class="skeleton-row" *ngFor="let r of [1,2,3,4,5]">
+            <div class="skeleton-line" style="width:12%"></div>
+            <div class="skeleton-line" style="width:12%"></div>
+            <div class="skeleton-line" style="width:10%"></div>
+            <div class="skeleton-line" style="width:20%"></div>
+            <div class="skeleton-line" style="width:15%"></div>
+            <div class="skeleton-line" style="width:25%"></div>
+          </div>
+        </div>
+      </div>
+
+      <ng-container *ngIf="!isLoading">
+<!-- LAB tab -->
+<div class="table-scroll-wrapper" #tableScroll *ngIf="labVisibleRows.length; else emptyLabTpl">
+          <table class="commission-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Amount</th>
+                <th>C.Code</th>
+                <th>Created By</th>
+                <th>Transaction Type</th>
+                <th>Remark</th>
+              </tr>
+            </thead>
+<tbody>
+  <tr *ngFor="let row of labVisibleRows; let i = index"
+      [class.row-selected]="selectedLabRowIndex === i"
+      (click)="selectLabRow(i)">
+    <td class="nowrap-cell">{{ row.dateLabel }}</td>
+    <td class="nowrap-cell">{{ row.amountLabel }}</td>
+    <td class="nowrap-cell">{{ row.centerCode }}</td>
+    <td class="wrap-cell">{{ row.createdBy }}</td>
+    <td class="nowrap-cell">{{ row.transactionType }}</td>
+    <td class="wrap-cell">{{ row.remark }}</td>
+  </tr>
+</tbody>
+          </table>
+        </div>
+
+        <ng-template #emptyLabTpl>
+          <div class="empty-state">
+            <ion-icon name="file-tray-outline"></ion-icon>
+            <p>No Data Found</p>
+          </div>
+        </ng-template>
+      </ng-container>
+
+    </ng-container>
+
+  </ng-container>
+
+</ion-content>

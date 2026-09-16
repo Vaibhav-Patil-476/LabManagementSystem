@@ -1,0 +1,654 @@
+// payment-history.component.scss
+
+:host {
+    --primary: #0f766e;
+    --primary-dark: #0c5f59;
+    --border-color: #e4eded;
+    --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
+    --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
+    --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
+    --r-sm: 10px;
+    --r-md: 14px;
+}
+
+.page-bg {
+    --background: #eef1f4;
+}
+
+// ---------- Header ----------
+.app-toolbar {
+    --background: #0f766e;
+    --color: #fff;
+
+    ion-back-button {
+        --color: #fff;
+    }
+
+    ion-title {
+        font-weight: 700;
+        font-size: 18px;
+        letter-spacing: -0.2px;
+    }
+}
+
+// ---------- Filter card ----------
+.filter-card {
+    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    border-radius: 0 0 20px 20px;
+    padding: 16px;
+}
+
+.filter-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    color: #fff;
+    position: relative;
+
+    ion-icon {
+        font-size: 20px;
+        color: #fff;
+    }
+
+    .filter-text {
+        flex: 1;
+        font-weight: 600;
+        font-size: 15px;
+    }
+
+    .clear-icon {
+        font-size: 20px;
+        opacity: 0.85;
+    }
+
+    .hidden-select {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
+.date-range-row {
+    .hidden-date-input {
+        position: absolute;
+        width: 0;
+        height: 0;
+        opacity: 0;
+        overflow: hidden;
+        pointer-events: none;
+    }
+}
+
+.search-btn {
+    --background: #fff;
+    --color: #0f766e;
+    --border-radius: 12px;
+    font-weight: 700;
+    margin-top: 4px;
+}
+
+// ---------- Section heading ----------
+.section-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 20px 16px 10px;
+
+    .accent-bar {
+        width: 4px;
+        height: 18px;
+        background: #0f766e;
+        border-radius: 2px;
+    }
+
+    ion-icon {
+        font-size: 18px;
+        color: #0f766e;
+    }
+
+    h2 {
+        font-size: 16px;
+        font-weight: 700;
+        margin: 0;
+        color: #1f2937;
+    }
+}
+
+// ---------- Gateway summary cards ----------
+.gateway-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    padding: 0 16px;
+}
+
+.gateway-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 14px;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: border-color 0.15s ease;
+
+    &.active-gateway {
+        border-color: #0f766e;
+    }
+}
+
+.gateway-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.gateway-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.gw-row {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    padding: 9px 0;
+    border-bottom: 1px solid #f0f2f5;
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    &.gw-row-total {
+        margin-top: 4px;
+        padding-top: 12px;
+        border-top: 1.5px solid #e4eded;
+        border-bottom: none;
+    }
+}
+
+.gw-label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    letter-spacing: 0.1px;
+}
+
+.gw-value {
+    font-size: 15px;
+    font-weight: 800;
+    color: #0f766e;
+    letter-spacing: -0.2px;
+    font-variant-numeric: tabular-nums;   // ✅ आकडे नीट align राहतात
+}
+
+.gw-row-total {
+    .gw-label {
+        font-weight: 700;
+        color: #111827;
+        font-size: 13px;
+    }
+    .gw-value {
+        font-size: 16px;
+        color: #0c5f59;
+    }
+}
+
+.gateway-card {
+    padding: 18px 16px;
+    border-radius: 16px;
+    box-shadow: 0 3px 10px rgba(15, 118, 110, 0.08);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+
+    &:active {
+        transform: scale(0.99);
+    }
+}
+
+.gateway-logo {
+    display: block;
+    max-width: 140px;
+    max-height: 38px;
+    margin: 2px auto 16px;
+    object-fit: contain;
+}
+
+.gateway-all-toggle {
+    margin: 12px 16px 0;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 700;
+    color: #0f766e;
+    padding: 8px;
+    border-radius: 10px;
+    background: #fff;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+
+    &.active-all {
+        background: #0f766e;
+        color: #fff;
+    }
+}
+
+// =========================================================
+// SKELETON LOADER — ledger पेजसारखाच shimmer pattern
+// =========================================================
+.table-skeleton {
+    padding: 4px 16px 20px;
+}
+
+.skeleton-toolbar {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.skeleton-pill {
+    height: 38px;
+    flex: 1 1 120px;
+    border-radius: var(--r-sm);
+    background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
+    background-size: 400% 100%;
+    animation: ph-skeleton-shine 1.2s ease-in-out infinite;
+}
+
+.skeleton-table {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    background: #ffffff;
+    border: 1px solid var(--border-color);
+    border-radius: var(--r-md);
+    padding: 14px;
+    box-shadow: var(--shadow-xs);
+}
+
+.skeleton-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.skeleton-line {
+    height: 12px;
+    border-radius: var(--r-sm);
+    background: linear-gradient(90deg, #eaf4f3 25%, #f7fbfb 37%, #eaf4f3 63%);
+    background-size: 400% 100%;
+    animation: ph-skeleton-shine 1.2s ease-in-out infinite;
+}
+
+@keyframes ph-skeleton-shine {
+    0% {
+        background-position: 100% 50%;
+    }
+
+    100% {
+        background-position: 0 50%;
+    }
+}
+
+// ---------- Table (ledger-table style) ----------
+// ---------- Table (ledger-table exact match — कुठलाही extra rounding/shadow/margin नाही) ----------
+.table-scroll-wrapper {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  width: 100%;
+  box-sizing: border-box;
+  margin-top: 12px;
+}
+
+.commission-table {
+  width: 100%;              // ✅ max-content ऐवजी 100% — container इतकीच रुंद, content ओव्हरफ्लो झाल्यास scroll-wrapper स्वतः scroll करेल
+  box-sizing: border-box;
+  border-collapse: collapse;
+  font-size: 14px;
+  table-layout: auto;       // ✅ explicit — auto layout, content नुसार column रुंदी
+
+  th, td {
+    padding: 10px 12px;
+    white-space: nowrap;
+    text-align: left;
+    border-bottom: 1px solid var(--ion-color-light-shade, #e0e0e0);
+  }
+
+  th:last-child,
+  td:last-child {
+    white-space: normal;    // ✅ NEW — शेवटच्या column ला nowrap काढा, तरच width:100% प्रत्यक्षात stretch करू शकेल
+    width: 100%;
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background: #f8fafc;
+    font-weight: 600;
+    z-index: 1;
+  }
+
+  tbody tr {
+    background: #ffffff !important;   // ✅ NEW — global zebra-striping पूर्णपणे रद्द
+    cursor: pointer;
+    transition: background 0.15s ease;
+    vertical-align: top;
+
+    &:hover {
+      background: #f5f7fa !important;
+    }
+  }
+
+  tbody tr.row-selected {
+    background: #e6f0ff !important;
+    box-shadow: inset 3px 0 0 var(--ion-color-primary, #3880ff);
+  }
+}
+
+.nowrap-cell {
+  white-space: nowrap;
+}
+
+.wrap-cell {
+  white-space: normal;
+  max-width: 260px;
+  min-width: 160px;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.nowrap-cell {
+    white-space: nowrap;
+}
+
+.wrap-cell {
+    white-space: normal;
+    max-width: 260px;
+    min-width: 160px;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.nowrap-cell {
+    white-space: nowrap;
+}
+
+.wrap-cell {
+    max-width: 220px;
+    min-width: 160px;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.4;
+}
+
+.commission-pill {
+    font-weight: 700;
+    font-size: 12px;
+    padding: 4px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+
+    &.status-success {
+        background: #dcfce7;
+        color: #15803d;
+    }
+
+    &.status-fail {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    &.status-pending {
+        background: #fef3c7;
+        color: #b45309;
+    }
+
+    &.status-default {
+        background: #e5e7eb;
+        color: #374151;
+    }
+}
+
+// ---------- Empty state ----------
+.empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #6b7280;
+
+    ion-icon {
+        font-size: 42px;
+        color: #d1d5db;
+        margin-bottom: 8px;
+    }
+
+    p {
+        font-size: 14px;
+        margin: 0;
+    }
+}
+
+// ---------- Main tabs (Online Payments / From Lab) ----------
+.main-tab-bar {
+    display: flex;
+    gap: 4px;
+    margin: 20px 16px 0;
+    background: #e5e9ef;
+    border-radius: 10px;
+    padding: 4px;
+}
+
+.main-tab-btn {
+    flex: 1;
+    border: none;
+    background: transparent;
+    padding: 10px 12px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #6b7280;
+    border-radius: 8px;
+
+    &.active {
+        background: #fff;
+        color: #0f766e;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    }
+}
+
+// ---------- Toolbar row (search + filters + export) ----------
+.toolbar-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin: 12px 16px 0;
+}
+
+.toolbar-search {
+    flex: 1 1 200px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px 12px;
+
+    ion-icon {
+        font-size: 16px;
+        color: #6b7280;
+    }
+
+    input {
+        flex: 1;
+        border: none;
+        outline: none;
+        font-size: 13px;
+        background: transparent;
+    }
+}
+
+.toolbar-select {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 10px 12px;
+    min-width: 130px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    cursor: pointer;
+
+    span {
+        flex: 1;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .toolbar-chevron {
+        font-size: 14px;
+        color: #6b7280;
+    }
+
+    .toolbar-clear {
+        font-size: 16px;
+        color: #9ca3af;
+    }
+
+    .hidden-select {
+        position: absolute;
+        inset: 0;
+        opacity: 0;
+        pointer-events: none;
+    }
+}
+
+.page-size-select {
+    min-width: 70px;
+}
+
+.export-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon {
+        font-size: 18px;
+        color: #fff;
+    }
+
+    &.export-pdf {
+        background: #d97706;
+    }
+
+    &.export-excel {
+        background: #16a34a;
+    }
+}
+
+// ---------- Footer pagination ----------
+.table-footer-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 16px;
+    background: #fff;
+    margin: 0 16px 16px;
+    border-radius: 0 0 12px 12px;
+}
+
+.footer-summary {
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.footer-pagination {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.page-nav-btn {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    border: 1px solid #d1d5db;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+
+    &:disabled {
+        opacity: 0.4;
+    }
+}
+
+// ==========================================================
+// "Payment data loading..." popup — ledger पेज सारखाच
+// GREEN spinner + GREEN bold text. ion-loading हे component च्या
+// DOM बाहेर (app root ला) render होतं, म्हणून ::ng-deep लागतं.
+// ==========================================================
+::ng-deep ion-loading.payment-loading-popup {
+    --backdrop-opacity: 0.55;
+
+    .loading-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 16px;
+        padding: 32px 28px;
+        border-radius: 20px;
+        background: #ffffff;
+        box-shadow: 0 14px 38px rgba(7, 95, 93, 0.16);
+        min-width: 240px;
+        max-width: 300px;
+    }
+
+    // ion-spinner चा स्वतःचा shadow root असतो, म्हणून --color
+    // custom property वापरूनच रंग बदलता येतो.
+    .loading-spinner,
+    ion-spinner {
+        --color: #0f766e;
+        width: 46px;
+        height: 46px;
+        color: #0f766e;
+    }
+
+    .loading-content {
+        text-align: center;
+        font-size: 15px;
+        font-weight: 700;
+        color: #0f766e;
+        line-height: 1.4;
+    }
+}
+
+
+.gateway-card {
+    text-align: center;   // ✅ NEW — logo आणि rows दोन्ही centered
+}
+
+.gateway-logo {
+    display: block;
+    max-width: 140px;
+    max-height: 40px;
+    margin: 4px auto 14px;
+    object-fit: contain;
+}
+
+.gateway-stats {
+    text-align: left;     // ✅ NEW — फक्त rows डावीकडे align राहतील, logo मात्र centered
+}
