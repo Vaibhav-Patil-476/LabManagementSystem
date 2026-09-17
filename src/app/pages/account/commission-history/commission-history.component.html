@@ -159,9 +159,18 @@
       </ng-template>
     </ng-container>
 
-    <ion-infinite-scroll (ionInfinite)="loadMore($event)" *ngIf="visibleRows.length < filteredRows.length">
-      <ion-infinite-scroll-content loadingSpinner="bubbles"></ion-infinite-scroll-content>
-    </ion-infinite-scroll>
+      <!-- ✅ NEW: Load More footer (इतर pages सारखा) -->
+    <div class="load-more-wrapper" *ngIf="!isLoading && visibleRows.length">
+      <span class="entries-info">Showing {{ visibleRows.length }} of {{ filteredRows.length }} entries</span>
+
+      <ion-button
+        *ngIf="hasMoreCommissionRows"
+        class="load-more-btn"
+        fill="solid"
+        (click)="loadMore()">
+        Load More
+      </ion-button>
+    </div>
 
   </ng-container>
 

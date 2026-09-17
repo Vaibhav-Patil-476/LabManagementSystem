@@ -200,6 +200,11 @@ getGatewayLogo(pgName: string): string {
     }
   }
 
+private getApiEndDate(iso: string): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + 1);
+  return this.toIsoDate(d);
+}
   constructor(
     private labApi: LabApiService,
     private auth: AuthService,
@@ -340,11 +345,11 @@ getGatewayLogo(pgName: string): string {
     await loading.present();
 
     try {
-      const res: any = await this.labApi.getOrderPayments(
-        this.startDate,
-        this.endDate,
-        this.selectedFranchiseId ?? undefined
-      ).toPromise();
+   const res: any = await this.labApi.getOrderPayments(
+  this.startDate,
+  this.getApiEndDate(this.endDate),
+  this.selectedFranchiseId ?? undefined
+).toPromise();
 
       console.log('RAW PAYMENT RESPONSE:', JSON.stringify(res, null, 2)); // TEMP debug
 
@@ -478,11 +483,12 @@ getGatewayLogo(pgName: string): string {
   private async loadGatewaySummaries(): Promise<void> {
     if (!this.startDate || !this.endDate) return;
     try {
-      const res: any = await this.labApi.getOrderAnalysis(
-        this.startDate,
-        this.endDate,
-        this.selectedFranchiseId ?? undefined
-      ).toPromise();
+   const res: any = await this.labApi.getOrderAnalysis(
+  this.startDate,
+  this.getApiEndDate(this.endDate),
+  this.selectedFranchiseId ?? undefined
+).toPromise();
+console.log('ORDER ANALYSIS RAW:', JSON.stringify(res, null, 2)); // TEMP debug
 
       const list: GatewayAnalysisItem[] = Array.isArray(res) ? res : (res?.content ?? []);
       this.gatewaySummaries = this.buildGatewaySummaries(list);
@@ -491,16 +497,36 @@ getGatewayLogo(pgName: string): string {
     }
   }
 
-  private buildGatewaySummaries(list: GatewayAnalysisItem[]): GatewaySummary[] {
-    return this.gatewayFieldMap.map(gw => {
-      const rows: GatewayFranchiseRow[] = list.map(item => ({
+private buildGatewaySummaries(list: GatewayAnalysisItem[]): GatewaySummary[] {
+  return this.gatewayFieldMap.map(gw => {
+    let rows: GatewayFranchiseRow[];
+
+    if (this.selectedFranchiseId != null) {
+      // एक franchise select केलेली असेल तर: स्वतःची entry + बाकी सगळ्यांची बेरीज
+      const selfItem = list.find(item => (item as any).franchiseId === this.selectedFranchiseId);
+      const otherItems = list.filter(item => (item as any).franchiseId !== this.selectedFranchiseId);
+
+      const selfAmount = Number((selfItem?.[gw.field] as number) ?? 0);
+      const othersAmount = otherItems.reduce(
+        (sum, item) => sum + Number((item?.[gw.field] as number) ?? 0), 0
+      );
+
+      rows = [
+        { label: selfItem?.centerCode || this.selectedFranchiseLabel, amount: selfAmount },
+        { label: 'Franchise Clients', amount: othersAmount }
+      ];
+    } else {
+      // "All Franchises" असेल तर सगळ्यांची वेगळी row (जसं आधी होतं)
+      rows = list.map(item => ({
         label: item?.franchiseName || item?.centerCode || 'Unknown',
         amount: Number((item?.[gw.field] as number) ?? 0)
       }));
-      const total = rows.reduce((sum, r) => sum + r.amount, 0);
-      return { pgName: gw.pgName, filterValue: gw.filterValue, rows, total };
-    });
-  }
+    }
+
+    const total = rows.reduce((sum, r) => sum + r.amount, 0);
+    return { pgName: gw.pgName, filterValue: gw.filterValue, rows, total };
+  });
+}
 
   selectGatewayCard(summary: GatewaySummary): void {
     if (this.selectedGatewayCard === summary.pgName) {
@@ -535,12 +561,12 @@ getGatewayLogo(pgName: string): string {
     await loading.present();
 
     try {
-      const res: any = await this.labApi.getLabPayments(
-        this.startDate,
-        this.endDate,
-        this.selectedFranchiseId ?? undefined,
-        this.byUserMap[this.userRoleFilter]
-      ).toPromise();
+  const res: any = await this.labApi.getLabPayments(
+  this.startDate,
+  this.getApiEndDate(this.endDate),
+  this.selectedFranchiseId ?? undefined,
+  this.byUserMap[this.userRoleFilter]
+).toPromise();
 
       const list: any[] = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
       this.labRecords = list.map((r: any) => this.toLabRecord(r));

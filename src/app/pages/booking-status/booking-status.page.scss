@@ -3654,3 +3654,68 @@ ion-content.menu-open {
     margin-right: 0 !important;
   }
 }
+
+.bcard-id-row .id-link {
+  cursor: pointer;
+}
+
+// ===================== REPORT NOT READY — danger themed =====================
+::ng-deep .report-not-ready-modal .printbill-modal-header {
+  background: linear-gradient(135deg, #dc3545, #a71d2a) !important;
+}
+
+.report-not-ready-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+
+  ion-icon {
+    font-size: 54px;
+    color: #dc3545;
+  }
+}
+
+.report-not-ready-text {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-mid, #56696c);
+  line-height: 1.55;
+  margin: 0 0 22px;
+  padding: 0 4px;
+}
+
+.modal-save-btn.danger-btn {
+  --background: linear-gradient(135deg, #dc3545, #a71d2a);
+  --color: #fff;
+  --box-shadow: 0 8px 20px rgba(220, 53, 69, 0.28);
+
+  &::part(native) {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
+    color: #fff;
+  }
+
+  &:active::part(native) {
+    transform: scale(0.98);
+  }
+}
+
+.refresh-field-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.refresh-hint-text {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--gray-accent);
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .refresh-hint-text {
+    display: none; // mobile वर जागा वाचवायला लपवा
+  }
+}

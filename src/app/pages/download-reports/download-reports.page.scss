@@ -1622,3 +1622,213 @@
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
+
+// ===================== barcode compact (matches Booking Status card) =====================
+.bcard-barcode-compact {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 4px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  padding: 6px 4px;
+}
+
+.barcode-compact-icon {
+  color: var(--primary);
+  font-size: 15px;
+  flex-shrink: 0;
+  align-self: center;
+  margin-right: 2px;
+}
+
+.barcode-compact-label {
+  font-weight: 800;
+  color: var(--primary-dark);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+.barcode-compact-list {
+  min-width: 0;
+  word-break: break-word;
+}
+
+.barcode-compact-item {
+  cursor: pointer;
+  font-family: 'Courier New', monospace;
+  font-weight: 700;
+  color: var(--text-dark, #10201f);
+  transition: color 0.15s ease, opacity 0.15s ease;
+
+  &:hover,
+  &:active {
+    color: var(--primary);
+    opacity: 0.75;
+  }
+}
+
+.barcode-compact-sep {
+  color: var(--gray-accent);
+  font-weight: 600;
+}
+
+.barcode-compact-empty {
+  color: var(--gray-accent);
+  font-size: 12.5px;
+  font-weight: 500;
+  padding: 6px 4px;
+}
+
+// ===================== DOWNLOAD REPORT — standalone centered popup =====================
+::ng-deep ion-modal.printbill-modal {
+  --width: 320px !important;
+  --height: auto !important;
+  --max-height: 90vh !important;
+  --border-radius: 16px !important;
+  --box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
+
+  &::part(content) {
+    display: block !important;
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    margin: 0 auto !important;
+  }
+}
+
+::ng-deep .printbill-modal-page {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 0 0 20px 0 !important;
+  overflow: hidden !important;
+}
+
+::ng-deep .printbill-modal-header {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: space-between !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 18px 18px !important;
+  background: var(--brand-gradient);
+  border-top-left-radius: 16px;
+  border-top-right-radius: 16px;
+
+  h2 {
+    margin: 0 !important;
+    font-size: 17px !important;
+    font-weight: 700 !important;
+    color: #fff !important;
+    white-space: nowrap !important;
+
+    .header-booking-tag {
+      font-weight: 500;
+      font-size: 13px;
+      color: rgba(255, 255, 255, 0.75);
+      margin-left: 6px;
+    }
+  }
+
+  .close-modal-btn {
+    flex-shrink: 0 !important;
+    background: rgba(255, 255, 255, 0.18);
+    border: none;
+    border-radius: 10px;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    ion-icon { color: #fff; font-size: 20px; }
+  }
+}
+
+::ng-deep .printbill-modal-body {
+  display: flex !important;
+  flex-direction: column !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  padding: 18px !important;
+  gap: 0 !important;
+
+  ion-button {
+    width: 100% !important;
+    display: block !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+  }
+}
+
+.modal-save-btn {
+  --background: var(--brand-gradient);
+  --color: #fff;
+  --border-radius: 10px;
+  --box-shadow: var(--shadow-glow);
+  height: 48px;
+  font-weight: 800;
+
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
+    font-weight: 800;
+  }
+
+  &[disabled]::part(native) {
+    background: #d5dede;
+    color: #97a5a5;
+  }
+}
+
+// ===================== REPORT NOT READY — danger themed =====================
+::ng-deep .report-not-ready-modal .printbill-modal-header {
+  background: linear-gradient(135deg, #dc3545, #a71d2a) !important;
+}
+
+.report-not-ready-icon {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+
+  ion-icon {
+    font-size: 54px;
+    color: #dc3545;
+  }
+}
+
+.report-not-ready-text {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--gray-accent, #56696c);
+  line-height: 1.55;
+  margin: 0 0 22px;
+  padding: 0 4px;
+}
+
+.modal-save-btn.danger-btn {
+  --background: linear-gradient(135deg, #dc3545, #a71d2a);
+  --color: #fff;
+  --box-shadow: 0 8px 20px rgba(220, 53, 69, 0.28);
+
+  &::part(native) {
+    background: linear-gradient(135deg, #dc3545, #a71d2a);
+    color: #fff;
+  }
+}
+
+.id-link {
+  cursor: pointer;
+}
+
+.bcard-barcode-stat {
+  border-top: 1px solid var(--border-color);
+  padding-top: 10px;
+  margin-top: 2px;
+}

@@ -64,24 +64,24 @@
       <button type="button" class="main-tab-btn" [class.active]="activeTab === 'LAB'" (click)="setTab('LAB')">
         From Lab
       </button>
-    </div>
+    </div><br>
 
     <!-- ✅ Gateway summary cards — दोन्ही tabs वर कायम दिसतील, फक्त display, क्लिक नाही -->
-<div class="gateway-grid" *ngIf="gatewaySummaries.length">
-  <div class="gateway-card" *ngFor="let gw of gatewaySummaries">
-    <img *ngIf="getGatewayLogo(gw.pgName)" [src]="getGatewayLogo(gw.pgName)"
-         [alt]="gw.pgName" class="gateway-logo">
-    <div class="gateway-name" *ngIf="!getGatewayLogo(gw.pgName)">{{ gw.pgName }}</div>
-<div class="gateway-stats">
-  <div class="gw-row" *ngFor="let row of gw.rows">
-    <span class="gw-label">{{ row.label }}</span>
-    <span class="gw-value">{{ formatGatewayAmount(row.amount) }}</span>
-  </div>
-  <div class="gw-row gw-row-total">
-    <span class="gw-label">Total</span>
-    <span class="gw-value">{{ formatGatewayAmount(gw.total) }}</span>
-  </div>
-</div>
+<div class="gateway-card" *ngFor="let gw of gatewaySummaries"
+     [class.cashfree-card]="gw.pgName === 'Cashfree'">
+  <img *ngIf="getGatewayLogo(gw.pgName)" [src]="getGatewayLogo(gw.pgName)"
+       [alt]="gw.pgName" class="gateway-logo">
+  <div class="gateway-name" *ngIf="!getGatewayLogo(gw.pgName)">{{ gw.pgName }}</div>
+
+  <div class="gateway-stats">
+    <div class="gw-row" *ngFor="let row of gw.rows">
+      <span class="gw-label">{{ row.label }}</span>
+      <span class="gw-value">{{ formatGatewayAmount(row.amount) }}</span>
+    </div>
+    <div class="gw-row gw-row-total">
+      <span class="gw-label">Total</span>
+      <span class="gw-value">{{ formatGatewayAmount(gw.total) }}</span>
+    </div>
   </div>
 </div>
 

@@ -825,3 +825,85 @@
     box-shadow: inset 3px 0 0 var(--ion-color-primary, #3880ff);
   }
 }
+
+// ============================================================
+// ✅ Load More footer — premium style
+// ============================================================
+.ledger-loadmore-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 12px 28px;
+  padding: 18px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 16px;
+  box-shadow:
+    0 2px 8px rgba(15, 118, 110, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.lg-pg-info {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #5f7a76;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+
+.lg-loadmore-btn {
+  --border-radius: 999px;
+  --border-width: 1.5px;
+  --border-color: #0f766e;
+  --color: #0f766e;
+  --background: transparent;
+  --background-hover: rgba(15, 118, 110, 0.08);
+  --background-activated: rgba(15, 118, 110, 0.14);
+  --box-shadow: none;
+
+  min-width: 160px;
+  height: 42px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &::part(native) {
+    padding-inline: 22px;
+  }
+
+  &:not([disabled]):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.18);
+  }
+
+  &:not([disabled]):active {
+    transform: translateY(0);
+  }
+
+  ion-spinner {
+    width: 18px;
+    height: 18px;
+    color: #0f766e;
+  }
+}
+
+// Optional: subtle divider line above the footer so it visually
+// separates from the table
+.table-scroll-wrapper + .ledger-loadmore-wrap {
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.15), transparent);
+  }
+}

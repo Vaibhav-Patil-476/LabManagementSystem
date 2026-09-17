@@ -15,7 +15,7 @@ import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline, downloadOutline,alertCircleOutline
 } from 'ionicons/icons';
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
@@ -145,6 +145,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   selectedDoctorPick: any = null;
   selectedLabPick: any = null;
   isPrintBillModalOpen = false;
+  isDownloadReportModalOpen = false;
+  downloadReportItem: BookingListItem | null = null;
+  generatingReportId: number | null = null;
   printBillItem: BookingListItem | null = null;
   selectedBillPriceType: string = 'myprice';
   isNoteModalOpen = false;
@@ -168,7 +171,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   isBillHistoryModalOpen = false;
   billHistoryBooking: BookingListItem | null = null;
-
+isReportNotReadyModalOpen = false;
+reportNotReadyBookingId: number | null = null;
   openActionRowId: number | null = null;
   generatingBillId: number | null = null;
   sharingWhatsappId: number | null = null;
@@ -406,10 +410,16 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return this.totalBookingsFromServer;
   }
 
-  get isDefaultTodayRange(): boolean {
-    const today = this.formatDateForInput(new Date());
-    return this.fromDate === today && this.toDate === today;
-  }
+get isDefaultTodayRange(): boolean {
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 6);
+
+  return (
+    this.fromDate === this.formatDateForInput(sevenDaysAgo) &&
+    this.toDate === this.formatDateForInput(today)
+  );
+}
 
   constructor(
     private toast: ToastService,
@@ -425,19 +435,21 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
       addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
       documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, 'copy-outline': copyOutline
+      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, 'copy-outline': copyOutline, downloadOutline,alertCircleOutline
     });
   }
 
   // ---------- lifecycle ----------
-  ngOnInit(): void {
-    const today = this.formatDateForInput(new Date());
+ngOnInit(): void {
+  const today = new Date();
+  const sevenDaysAgo = new Date();
+  sevenDaysAgo.setDate(today.getDate() - 6); // aaj धरून एकूण 7 days
 
-    this.fromDate = today;
-    this.toDate = today;
+  this.fromDate = this.formatDateForInput(sevenDaysAgo);
+  this.toDate = this.formatDateForInput(today);
 
-    this.loadCurrentUser();
-  }
+  this.loadCurrentUser();
+}
 
   ionViewWillEnter(): void {
     this.loadCurrentUser();
@@ -1068,56 +1080,117 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   // }
 
 
-openPrintBillModal(item: BookingListItem): void {
+  openPrintBillModal(item: BookingListItem): void {
+    this.closeActionMenu();
+    this.printBillItem = item;
+    this.selectedBillPriceType = 'myprice';
+    this.isPrintBillModalOpen = true;
+  }
+
+ async openDownloadReportModal(item: BookingListItem, event?: MouseEvent): Promise<void> {
+  event?.stopPropagation();
   this.closeActionMenu();
-  this.printBillItem = item;
-  this.selectedBillPriceType = 'myprice';
-  this.isPrintBillModalOpen = true;
+
+  const tests = item.tests || [];
+
+  const isReportReady =
+    tests.length > 0 &&
+    tests.every(t => this.isCompleteOrReady(this.normalizeStatus(t.status)));
+
+  if (!isReportReady) {
+    this.reportNotReadyBookingId = item.bookingId;
+    this.isReportNotReadyModalOpen = true;
+    return;
+  }
+
+  this.downloadReportItem = item;
+  this.isDownloadReportModalOpen = true;
 }
 
-closePrintBillModal(): void {
-  this.isPrintBillModalOpen = false;
-  this.printBillItem = null;
+closeReportNotReadyModal(): void {
+  this.isReportNotReadyModalOpen = false;
+  this.reportNotReadyBookingId = null;
 }
+  closeDownloadReportModal(): void {
+    this.isDownloadReportModalOpen = false;
+    this.downloadReportItem = null;
+  }
 
-confirmPrintBill(letterHead: boolean): void {
-  const item = this.printBillItem;
-  if (!item) return;
+  confirmDownloadReport(letterHead: boolean): void {
+    const item = this.downloadReportItem;
+    if (!item) return;
 
-  if (this.generatingBillId === item.bookingId) return;
-  this.generatingBillId = item.bookingId;
-  this.isPrintBillModalOpen = false;
+    if (this.generatingReportId === item.bookingId) return;
+    this.generatingReportId = item.bookingId;
+    this.isDownloadReportModalOpen = false;
 
-  const payload = this.labApi.buildBillPayload(
-    item.bookingId,
-    this.selectedBillPriceType,
-    null,
-    letterHead
-  );
+    this.labApi.generatePdfReport([item.bookingId], { letterHead, single: true }).subscribe({
+      next: (res: any) => this.ngZone.run(() => {
+        this.generatingReportId = null;
+        this.downloadReportItem = null;
 
-  this.labApi.printBill(payload).subscribe({
-    next: (res: any) => this.ngZone.run(() => {
-      this.generatingBillId = null;
-      this.printBillItem = null;
-
-      if (res?.downloadUrl) {
-        window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-        this.showToast('Bill ready', 'success');
-      } else {
-        this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
+        if (res?.downloadUrl) {
+          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+          this.showToast('Report ready', 'success');
+        } else {
+          this.showToast(res?.message || 'Report PDF banवता aala nahi', 'error');
+        }
+        this.cdr.detectChanges();
+      }),
+      error: (err) => {
+        this.ngZone.run(() => {
+          this.generatingReportId = null;
+          this.downloadReportItem = null;
+          this.showToast('Report generate karnyat error aali: ' + (err?.error?.message || 'Unknown error'), 'error');
+          this.cdr.detectChanges();
+        });
       }
-      this.cdr.detectChanges();
-    }),
-    error: () => {
-      this.ngZone.run(() => {
+    });
+  }
+
+  closePrintBillModal(): void {
+    this.isPrintBillModalOpen = false;
+    this.printBillItem = null;
+  }
+
+  confirmPrintBill(letterHead: boolean): void {
+    const item = this.printBillItem;
+    if (!item) return;
+
+    if (this.generatingBillId === item.bookingId) return;
+    this.generatingBillId = item.bookingId;
+    this.isPrintBillModalOpen = false;
+
+    const payload = this.labApi.buildBillPayload(
+      item.bookingId,
+      this.selectedBillPriceType,
+      null,
+      letterHead
+    );
+
+    this.labApi.printBill(payload).subscribe({
+      next: (res: any) => this.ngZone.run(() => {
         this.generatingBillId = null;
         this.printBillItem = null;
-        this.showToast('Bill generate karnyat error aali', 'error');
+
+        if (res?.downloadUrl) {
+          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+          this.showToast('Bill ready', 'success');
+        } else {
+          this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
+        }
         this.cdr.detectChanges();
-      });
-    }
-  });
-}
+      }),
+      error: () => {
+        this.ngZone.run(() => {
+          this.generatingBillId = null;
+          this.printBillItem = null;
+          this.showToast('Bill generate karnyat error aali', 'error');
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
 
   // ---------- print bill ----------
   async openPrintBillOptions(item: BookingListItem): Promise<void> {

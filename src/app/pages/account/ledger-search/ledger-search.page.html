@@ -304,6 +304,24 @@
           </tbody>
         </table>
       </div>
+
+            <!-- ✅ NEW: Load More footer -->
+      <div class="ledger-loadmore-wrap" *ngIf="!loading && totalEntries > 0">
+        <span class="lg-pg-info">
+          Showing {{ sortedPastLedger.length }} of {{ totalEntries }} entries
+          (Page {{ currentPage + 1 }} of {{ totalPages }})
+        </span>
+
+        <ion-button
+          *ngIf="hasMorePastLedger"
+          fill="outline"
+          class="lg-loadmore-btn"
+          (click)="loadMorePastLedger()"
+          [disabled]="isLoadingMore">
+          <ion-spinner *ngIf="isLoadingMore" name="crescent" slot="start"></ion-spinner>
+          <span *ngIf="!isLoadingMore">Load More</span>
+        </ion-button>
+      </div>
     </ng-container>
   </ng-container>
 

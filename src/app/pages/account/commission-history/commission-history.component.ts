@@ -68,9 +68,16 @@ export class CommissionHistoryPage implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    // CHANGED: यापुढे कुठलाही default date-range सेट केला जात नाही --
-    // पेज उघडल्यावर लगेच "All Dates" साठी auto-search होईल, user ला
-    // date select/clear करायची गरज नाही.
+    // ✅ NEW: इतर pages (ledger/account-summary) सारखं default date-range
+    // सेट कर -- 1st of month ते आज. Month बदलला की parत page उघडल्यावर
+    // हे fresh calculate होईल.
+    const today = new Date();
+    const first = new Date(today.getFullYear(), today.getMonth(), 1);
+    this.pickedStartDate = first;
+    this.pickedEndDate = today;
+    this.startDate = this.toIsoDate(first);
+    this.endDate = this.toIsoDate(today);
+
     if (this.auth.currentUserValue) {
       this.labId = this.auth.labId;
       this.loadFranchises();
@@ -233,15 +240,15 @@ export class CommissionHistoryPage implements OnInit, OnDestroy {
     this.avgCommission = this.totalBookings ? this.totalCommission / this.totalBookings : 0;
   }
 
-  loadMore(event: any): void {
+  // ✅ CHANGED: आता ion-infinite-scroll event ऐवजी साध्या button click वर call होतो
+  loadMore(): void {
     const nextLength = this.visibleRows.length + PAGE_SIZE;
     this.visibleRows = this.filteredRows.slice(0, nextLength);
-    event.target.complete();
-    if (this.visibleRows.length >= this.filteredRows.length) {
-      event.target.disabled = true;
-    }
   }
 
+  get hasMoreCommissionRows(): boolean {
+    return this.visibleRows.length < this.filteredRows.length;
+  }
   // NEW: toggles the highlighted/selected state of a row in the booking table.
   // Clicking the same row again clears the selection.
   selectRow(index: number): void {

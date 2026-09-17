@@ -243,7 +243,7 @@ export class TestListPage implements OnInit {
       }
       headerRow.push(
         { text: 'Sample Type', style: 'tableHeader', alignment: 'center' },
-        { text: 'TAT (min)', style: 'tableHeader', alignment: 'center' }
+        { text: 'TAT', style: 'tableHeader', alignment: 'center' }
       );
 
       const tableBody: any[] = [headerRow];
@@ -262,7 +262,7 @@ export class TestListPage implements OnInit {
         }
         row.push(
           { text: test.sampleType || '-', style: 'tableCell', alignment: 'center' },
-          { text: test.tat ?? '-', style: 'tableCell', alignment: 'center' }
+          { text: this.formatTat(test.tat), style: 'tableCell', alignment: 'center' }
         );
         tableBody.push(row);
       });
@@ -411,5 +411,24 @@ console.log('VFS CHECK:', pdfMake.vfs ? Object.keys(pdfMake.vfs).length + ' font
       if (key.startsWith(k)) return known[k];
     }
     return this.hashColor(key);
+  }
+
+  // ============================================================
+  // TAT FORMAT (minutes -> day/hour/min display)
+  // ============================================================
+  formatTat(tat: string): string {
+    const totalMin = Number(tat);
+    if (!totalMin || isNaN(totalMin)) return tat || '-';
+
+    const days = Math.floor(totalMin / 1440);       // 1440 min = 1 day
+    const hrs = Math.floor((totalMin % 1440) / 60);
+    const mins = totalMin % 60;
+
+    const parts: string[] = [];
+    if (days > 0) parts.push(`${days} day${days > 1 ? 's' : ''}`);
+    if (hrs > 0) parts.push(`${hrs} hr`);
+    if (mins > 0) parts.push(`${mins} min`);
+
+    return parts.length ? parts.join(' ') : '0 min';
   }
 }

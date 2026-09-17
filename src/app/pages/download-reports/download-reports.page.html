@@ -24,7 +24,7 @@
 
       <span class="refresh-hint">
         <ion-icon name="information-circle-outline"></ion-icon>
-        Please refer to see the latest data.
+       <span class="refresh-hint-text">Showing last 7 days data by default</span>
       </span>
 
     </div>
@@ -155,7 +155,7 @@
               </label>
 
               <!-- Booking ID -->
-              <a class="id-link">#{{ item.bookingId }}</a>
+              <a class="id-link" (click)="openDownloadReportModal(item, $event)">#{{ item.bookingId }}</a>
 
               <!-- Booking Date -->
               <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
@@ -205,17 +205,22 @@
 
           <!-- ✅ Barcode row — tap-to-copy added (same behaviour as
               Booking Status page): trackBy + click handler + copy icon. -->
-          <div class="bcard-stat">
-            <div class="bcard-barcode-inline">
-              <div class="barcode-line" *ngFor="let b of item.barcodes; trackBy: trackByBarcode"
-                (click)="copyBarcode(b); $event.stopPropagation()">
-                <ion-icon name="qr-code-outline"></ion-icon>
-                <span>{{ b }}</span>
-                <ion-icon name="copy-outline" class="barcode-line-copy-icon"></ion-icon>
-              </div>
-              <div class="barcode-line empty" *ngIf="!item.barcodes?.length">—</div>
-            </div>
-          </div>
+<div class="bcard-stat bcard-barcode-stat">
+  <div class="bcard-barcode-compact" *ngIf="item.barcodes?.length; else noBarcodeTpl">
+    <ion-icon name="qr-code-outline" class="barcode-compact-icon"></ion-icon>
+    <span class="barcode-compact-label">Barcode :-</span>
+    <span class="barcode-compact-list">
+      <ng-container *ngFor="let b of item.barcodes; let last = last; trackBy: trackByBarcode">
+        <span class="barcode-compact-item" (click)="copyBarcode(b); $event.stopPropagation()">{{ b }}</span><span class="barcode-compact-sep" *ngIf="!last">, </span>
+      </ng-container>
+    </span>
+  </div>
+  <ng-template #noBarcodeTpl>
+    <div class="bcard-barcode-compact">
+      <span class="barcode-compact-empty">—</span>
+    </div>
+  </ng-template>
+</div>
 
         </div>
 
@@ -281,6 +286,70 @@
         </div>
       </ng-template>
     </ion-modal>
+
+<!-- ===================== DOWNLOAD REPORT MODAL (booking-id click + bulk Download button) ===================== -->
+<ion-modal [isOpen]="isDownloadReportModalOpen" cssClass="printbill-modal" [keepContentsMounted]="false"
+  [canDismiss]="true" (didDismiss)="closeDownloadReportModal()">
+  <ng-template>
+    <div class="printbill-modal-page">
+      <div class="printbill-modal-header">
+        <h2>Download Report
+          <span class="header-booking-tag" *ngIf="!isBulkDownload">#{{ downloadReportItem?.bookingId }}</span>
+          <span class="header-booking-tag" *ngIf="isBulkDownload">{{ selectedIds.size }} selected</span>
+        </h2>
+        <button class="close-modal-btn" (click)="closeDownloadReportModal()">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+
+      <div class="printbill-modal-body">
+        <ion-button expand="block" fill="solid" class="modal-save-btn"
+          [disabled]="generatingReportId !== null" (click)="confirmDownloadReport(true)">
+          <ion-icon slot="start" name="download-outline" *ngIf="generatingReportId === null"></ion-icon>
+          <ion-spinner name="crescent" slot="start" *ngIf="generatingReportId !== null"></ion-spinner>
+          With letterHead
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="modal-save-btn" style="margin-top:10px;"
+          [disabled]="generatingReportId !== null" (click)="confirmDownloadReport(false)">
+          <ion-icon slot="start" name="download-outline" *ngIf="generatingReportId === null"></ion-icon>
+          <ion-spinner name="crescent" slot="start" *ngIf="generatingReportId !== null"></ion-spinner>
+          Without letterHead
+        </ion-button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+<!-- ===================== REPORT NOT READY MODAL ===================== -->
+<ion-modal [isOpen]="isReportNotReadyModalOpen" cssClass="printbill-modal report-not-ready-modal"
+  [keepContentsMounted]="false" [canDismiss]="true" (didDismiss)="closeReportNotReadyModal()">
+  <ng-template>
+    <div class="printbill-modal-page">
+      <div class="printbill-modal-header">
+        <h2>Report Not Ready
+          <span class="header-booking-tag" *ngIf="reportNotReadyBookingId">#{{ reportNotReadyBookingId }}</span>
+        </h2>
+        <button class="close-modal-btn" (click)="closeReportNotReadyModal()">
+          <ion-icon name="close-outline"></ion-icon>
+        </button>
+      </div>
+
+      <div class="printbill-modal-body">
+        <div class="report-not-ready-icon">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+        </div>
+        <p class="report-not-ready-text">
+          This report is not yet complete. Please try again once all tests for this booking have been completed.
+        </p>
+
+        <ion-button expand="block" fill="solid" class="modal-save-btn danger-btn" (click)="closeReportNotReadyModal()">
+          Got it
+        </ion-button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
 
   </div>
 

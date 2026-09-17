@@ -58,7 +58,13 @@ export class LedgerSearchPage implements OnDestroy {
   private franchiseSearchTimer: any;
 
   private hasInitialized = false;
-
+  // ✅ NEW: pagination for past ledger (load more)
+  private readonly pageSize = 100;
+  currentPage = 0;
+  totalPages = 0;
+  totalEntries = 0;
+  isLoadingMore = false;
+  private pastLedgerAccum: any[] = [];
   // ✅ NEW: कुठली row selected/highlighted आहे ते track करण्यासाठी
   selectedRowIndex: number | null = null;
 
@@ -183,7 +189,13 @@ export class LedgerSearchPage implements OnDestroy {
 
     this.loading = true;
     this.errorMessage = '';
-    this.selectedRowIndex = null; // ✅ नवीन search वर आधीची highlight clear कर
+    this.selectedRowIndex = null;
+
+    // ✅ NEW: fresh search वर pagination reset कर
+    this.currentPage = 0;
+    this.pastLedgerAccum = [];
+    this.totalPages = 0;
+    this.totalEntries = 0;
 
     let popup: HTMLIonLoadingElement | null = null;
 
@@ -197,8 +209,6 @@ export class LedgerSearchPage implements OnDestroy {
       await popup.present();
     }
 
-    // ✅ NEW: endDate exclusive असल्याने आजच्या (शेवटच्या दिवसाच्या) entries चुकत होत्या —
-    // API ला endDate चा पुढचा दिवस पाठवतो जेणेकरून निवडलेला शेवटचा दिवस पूर्ण cover होईल
     const apiEndDate = this.toApiEndDate(this.endDate);
 
     forkJoin({
@@ -211,7 +221,7 @@ export class LedgerSearchPage implements OnDestroy {
         this.authService.labId,
         this.franchiseId,
         0,
-        100,
+        this.pageSize,
         true,
         undefined,
         this.startDate,
@@ -225,44 +235,18 @@ export class LedgerSearchPage implements OnDestroy {
       }))
       .subscribe({
         next: ({ summary, transactions }) => {
-          const pastLedger = (transactions?.transaction?.content ?? []).map((t: any) => {
-            const booking = t.bookingDto;
+          const pageData = transactions?.transaction;
+          this.pastLedgerAccum = this.mapTransactions(pageData?.content ?? []);
 
-            // patient name — booking नसेल (उदा. wallet recharge) तर '-'
-            const patientName = booking?.customerName?.trim() || '-';
-
-            // एका booking मध्ये multiple tests असू शकतात — सगळ्यांची नावं जोडून दाखव
-            const testNames = (booking?.tests ?? [])
-              .map((test: any) => test.testName?.trim())
-              .filter(Boolean);
-            const testName = testNames.length ? testNames.join(', ') : '-';
-
-            // barcode पण per-test असतो — unique barcodes जोडून दाखव
-            const barcodes = (booking?.samples ?? [])
-              .map((sample: any) => sample.barcode)
-              .filter(Boolean);
-            const uniqueBarcodes = [...new Set(barcodes)];
-            const barcode = uniqueBarcodes.length ? uniqueBarcodes.join(', ') : '-';
-
-            return {
-              bookingId: t.bookingId,
-              bookingDate: t.createdOn ? new Date(t.createdOn).toLocaleDateString() : '',
-              type: t.transactionType,
-              remark: t.description,
-              amount: t.balance,
-              patientName,
-              testName,
-              barcode,
-              openingBalance: t.openingBalance,
-              closingBalance: t.closingBalance
-            };
-          });
+          // ✅ NEW: total pages/entries backend Page-object मधून घेतले
+          this.totalPages = pageData?.totalPages ?? 1;
+          this.totalEntries = pageData?.totalElements ?? this.pastLedgerAccum.length;
 
           this.ledger = {
             ...summary,
             cancellationRefundAmount: summary.cancellationRefund,
             inventoryDebitAmount: summary.inventoryDebit,
-            pastLedger
+            pastLedger: this.pastLedgerAccum
           };
         },
         error: (err) => {
@@ -271,6 +255,84 @@ export class LedgerSearchPage implements OnDestroy {
           this.presentToast(this.errorMessage);
         }
       });
+  }
+
+  // ✅ NEW: load more — next page फक्त wallet/transactions साठी (summary परत नको)
+  loadMorePastLedger(): void {
+    if (!this.franchiseId || this.isLoadingMore) return;
+    if (this.currentPage + 1 >= this.totalPages) return;
+
+    this.isLoadingMore = true;
+    const nextPage = this.currentPage + 1;
+    const apiEndDate = this.toApiEndDate(this.endDate);
+
+    this.walletService.getWallet(
+      this.authService.labId,
+      this.franchiseId,
+      nextPage,
+      this.pageSize,
+      true,
+      undefined,
+      this.startDate,
+      apiEndDate,
+      true
+    )
+      .pipe(finalize(() => (this.isLoadingMore = false)))
+      .subscribe({
+        next: (transactions: any) => {
+          const pageData = transactions?.transaction;
+          const mapped = this.mapTransactions(pageData?.content ?? []);
+
+          this.pastLedgerAccum = [...this.pastLedgerAccum, ...mapped];
+          this.currentPage = nextPage;
+          this.totalPages = pageData?.totalPages ?? this.totalPages;
+          this.totalEntries = pageData?.totalElements ?? this.totalEntries;
+
+          if (this.ledger) {
+            this.ledger = { ...this.ledger, pastLedger: this.pastLedgerAccum };
+          }
+        },
+        error: (err) => {
+          console.error('loadMorePastLedger failed', err);
+          this.presentToast('Could not load more entries.');
+        }
+      });
+  }
+
+  get hasMorePastLedger(): boolean {
+    return this.currentPage + 1 < this.totalPages;
+  }
+
+  // ✅ NEW: mapping logic common function मध्ये काढली (searchLedger + loadMore दोन्हीकडे वापरण्यासाठी)
+  private mapTransactions(list: any[]): any[] {
+    return list.map((t: any) => {
+      const booking = t.bookingDto;
+      const patientName = booking?.customerName?.trim() || '-';
+
+      const testNames = (booking?.tests ?? [])
+        .map((test: any) => test.testName?.trim())
+        .filter(Boolean);
+      const testName = testNames.length ? testNames.join(', ') : '-';
+
+      const barcodes = (booking?.samples ?? [])
+        .map((sample: any) => sample.barcode)
+        .filter(Boolean);
+      const uniqueBarcodes = [...new Set(barcodes)];
+      const barcode = uniqueBarcodes.length ? uniqueBarcodes.join(', ') : '-';
+
+      return {
+        bookingId: t.bookingId,
+        bookingDate: t.createdOn ? new Date(t.createdOn).toLocaleDateString() : '',
+        type: t.transactionType,
+        remark: t.description,
+        amount: t.balance,
+        patientName,
+        testName,
+        barcode,
+        openingBalance: t.openingBalance,
+        closingBalance: t.closingBalance
+      };
+    });
   }
 
   get sortedPastLedger() {

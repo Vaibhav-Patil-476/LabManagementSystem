@@ -19,8 +19,9 @@
       </div>
       <div class="default-note" *ngIf="isDefaultTodayRange && !isSearchMode">
         <ion-icon name="information-circle-outline"></ion-icon>
-        "Please refresh to see the latest data."
+        Showing last 7 days data by default
       </div>
+
     </div>
 
     <!-- ===================== FILTER BAR ===================== -->
@@ -132,7 +133,7 @@
         <div class="bcard-header">
           <div class="bcard-header-left">
             <div class="bcard-id-row">
-              <a class="id-link">#{{ item.bookingId }}</a>
+              <a class="id-link" (click)="openDownloadReportModal(item, $event)">#{{ item.bookingId }}</a>
               <span class="bcard-date">{{ item.bookingDate }}</span>
             </div>
             <div class="bcard-name-row">
@@ -970,6 +971,8 @@
 
   </ion-modal>
 
+
+  <!-- ===================== PRINT BILL MODAL ===================== -->
   <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal" [keepContentsMounted]="false"
     [canDismiss]="true" (didDismiss)="closePrintBillModal()">
     <ng-template>
@@ -1006,6 +1009,74 @@
             Without letterHead
           </ion-button>
 
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+  <!-- ===================== DOWANLOAD REPORT MODAL ===================== -->
+
+  <ion-modal [isOpen]="isDownloadReportModalOpen" cssClass="printbill-modal" [keepContentsMounted]="false"
+    [canDismiss]="true" (didDismiss)="closeDownloadReportModal()">
+    <ng-template>
+      <div class="printbill-modal-page">
+        <div class="printbill-modal-header">
+          <h2>Download Report <span class="header-booking-tag">#{{ downloadReportItem?.bookingId }}</span></h2>
+          <button class="close-modal-btn" (click)="closeDownloadReportModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="printbill-modal-body">
+          <ion-button expand="block" fill="solid" class="modal-save-btn"
+            [disabled]="generatingReportId === downloadReportItem?.bookingId" (click)="confirmDownloadReport(true)">
+            <ion-icon slot="start" name="download-outline"
+              *ngIf="generatingReportId !== downloadReportItem?.bookingId"></ion-icon>
+            <ion-spinner name="crescent" slot="start"
+              *ngIf="generatingReportId === downloadReportItem?.bookingId"></ion-spinner>
+            With letterHead
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="modal-save-btn" style="margin-top:10px;"
+            [disabled]="generatingReportId === downloadReportItem?.bookingId" (click)="confirmDownloadReport(false)">
+            <ion-icon slot="start" name="download-outline"
+              *ngIf="generatingReportId !== downloadReportItem?.bookingId"></ion-icon>
+            <ion-spinner name="crescent" slot="start"
+              *ngIf="generatingReportId === downloadReportItem?.bookingId"></ion-spinner>
+            Without letterHead
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+
+  <!-- ===================== REPORT NOT READY MODAL ===================== -->
+  <ion-modal [isOpen]="isReportNotReadyModalOpen" cssClass="printbill-modal report-not-ready-modal"
+    [keepContentsMounted]="false" [canDismiss]="true" (didDismiss)="closeReportNotReadyModal()">
+    <ng-template>
+      <div class="printbill-modal-page">
+        <div class="printbill-modal-header">
+          <h2>Report Not Ready
+            <span class="header-booking-tag" *ngIf="reportNotReadyBookingId">#{{ reportNotReadyBookingId }}</span>
+          </h2>
+          <button class="close-modal-btn" (click)="closeReportNotReadyModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <div class="printbill-modal-body">
+          <div class="report-not-ready-icon">
+            <ion-icon name="alert-circle-outline"></ion-icon>
+          </div>
+          <p class="report-not-ready-text">
+            This report is not yet complete. Please try again once all tests for this booking have been completed.
+          </p>
+
+          <ion-button expand="block" fill="solid" class="modal-save-btn danger-btn"
+            (click)="closeReportNotReadyModal()">
+            Got it
+          </ion-button>
         </div>
       </div>
     </ng-template>

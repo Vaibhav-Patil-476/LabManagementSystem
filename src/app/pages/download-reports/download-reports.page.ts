@@ -92,8 +92,18 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   ];
 
   activeTab: ReportTabKey = 'COMPLETE';
-  fromDate: string = this.todayIso();
+  fromDate: string = this.sevenDaysAgoIso();
   toDate: string = this.todayIso();
+
+  private todayIso(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
+
+  private sevenDaysAgoIso(): string {
+    const d = new Date();
+    d.setDate(d.getDate() - 6);
+    return d.toISOString().slice(0, 10);
+  }
   quickSearch = '';
   franchiseId: any = null;
   franchises: any[] = [];
@@ -107,6 +117,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   totalBookingsFromServer = 0;
   showTestPreview = false;
   previewItem: ReportBookingRow | null = null;
+ isBulkDownload = false;   
 
   openTestPreview(item: ReportBookingRow, event?: MouseEvent): void {
     event?.stopPropagation();
@@ -119,7 +130,96 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.previewItem = null;
   }
 
+  openDownloadReportModal(item: ReportBookingRow, event?: MouseEvent): void {
+  event?.stopPropagation();
+
+  if (item.bucket !== 'COMPLETE') {
+    this.reportNotReadyBookingId = item.bookingId;
+    this.isReportNotReadyModalOpen = true;
+    return;
+  }
+
+  if (this.isReportLocked(item)) {
+    this.toast.error('Download Report Locked', 'Report download is locked, Please contact admin.');
+    return;
+  }
+
+  this.downloadReportItem = item;
+  this.isDownloadReportModalOpen = true;
+}
+
+closeDownloadReportModal(): void {
+  this.isDownloadReportModalOpen = false;
+  this.downloadReportItem = null;
+  this.isBulkDownload = false;
+}
+
+closeReportNotReadyModal(): void {
+  this.isReportNotReadyModalOpen = false;
+  this.reportNotReadyBookingId = null;
+}
+
+async confirmDownloadReport(letterHead: boolean): Promise<void> {
+  const isBulk = this.isBulkDownload;
+  const selected = isBulk ? this.selectedReports : (this.downloadReportItem ? [this.downloadReportItem] : []);
+
+  if (selected.length === 0) {
+    this.isDownloadReportModalOpen = false;
+    return;
+  }
+
+  const bookingIds = selected.map(r => Number(r.bookingId));
+  const trackId = isBulk ? 'bulk' : selected[0].bookingId;
+
+  if (this.generatingReportId === trackId) return;
+  this.generatingReportId = trackId;
+  this.isDownloadReportModalOpen = false;
+
+  try {
+    const res: any = await firstValueFrom(
+      this.labApi.generatePdfReport(bookingIds, { single: bookingIds.length === 1, letterHead })
+    );
+
+    if (res?.success && res?.downloadUrl) {
+      const fileName = res.fileName || `report-${bookingIds[0]}.pdf`;
+
+      if (Capacitor.isNativePlatform()) {
+        const response = await fetch(res.downloadUrl);
+        const blob = await response.blob();
+        const base64Pdf = await this.blobToBase64(blob);
+
+        const result = await PdfDownload.savePdf({ fileName, data: base64Pdf });
+
+        if (!result || result.success !== true) {
+          throw new Error('Unable to download PDF');
+        }
+      } else {
+        window.open(res.downloadUrl, '_blank');
+      }
+
+      this.toast.success('Success', `${bookingIds.length} report(s) downloaded successfully.`);
+      if (isBulk) this.selectedIds.clear();
+    } else {
+      this.toast.error('Generation Failed', res?.message || 'Unable to generate the PDF report.');
+    }
+  } catch {
+    this.toast.error('Error', 'An error occurred while generating the PDF. Please try again.');
+  } finally {
+    this.generatingReportId = null;
+    this.downloadReportItem = null;
+    this.isBulkDownload = false;
+    this.ngZone.run(() => this.cdr.detectChanges());
+  }
+}
+
   selectedIds = new Set<string>();
+  // ✅ Download Report modal (booking-ID click)
+  isDownloadReportModalOpen = false;
+  downloadReportItem: ReportBookingRow | null = null;
+  generatingReportId: number | string | null = null;
+
+  isReportNotReadyModalOpen = false;
+  reportNotReadyBookingId: number | string | null = null;
 
   private bookings: ReportBookingRow[] = [];
   private searchDataset: ReportBookingRow[] = [];
@@ -202,11 +302,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     return this.formatDateForInput(d);
   }
 
-  private todayIso(): string {
-    return new Date().toISOString().slice(0, 10);
-  }
 
-private loadFilterFranchises(): void {
+  private loadFilterFranchises(): void {
     const currentRole = this.authService?.role;
     const currentFranchiseId = this.authService?.franchiseId;
     const currentFranchiseName = this.authService?.franchiseName;
@@ -570,15 +667,14 @@ private loadFilterFranchises(): void {
       };
     });
 
-    const seenBarcodes = new Set<string>();
-    const barcodes: string[] = [];
-    (raw.sampleAccessions || []).forEach((s: any) => {
-      const barcode = s.barCode || s.barcode;
-      if (!barcode || seenBarcodes.has(barcode)) return;
-      seenBarcodes.add(barcode);
-      const sampleType = s.sampleTypeData?.sample_type || s.sampleType;
-      barcodes.push(sampleType ? `${barcode} - ${sampleType}` : barcode);
-    });
+const seenBarcodes = new Set<string>();
+const barcodes: string[] = [];
+(raw.sampleAccessions || []).forEach((s: any) => {
+  const barcode = s.barCode || s.barcode;
+  if (!barcode || seenBarcodes.has(barcode)) return;
+  seenBarcodes.add(barcode);
+  barcodes.push(barcode);
+});
 
 
     const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
@@ -604,17 +700,18 @@ private loadFilterFranchises(): void {
 
     };
   }
-  private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
-    if (tests.length === 0) return 'PENDING';
+private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
+  if (tests.length === 0) return 'PENDING';
 
-    const statuses = tests.map(t => this.normalizeStatus(t.status));
+  const statuses = tests.map(t => this.normalizeStatus(t.status, 'snr'));
 
-    if (statuses.every(s => this.isCompleteOrReady(s))) return 'COMPLETE';
-    if (statuses.some(s => s === 'snr')) return 'SNR';
-    if (statuses.some(s => s.includes('clinical'))) return 'CLINICAL';
-    if (statuses.some(s => this.isCompleteOrReady(s))) return 'PARTIALLY_COMPLETE';
-    return 'PENDING';
-  }
+  if (statuses.every(s => s === 'cancel' || s === 'cancelled')) return 'CANCEL';
+  if (statuses.every(s => this.isCompleteOrReady(s))) return 'COMPLETE';
+  if (statuses.some(s => s === 'snr')) return 'SNR';
+  if (statuses.some(s => s.includes('clinical'))) return 'CLINICAL';
+  if (statuses.some(s => this.isCompleteOrReady(s))) return 'PARTIALLY_COMPLETE';
+  return 'PENDING';
+}
 
   // ---------- tabs / rows ----------
   setTab(tab: ReportTabKey): void {
@@ -623,38 +720,36 @@ private loadFilterFranchises(): void {
     this.selectedIds.clear();
   }
 
-  get rowsForActiveTab(): ReportBookingRow[] {
-    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+ get rowsForActiveTab(): ReportBookingRow[] {
+  const source = this.isSearchMode ? this.filteredDataset : this.bookings;
 
-    if (this.activeTab === 'ALL') {
-      return source;
-    }
-
-    return source.filter(r =>
-      (r.tests || []).some(t => this.testMatchesTab(t.status, this.activeTab))
-    );
+  if (this.activeTab === 'ALL') {
+    return source;
   }
+
+  return source.filter(r => r.bucket === this.activeTab);
+}
 
   get totalBookings(): number {
     return this.isSearchMode ? this.filteredDataset.length : this.totalBookingsFromServer;
   }
 
-  get bucketCount(): Record<ReportTabKey, number> {
-    const counts: Record<ReportTabKey, number> = {
-      ALL: 0, COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0, CANCEL: 0
-    };
-    const source = this.isSearchMode ? this.filteredDataset : this.bookings;
+get bucketCount(): Record<ReportTabKey, number> {
+  const counts: Record<ReportTabKey, number> = {
+    ALL: 0, COMPLETE: 0, CLINICAL: 0, PARTIALLY_COMPLETE: 0, PENDING: 0, SNR: 0, CANCEL: 0
+  };
+  const source = this.isSearchMode ? this.filteredDataset : this.bookings;
 
-    counts.ALL = source.length;
+  counts.ALL = source.length;
 
-    (['COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR', 'CANCEL'] as ReportTabKey[]).forEach(key => {
-      counts[key] = source.filter(r =>
-        (r.tests || []).some(t => this.testMatchesTab(t.status, key))
-      ).length;
-    });
+  source.forEach(r => {
+    if (r.bucket && counts[r.bucket] !== undefined) {
+      counts[r.bucket]++;
+    }
+  });
 
-    return counts;
-  }
+  return counts;
+}
 
   get hasMoreForActiveTab(): boolean {
     return this.hasMore;
@@ -726,83 +821,89 @@ private loadFilterFranchises(): void {
     return this.selectedIds.has(String(item.bookingId));
   }
 
-toggleSelect(item: ReportBookingRow, checked: boolean): void {
-  const id = String(item.bookingId);
-  if (checked) this.selectedIds.add(id);
-  else this.selectedIds.delete(id);
-}
+  toggleSelect(item: ReportBookingRow, checked: boolean): void {
+    const id = String(item.bookingId);
+    if (checked) this.selectedIds.add(id);
+    else this.selectedIds.delete(id);
+  }
 
   get selectedReports(): ReportBookingRow[] {
     return this.rowsForActiveTab.filter(r => this.selectedIds.has(String(r.bookingId)));
   }
 
-  // ---------- download ----------
-async downloadSelected(): Promise<void> {
-
+downloadSelected(): void {
   const selected = this.selectedReports;
+
   if (selected.length === 0) {
     this.toast.warning('Selection Required', 'Please select at least one report to download.');
     return;
   }
 
-  // ✅ FIX: checkbox var block nahi — selection zाल्यावरच, download
-  // click cha veli locked report असेल tar exception dakhavायचा.
   const lockedSelected = selected.filter(r => this.isReportLocked(r));
 
   if (lockedSelected.length > 0) {
-
-    const names = lockedSelected.map(r => `#${r.bookingId}`).join(', ');
-
     this.toast.error(
       'Download Report Locked',
       `Report download is locked, Please contact admin.`
     );
-
     return;
   }
 
+  this.isBulkDownload = true;
+  this.downloadReportItem = null;
+  this.isDownloadReportModalOpen = true;
+}
+
+closeBulkDownloadModal(): void {
+  this.isBulkDownload = false;
+}
+
+async confirmBulkDownload(letterHead: boolean): Promise<void> {
+  const selected = this.selectedReports;
+  if (selected.length === 0) {
+    this.isBulkDownload = false;
+    return;
+  }
+
+  this.isBulkDownload = false;
   this.isGenerating = true;
 
-    try {
-      const bookingIds = selected.map(r => Number(r.bookingId));
-      const res: any = await firstValueFrom(
-        this.labApi.generatePdfReport(bookingIds, { single: bookingIds.length === 1 })
-      );
+  try {
+    const bookingIds = selected.map(r => Number(r.bookingId));
+    const res: any = await firstValueFrom(
+      this.labApi.generatePdfReport(bookingIds, { single: bookingIds.length === 1, letterHead })
+    );
 
-      if (res?.success && res?.downloadUrl) {
+    if (res?.success && res?.downloadUrl) {
 
-        const fileName = res.fileName || `report-${bookingIds[0]}.pdf`;
+      const fileName = res.fileName || `report-${bookingIds[0]}.pdf`;
 
-        if (Capacitor.isNativePlatform()) {
-          // ✅ ANDROID: fetch PDF bytes from S3, convert to base64,
-          // save via native PdfDownload plugin -> lands in Downloads folder
-          // + fires the system "Download complete" notification (same flow as profile-list PDF export)
-          const response = await fetch(res.downloadUrl);
-          const blob = await response.blob();
-          const base64Pdf = await this.blobToBase64(blob);
+      if (Capacitor.isNativePlatform()) {
+        const response = await fetch(res.downloadUrl);
+        const blob = await response.blob();
+        const base64Pdf = await this.blobToBase64(blob);
 
-          const result = await PdfDownload.savePdf({ fileName, data: base64Pdf });
+        const result = await PdfDownload.savePdf({ fileName, data: base64Pdf });
 
-          if (!result || result.success !== true) {
-            throw new Error('Unable to download PDF');
-          }
-
-        } else {
-          // ✅ WEB: unchanged browser-tab behavior
-          window.open(res.downloadUrl, '_blank');
+        if (!result || result.success !== true) {
+          throw new Error('Unable to download PDF');
         }
 
-        this.toast.success('Success', `${bookingIds.length} report(s) downloaded successfully.`);
-        this.selectedIds.clear();
       } else {
-        this.toast.error('Generation Failed', res?.message || 'Unable to generate the PDF report.');
+        window.open(res.downloadUrl, '_blank');
       }
-    } catch {
-      this.toast.error('Error', 'An error occurred while generating the PDF. Please try again.');
-    } finally {
-      this.isGenerating = false;
+
+      this.toast.success('Success', `${bookingIds.length} report(s) downloaded successfully.`);
+      this.selectedIds.clear();
+    } else {
+      this.toast.error('Generation Failed', res?.message || 'Unable to generate the PDF report.');
     }
+  } catch {
+    this.toast.error('Error', 'An error occurred while generating the PDF. Please try again.');
+  } finally {
+    this.isGenerating = false;
   }
+}
 
   // ✅ NEW: converts fetched PDF blob to raw base64 (no data: prefix) for PdfDownload plugin
   private blobToBase64(blob: Blob): Promise<string> {

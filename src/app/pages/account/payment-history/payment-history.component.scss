@@ -120,121 +120,131 @@
 }
 
 // ---------- Gateway summary cards ----------
-.gateway-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    padding: 0 16px;
-}
-
 .gateway-card {
-    background: #fff;
-    border-radius: 14px;
-    padding: 14px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-    cursor: pointer;
-    border: 2px solid transparent;
-    transition: border-color 0.15s ease;
+  position: relative;
+  padding: 8px 10px 7px;
+  border-radius: 12px;
+  background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
+  box-shadow:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 1px 5px rgba(15, 118, 110, 0.05);
+  border: 1px solid rgba(16, 24, 40, 0.04);
+  overflow: hidden;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
 
-    &.active-gateway {
-        border-color: #0f766e;
-    }
-}
+  &:active {
+    transform: scale(0.99);
+  }
 
-.gateway-name {
-    font-weight: 700;
-    font-size: 14px;
-    color: #111827;
-    margin-bottom: 8px;
-}
+  &::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #1a73e8, #6fb3ff);
+  }
 
-.gateway-stats {
-    display: flex;
-    flex-direction: column;
-    gap: 0;
-}
-
-.gw-row {
-    display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    padding: 9px 0;
-    border-bottom: 1px solid #f0f2f5;
-
-    &:last-child {
-        border-bottom: none;
-    }
-
-    &.gw-row-total {
-        margin-top: 4px;
-        padding-top: 12px;
-        border-top: 1.5px solid #e4eded;
-        border-bottom: none;
-    }
-}
-
-.gw-label {
-    font-size: 13px;
-    font-weight: 600;
-    color: #6b7280;
-    letter-spacing: 0.1px;
-}
-
-.gw-value {
-    font-size: 15px;
-    font-weight: 800;
-    color: #0f766e;
-    letter-spacing: -0.2px;
-    font-variant-numeric: tabular-nums;   // ✅ आकडे नीट align राहतात
-}
-
-.gw-row-total {
-    .gw-label {
-        font-weight: 700;
-        color: #111827;
-        font-size: 13px;
-    }
-    .gw-value {
-        font-size: 16px;
-        color: #0c5f59;
-    }
-}
-
-.gateway-card {
-    padding: 18px 16px;
-    border-radius: 16px;
-    box-shadow: 0 3px 10px rgba(15, 118, 110, 0.08);
-    transition: box-shadow 0.15s ease, transform 0.15s ease;
-
-    &:active {
-        transform: scale(0.99);
-    }
+  &.cashfree-card::before {
+    background: linear-gradient(90deg, #00b98e, #6fe3c4);
+  }
 }
 
 .gateway-logo {
-    display: block;
-    max-width: 140px;
-    max-height: 38px;
-    margin: 2px auto 16px;
-    object-fit: contain;
+  display: block;
+  max-width: 72px;
+  max-height: 13px;
+  margin: 0 auto 5px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid rgba(16, 24, 40, 0.06);
+  object-fit: contain;
 }
 
-.gateway-all-toggle {
-    margin: 12px 16px 0;
-    text-align: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: #0f766e;
-    padding: 8px;
-    border-radius: 10px;
-    background: #fff;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
-    cursor: pointer;
+.gateway-stats {
+  display: flex;
+  flex-direction: column;
+}
 
-    &.active-all {
-        background: #0f766e;
-        color: #fff;
-    }
+.gw-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px;
+  padding: 3.5px 1px;
+  border-bottom: 1px solid #eef0f2;
+}
+
+.gw-row:last-of-type {
+  border-bottom: none;
+}
+
+.gw-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: #6b7280;
+  font-size: 10px;
+  font-weight: 500;
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+.gw-value {
+  flex: 0 0 auto;
+  color: #0f9d6e;
+  font-size: 11px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  text-align: right;
+  letter-spacing: -0.1px;
+}
+
+.gw-row-total {
+  margin-top: 1px;
+  padding-top: 5px;
+  border-top: 1.5px solid #e5e7eb;
+  border-bottom: none;
+
+  .gw-label {
+    color: #111827;
+    font-weight: 700;
+    font-size: 10.5px;
+  }
+
+  .gw-value {
+    font-size: 12px;
+    font-weight: 800;
+    background: linear-gradient(90deg, #0f9d6e, #17b984);
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+}
+
+// ---------- Grid gap between cards ----------
+.gateway-grid {
+  gap: 6px;
+}
+
+// ---------- "All" filter toggle ----------
+.gateway-all-toggle {
+  margin: 6px 10px 0;
+  text-align: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: #0f766e;
+  padding: 5px;
+  border-radius: 7px;
+  background: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+
+  &.active-all {
+    background: #0f766e;
+    color: #fff;
+  }
 }
 
 // =========================================================
@@ -651,4 +661,71 @@
 
 .gateway-stats {
     text-align: left;     // ✅ NEW — फक्त rows डावीकडे align राहतील, logo मात्र centered
+}// ============================================================
+// ✅ Load More footer — premium style
+// ============================================================
+.load-more-wrapper {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 12px 28px;
+  padding: 18px 16px;
+  background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%);
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 16px;
+  box-shadow:
+    0 2px 8px rgba(15, 118, 110, 0.06),
+    0 1px 2px rgba(0, 0, 0, 0.03);
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: -14px;
+    left: 16px;
+    right: 16px;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.15), transparent);
+  }
+}
+
+.entries-info {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: #5f7a76;
+  letter-spacing: 0.2px;
+  text-align: center;
+}
+
+.load-more-btn {
+  --border-radius: 999px;
+  --background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  --background-hover: linear-gradient(135deg, #0d6b64 0%, #0c857a 100%);
+  --background-activated: linear-gradient(135deg, #0c5f59 0%, #0b756b 100%);
+  --color: #ffffff;
+  --box-shadow: 0 3px 10px rgba(15, 118, 110, 0.28);
+
+  min-width: 160px;
+  height: 42px;
+  margin: 0;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+
+  &::part(native) {
+    padding-inline: 24px;
+  }
+
+  &:not([disabled]):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 5px 16px rgba(15, 118, 110, 0.35);
+  }
+
+  &:not([disabled]):active {
+    transform: translateY(0);
+  }
 }
