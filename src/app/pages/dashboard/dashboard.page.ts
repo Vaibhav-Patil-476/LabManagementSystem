@@ -30,7 +30,7 @@ import {
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, attachOutline,
   checkmarkOutline, walletOutline, cardOutline,
-  addCircleOutline, lockClosedOutline, eyeOutline,homeOutline 
+  addCircleOutline, lockClosedOutline, eyeOutline, homeOutline, alertCircleOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -154,6 +154,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   // EDIT TEST MODAL
   // ============================================================
   isEditTestModalOpen = false;
+  isGlobalDownloadModalOpen = false;
+  globalDownloadItem: any = null;
+  isGlobalReportNotReadyModalOpen = false;
+  globalReportNotReadyBookingId: any = null;
   isTestLoading = false;
   selectedBooking: any = null;
   testSearchTerm = '';
@@ -219,6 +223,9 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   downloadingReportId: any = null;
   printingId: any = null;
+  isPrintBillModalOpen = false;      
+  printBillItem: any = null;          
+  selectedBillPriceType: string = 'myprice';   
   clinicalUnseenCount = 0;
   cancelUnseenCount = 0;
 
@@ -295,6 +302,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       'lock-closed-outline': lockClosedOutline,
       'eye-outline': eyeOutline,
       'home-outline': homeOutline,
+      'alert-circle-outline': alertCircleOutline,
     });
   }
 
@@ -313,14 +321,14 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   isSampleReceivedForBooking(item: any): boolean {
-  return (item?.samples || []).some((s: any) => (s.status || '').toString().toUpperCase() === 'RECEIVED');
-}
+    return (item?.samples || []).some((s: any) => (s.status || '').toString().toUpperCase() === 'RECEIVED');
+  }
 
-canEditPatientForItem(item: any): boolean {
-  if (!this.canEditPatient) return false;
-  if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
-  return true;
-}
+  canEditPatientForItem(item: any): boolean {
+    if (!this.canEditPatient) return false;
+    if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
+    return true;
+  }
 
   get canViewAmount(): boolean {
     return this.roleService.isLabAdmin || this.isFranchiseOnlyRole;
@@ -453,7 +461,7 @@ canEditPatientForItem(item: any): boolean {
     });
   }
 
-    private startNotificationPolling(): void {
+  private startNotificationPolling(): void {
     this.notifPollSub?.unsubscribe();
     // Reuses the same cadence as the main dashboard poll — no need
     // for a separate/faster interval for a badge count.
@@ -745,40 +753,97 @@ canEditPatientForItem(item: any): boolean {
     };
   }
 
-  // ============================================================
-  // BILL PRINT / REPORT DOWNLOAD
-  // ============================================================
-  printBillInline(item: any): void {
-    if (this.printingId === item.bookingId) return;
-    this.printingId = item.bookingId;
+openPrintBillModal(item: any, event?: MouseEvent): void {
+  event?.stopPropagation();
+  this.printBillItem = item;
+  this.selectedBillPriceType = 'myprice';
+  this.isPrintBillModalOpen = true;
+}
 
-    const payload = this.labApi.buildBillPayload(item.bookingId);
-    this.labApi.printBill(payload).subscribe({
-      next: (res: any) => {
-        this.printingId = null;
-        if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-      },
-      error: () => { this.printingId = null; }
-    });
+closePrintBillModal(): void {
+  this.isPrintBillModalOpen = false;
+  this.printBillItem = null;
+}
+
+confirmPrintBill(letterHead: boolean): void {
+  const item = this.printBillItem;
+  if (!item) return;
+  if (this.printingId === item.bookingId) return;
+
+  this.printingId = item.bookingId;
+  this.isPrintBillModalOpen = false;
+
+  // booking-status.page.ts प्रमाणेच — billType (myprice/mrp) आणि letterHead दोन्ही पास होतात
+  const payload = this.labApi.buildBillPayload(
+    item.bookingId,
+    this.selectedBillPriceType,
+    null,
+    letterHead
+  );
+
+  this.labApi.printBill(payload).subscribe({
+    next: (res: any) => {
+      this.printingId = null;
+      this.printBillItem = null;
+      if (res?.downloadUrl) {
+        window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+      }
+    },
+    error: () => {
+      this.printingId = null;
+      this.printBillItem = null;
+    }
+  });
+}
+
+  openGlobalDownloadModal(item: any, event?: MouseEvent): void {
+    event?.stopPropagation();
+
+    if (item.statusClass !== 'completed') {
+      this.globalReportNotReadyBookingId = item.bookingId;
+      this.isGlobalReportNotReadyModalOpen = true;
+      return;
+    }
+
+    this.globalDownloadItem = item;
+    this.isGlobalDownloadModalOpen = true;
   }
 
-  async downloadReportInline(item: any): Promise<void> {
+  closeGlobalDownloadModal(): void {
+    this.isGlobalDownloadModalOpen = false;
+    this.globalDownloadItem = null;
+  }
+
+  closeGlobalReportNotReadyModal(): void {
+    this.isGlobalReportNotReadyModalOpen = false;
+    this.globalReportNotReadyBookingId = null;
+  }
+
+  async confirmGlobalDownload(letterHead: boolean): Promise<void> {
+    const item = this.globalDownloadItem;
+    if (!item) return;
+
     const role = this.authService?.role;
     const allowed = role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE || role === this.ROLE_FRANCHISE_STAFF;
 
     if (!allowed) {
       this.toastService.error('Not allowed', 'Download फक्त Admin/Franchise ला उपलब्ध आहे');
+      this.closeGlobalDownloadModal();   // ✅ fixed
       return;
     }
-    if (!item.hasCompletedTest) return;
+    if (!item.hasCompletedTest) {
+      this.closeGlobalDownloadModal();   // ✅ fixed
+      return;
+    }
     if (this.downloadingReportId === item.bookingId) return;
 
     this.downloadingReportId = item.bookingId;
+    this.isGlobalDownloadModalOpen = false;
 
     try {
       const bookingId = Number(item.bookingId);
       const res: any = await firstValueFrom(
-        this.labApi.generatePdfReport([bookingId], { single: true })
+        this.labApi.generatePdfReport([bookingId], { single: true, letterHead })
       );
 
       if (res?.success && res?.downloadUrl) {
@@ -791,7 +856,10 @@ canEditPatientForItem(item: any): boolean {
       console.error('DOWNLOAD REPORT ERROR:', err);
       this.toastService.error('Error', 'PDF generate karnyat error aali');
     } finally {
-      this.ngZone.run(() => { this.downloadingReportId = null; });
+      this.ngZone.run(() => {
+        this.downloadingReportId = null;
+        this.globalDownloadItem = null;
+      });
     }
   }
 
@@ -1151,11 +1219,11 @@ canEditPatientForItem(item: any): boolean {
   // ============================================================
   // EDIT PATIENT MODAL
   // ============================================================
-onEditPatientClick(item: any): void {
-  if (!this.canEditPatientForItem(item)) return;
-  this.isSearchModalOpen = false;
-  this.editPatientFromSearch(item);
-}
+  onEditPatientClick(item: any): void {
+    if (!this.canEditPatientForItem(item)) return;
+    this.isSearchModalOpen = false;
+    this.editPatientFromSearch(item);
+  }
 
   editPatientFromSearch(item: any): void {
     this.editPatientData = null;
@@ -1204,7 +1272,7 @@ onEditPatientClick(item: any): void {
     if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true;
   }
 
-    onEditTitleChange(): void {
+  onEditTitleChange(): void {
     if (!this.editPatientData) {
       return;
     }
@@ -2352,110 +2420,101 @@ onEditPatientClick(item: any): void {
   }
 
   // ============================================================
-// 1) ADD these two ionicons imports to the existing import block
-//    from "ionicons/icons" (near the top of dashboard.page.ts):
-// ============================================================
-//
-//   receiptOutline, barChartOutline, pricetagsOutline
-//
-// So your import list becomes something like:
-//
-// import {
-//   beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
-//   logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
-//   personCircleOutline, personOutline, clipboardOutline,
-//   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
-//   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
-//   printOutline, cashOutline, qrCodeOutline, attachOutline,
-//   checkmarkOutline, walletOutline, cardOutline,
-//   addCircleOutline, lockClosedOutline, eyeOutline, homeOutline,
-//   receiptOutline, barChartOutline, pricetagsOutline
-// } from "ionicons/icons";
+  // 1) ADD these two ionicons imports to the existing import block
+  //    from "ionicons/icons" (near the top of dashboard.page.ts):
+  // ============================================================
+  //
+  //   receiptOutline, barChartOutline, pricetagsOutline
+  //
+  // So your import list becomes something like:
+  //
+  // import {
+  //   beakerOutline, calendarOutline, documentTextOutline, flaskOutline,
+  //   logOutOutline, notificationsOutline, peopleOutline, personAddOutline,
+  //   personCircleOutline, personOutline, clipboardOutline,
+  //   downloadOutline, listOutline, timeOutline, searchOutline, closeOutline,
+  //   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
+  //   printOutline, cashOutline, qrCodeOutline, attachOutline,
+  //   checkmarkOutline, walletOutline, cardOutline,
+  //   addCircleOutline, lockClosedOutline, eyeOutline, homeOutline,
+  //   receiptOutline, barChartOutline, pricetagsOutline
+  // } from "ionicons/icons";
 
 
-// ============================================================
-// 2) ADD these 3 lines inside registerIcons()'s addIcons({...}) call,
-//    alongside the existing entries (e.g. right after 'home-outline'):
-// ============================================================
-//
-//   'receipt-outline': receiptOutline,
-//   'bar-chart-outline': barChartOutline,
-//   'pricetags-outline': pricetagsOutline,
+  // ============================================================
+  // 2) ADD these 3 lines inside registerIcons()'s addIcons({...}) call,
+  //    alongside the existing entries (e.g. right after 'home-outline'):
+  // ============================================================
+  //
+  //   'receipt-outline': receiptOutline,
+  //   'bar-chart-outline': barChartOutline,
+  //   'pricetags-outline': pricetagsOutline,
 
 
-// ============================================================
-// 3) ADD these properties near your other bottom-nav state
-//    (e.g. right below the existing `downloadingReportId`/`printingId`
-//    fields, or anywhere in the class body):
-// ============================================================
+  // ============================================================
+  // 3) ADD these properties near your other bottom-nav state
+  //    (e.g. right below the existing `downloadingReportId`/`printingId`
+  //    fields, or anywhere in the class body):
+  // ============================================================
 
   // Whether the Account tab's 4-option popup is currently open.
   accountMenuOpen = false;
 
-  // ✅ 1 already existed as "Ledger" per your note — added Summary,
-  // Payment, Commission alongside it. Adjust the `route` values to
-  // match your actual routing module paths.
-  // accountSubOptions: { icon: string; label: string; route: string }[] = [
-  //   { icon: 'receipt-outline', label: 'Ledger', route: '/ledger-search' },
-  //   { icon: 'bar-chart-outline', label: 'Summary', route: '/account-summary' },
-  //   { icon: 'card-outline', label: 'Payment', route: '/account-payment' },
-  //   { icon: 'pricetags-outline', label: 'Commission', route: '/account-commission' }
-  // ];
 
 
-accountSubOptions: {
-  icon: string;
-  label: string;
-  route: string;
-  locked: boolean;
-}[] = [
-  {
-    icon: 'receipt-outline',
-    label: 'Ledger',
-    route: '/ledger-search',
-    locked: false
-  },
-  {
-    icon: 'bar-chart-outline',
-    label: 'Summary',
-    route: '/account-summary',
-    locked: false
-  },
-  {
-    icon: 'pricetags-outline',
-    label: 'Commission',
-    route: '/account-commission',
-    locked: false
-  },
-  {
-    icon: 'card-outline',
-    label: 'Payment',
-    route: '/account-payments',   // ✅ FIX: plural — matches app.routes.ts
-    locked: false
-  },
-];
+  accountSubOptions: {
+    icon: string;
+    label: string;
+    route: string;
+    locked: boolean;
+  }[] = [
+      {
+        icon: 'receipt-outline',
+        label: 'Ledger',
+        route: '/ledger-search',
+        locked: false
+      },
+      {
+        icon: 'bar-chart-outline',
+        label: 'Summary',
+        route: '/account-summary',
+        locked: false
+      },
+      {
+        icon: 'pricetags-outline',
+        label: 'Commission',
+        route: '/account-commission',
+        locked: false
+      },
+      {
+        icon: 'card-outline',
+        label: 'Payment',
+        route: '/account-payments',   // ✅ FIX: plural — matches app.routes.ts
+        locked: false
+      },
+    ];
 
-goToAccountSub(opt: {
-  route: string;
-  locked: boolean;
-}): void {
+  goToAccountSub(opt: {
+    route: string;
+    locked: boolean;
+  }): void {
 
-  // Locked options do nothing
-  if (opt.locked) {
-    return;
+    // Locked options do nothing
+    if (opt.locked) {
+      return;
+    }
+
+    // Only unlocked options navigate
+    this.closeAccountMenu();
+    this.menuCtrl.close();
+    this.router.navigate([opt.route]);
   }
 
-  // Only unlocked options navigate
-  this.closeAccountMenu();
-  this.menuCtrl.close();
-  this.router.navigate([opt.route]);
-}
 
-
-// ============================================================
-// 4) ADD these 3 methods near your existing NAVIGATION section
-//    (right below goToPage() / isActiveTab() is a good spot):
-// ============================================================
+  // ============================================================
+  // 4) ADD these 3 methods near your existing NAVIGATION section
+  //    (right below goToPage() / isActiveTab() is a good spot):
+  // ============================================================
 
   toggleAccountMenu(): void {
     this.accountMenuOpen = !this.accountMenuOpen;
@@ -2489,83 +2548,83 @@ goToAccountSub(opt: {
     localStorage.setItem(this.notifStorageKey(category), String(ts));
   }
 
-private extractRecordTimestamp(record: any, category: 'clinical' | 'cancel' = 'clinical'): number {
-  const raw = category === 'cancel'
-    ? (record?.cancelDate ?? record?.created_on ?? record?.createdAt ?? record?.date ?? null)
-    : (record?.created_on ?? record?.cancelDate ?? record?.createdAt ?? record?.date ?? null);
+  private extractRecordTimestamp(record: any, category: 'clinical' | 'cancel' = 'clinical'): number {
+    const raw = category === 'cancel'
+      ? (record?.cancelDate ?? record?.created_on ?? record?.createdAt ?? record?.date ?? null)
+      : (record?.created_on ?? record?.cancelDate ?? record?.createdAt ?? record?.date ?? null);
 
-  if (raw === null || raw === undefined) return 0;
+    if (raw === null || raw === undefined) return 0;
 
-  if (typeof raw === 'number') return raw;
-  const asNum = Number(raw);
-  if (!isNaN(asNum) && String(raw).trim() !== '') return asNum;
+    if (typeof raw === 'number') return raw;
+    const asNum = Number(raw);
+    if (!isNaN(asNum) && String(raw).trim() !== '') return asNum;
 
-  const parsed = new Date(raw).getTime();
-  return isNaN(parsed) ? 0 : parsed;
-}
+    const parsed = new Date(raw).getTime();
+    return isNaN(parsed) ? 0 : parsed;
+  }
 
-private countUnseen(records: any[], category: 'clinical' | 'cancel'): number {
-  const lastSeen = this.getLastSeen(category);
-  if (!Array.isArray(records)) return 0;
+  private countUnseen(records: any[], category: 'clinical' | 'cancel'): number {
+    const lastSeen = this.getLastSeen(category);
+    if (!Array.isArray(records)) return 0;
 
-  return records.filter((r: any) => this.extractRecordTimestamp(r, category) > lastSeen).length;
-}
+    return records.filter((r: any) => this.extractRecordTimestamp(r, category) > lastSeen).length;
+  }
 
   /** Fetches both lists and updates the two badge counts. Silent —
    * never shows an error toast, since this runs on every poll tick
    * in the background and a transient failure shouldn't be noisy. */
-loadNotificationCounts(): void {
-  const today = new Date();
-  const endDate = this.nextDay(this.formatDateParam(today));   // ✅ आधीच nextDay वापरतंय, ठीक आहे
-  const lookback = new Date(today);
-  lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
-  const startDate = this.formatDateParam(lookback);
+  loadNotificationCounts(): void {
+    const today = new Date();
+    const endDate = this.nextDay(this.formatDateParam(today));   // ✅ आधीच nextDay वापरतंय, ठीक आहे
+    const lookback = new Date(today);
+    lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
+    const startDate = this.formatDateParam(lookback);
 
-  const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
+    const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
 
-  this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate).subscribe({
-    next: (res: any) => {
-      const list = res?.content || res?.data || res || [];
+    this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate).subscribe({
+      next: (res: any) => {
+        const list = res?.content || res?.data || res || [];
 
-      // ✅ list page सारखंच booking+test नुसार group करून प्रत्येक
-      // group मध्ये खरंच "unread" (दुसऱ्याचं + not closed) आहे का बघा
-      const grouped = new Map<string, any[]>();
-      for (const raw of list) {
-        const bookingId = raw?.bookingId;
-        const testId = raw?.testId;
-        const key = `${bookingId}_${testId}`;
-        if (!grouped.has(key)) grouped.set(key, []);
-        grouped.get(key)!.push(raw);
-      }
+        // ✅ list page सारखंच booking+test नुसार group करून प्रत्येक
+        // group मध्ये खरंच "unread" (दुसऱ्याचं + not closed) आहे का बघा
+        const grouped = new Map<string, any[]>();
+        for (const raw of list) {
+          const bookingId = raw?.bookingId;
+          const testId = raw?.testId;
+          const key = `${bookingId}_${testId}`;
+          if (!grouped.has(key)) grouped.set(key, []);
+          grouped.get(key)!.push(raw);
+        }
 
-      let unreadBookingsCount = 0;
-      grouped.forEach((entries) => {
-        const hasUnread = entries.some((e: any) =>
-          Number(e?.created_by ?? e?.createdBy) !== currentUserId &&
-          String(e?.status || '').toLowerCase() !== 'closed'
-        );
-        if (hasUnread) unreadBookingsCount++;
-      });
+        let unreadBookingsCount = 0;
+        grouped.forEach((entries) => {
+          const hasUnread = entries.some((e: any) =>
+            Number(e?.created_by ?? e?.createdBy) !== currentUserId &&
+            String(e?.status || '').toLowerCase() !== 'closed'
+          );
+          if (hasUnread) unreadBookingsCount++;
+        });
 
-      this.ngZone.run(() => {
-        this.clinicalUnseenCount = unreadBookingsCount;
-        this.cdr.detectChanges();
-      });
-    },
-    error: () => { /* silent — badge just won't update this tick */ }
-  });
+        this.ngZone.run(() => {
+          this.clinicalUnseenCount = unreadBookingsCount;
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => { /* silent — badge just won't update this tick */ }
+    });
 
-  this.labApi.getCancelTests(startDate, endDate, 500).subscribe({
-    next: (res: any) => {
-      const list = res?.content || res?.data || res || [];
-      this.ngZone.run(() => {
-        this.cancelUnseenCount = this.countUnseen(list, 'cancel');
-        this.cdr.detectChanges();
-      });
-    },
-    error: () => { /* silent */ }
-  });
-}
+    this.labApi.getCancelTests(startDate, endDate, 500).subscribe({
+      next: (res: any) => {
+        const list = res?.content || res?.data || res || [];
+        this.ngZone.run(() => {
+          this.cancelUnseenCount = this.countUnseen(list, 'cancel');
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => { /* silent */ }
+    });
+  }
 
   /** Marks a category as "seen right now" — badge drops to 0
    * immediately (no need to wait for the next poll tick). */
@@ -2576,14 +2635,14 @@ loadNotificationCounts(): void {
   }
 
   openClinicalHistory(): void {
-   
+
     this.goToPage('clinical-history');
   }
 
-openCancelTest(): void {
-  this.markCategorySeen('cancel');   // ✅ क्लिक करताच count 0 होतो
-  this.goToPage('cancel-test');
-}
+  openCancelTest(): void {
+    this.markCategorySeen('cancel');   // ✅ क्लिक करताच count 0 होतो
+    this.goToPage('cancel-test');
+  }
 }
 
 

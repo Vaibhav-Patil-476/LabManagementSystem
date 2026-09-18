@@ -56,7 +56,7 @@
             <div class="sc-header" (click)="toggleSearchExpand(item)">
               <div class="sc-header-left">
                 <div class="sc-id-row">
-                  <span class="sc-id">#{{ item.bookingId }}</span>
+                  <span class="sc-id" (click)="openGlobalDownloadModal(item, $event)">#{{ item.bookingId }}</span>
                   <span class="sc-date">{{ item.bookingDate }}</span>
                 </div>
                 <div class="sc-name">{{ item.title | titlecase }} {{ item.customerName }}</div>
@@ -111,7 +111,7 @@
                   <span>Edit Barcode</span>
                 </div>
                 <div class="sc-action-item" [class.item-loading]="printingId === item.bookingId"
-                  (click)="printBillInline(item)">
+                  (click)="openPrintBillModal(item, $event)">
                   <span class="sc-action-icon">
                     <ion-spinner name="crescent" *ngIf="printingId === item.bookingId"></ion-spinner>
                     <ion-icon name="print-outline" *ngIf="printingId !== item.bookingId"></ion-icon>
@@ -119,12 +119,11 @@
                   <span>{{ printingId === item.bookingId ? 'Generating...' : 'Print Bill' }}</span>
                 </div>
                 <div class="sc-action-item" *ngIf="canShowDownloadReport && item.hasCompletedTest"
-                  [class.item-loading]="downloadingReportId === item.bookingId" (click)="downloadReportInline(item)">
+                  (click)="openGlobalDownloadModal(item, $event)">
                   <span class="sc-action-icon">
-                    <ion-spinner name="crescent" *ngIf="downloadingReportId === item.bookingId"></ion-spinner>
-                    <ion-icon name="download-outline" *ngIf="downloadingReportId !== item.bookingId"></ion-icon>
+                    <ion-icon name="download-outline"></ion-icon>
                   </span>
-                  <span>{{ downloadingReportId === item.bookingId ? 'Generating...' : 'Download Report' }}</span>
+                  <span>Download Report</span>
                 </div>
               </div>
             </div>
@@ -134,6 +133,102 @@
             <ion-icon name="search-outline"></ion-icon>
             <span>No results found</span>
           </div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+  <!-- Download Report modal (Global search — With/Without letterhead) -->
+  <ion-modal cssClass="test-preview-popup" [isOpen]="isGlobalDownloadModalOpen"
+    (didDismiss)="closeGlobalDownloadModal()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>Download Report <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
+              globalDownloadItem?.bookingId }}</span></h2>
+          <ion-button fill="clear" (click)="closeGlobalDownloadModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div style="padding:18px;">
+          <ion-button expand="block" fill="solid" class="save-changes-btn" [disabled]="downloadingReportId !== null"
+            (click)="confirmGlobalDownload(true)">
+            {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="save-changes-btn" style="margin-top:10px;"
+            [disabled]="downloadingReportId !== null" (click)="confirmGlobalDownload(false)">
+            {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
+          </ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+<!-- Print Bill modal (Global search — Price Type + With/Without letterhead) -->
+<ion-modal cssClass="test-preview-popup" [isOpen]="isPrintBillModalOpen" (didDismiss)="closePrintBillModal()">
+  <ng-template>
+    <div class="modal-page">
+      <div class="modal-header">
+        <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId }}</span></h2>
+        <ion-button fill="clear" (click)="closePrintBillModal()">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div style="padding:18px;">
+
+        <div class="input-group" style="margin-bottom:16px;">
+          <label>Price Type</label>
+          <div class="input-wrap">
+            <ion-select interface="popover" placeholder="Select"
+              [(ngModel)]="selectedBillPriceType" class="premium-select">
+              <ion-select-option value="myprice">My Price</ion-select-option>
+              <ion-select-option value="mrp">MRP</ion-select-option>
+            </ion-select>
+          </div>
+        </div>
+
+        <ion-button expand="block" fill="solid" class="save-changes-btn"
+          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With letterHead' }}
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="save-changes-btn" style="margin-top:10px;"
+          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
+        </ion-button>
+
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
+
+
+  <!-- Report Not Ready modal (Global search) -->
+  <ion-modal cssClass="test-preview-popup" [isOpen]="isGlobalReportNotReadyModalOpen"
+    (didDismiss)="closeGlobalReportNotReadyModal()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #a71d2a);">
+          <h2>Report Not Ready <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
+              globalReportNotReadyBookingId }}</span></h2>
+          <ion-button fill="clear" (click)="closeGlobalReportNotReadyModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div style="padding:24px 20px; text-align:center;">
+          <ion-icon name="alert-circle-outline" style="font-size:54px; color:#dc3545; margin-bottom:14px;"></ion-icon>
+          <p style="font-size:14px; font-weight:600; color:#6c7b86; line-height:1.55; margin:0 0 22px;">
+            This report is not yet complete. Please try again once all tests for this booking have been completed.
+          </p>
+          <ion-button expand="block" fill="solid" class="save-changes-btn"
+            style="--background: linear-gradient(135deg, #dc3545, #a71d2a);" (click)="closeGlobalReportNotReadyModal()">
+            GOT IT
+          </ion-button>
         </div>
       </div>
     </ng-template>
@@ -1163,30 +1258,22 @@
 
     <!-- Centered floating card, sits directly above the Account tab -->
 
-<div class="account-submenu-card" [class.open]="accountMenuOpen">
-  <button
-    *ngFor="let opt of accountSubOptions"
-    type="button"
-    class="bn-sub-option"
-    [class.locked]="opt.locked"
-    (click)="goToAccountSub(opt)"
-  >
-    <span class="bn-sub-circle">
-      <ion-icon [name]="opt.icon"></ion-icon>
-    </span>
+    <div class="account-submenu-card" [class.open]="accountMenuOpen">
+      <button *ngFor="let opt of accountSubOptions" type="button" class="bn-sub-option" [class.locked]="opt.locked"
+        (click)="goToAccountSub(opt)">
+        <span class="bn-sub-circle">
+          <ion-icon [name]="opt.icon"></ion-icon>
+        </span>
 
-    <span class="bn-sub-label">
-      {{ opt.label }}
-    </span>
+        <span class="bn-sub-label">
+          {{ opt.label }}
+        </span>
 
-    <!-- Lock icon ONLY for locked options -->
-    <ion-icon
-      *ngIf="opt.locked"
-      name="lock-closed-outline"
-      class="locked-icon">
-    </ion-icon>
-  </button>
-</div>
+        <!-- Lock icon ONLY for locked options -->
+        <ion-icon *ngIf="opt.locked" name="lock-closed-outline" class="locked-icon">
+        </ion-icon>
+      </button>
+    </div>
 
 
 

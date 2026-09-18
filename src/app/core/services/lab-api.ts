@@ -890,19 +890,22 @@ getWalletSummary(
 
 private readonly COMMISSION_PAGE_SIZE = 2000;
 
-// Single page — infinite-scroll / lazy loading sathi vaparaycha
-// asel tar hach vapar.
 getCommissionHistoryPage(
   franchiseId: number,
+  startDate?: string,
+  endDate?: string,
   page: number = 0,
   size: number = this.COMMISSION_PAGE_SIZE
 ): Observable<any> {
-  const params = new HttpParams()
+  let params = new HttpParams()
     .set('transaction', 'true')
     .set('groupByBooking', 'true')
     .set('commission', 'true')
     .set('page', page.toString())
     .set('size', Math.min(size, this.COMMISSION_PAGE_SIZE).toString());
+
+  if (startDate) params = params.set('startDate', startDate);
+  if (endDate) params = params.set('endDate', endDate);
 
   return this.http.get(
     `${this.BASE_URL}/api/v1/wallet/${this.getLabId()}/${franchiseId}`,
@@ -910,21 +913,13 @@ getCommissionHistoryPage(
   );
 }
 
-// Sagle pages loop karun (page=0..totalPages-1) ekatra records
-// return karto — Excel/PDF export sathi, jithe pura dataset
-// memory madhe lagto.
-//
-// ⚠️ NOTE: ha wallet endpoint records thet `content` madhe deत
-// nahi — te `groupedTransaction.content` chya aat nested aahet
-// (response root la walletId/balance/franchiseId/etc. asto,
-// aani records tyachya खाली groupedTransaction key madhe).
-async getAllCommissionHistory(franchiseId: number): Promise<any[]> {
+async getAllCommissionHistory(franchiseId: number, startDate?: string, endDate?: string): Promise<any[]> {
   const all: any[] = [];
   let page = 0;
   let totalPages = 1;
 
   do {
-    const res: any = await firstValueFrom(this.getCommissionHistoryPage(franchiseId, page));
+    const res: any = await firstValueFrom(this.getCommissionHistoryPage(franchiseId, startDate, endDate, page));
     if (!res) break;
     const grouped = res.groupedTransaction ?? {};
     all.push(...(grouped.content ?? []));

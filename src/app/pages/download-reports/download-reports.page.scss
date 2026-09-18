@@ -1,1834 +1,1834 @@
-// ==========================================================
-// PREMIUM ENTERPRISE DESIGN SYSTEM — Report Status / Download
-// Recolored to match Dashboard's teal identity (--brand: #087b76).
-// Same token set as booking-status.page.scss — keep in sync.
-// ==========================================================
-:host {
-  --primary: #087b76;
-  --primary-dark: #075f5d;
-  --primary-light: #d9f0ee;
-  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
-  --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
+  // ==========================================================
+  // PREMIUM ENTERPRISE DESIGN SYSTEM — Report Status / Download
+  // Recolored to match Dashboard's teal identity (--brand: #087b76).
+  // Same token set as booking-status.page.scss — keep in sync.
+  // ==========================================================
+  :host {
+    --primary: #087b76;
+    --primary-dark: #075f5d;
+    --primary-light: #d9f0ee;
+    --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+    --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
 
-  --success: #16866e;
-  --success-bg: #d8f2ed;
-  --warning: #bd7d19;
-  --warning-bg: #fff0d9;
-  --danger: #c05262;
-  --danger-bg: #ffebef;
-  --info: #2470b9;
-  --info-bg: #e1efff;
-  --teal: #087b76;
-  --pink: #bd526f;
-  --purple: #7856c9;
-  --gray-accent: #8fa1a5;
+    --success: #16866e;
+    --success-bg: #d8f2ed;
+    --warning: #bd7d19;
+    --warning-bg: #fff0d9;
+    --danger: #c05262;
+    --danger-bg: #ffebef;
+    --info: #2470b9;
+    --info-bg: #e1efff;
+    --teal: #087b76;
+    --pink: #bd526f;
+    --purple: #7856c9;
+    --gray-accent: #8fa1a5;
 
-  --border-color: #e4eded;
-  --section-bg: #f5f9f9;
+    --border-color: #e4eded;
+    --section-bg: #f5f9f9;
 
-  --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
-  --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
-  --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
-  --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
-  --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
+    --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
+    --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
+    --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
+    --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
+    --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
 
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 26px;
-  --r-pill: 999px;
-}
-
-// =========================
-// Header
-// =========================
-.report-header {
-  --background: var(--brand-gradient);
-  --color: #ffffff;
-
-  ion-title {
-    font-weight: 700;
-    font-size: 17px;
-    letter-spacing: -0.2px;
+    --r-sm: 10px;
+    --r-md: 14px;
+    --r-lg: 20px;
+    --r-xl: 26px;
+    --r-pill: 999px;
   }
 
-  ion-back-button {
+  // =========================
+  // Header
+  // =========================
+  .report-header {
+    --background: var(--brand-gradient);
     --color: #ffffff;
-  }
-}
 
-// .report-content {
-//   --background: var(--app-bg, #f4f8f8);
-//   --padding-start: 0;
-//   --padding-end: 0;
-// }
+    ion-title {
+      font-weight: 700;
+      font-size: 17px;
+      letter-spacing: -0.2px;
+    }
 
-// 1. Content background white
-.report-content {
-  --background: #ffffff;
-  padding: 0;
-}
-
-.report-content::part(scroll) {
-  background: #ffffff;
-}
-
-// =========================
-// Top bar
-// =========================
-// 2. Top bar padding
-.top-bar {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-
-  padding: 18px 12px 0;
-
-  background: #ffffff;
-}
-
-.total-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  background: var(--brand-gradient);
-  color: #ffffff;
-  font-weight: 700;
-  font-size: 0.85rem;
-  padding: 10px 18px;
-  border-radius: var(--r-pill);
-  box-shadow: var(--shadow-glow);
-
-  ion-icon {
-    font-size: 15px;
-  }
-}
-
-.refresh-hint {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--pink);
-  background: var(--danger-bg);
-  font-weight: 600;
-  font-size: 0.8rem;
-  padding: 8px 12px;
-  border-radius: var(--r-pill);
-
-  ion-icon {
-    font-size: 14px;
-  }
-}
-
-// ==========================================================
-// FILTER BAR — same pattern used on Booking Status page, so both
-// pages behave/look identical.
-// ==========================================================
-// 3. Filter bar padding
-.filter-bar {
-  position: relative;
-  z-index: 3;
-
-  display: flex;
-  flex-wrap: wrap;
-  align-items: stretch;
-  gap: 10px;
-
-  padding: 14px 12px 4px;
-
-  background: #ffffff;
-}
-
-.filter-field {
-  flex: 1 1 140px;
-  min-width: 130px;
-  max-width: 100%;
-  display: flex;
-  align-items: center;
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--r-sm);
-  background: var(--section-bg);
-  padding: 0 12px;
-  height: 44px;
-  box-sizing: border-box;
-  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
-
-  select,
-  input {
-    border: none;
-    background: transparent;
-    outline: none;
-    width: 100%;
-    min-width: 0;
-    height: 100%;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-dark, #14222e);
-  }
-
-  ion-icon {
-    color: var(--gray-accent);
-    margin-right: 8px;
-    flex-shrink: 0;
-    font-size: 16px;
-  }
-
-  &:focus-within {
-    border-color: var(--primary);
-    background: var(--primary-light);
-    box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
-  }
-}
-
-.search-field input::placeholder {
-  color: #9aabae;
-}
-
-// ==========================================================
-// FILTER FIELDS — search / franchise / date all share the same
-// height + icon-badge treatment so they read as one consistent row.
-// ==========================================================
-.search-field,
-.select-field,
-.date-field {
-  height: 58px;
-  padding: 0 16px;
-  gap: 12px;
-}
-
-.search-field {
-  .search-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary-light);
-    flex-shrink: 0;
-
-    ion-icon {
-      color: var(--primary);
-      font-size: 18px;
-      margin: 0;
+    ion-back-button {
+      --color: #ffffff;
     }
   }
 
-  input {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-dark, #14222e);
+  // .report-content {
+  //   --background: var(--app-bg, #f4f8f8);
+  //   --padding-start: 0;
+  //   --padding-end: 0;
+  // }
+
+  // 1. Content background white
+  .report-content {
+    --background: #ffffff;
+    padding: 0;
   }
 
-  input::placeholder {
-    color: #9aabae;
-    font-weight: 500;
+  .report-content::part(scroll) {
+    background: #ffffff;
   }
-}
 
-.select-field {
-  overflow: hidden;
-
-  .select-icon-badge {
+  // =========================
+  // Top bar
+  // =========================
+  // 2. Top bar padding
+  .top-bar {
     display: flex;
     align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary-light);
-    flex-shrink: 0;
+    gap: 12px;
+    flex-wrap: wrap;
 
-    ion-icon {
-      color: var(--primary);
-      font-size: 18px;
-      margin: 0;
-    }
+    padding: 18px 12px 0;
+
+    background: #ffffff;
   }
 
-  ion-select {
-    flex: 1 1 auto;
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    --padding-start: 0;
-    --padding-end: 4px;
-    --padding-top: 0;
-    --padding-bottom: 0;
-    --placeholder-color: #9aabae;
-    --placeholder-opacity: 1;
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-dark, #14222e);
-    display: flex;
+  .total-pill {
+    display: inline-flex;
     align-items: center;
-    box-sizing: border-box;
-  }
-
-  ion-select::part(text),
-  ion-select::part(placeholder) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-  }
-
-  ion-select::part(icon) {
-    color: var(--gray-accent);
-  }
-}
-
-// ion-popover cha overlay-portaled panel — ::ng-deep havाच.
-:host ::ng-deep ion-select-popover,
-:host ::ng-deep ion-popover {
-  --width: min(320px, 92vw);
-  --max-height: min(360px, 70vh);
-  --box-shadow: var(--shadow-lg);
-  --backdrop-opacity: 0.28;
-
-  &::part(content) {
-    border-radius: var(--r-md);
-  }
-
-  ion-list {
-    padding: 4px;
-  }
-
-  ion-item {
-    --min-height: 44px;
-    font-size: 13.5px;
-  }
-}
-
-.date-field {
-  flex: 1 1 260px;
-  cursor: pointer;
-  position: relative;
-  z-index: 5;
-  overflow: visible;
-  background: var(--card-bg, #fff);
-  border-width: 1.5px;
-
-  .date-icon-badge {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 34px;
-    height: 34px;
-    border-radius: 10px;
-    background: var(--primary-light);
-    flex-shrink: 0;
-
-    ion-icon {
-      color: var(--primary);
-      font-size: 18px;
-      margin: 0;
-    }
-  }
-
-  .date-trigger-btn {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-dark, #14222e);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    letter-spacing: 0.1px;
-  }
-
-  &:hover {
-    border-color: rgba(8, 123, 118, 0.4);
-    background: var(--primary-light);
-  }
-}
-
-.refresh-btn {
-  --border-radius: var(--r-sm);
-  --color: #fff;
-  margin: 0;
-  height: 58px;
-  width: 58px;
-  flex-shrink: 0;
-  --box-shadow: var(--shadow-glow);
-
-  &::part(native) {
+    gap: 8px;
     background: var(--brand-gradient);
-    color: #fff;
+    color: #ffffff;
+    font-weight: 700;
+    font-size: 0.85rem;
+    padding: 10px 18px;
+    border-radius: var(--r-pill);
+    box-shadow: var(--shadow-glow);
+
+    ion-icon {
+      font-size: 15px;
+    }
   }
 
-  &:active::part(native) {
-    transform: scale(0.94);
-  }
-}
+  .refresh-hint {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--pink);
+    background: var(--danger-bg);
+    font-weight: 600;
+    font-size: 0.8rem;
+    padding: 8px 12px;
+    border-radius: var(--r-pill);
 
-// Below 480px, stack every filter field full-width.
-@media (max-width: 480px) {
+    ion-icon {
+      font-size: 14px;
+    }
+  }
+
+  // ==========================================================
+  // FILTER BAR — same pattern used on Booking Status page, so both
+  // pages behave/look identical.
+  // ==========================================================
+  // 3. Filter bar padding
   .filter-bar {
-    flex-direction: column;
+    position: relative;
+    z-index: 3;
+
+    display: flex;
+    flex-wrap: wrap;
     align-items: stretch;
+    gap: 10px;
+
+    padding: 14px 12px 4px;
+
+    background: #ffffff;
   }
 
-  .filter-field,
+  .filter-field {
+    flex: 1 1 140px;
+    min-width: 130px;
+    max-width: 100%;
+    display: flex;
+    align-items: center;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-sm);
+    background: var(--section-bg);
+    padding: 0 12px;
+    height: 44px;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+
+    select,
+    input {
+      border: none;
+      background: transparent;
+      outline: none;
+      width: 100%;
+      min-width: 0;
+      height: 100%;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--text-dark, #14222e);
+    }
+
+    ion-icon {
+      color: var(--gray-accent);
+      margin-right: 8px;
+      flex-shrink: 0;
+      font-size: 16px;
+    }
+
+    &:focus-within {
+      border-color: var(--primary);
+      background: var(--primary-light);
+      box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
+    }
+  }
+
+  .search-field input::placeholder {
+    color: #9aabae;
+  }
+
+  // ==========================================================
+  // FILTER FIELDS — search / franchise / date all share the same
+  // height + icon-badge treatment so they read as one consistent row.
+  // ==========================================================
+  .search-field,
+  .select-field,
   .date-field {
-    width: 100%;
-    flex: 1 1 100%;
+    height: 58px;
+    padding: 0 16px;
+    gap: 12px;
+  }
+
+  .search-field {
+    .search-icon-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      flex-shrink: 0;
+
+      ion-icon {
+        color: var(--primary);
+        font-size: 18px;
+        margin: 0;
+      }
+    }
+
+    input {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-dark, #14222e);
+    }
+
+    input::placeholder {
+      color: #9aabae;
+      font-weight: 500;
+    }
+  }
+
+  .select-field {
+    overflow: hidden;
+
+    .select-icon-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      flex-shrink: 0;
+
+      ion-icon {
+        color: var(--primary);
+        font-size: 18px;
+        margin: 0;
+      }
+    }
+
+    ion-select {
+      flex: 1 1 auto;
+      width: 100%;
+      height: 100%;
+      min-width: 0;
+      --padding-start: 0;
+      --padding-end: 4px;
+      --padding-top: 0;
+      --padding-bottom: 0;
+      --placeholder-color: #9aabae;
+      --placeholder-opacity: 1;
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-dark, #14222e);
+      display: flex;
+      align-items: center;
+      box-sizing: border-box;
+    }
+
+    ion-select::part(text),
+    ion-select::part(placeholder) {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 100%;
+    }
+
+    ion-select::part(icon) {
+      color: var(--gray-accent);
+    }
+  }
+
+  // ion-popover cha overlay-portaled panel — ::ng-deep havाच.
+  :host ::ng-deep ion-select-popover,
+  :host ::ng-deep ion-popover {
+    --width: min(320px, 92vw);
+    --max-height: min(360px, 70vh);
+    --box-shadow: var(--shadow-lg);
+    --backdrop-opacity: 0.28;
+
+    &::part(content) {
+      border-radius: var(--r-md);
+    }
+
+    ion-list {
+      padding: 4px;
+    }
+
+    ion-item {
+      --min-height: 44px;
+      font-size: 13.5px;
+    }
+  }
+
+  .date-field {
+    flex: 1 1 260px;
+    cursor: pointer;
+    position: relative;
+    z-index: 5;
+    overflow: visible;
+    background: var(--card-bg, #fff);
+    border-width: 1.5px;
+
+    .date-icon-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 34px;
+      height: 34px;
+      border-radius: 10px;
+      background: var(--primary-light);
+      flex-shrink: 0;
+
+      ion-icon {
+        color: var(--primary);
+        font-size: 18px;
+        margin: 0;
+      }
+    }
+
+    .date-trigger-btn {
+      font-size: 16px;
+      font-weight: 600;
+      color: var(--text-dark, #14222e);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      letter-spacing: 0.1px;
+    }
+
+    &:hover {
+      border-color: rgba(8, 123, 118, 0.4);
+      background: var(--primary-light);
+    }
   }
 
   .refresh-btn {
-    width: 100%;
-  }
-}
-
-// ==========================================================
-// Material date-range-picker integration — identical to Booking
-// Status page, so the calendar UI/behaviour matches everywhere.
-// ==========================================================
-.hidden-range-field {
-  position: absolute !important;
-  width: 1px !important;
-  height: 1px !important;
-  padding: 0 !important;
-  margin: -1px !important;
-  overflow: hidden !important;
-  clip: rect(0, 0, 0, 0) !important;
-  white-space: nowrap !important;
-  border: 0 !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
-::ng-deep .cdk-overlay-container {
-  z-index: 99999 !important;
-}
-
-::ng-deep .mat-datepicker-content {
-  z-index: 99999 !important;
-  background-color: #ffffff !important;
-  border-radius: 12px !important;
-  box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16)) !important;
-}
-
-::ng-deep .mat-calendar {
-  background-color: #ffffff !important;
-}
-
-::ng-deep .mat-calendar-body-selected {
-  background-color: var(--primary, #087b76) !important;
-  color: #ffffff !important;
-}
-
-::ng-deep .mat-calendar-body-in-range::before {
-  background: var(--primary-light, #d9f0ee) !important;
-}
-
-::ng-deep .mat-calendar-body-comparison-bridge-start::before,
-::ng-deep .mat-calendar-body-comparison-bridge-end::before,
-::ng-deep .mat-calendar-body-range-start::before,
-::ng-deep .mat-calendar-body-range-end::before {
-  background: var(--primary-light, #d9f0ee) !important;
-}
-
-::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
-  border-color: var(--primary, #087b76) !important;
-}
-
-::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
-  background-color: var(--primary-light, #d9f0ee) !important;
-}
-
-// =========================
-// Status tabs
-// =========================
-.status-tabs-wrapper {
-  padding: 4px 12px 8px;
-  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
-  mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
-}
-
-.status-tabs {
-  display: flex;
-  align-items: stretch;
-  gap: 10px;
-  overflow-x: auto;
-  overflow-y: hidden;
-  padding: 4px 12px 10px;
-  scroll-snap-type: x proximity;
-  -webkit-overflow-scrolling: touch;
-  scrollbar-width: none;
-
-  &::-webkit-scrollbar {
-    display: none;
-  }
-}
-
-.status-tab {
-  scroll-snap-align: start;
-  flex: 0 0 auto;
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  padding: 11px 18px;
-  border-radius: var(--r-pill);
-  background: var(--card-bg, #fff);
-  border: 1.5px solid var(--border-color);
-  box-shadow: var(--shadow-xs);
-  cursor: pointer;
-  white-space: nowrap;
-
-  transition:
-    border-color 0.15s ease,
-    background 0.15s ease,
-    box-shadow 0.15s ease,
-    transform 0.1s ease;
-
-  // =========================
-  // TAB DOT
-  // =========================
-  .tab-dot {
-    width: 8px;
-    height: 8px;
-    border-radius: 50%;
+    --border-radius: var(--r-sm);
+    --color: #fff;
+    margin: 0;
+    height: 58px;
+    width: 58px;
     flex-shrink: 0;
+    --box-shadow: var(--shadow-glow);
 
-    // ALL - GRAY
-    &.badge-all {
-      background: #607d8b;
+    &::part(native) {
+      background: var(--brand-gradient);
+      color: #fff;
     }
 
-    // COMPLETE - GREEN
-    &.badge-complete {
-      background: var(--success);
-    }
-
-    // CLINICAL - BLUE
-    &.badge-clinical {
-      background: var(--info);
-    }
-
-    // PARTIALLY COMPLETE - PINK
-    &.badge-partial {
-      background: var(--pink);
-    }
-
-    // PENDING - ORANGE
-    &.badge-pending {
-      background: var(--warning);
-    }
-
-    &.badge-clinical {
-  background: #2470b9;
-}
-
-  &.badge-snr {
-    background: var(--purple, #7856c9) !important;
-    color: #fff !important;
-  }
-
-    // CANCEL - RED
-    &.badge-cancel {
-      background: var(--danger);
+    &:active::part(native) {
+      transform: scale(0.94);
     }
   }
 
-  // =========================
-  // TAB LABEL
-  // =========================
-  .tab-label {
-    font-weight: 700;
-    font-size: 0.85rem;
-    color: #56696c;
-    transition: color 0.15s ease;
-  }
-
-  // =========================
-  // TAB COUNT
-  // =========================
-  .tab-count {
-    min-width: 24px;
-    height: 24px;
-    padding: 0 7px;
-    border-radius: var(--r-pill);
-    color: #ffffff;
-    font-size: 0.74rem;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-weight: 800;
-    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
-
-    // ALL - GRAY
-    &.badge-all {
-      background: #607d8b;
+  // Below 480px, stack every filter field full-width.
+  @media (max-width: 480px) {
+    .filter-bar {
+      flex-direction: column;
+      align-items: stretch;
     }
 
-    // COMPLETE - GREEN
-    &.badge-complete {
-      background: var(--success);
+    .filter-field,
+    .date-field {
+      width: 100%;
+      flex: 1 1 100%;
     }
 
-    // CLINICAL - BLUE
-    &.badge-clinical {
-      background: var(--info);
-    }
-
-    // PARTIALLY COMPLETE - PINK
-    &.badge-partial {
-      background: var(--pink);
-    }
-
-    // PENDING - ORANGE
-    &.badge-pending {
-      background: var(--warning);
-    }
-
-    // SNR - PURPLE
-    &.badge-snr {
-      background: var(--purple);
-    }
-
-    // CANCEL - RED
-    &.badge-cancel {
-      background: var(--danger);
+    .refresh-btn {
+      width: 100%;
     }
   }
 
-  // =========================
-  // HOVER
-  // =========================
-  &:hover {
-    border-color: rgba(8, 123, 118, 0.35);
-    box-shadow: var(--shadow-sm);
+  // ==========================================================
+  // Material date-range-picker integration — identical to Booking
+  // Status page, so the calendar UI/behaviour matches everywhere.
+  // ==========================================================
+  .hidden-range-field {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  ::ng-deep .cdk-overlay-container {
+    z-index: 99999 !important;
+  }
+
+  ::ng-deep .mat-datepicker-content {
+    z-index: 99999 !important;
+    background-color: #ffffff !important;
+    border-radius: 12px !important;
+    box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16)) !important;
+  }
+
+  ::ng-deep .mat-calendar {
+    background-color: #ffffff !important;
+  }
+
+  ::ng-deep .mat-calendar-body-selected {
+    background-color: var(--primary, #087b76) !important;
+    color: #ffffff !important;
+  }
+
+  ::ng-deep .mat-calendar-body-in-range::before {
+    background: var(--primary-light, #d9f0ee) !important;
+  }
+
+  ::ng-deep .mat-calendar-body-comparison-bridge-start::before,
+  ::ng-deep .mat-calendar-body-comparison-bridge-end::before,
+  ::ng-deep .mat-calendar-body-range-start::before,
+  ::ng-deep .mat-calendar-body-range-end::before {
+    background: var(--primary-light, #d9f0ee) !important;
+  }
+
+  ::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
+    border-color: var(--primary, #087b76) !important;
+  }
+
+  ::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
+    background-color: var(--primary-light, #d9f0ee) !important;
   }
 
   // =========================
-  // PRESS
+  // Status tabs
   // =========================
-  &:active {
-    transform: scale(0.97);
+  .status-tabs-wrapper {
+    padding: 4px 12px 8px;
+    -webkit-mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
+    mask-image: linear-gradient(to right, transparent 0, #000 14px, #000 calc(100% - 14px), transparent 100%);
   }
-
-  // =========================
-  // ACTIVE TAB
-  // =========================
-  &.active {
-    border-color: transparent;
-
-    .tab-dot {
-      background: #ffffff !important;
-    }
-
-    .tab-label {
-      color: #ffffff !important;
-    }
-
-    .tab-count {
-      background: rgba(255, 255, 255, 0.22) !important;
-      color: #ffffff !important;
-      box-shadow: none;
-    }
-
-    // =========================
-    // ALL - GRAY
-    // =========================
-    &:has(.tab-dot.badge-all) {
-      background: #607d8b !important;
-      border-color: #607d8b !important;
-      box-shadow: 0 8px 22px rgba(96, 125, 139, 0.28);
-    }
-
-    // =========================
-    // COMPLETE - GREEN
-    // =========================
-    &:has(.tab-dot.badge-complete) {
-      background: var(--success) !important;
-      border-color: var(--success) !important;
-      box-shadow: 0 8px 22px rgba(22, 134, 110, 0.28);
-    }
-
-    // =========================
-    // CLINICAL - BLUE
-    // =========================
-    &:has(.tab-dot.badge-clinical) {
-      background: var(--info) !important;
-      border-color: var(--info) !important;
-      box-shadow: 0 8px 22px rgba(36, 112, 185, 0.28);
-    }
-
-    // =========================
-    // PARTIALLY COMPLETE - PINK
-    // =========================
-    &:has(.tab-dot.badge-partial) {
-      background: var(--pink) !important;
-      border-color: var(--pink) !important;
-      box-shadow: 0 8px 22px rgba(189, 82, 111, 0.28);
-    }
-
-    // =========================
-    // PENDING - ORANGE
-    // =========================
-    &:has(.tab-dot.badge-pending) {
-      background: var(--warning) !important;
-      border-color: var(--warning) !important;
-      box-shadow: 0 8px 22px rgba(189, 125, 25, 0.28);
-    }
-
-    // =========================
-    // SNR - PURPLE
-    // =========================
-    &:has(.tab-dot.badge-snr) {
-      background: var(--purple) !important;
-      border-color: var(--purple) !important;
-      box-shadow: 0 8px 22px rgba(120, 86, 201, 0.28);
-    }
-
-    // =========================
-    // CANCEL - RED
-    // =========================
-    &:has(.tab-dot.badge-cancel) {
-      background: var(--danger) !important;
-      border-color: var(--danger) !important;
-      box-shadow: 0 8px 22px rgba(192, 82, 98, 0.28);
-    }
-  }
-}
-
-// =========================
-// MOBILE
-// =========================
-@media (max-width: 480px) {
-.status-tabs-wrapper {
-  padding: 4px 12px 8px;
-  background: #ffffff;
-}
 
   .status-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: 10px;
+    overflow-x: auto;
+    overflow-y: hidden;
     padding: 4px 12px 10px;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar {
+      display: none;
+    }
   }
 
   .status-tab {
-    padding: 10px 14px;
+    scroll-snap-align: start;
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 11px 18px;
+    border-radius: var(--r-pill);
+    background: var(--card-bg, #fff);
+    border: 1.5px solid var(--border-color);
+    box-shadow: var(--shadow-xs);
+    cursor: pointer;
+    white-space: nowrap;
 
+    transition:
+      border-color 0.15s ease,
+      background 0.15s ease,
+      box-shadow 0.15s ease,
+      transform 0.1s ease;
+
+    // =========================
+    // TAB DOT
+    // =========================
+    .tab-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+
+      // ALL - GRAY
+      &.badge-all {
+        background: #607d8b;
+      }
+
+      // COMPLETE - GREEN
+      &.badge-complete {
+        background: var(--success);
+      }
+
+      // CLINICAL - BLUE
+      &.badge-clinical {
+        background: var(--info);
+      }
+
+      // PARTIALLY COMPLETE - PINK
+      &.badge-partial {
+        background: var(--pink);
+      }
+
+      // PENDING - ORANGE
+      &.badge-pending {
+        background: var(--warning);
+      }
+
+      &.badge-clinical {
+    background: #2470b9;
+  }
+
+    &.badge-snr {
+      background: var(--purple, #7856c9) !important;
+      color: #fff !important;
+    }
+
+      // CANCEL - RED
+      &.badge-cancel {
+        background: var(--danger);
+      }
+    }
+
+    // =========================
+    // TAB LABEL
+    // =========================
     .tab-label {
-      font-size: 0.8rem;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: #56696c;
+      transition: color 0.15s ease;
+    }
+
+    // =========================
+    // TAB COUNT
+    // =========================
+    .tab-count {
+      min-width: 24px;
+      height: 24px;
+      padding: 0 7px;
+      border-radius: var(--r-pill);
+      color: #ffffff;
+      font-size: 0.74rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 800;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+
+      // ALL - GRAY
+      &.badge-all {
+        background: #607d8b;
+      }
+
+      // COMPLETE - GREEN
+      &.badge-complete {
+        background: var(--success);
+      }
+
+      // CLINICAL - BLUE
+      &.badge-clinical {
+        background: var(--info);
+      }
+
+      // PARTIALLY COMPLETE - PINK
+      &.badge-partial {
+        background: var(--pink);
+      }
+
+      // PENDING - ORANGE
+      &.badge-pending {
+        background: var(--warning);
+      }
+
+      // SNR - PURPLE
+      &.badge-snr {
+        background: var(--purple);
+      }
+
+      // CANCEL - RED
+      &.badge-cancel {
+        background: var(--danger);
+      }
+    }
+
+    // =========================
+    // HOVER
+    // =========================
+    &:hover {
+      border-color: rgba(8, 123, 118, 0.35);
+      box-shadow: var(--shadow-sm);
+    }
+
+    // =========================
+    // PRESS
+    // =========================
+    &:active {
+      transform: scale(0.97);
+    }
+
+    // =========================
+    // ACTIVE TAB
+    // =========================
+    &.active {
+      border-color: transparent;
+
+      .tab-dot {
+        background: #ffffff !important;
+      }
+
+      .tab-label {
+        color: #ffffff !important;
+      }
+
+      .tab-count {
+        background: rgba(255, 255, 255, 0.22) !important;
+        color: #ffffff !important;
+        box-shadow: none;
+      }
+
+      // =========================
+      // ALL - GRAY
+      // =========================
+      &:has(.tab-dot.badge-all) {
+        background: #607d8b !important;
+        border-color: #607d8b !important;
+        box-shadow: 0 8px 22px rgba(96, 125, 139, 0.28);
+      }
+
+      // =========================
+      // COMPLETE - GREEN
+      // =========================
+      &:has(.tab-dot.badge-complete) {
+        background: var(--success) !important;
+        border-color: var(--success) !important;
+        box-shadow: 0 8px 22px rgba(22, 134, 110, 0.28);
+      }
+
+      // =========================
+      // CLINICAL - BLUE
+      // =========================
+      &:has(.tab-dot.badge-clinical) {
+        background: var(--info) !important;
+        border-color: var(--info) !important;
+        box-shadow: 0 8px 22px rgba(36, 112, 185, 0.28);
+      }
+
+      // =========================
+      // PARTIALLY COMPLETE - PINK
+      // =========================
+      &:has(.tab-dot.badge-partial) {
+        background: var(--pink) !important;
+        border-color: var(--pink) !important;
+        box-shadow: 0 8px 22px rgba(189, 82, 111, 0.28);
+      }
+
+      // =========================
+      // PENDING - ORANGE
+      // =========================
+      &:has(.tab-dot.badge-pending) {
+        background: var(--warning) !important;
+        border-color: var(--warning) !important;
+        box-shadow: 0 8px 22px rgba(189, 125, 25, 0.28);
+      }
+
+      // =========================
+      // SNR - PURPLE
+      // =========================
+      &:has(.tab-dot.badge-snr) {
+        background: var(--purple) !important;
+        border-color: var(--purple) !important;
+        box-shadow: 0 8px 22px rgba(120, 86, 201, 0.28);
+      }
+
+      // =========================
+      // CANCEL - RED
+      // =========================
+      &:has(.tab-dot.badge-cancel) {
+        background: var(--danger) !important;
+        border-color: var(--danger) !important;
+        box-shadow: 0 8px 22px rgba(192, 82, 98, 0.28);
+      }
     }
   }
-}
 
-// ==========================================================
-// DOWNLOAD ROW — compact, premium pill button matching the
-// status-tabs treatment (small, gradient, tight shadow, crisp
-// press feedback) instead of the old full-width bulky button.
-// ==========================================================
-// 6. Download row padding
-.download-row {
-  padding: 4px 12px 4px;
-  display: flex;
-  justify-content: flex-end;
-}
-
-.download-btn {
-  --background: var(--brand-gradient);
-  --background-activated: linear-gradient(135deg, #06635f, #044c4a);
-  --background-hover: linear-gradient(135deg, #0a938c, #087b76);
-  --box-shadow: 0 4px 14px rgba(8, 123, 118, 0.24);
-  --color: #ffffff;
-  --border-radius: var(--r-pill);
-  --padding-start: 16px;
-  --padding-end: 16px;
-  height: 38px;
-  margin: 0;
-  font-weight: 700;
-  font-size: 0.78rem;
-  letter-spacing: 0.1px;
-  text-transform: none;
-  transition: transform 0.1s ease, box-shadow 0.15s ease;
-
-  ion-icon {
-    font-size: 15px;
-    margin-right: 2px;
+  // =========================
+  // MOBILE
+  // =========================
+  @media (max-width: 480px) {
+  .status-tabs-wrapper {
+    padding: 4px 12px 8px;
+    background: #ffffff;
   }
 
-  .btn-label {
-    white-space: nowrap;
+    .status-tabs {
+      padding: 4px 12px 10px;
+    }
+
+    .status-tab {
+      padding: 10px 14px;
+
+      .tab-label {
+        font-size: 0.8rem;
+      }
+    }
   }
 
-  .selected-count {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    min-width: 18px;
-    height: 18px;
-    padding: 0 5px;
-    margin-left: 8px;
-    border-radius: var(--r-pill);
-    background: rgba(255, 255, 255, 0.24);
-    font-size: 0.7rem;
-    font-weight: 800;
-  }
-
-  &:not([disabled]):hover {
-    --box-shadow: 0 6px 18px rgba(8, 123, 118, 0.32);
-  }
-
-  &:not([disabled]):active {
-    transform: scale(0.96);
-  }
-
-  &[disabled] {
-    --background: #dde6e6;
-    --box-shadow: none;
-    --color: #a3b2b1;
-    opacity: 1;
-  }
-}
-
-@media (max-width: 480px) {
+  // ==========================================================
+  // DOWNLOAD ROW — compact, premium pill button matching the
+  // status-tabs treatment (small, gradient, tight shadow, crisp
+  // press feedback) instead of the old full-width bulky button.
+  // ==========================================================
+  // 6. Download row padding
   .download-row {
-    justify-content: stretch;
+    padding: 4px 12px 4px;
+    display: flex;
+    justify-content: flex-end;
   }
 
   .download-btn {
-    width: 100%;
-    height: 40px;
-  }
-}
-
-.empty-state {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 56px 16px;
-  color: var(--gray-accent);
-}
-
-.empty-state ion-icon {
-  font-size: 48px;
-  color: #c3d3d2;
-}
-
-.empty-state span {
-  font-size: 15px;
-  font-weight: 700;
-  color: #37474a;
-}
-
-.empty-state .empty-sub {
-  font-size: 12.5px;
-  color: var(--gray-accent);
-  margin: 0;
-}
-
-.loading-inline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 24px 0;
-  color: var(--gray-accent);
-  font-size: 0.85rem;
-  font-weight: 600;
-
-  ion-spinner {
-    color: var(--primary);
-  }
-}
-
-.test-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 4px 0;
-
-  .test-name {
-    font-weight: 600;
-  }
-}
-
-.status-pill {
-  display: inline-block;
-  padding: 3px 10px;
-  border-radius: var(--r-pill);
-  font-size: 0.66rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.2px;
-  color: #ffffff;
-  white-space: nowrap;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-
-  &.status-in\ process {
-    background: #bd7d19 !important;
-  }
-
-  &.status-pending {
-    background: #bd7d19 !important;
-  }
-
-  &.status-complete {
-    background: #16866e !important;
-  }
-
-  &.status-clinical {
-    background: #2470b9 !important;
-  }
-
-  &.status-snr {
-    background: #7856c9 !important;
-  }
-
-  &.badge-ready {
-    background: #16866e !important;
-  }
-
-  &.badge-inprocess {
-    background: #2470b9 !important;
-  }
-
-  &.badge-snr {
-    background: #7856c9 !important;
-    color: #fff !important;
-  }
-
-  &.badge-clinical {
-    background: #2470b9 !important;
-    color: #fff !important;
-  }
-
-  &.badge-pending {
-    background: #bd7d19 !important;
-  }
-
-  &.badge-recheck {
-    background: #bd7d19 !important;
-  }
-
-  // ✅ FIX: Booking Status सारखा solid red — outline नाही
-  &.badge-cancel {
-    background: #dc3545 !important;
-    color: #fff !important;
-  }
-}
-.reports-pill {
-  display: inline-block;
-  padding: 4px 12px;
-  border-radius: var(--r-pill);
-  font-size: 0.8rem;
-  font-weight: 700;
-  background: var(--danger-bg);
-  color: var(--danger);
-
-  &.reports-complete {
-    background: var(--success-bg);
-    color: var(--success);
-  }
-}
-
-.load-more-row {
-  display: flex;
-  justify-content: center;
-  padding: 14px;
-
-  ion-button {
+    --background: var(--brand-gradient);
+    --background-activated: linear-gradient(135deg, #06635f, #044c4a);
+    --background-hover: linear-gradient(135deg, #0a938c, #087b76);
+    --box-shadow: 0 4px 14px rgba(8, 123, 118, 0.24);
+    --color: #ffffff;
     --border-radius: var(--r-pill);
-    --border-color: var(--primary);
-    --color: var(--primary);
-    font-weight: 700;
-    font-size: 0.85rem;
-  }
-}
-
-// .booking-card-list {
-//   display: flex;
-//   flex-direction: column;
-//   gap: var(--sp-3, 12px);
-//   margin: var(--sp-4, 16px);
-// }
-
-// 7. booking-card-list padding
-.booking-card-list {
-  display: flex;
-  flex-direction: column;
-
-  gap: var(--sp-3, 12px);
-
-  margin: 0;
-
-  padding: 24px 12px 32px;
-
-  background: #ffffff;
-
-  min-height: 100%;
-
-  box-sizing: border-box;
-}
-
-
-// .booking-card {
-//   background: var(--card-bg, #fff);
-//   border: 1.5px solid var(--border-color);
-//   border-radius: var(--r-lg);
-//   box-shadow: var(--shadow-xs);
-//   overflow: hidden;
-//   transition: box-shadow 0.18s ease, border-color 0.18s ease;
-// }
-
-.booking-card {
-  width: 100%;
-  box-sizing: border-box;
-  background: #ffffff;
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--r-lg);
-  box-shadow: var(--shadow-xs);
-  overflow: hidden;
-}
-
-
-@media (max-width: 480px) {
-  .booking-card-list {
+    --padding-start: 16px;
+    --padding-end: 16px;
+    height: 38px;
     margin: 0;
-    gap: 12px;
-    padding: 0 12px 32px;
+    font-weight: 700;
+    font-size: 0.78rem;
+    letter-spacing: 0.1px;
+    text-transform: none;
+    transition: transform 0.1s ease, box-shadow 0.15s ease;
+
+    ion-icon {
+      font-size: 15px;
+      margin-right: 2px;
+    }
+
+    .btn-label {
+      white-space: nowrap;
+    }
+
+    .selected-count {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 18px;
+      height: 18px;
+      padding: 0 5px;
+      margin-left: 8px;
+      border-radius: var(--r-pill);
+      background: rgba(255, 255, 255, 0.24);
+      font-size: 0.7rem;
+      font-weight: 800;
+    }
+
+    &:not([disabled]):hover {
+      --box-shadow: 0 6px 18px rgba(8, 123, 118, 0.32);
+    }
+
+    &:not([disabled]):active {
+      transform: scale(0.96);
+    }
+
+    &[disabled] {
+      --background: #dde6e6;
+      --box-shadow: none;
+      --color: #a3b2b1;
+      opacity: 1;
+    }
+  }
+
+  @media (max-width: 480px) {
+    .download-row {
+      justify-content: stretch;
+    }
+
+    .download-btn {
+      width: 100%;
+      height: 40px;
+    }
+  }
+
+  .empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 56px 16px;
+    color: var(--gray-accent);
+  }
+
+  .empty-state ion-icon {
+    font-size: 48px;
+    color: #c3d3d2;
+  }
+
+  .empty-state span {
+    font-size: 15px;
+    font-weight: 700;
+    color: #37474a;
+  }
+
+  .empty-state .empty-sub {
+    font-size: 12.5px;
+    color: var(--gray-accent);
+    margin: 0;
+  }
+
+  .loading-inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 24px 0;
+    color: var(--gray-accent);
+    font-size: 0.85rem;
+    font-weight: 600;
+
+    ion-spinner {
+      color: var(--primary);
+    }
+  }
+
+  .test-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 4px 0;
+
+    .test-name {
+      font-weight: 600;
+    }
+  }
+
+  .status-pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: var(--r-pill);
+    font-size: 0.66rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.2px;
+    color: #ffffff;
+    white-space: nowrap;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+
+    &.status-in\ process {
+      background: #bd7d19 !important;
+    }
+
+    &.status-pending {
+      background: #bd7d19 !important;
+    }
+
+    &.status-complete {
+      background: #16866e !important;
+    }
+
+    &.status-clinical {
+      background: #2470b9 !important;
+    }
+
+    &.status-snr {
+      background: #7856c9 !important;
+    }
+
+    &.badge-ready {
+      background: #16866e !important;
+    }
+
+    &.badge-inprocess {
+      background: #2470b9 !important;
+    }
+
+    &.badge-snr {
+      background: #7856c9 !important;
+      color: #fff !important;
+    }
+
+    &.badge-clinical {
+      background: #2470b9 !important;
+      color: #fff !important;
+    }
+
+    &.badge-pending {
+      background: #bd7d19 !important;
+    }
+
+    &.badge-recheck {
+      background: #bd7d19 !important;
+    }
+
+    // ✅ FIX: Booking Status सारखा solid red — outline नाही
+    &.badge-cancel {
+      background: #dc3545 !important;
+      color: #fff !important;
+    }
+  }
+  .reports-pill {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: var(--r-pill);
+    font-size: 0.8rem;
+    font-weight: 700;
+    background: var(--danger-bg);
+    color: var(--danger);
+
+    &.reports-complete {
+      background: var(--success-bg);
+      color: var(--success);
+    }
+  }
+
+  .load-more-row {
+    display: flex;
+    justify-content: center;
+    padding: 14px;
+
+    ion-button {
+      --border-radius: var(--r-pill);
+      --border-color: var(--primary);
+      --color: var(--primary);
+      font-weight: 700;
+      font-size: 0.85rem;
+    }
+  }
+
+  // .booking-card-list {
+  //   display: flex;
+  //   flex-direction: column;
+  //   gap: var(--sp-3, 12px);
+  //   margin: var(--sp-4, 16px);
+  // }
+
+  // 7. booking-card-list padding
+  .booking-card-list {
+    display: flex;
+    flex-direction: column;
+
+    gap: var(--sp-3, 12px);
+
+    margin: 0;
+
+    padding: 24px 12px 32px;
+
     background: #ffffff;
+
+    min-height: 100%;
+
+    box-sizing: border-box;
   }
-}
 
-.booking-card.expanded {
-  border-color: rgba(8, 123, 118, 0.32);
-  box-shadow: var(--shadow-md);
-}
 
-.booking-card.row-selected {
-  background: var(--primary-light);
-  border-color: rgba(8, 123, 118, 0.35);
-}
+  // .booking-card {
+  //   background: var(--card-bg, #fff);
+  //   border: 1.5px solid var(--border-color);
+  //   border-radius: var(--r-lg);
+  //   box-shadow: var(--shadow-xs);
+  //   overflow: hidden;
+  //   transition: box-shadow 0.18s ease, border-color 0.18s ease;
+  // }
 
-.bcard-header {
-  display: flex;
-  align-items: flex-start;
-  gap: var(--sp-3);
-  padding: var(--sp-4);
-  cursor: pointer;
-  transition: background 0.12s ease;
-
-  &:active {
-    background: var(--primary-lighter);
+  .booking-card {
+    width: 100%;
+    box-sizing: border-box;
+    background: #ffffff;
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-lg);
+    box-shadow: var(--shadow-xs);
+    overflow: hidden;
   }
-}
 
-.bcard-header:active {
-  background: var(--primary-light);
-}
 
-.bcard-checkbox-wrap {
-  flex-shrink: 0;
-  display: block;
-  width: 20px;
-  height: 20px;
-}
+  @media (max-width: 480px) {
+    .booking-card-list {
+      margin: 0;
+      gap: 12px;
+      padding: 0 12px 32px;
+      background: #ffffff;
+    }
+  }
 
-.bcard-checkbox {
-  appearance: none;
-  -webkit-appearance: none;
-  margin: 0;
-  width: 20px;
-  height: 20px;
-  border: 2px solid #cfdcdc;
-  border-radius: 6px;
-  background: #fff;
-  cursor: pointer;
-  display: block;
-  position: relative;
-  transition: background 0.12s ease, border-color 0.12s ease;
-}
+  .booking-card.expanded {
+    border-color: rgba(8, 123, 118, 0.32);
+    box-shadow: var(--shadow-md);
+  }
 
-.bcard-checkbox:checked {
-  background: var(--primary);
-  border-color: var(--primary);
-}
+  .booking-card.row-selected {
+    background: var(--primary-light);
+    border-color: rgba(8, 123, 118, 0.35);
+  }
 
-.bcard-checkbox:checked::after {
-  content: '';
-  position: absolute;
-  left: 6px;
-  top: 2px;
-  width: 5px;
-  height: 10px;
-  border: solid #fff;
-  border-width: 0 2px 2px 0;
-  transform: rotate(45deg);
-}
+  .bcard-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--sp-3);
+    padding: var(--sp-4);
+    cursor: pointer;
+    transition: background 0.12s ease;
 
-.bcard-header-left {
-  min-width: 0;
-  flex: 1;
-}
+    &:active {
+      background: var(--primary-lighter);
+    }
+  }
 
-.bcard-id-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-bottom: 4px;
+  .bcard-header:active {
+    background: var(--primary-light);
+  }
 
-  .id-link {
+  .bcard-checkbox-wrap {
+    flex-shrink: 0;
+    display: block;
+    width: 20px;
+    height: 20px;
+  }
+
+  .bcard-checkbox {
+    appearance: none;
+    -webkit-appearance: none;
+    margin: 0;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #cfdcdc;
+    border-radius: 6px;
+    background: #fff;
+    cursor: pointer;
+    display: block;
+    position: relative;
+    transition: background 0.12s ease, border-color 0.12s ease;
+  }
+
+  .bcard-checkbox:checked {
+    background: var(--primary);
+    border-color: var(--primary);
+  }
+
+  .bcard-checkbox:checked::after {
+    content: '';
+    position: absolute;
+    left: 6px;
+    top: 2px;
+    width: 5px;
+    height: 10px;
+    border: solid #fff;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+  }
+
+  .bcard-header-left {
+    min-width: 0;
+    flex: 1;
+  }
+
+  .bcard-id-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 4px;
+
+    .id-link {
+      color: var(--primary);
+      font-weight: 800;
+      font-size: 14px;
+    }
+
+    .bcard-date {
+      color: var(--gray-accent);
+      font-size: 11px;
+      font-weight: 600;
+    }
+  }
+
+  .bcard-id-row .id-link {
     color: var(--primary);
     font-weight: 800;
     font-size: 14px;
   }
 
-  .bcard-date {
+  .bcard-id-row .bcard-date {
     color: var(--gray-accent);
     font-size: 11px;
     font-weight: 600;
   }
-}
 
-.bcard-id-row .id-link {
-  color: var(--primary);
-  font-weight: 800;
-  font-size: 14px;
-}
+  .bcard-name-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
 
-.bcard-id-row .bcard-date {
-  color: var(--gray-accent);
-  font-size: 11px;
-  font-weight: 600;
-}
+  .bcard-name {
+    font-weight: 700;
+    font-size: 14px;
+    color: var(--text-dark, #10201f);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 
-.bcard-name-row {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
+  .sub-text {
+    font-size: 11px;
+    color: var(--gray-accent);
+    font-weight: 500;
+  }
 
-.bcard-name {
-  font-weight: 700;
-  font-size: 14px;
-  color: var(--text-dark, #10201f);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
+  .bcard-header-right {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
 
-.sub-text {
-  font-size: 11px;
-  color: var(--gray-accent);
-  font-weight: 500;
-}
+  .expand-chevron {
+    color: var(--gray-accent);
+    font-size: 18px;
+    transition: transform 0.2s ease;
+  }
 
-.bcard-header-right {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 8px;
-  flex-shrink: 0;
-}
+  .booking-card.expanded .expand-chevron {
+    transform: rotate(180deg);
+    color: var(--primary);
+  }
 
-.expand-chevron {
-  color: var(--gray-accent);
-  font-size: 18px;
-  transition: transform 0.2s ease;
-}
+  .bcard-stats {
+    display: flex;
+    flex-direction: column;
+    gap: var(--sp-3, 12px);
+    padding: 0 var(--sp-4, 16px) var(--sp-4, 16px);
+    border-bottom: 1px solid var(--border-color);
+  }
 
-.booking-card.expanded .expand-chevron {
-  transform: rotate(180deg);
-  color: var(--primary);
-}
-
-.bcard-stats {
-  display: flex;
-  flex-direction: column;
-  gap: var(--sp-3, 12px);
-  padding: 0 var(--sp-4, 16px) var(--sp-4, 16px);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.bcard-stat {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  min-width: 0;
-  width: 100%;
-}
-
-// Client/Doctor stat now shares its row with the Tests pill,
-// right-aligned, matching the Booking Status card layout.
-.bcard-stat-with-tests {
-  flex-direction: row;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
-
-  .bcs-text {
+  .bcard-stat {
     display: flex;
     flex-direction: column;
     gap: 4px;
     min-width: 0;
-    flex: 1;
+    width: 100%;
   }
-}
 
-.bcs-label {
-  font-size: 10px;
-  font-weight: 800;
-  text-transform: uppercase;
-  letter-spacing: 0.4px;
-  color: var(--text-dark, #10201f);
-}
+  // Client/Doctor stat now shares its row with the Tests pill,
+  // right-aligned, matching the Booking Status card layout.
+  .bcard-stat-with-tests {
+    flex-direction: row;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
 
-.bcs-value {
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--gray-accent);
-  letter-spacing: 0.1px;
-  line-height: 1.3;
-  white-space: normal;
-  word-break: break-word;
-  overflow: visible;
-  text-overflow: unset;
-}
+    .bcs-text {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 0;
+      flex: 1;
+    }
+  }
 
-.bcard-details {
-  padding: var(--sp-4, 16px);
-  background: var(--section-bg);
-}
+  .bcs-label {
+    font-size: 10px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+    color: var(--text-dark, #10201f);
+  }
 
-.bcard-test-table {
-  width: 100%;
-  border-collapse: collapse;
-  background: var(--card-bg, #fff);
-  border-radius: var(--r-sm);
-  overflow: hidden;
-  border: 1px solid var(--border-color);
-  margin-bottom: var(--sp-3, 12px);
-}
+  .bcs-value {
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--gray-accent);
+    letter-spacing: 0.1px;
+    line-height: 1.3;
+    white-space: normal;
+    word-break: break-word;
+    overflow: visible;
+    text-overflow: unset;
+  }
 
-.bcard-test-table th {
-  background: var(--card-bg-alt, #fbfdfd);
-  color: var(--gray-accent);
-  font-size: 10px;
-  font-weight: 700;
-  text-transform: uppercase;
-  text-align: left;
-  padding: 8px 10px;
-  border-bottom: 1px solid var(--border-color);
-}
+  .bcard-details {
+    padding: var(--sp-4, 16px);
+    background: var(--section-bg);
+  }
 
-.bcard-test-table td {
-  padding: 9px 10px;
-  font-size: 12.5px;
-  font-weight: 500;
-  color: var(--text-dark, #10201f);
-  border-bottom: 1px solid var(--border-color);
-}
-
-.bcard-test-table tr:last-child td {
-  border-bottom: none;
-}
-
-.empty-tests {
-  text-align: center;
-  color: var(--gray-accent);
-  padding: var(--sp-4, 16px) 0;
-  font-size: 12.5px;
-}
-
-
-.bcard-barcode-block {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-bottom: var(--sp-2);
-
-  .barcode-line {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 12.5px;
-    font-weight: 600;
-    color: var(--text-dark);
+  .bcard-test-table {
+    width: 100%;
+    border-collapse: collapse;
     background: var(--card-bg, #fff);
+    border-radius: var(--r-sm);
+    overflow: hidden;
     border: 1px solid var(--border-color);
-    border-radius: var(--r-xs);
-    padding: 8px 10px;
+    margin-bottom: var(--sp-3, 12px);
+  }
 
-    ion-icon {
-      color: var(--primary);
-      font-size: 15px;
-      flex-shrink: 0;
+  .bcard-test-table th {
+    background: var(--card-bg-alt, #fbfdfd);
+    color: var(--gray-accent);
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    text-align: left;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .bcard-test-table td {
+    padding: 9px 10px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: var(--text-dark, #10201f);
+    border-bottom: 1px solid var(--border-color);
+  }
+
+  .bcard-test-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  .empty-tests {
+    text-align: center;
+    color: var(--gray-accent);
+    padding: var(--sp-4, 16px) 0;
+    font-size: 12.5px;
+  }
+
+
+  .bcard-barcode-block {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-bottom: var(--sp-2);
+
+    .barcode-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 12.5px;
+      font-weight: 600;
+      color: var(--text-dark);
+      background: var(--card-bg, #fff);
+      border: 1px solid var(--border-color);
+      border-radius: var(--r-xs);
+      padding: 8px 10px;
+
+      ion-icon {
+        color: var(--primary);
+        font-size: 15px;
+        flex-shrink: 0;
+      }
+
+      &.empty {
+        color: var(--gray-accent);
+        justify-content: center;
+        font-weight: 500;
+      }
     }
 
-    &.empty {
+    .bcard-barcode-inline {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      margin-top: 6px;
+    }
+
+    small {
       color: var(--gray-accent);
-      justify-content: center;
-      font-weight: 500;
+      font-weight: 600;
+      margin-left: auto;
+    }
+  }
+
+  .bcard-barcode-block .barcode-line span:last-child {
+    margin-left: auto;
+    color: var(--gray-accent);
+    font-weight: 600;
+    text-transform: uppercase;
+    font-size: 11px;
+  }
+
+  .bcard-barcode-block .barcode-line.empty {
+    color: var(--gray-accent);
+    justify-content: center;
+    font-weight: 500;
+  }
+
+  .reports-pill {
+    display: inline-block;
+    padding: 5px 12px;
+    border-radius: var(--r-pill);
+    font-size: 11px;
+    font-weight: 700;
+    background: var(--danger-bg);
+    color: var(--danger);
+    white-space: nowrap;
+  }
+
+  .reports-pill.reports-complete {
+    background: var(--success-bg);
+    color: var(--success);
+  }
+
+  .bcard-count-box {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 4px;
+  }
+
+  .count-line {
+    font-size: 10px;
+    font-weight: 700;
+    color: var(--primary-dark);
+    background: var(--primary-light);
+    padding: 3px 9px;
+    border-radius: var(--r-pill);
+    white-space: nowrap;
+
+    &.pending {
+      background: var(--warning-bg);
+      color: var(--warning);
+    }
+
+    &.completed {
+      background: var(--success-bg);
+      color: var(--success);
     }
   }
 
   .bcard-barcode-inline {
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    gap: 8px;
     margin-top: 6px;
   }
 
-  small {
-    color: var(--gray-accent);
-    font-weight: 600;
-    margin-left: auto;
-  }
-}
-
-.bcard-barcode-block .barcode-line span:last-child {
-  margin-left: auto;
-  color: var(--gray-accent);
-  font-weight: 600;
-  text-transform: uppercase;
-  font-size: 11px;
-}
-
-.bcard-barcode-block .barcode-line.empty {
-  color: var(--gray-accent);
-  justify-content: center;
-  font-weight: 500;
-}
-
-.reports-pill {
-  display: inline-block;
-  padding: 5px 12px;
-  border-radius: var(--r-pill);
-  font-size: 11px;
-  font-weight: 700;
-  background: var(--danger-bg);
-  color: var(--danger);
-  white-space: nowrap;
-}
-
-.reports-pill.reports-complete {
-  background: var(--success-bg);
-  color: var(--success);
-}
-
-.bcard-count-box {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 4px;
-}
-
-.count-line {
-  font-size: 10px;
-  font-weight: 700;
-  color: var(--primary-dark);
-  background: var(--primary-light);
-  padding: 3px 9px;
-  border-radius: var(--r-pill);
-  white-space: nowrap;
-
-  &.pending {
-    background: var(--warning-bg);
-    color: var(--warning);
-  }
-
-  &.completed {
-    background: var(--success-bg);
-    color: var(--success);
-  }
-}
-
-.bcard-barcode-inline {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-top: 6px;
-}
-
-.bcard-barcode-inline .barcode-line {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  background: var(--section-bg);
-  border: 1px solid var(--border-color);
-  border-radius: var(--r-sm);
-  padding: 9px 12px;
-  font-size: 13.5px;
-  font-weight: 700;
-  color: var(--text-dark, #10201f);
-  letter-spacing: 0.3px;
-  font-family: 'Courier New', monospace;
-
-  ion-icon {
-    color: var(--primary);
-    font-size: 17px;
-    flex-shrink: 0;
-  }
-
-  &.empty {
-    justify-content: center;
-    color: var(--gray-accent);
-    font-family: inherit;
-    font-weight: 500;
-  }
-}// ==========================================================
-// FRANCHISE TYPE-AHEAD — booking-status sarkhach premium dropdown
-// ==========================================================
-.franchise-field {
-  position: relative;
-  z-index: 30;
-}
-
-.clear-franchise {
-  color: var(--gray-accent);
-  cursor: pointer;
-  font-size: 18px;
-  flex-shrink: 0;
-  margin-left: 6px;
-}
-
-.franchise-dropdown {
-  position: absolute;
-  top: calc(100% + 8px);
-  left: 0;
-  right: 0;
-  z-index: 999;
-  background: var(--card-bg, #ffffff);
-  border: 1.5px solid var(--border-color);
-  border-radius: var(--r-sm);
-  max-height: 220px;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  touch-action: pan-y;
-  overscroll-behavior: contain;
-  box-shadow: var(--shadow-lg);
-  box-sizing: border-box;
-}
-
-.franchise-dropdown-item {
-  padding: 12px 16px;
-  font-size: 13.5px;
-  font-weight: 600;
-  color: var(--text-dark, #14222e);
-  cursor: pointer;
-  border-bottom: 1px solid var(--border-color);
-  transition: background 0.12s ease;
-
-  &:last-child {
-    border-bottom: none;
-  }
-
-  &:hover {
-    background: var(--primary-light);
-  }
-}
-
-.click-catcher {
-  position: fixed;
-  inset: 0;
-  z-index: 20;
-  background: transparent;
-}.badge-all { background: #607d8b; color: #fff; }.download-action-bar {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 10px 14px;
-  margin-bottom: 12px;
-  border-radius: 14px;
-  background: #eef8f7;
-  border: 1px solid #d6efed;
-
-  .selected-count {
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--brand-deep, #075f5d);
-  }
-
-  ion-button {
-    --background: linear-gradient(135deg, #087d78, #055f5d);
-    --color: #fff;
-    --border-radius: 10px;
-  }
-}/* ============================================================
-   TESTS ROW WITH EYE ICON — now anchored top-right, under the
-   Test Count / Sample Count badges (bcard-count-box), so it
-   matches the Booking Status card layout.
-============================================================ */
-.bcard-tests-row {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  margin-top: 0;
-  flex-shrink: 0;
-  cursor: pointer;
-  width: fit-content;
-
-  padding: 6px 12px;
-  border-radius: var(--r-pill);
-  border: 1.5px solid var(--primary-light, #d9f0ee);
-  background: var(--primary-light, #d9f0ee);
-  transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
-
-  .bcard-tests-label {
-    font-size: 12px;
-    font-weight: 700;
-    color: var(--primary-dark, #075f5d);
-  }
-
-  .test-eye-icon {
-    font-size: 16px;
-    color: var(--primary, #087b76);
-  }
-
-  &:active {
-    opacity: 0.7;
-    transform: scale(0.97);
-  }
-}
-
-/* ============================================================
-   TEST PREVIEW MODAL — small centered popup (eye icon)
-============================================================ */
-.test-preview-popup {
-  --width: 380px;
-  --max-width: 92vw;
-  --height: auto;
-  --max-height: 78vh;
-  --border-radius: 22px;
-  align-items: center;
-
-  &::part(content) {
-    border-radius: 22px;
-    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
-    overflow: hidden;
-  }
-
-  .modal-page {
-    max-height: 78vh;
+  .bcard-barcode-inline .barcode-line {
     display: flex;
-    flex-direction: column;
-    background: #fff;
-    border-radius: 22px;
-    overflow: hidden;
+    align-items: center;
+    gap: 10px;
+    background: var(--section-bg);
+    border: 1px solid var(--border-color);
+    border-radius: var(--r-sm);
+    padding: 9px 12px;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text-dark, #10201f);
+    letter-spacing: 0.3px;
+    font-family: 'Courier New', monospace;
+
+    ion-icon {
+      color: var(--primary);
+      font-size: 17px;
+      flex-shrink: 0;
+    }
+
+    &.empty {
+      justify-content: center;
+      color: var(--gray-accent);
+      font-family: inherit;
+      font-weight: 500;
+    }
+  }// ==========================================================
+  // FRANCHISE TYPE-AHEAD — booking-status sarkhach premium dropdown
+  // ==========================================================
+  .franchise-field {
+    position: relative;
+    z-index: 30;
   }
 
-  .modal-header {
-    background: var(--brand-gradient);
-    border-bottom: none;
-    border-top-left-radius: 22px;
-    border-top-right-radius: 22px;
-    padding: 18px 20px;
+  .clear-franchise {
+    color: var(--gray-accent);
+    cursor: pointer;
+    font-size: 18px;
     flex-shrink: 0;
+    margin-left: 6px;
+  }
+
+  .franchise-dropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    right: 0;
+    z-index: 999;
+    background: var(--card-bg, #ffffff);
+    border: 1.5px solid var(--border-color);
+    border-radius: var(--r-sm);
+    max-height: 220px;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    touch-action: pan-y;
+    overscroll-behavior: contain;
+    box-shadow: var(--shadow-lg);
+    box-sizing: border-box;
+  }
+
+  .franchise-dropdown-item {
+    padding: 12px 16px;
+    font-size: 13.5px;
+    font-weight: 600;
+    color: var(--text-dark, #14222e);
+    cursor: pointer;
+    border-bottom: 1px solid var(--border-color);
+    transition: background 0.12s ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: var(--primary-light);
+    }
+  }
+
+  .click-catcher {
+    position: fixed;
+    inset: 0;
+    z-index: 20;
+    background: transparent;
+  }.badge-all { background: #607d8b; color: #fff; }.download-action-bar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 10px;
+    padding: 10px 14px;
+    margin-bottom: 12px;
+    border-radius: 14px;
+    background: #eef8f7;
+    border: 1px solid #d6efed;
 
-    h2 {
-      color: #fff;
-      font-size: 16px;
-      font-weight: 800;
-      letter-spacing: 0.2px;
-      margin: 0;
-      text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+    .selected-count {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--brand-deep, #075f5d);
     }
 
     ion-button {
-      margin: 0;
+      --background: linear-gradient(135deg, #087d78, #055f5d);
       --color: #fff;
-      width: 32px;
-      height: 32px;
-      --box-shadow: none;
-
-      &::part(native) {
-        background: rgba(255, 255, 255, 0.2);
-        border-radius: 10px;
-        width: 32px;
-        height: 32px;
-        padding: 0;
-      }
-
-      ion-icon {
-        font-size: 18px;
-      }
+      --border-radius: 10px;
     }
-  }
-
-  .pkg-preview-table {
-    flex: 1;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    padding-bottom: 6px;
-  }
-
-  .pkg-preview-header-full {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    display: grid;
-    grid-template-columns: 0.4fr 2.2fr 1fr;
-    gap: 8px;
-    background: var(--primary-light, #d9f0ee);
-    color: var(--primary-dark, #075f5d);
-    font-size: 10.5px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
-    padding: 10px 18px;
-    border-bottom: 1px solid #d9f0ee;
-  }
-
-  .pkg-preview-row-full {
-    display: grid;
-    grid-template-columns: 0.4fr 2.2fr 1fr;
-    gap: 8px;
-    padding: 10px 18px;
-    font-size: 12.5px;
-    color: #475569;
-    border-bottom: 1px solid #f1f5f5;
-    transition: background 0.15s;
-
-    &:nth-child(even) {
-      background: #fbfdfd;
-    }
-
-    div:nth-child(2) {
-      white-space: normal;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      font-weight: 600;
-      color: #1e293b;
-      line-height: 1.35;
-    }
-  }
-
-  .lab-picker-empty {
-    padding: 30px 16px;
-    text-align: center;
-    color: #94a3b8;
-    font-size: 13px;
-  }
-}
-
-.spin-icon {
-  animation: tl-spin 0.8s linear infinite;
-}
-
-@keyframes tl-spin {
-  from { transform: rotate(0deg); }
-  to   { transform: rotate(360deg); }
-}
-
-// ===================== barcode compact (matches Booking Status card) =====================
-.bcard-barcode-compact {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  flex-wrap: wrap;
-  gap: 4px;
-  font-size: 12.5px;
-  line-height: 1.5;
-  padding: 6px 4px;
-}
-
-.barcode-compact-icon {
-  color: var(--primary);
-  font-size: 15px;
-  flex-shrink: 0;
-  align-self: center;
-  margin-right: 2px;
-}
-
-.barcode-compact-label {
-  font-weight: 800;
-  color: var(--primary-dark);
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.barcode-compact-list {
-  min-width: 0;
-  word-break: break-word;
-}
-
-.barcode-compact-item {
-  cursor: pointer;
-  font-family: 'Courier New', monospace;
-  font-weight: 700;
-  color: var(--text-dark, #10201f);
-  transition: color 0.15s ease, opacity 0.15s ease;
-
-  &:hover,
-  &:active {
-    color: var(--primary);
-    opacity: 0.75;
-  }
-}
-
-.barcode-compact-sep {
-  color: var(--gray-accent);
-  font-weight: 600;
-}
-
-.barcode-compact-empty {
-  color: var(--gray-accent);
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 6px 4px;
-}
-
-// ===================== DOWNLOAD REPORT — standalone centered popup =====================
-::ng-deep ion-modal.printbill-modal {
-  --width: 320px !important;
-  --height: auto !important;
-  --max-height: 90vh !important;
-  --border-radius: 16px !important;
-  --box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
-
-  &::part(content) {
-    display: block !important;
-    position: relative !important;
-    top: auto !important;
-    left: auto !important;
-    margin: 0 auto !important;
-  }
-}
-
-::ng-deep .printbill-modal-page {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  padding: 0 0 20px 0 !important;
-  overflow: hidden !important;
-}
-
-::ng-deep .printbill-modal-header {
-  display: flex !important;
-  flex-direction: row !important;
-  align-items: center !important;
-  justify-content: space-between !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  padding: 18px 18px !important;
-  background: var(--brand-gradient);
-  border-top-left-radius: 16px;
-  border-top-right-radius: 16px;
-
-  h2 {
-    margin: 0 !important;
-    font-size: 17px !important;
-    font-weight: 700 !important;
-    color: #fff !important;
-    white-space: nowrap !important;
-
-    .header-booking-tag {
-      font-weight: 500;
-      font-size: 13px;
-      color: rgba(255, 255, 255, 0.75);
-      margin-left: 6px;
-    }
-  }
-
-  .close-modal-btn {
-    flex-shrink: 0 !important;
-    background: rgba(255, 255, 255, 0.18);
-    border: none;
-    border-radius: 10px;
-    width: 34px;
-    height: 34px;
+  }/* ============================================================
+    TESTS ROW WITH EYE ICON — now anchored top-right, under the
+    Test Count / Sample Count badges (bcard-count-box), so it
+    matches the Booking Status card layout.
+  ============================================================ */
+  .bcard-tests-row {
     display: flex;
     align-items: center;
-    justify-content: center;
+    gap: 6px;
+    margin-top: 0;
+    flex-shrink: 0;
+    cursor: pointer;
+    width: fit-content;
 
-    ion-icon { color: #fff; font-size: 20px; }
+    padding: 6px 12px;
+    border-radius: var(--r-pill);
+    border: 1.5px solid var(--primary-light, #d9f0ee);
+    background: var(--primary-light, #d9f0ee);
+    transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+
+    .bcard-tests-label {
+      font-size: 12px;
+      font-weight: 700;
+      color: var(--primary-dark, #075f5d);
+    }
+
+    .test-eye-icon {
+      font-size: 16px;
+      color: var(--primary, #087b76);
+    }
+
+    &:active {
+      opacity: 0.7;
+      transform: scale(0.97);
+    }
   }
-}
 
-::ng-deep .printbill-modal-body {
-  display: flex !important;
-  flex-direction: column !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  padding: 18px !important;
-  gap: 0 !important;
+  /* ============================================================
+    TEST PREVIEW MODAL — small centered popup (eye icon)
+  ============================================================ */
+  .test-preview-popup {
+    --width: 380px;
+    --max-width: 92vw;
+    --height: auto;
+    --max-height: 78vh;
+    --border-radius: 22px;
+    align-items: center;
 
-  ion-button {
-    width: 100% !important;
-    display: block !important;
-    margin-left: 0 !important;
-    margin-right: 0 !important;
+    &::part(content) {
+      border-radius: 22px;
+      box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+      overflow: hidden;
+    }
+
+    .modal-page {
+      max-height: 78vh;
+      display: flex;
+      flex-direction: column;
+      background: #fff;
+      border-radius: 22px;
+      overflow: hidden;
+    }
+
+    .modal-header {
+      background: var(--brand-gradient);
+      border-bottom: none;
+      border-top-left-radius: 22px;
+      border-top-right-radius: 22px;
+      padding: 18px 20px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      h2 {
+        color: #fff;
+        font-size: 16px;
+        font-weight: 800;
+        letter-spacing: 0.2px;
+        margin: 0;
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+      }
+
+      ion-button {
+        margin: 0;
+        --color: #fff;
+        width: 32px;
+        height: 32px;
+        --box-shadow: none;
+
+        &::part(native) {
+          background: rgba(255, 255, 255, 0.2);
+          border-radius: 10px;
+          width: 32px;
+          height: 32px;
+          padding: 0;
+        }
+
+        ion-icon {
+          font-size: 18px;
+        }
+      }
+    }
+
+    .pkg-preview-table {
+      flex: 1;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      padding-bottom: 6px;
+    }
+
+    .pkg-preview-header-full {
+      position: sticky;
+      top: 0;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: 0.4fr 2.2fr 1fr;
+      gap: 8px;
+      background: var(--primary-light, #d9f0ee);
+      color: var(--primary-dark, #075f5d);
+      font-size: 10.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+      padding: 10px 18px;
+      border-bottom: 1px solid #d9f0ee;
+    }
+
+    .pkg-preview-row-full {
+      display: grid;
+      grid-template-columns: 0.4fr 2.2fr 1fr;
+      gap: 8px;
+      padding: 10px 18px;
+      font-size: 12.5px;
+      color: #475569;
+      border-bottom: 1px solid #f1f5f5;
+      transition: background 0.15s;
+
+      &:nth-child(even) {
+        background: #fbfdfd;
+      }
+
+      div:nth-child(2) {
+        white-space: normal;
+        word-break: break-word;
+        overflow-wrap: anywhere;
+        font-weight: 600;
+        color: #1e293b;
+        line-height: 1.35;
+      }
+    }
+
+    .lab-picker-empty {
+      padding: 30px 16px;
+      text-align: center;
+      color: #94a3b8;
+      font-size: 13px;
+    }
   }
-}
 
-.modal-save-btn {
-  --background: var(--brand-gradient);
-  --color: #fff;
-  --border-radius: 10px;
-  --box-shadow: var(--shadow-glow);
-  height: 48px;
-  font-weight: 800;
+  .spin-icon {
+    animation: tl-spin 0.8s linear infinite;
+  }
 
-  &::part(native) {
-    background: var(--brand-gradient);
-    color: #fff;
+  @keyframes tl-spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+  }
+
+  // ===================== barcode compact (matches Booking Status card) =====================
+  .bcard-barcode-compact {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 4px;
+    font-size: 12.5px;
+    line-height: 1.5;
+    padding: 6px 4px;
+  }
+
+  .barcode-compact-icon {
+    color: var(--primary);
+    font-size: 15px;
+    flex-shrink: 0;
+    align-self: center;
+    margin-right: 2px;
+  }
+
+  .barcode-compact-label {
     font-weight: 800;
+    color: var(--primary-dark);
+    flex-shrink: 0;
+    white-space: nowrap;
   }
 
-  &[disabled]::part(native) {
-    background: #d5dede;
-    color: #97a5a5;
+  .barcode-compact-list {
+    min-width: 0;
+    word-break: break-word;
   }
-}
 
-// ===================== REPORT NOT READY — danger themed =====================
-::ng-deep .report-not-ready-modal .printbill-modal-header {
-  background: linear-gradient(135deg, #dc3545, #a71d2a) !important;
-}
+  .barcode-compact-item {
+    cursor: pointer;
+    font-family: 'Courier New', monospace;
+    font-weight: 700;
+    color: var(--text-dark, #10201f);
+    transition: color 0.15s ease, opacity 0.15s ease;
 
-.report-not-ready-icon {
-  display: flex;
-  justify-content: center;
-  margin-bottom: 14px;
-
-  ion-icon {
-    font-size: 54px;
-    color: #dc3545;
+    &:hover,
+    &:active {
+      color: var(--primary);
+      opacity: 0.75;
+    }
   }
-}
 
-.report-not-ready-text {
-  text-align: center;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--gray-accent, #56696c);
-  line-height: 1.55;
-  margin: 0 0 22px;
-  padding: 0 4px;
-}
-
-.modal-save-btn.danger-btn {
-  --background: linear-gradient(135deg, #dc3545, #a71d2a);
-  --color: #fff;
-  --box-shadow: 0 8px 20px rgba(220, 53, 69, 0.28);
-
-  &::part(native) {
-    background: linear-gradient(135deg, #dc3545, #a71d2a);
-    color: #fff;
+  .barcode-compact-sep {
+    color: var(--gray-accent);
+    font-weight: 600;
   }
-}
 
-.id-link {
-  cursor: pointer;
-}
+  .barcode-compact-empty {
+    color: var(--gray-accent);
+    font-size: 12.5px;
+    font-weight: 500;
+    padding: 6px 4px;
+  }
 
-.bcard-barcode-stat {
-  border-top: 1px solid var(--border-color);
-  padding-top: 10px;
-  margin-top: 2px;
-}
+  // ===================== DOWNLOAD REPORT — standalone centered popup =====================
+  ::ng-deep ion-modal.printbill-modal {
+    --width: 320px !important;
+    --height: auto !important;
+    --max-height: 90vh !important;
+    --border-radius: 16px !important;
+    --box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25) !important;
+
+    &::part(content) {
+      display: block !important;
+      position: relative !important;
+      top: auto !important;
+      left: auto !important;
+      margin: 0 auto !important;
+    }
+  }
+
+  ::ng-deep .printbill-modal-page {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 0 0 20px 0 !important;
+    overflow: hidden !important;
+  }
+
+  ::ng-deep .printbill-modal-header {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 18px 18px !important;
+    background: var(--brand-gradient);
+    border-top-left-radius: 16px;
+    border-top-right-radius: 16px;
+
+    h2 {
+      margin: 0 !important;
+      font-size: 17px !important;
+      font-weight: 700 !important;
+      color: #fff !important;
+      white-space: nowrap !important;
+
+      .header-booking-tag {
+        font-weight: 500;
+        font-size: 13px;
+        color: rgba(255, 255, 255, 0.75);
+        margin-left: 6px;
+      }
+    }
+
+    .close-modal-btn {
+      flex-shrink: 0 !important;
+      background: rgba(255, 255, 255, 0.18);
+      border: none;
+      border-radius: 10px;
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      ion-icon { color: #fff; font-size: 20px; }
+    }
+  }
+
+  ::ng-deep .printbill-modal-body {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    box-sizing: border-box !important;
+    padding: 18px !important;
+    gap: 0 !important;
+
+    ion-button {
+      width: 100% !important;
+      display: block !important;
+      margin-left: 0 !important;
+      margin-right: 0 !important;
+    }
+  }
+
+  .modal-save-btn {
+    --background: var(--brand-gradient);
+    --color: #fff;
+    --border-radius: 10px;
+    --box-shadow: var(--shadow-glow);
+    height: 48px;
+    font-weight: 800;
+
+    &::part(native) {
+      background: var(--brand-gradient);
+      color: #fff;
+      font-weight: 800;
+    }
+
+    &[disabled]::part(native) {
+      background: #d5dede;
+      color: #97a5a5;
+    }
+  }
+
+  // ===================== REPORT NOT READY — danger themed =====================
+  ::ng-deep .report-not-ready-modal .printbill-modal-header {
+    background: linear-gradient(135deg, #dc3545, #a71d2a) !important;
+  }
+
+  .report-not-ready-icon {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 14px;
+
+    ion-icon {
+      font-size: 54px;
+      color: #dc3545;
+    }
+  }
+
+  .report-not-ready-text {
+    text-align: center;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--gray-accent, #56696c);
+    line-height: 1.55;
+    margin: 0 0 22px;
+    padding: 0 4px;
+  }
+
+  .modal-save-btn.danger-btn {
+    --background: linear-gradient(135deg, #dc3545, #a71d2a);
+    --color: #fff;
+    --box-shadow: 0 8px 20px rgba(220, 53, 69, 0.28);
+
+    &::part(native) {
+      background: linear-gradient(135deg, #dc3545, #a71d2a);
+      color: #fff;
+    }
+  }
+
+  .id-link {
+    cursor: pointer;
+  }
+
+  .bcard-barcode-stat {
+    border-top: 1px solid var(--border-color);
+    padding-top: 10px;
+    margin-top: 2px;
+  }

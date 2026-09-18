@@ -86,23 +86,30 @@
   padding-top: 6vh;
   margin-bottom: 28px;
 
-  .logo-ring {
-    width: 84px;
-    height: 84px;
-    margin: 0 auto 18px;
-    border-radius: 24px;
-    background: #fff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    box-shadow: 0 10px 30px rgba(8, 123, 118, .20), 0 0 0 1px var(--line-soft);
-    animation: float 4s ease-in-out infinite;
+.logo-ring {
+  width: 100px;
+  height: 100px;
+  margin: 0 auto 18px;   /* 👈 ही ओळ ऍड करा — box ला horizontally center करते */
+  flex-shrink: 0;
+  overflow: hidden;
+  border-radius: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  box-shadow: 0 10px 30px rgba(8, 123, 118, .20), 0 0 0 1px var(--line-soft);
+  animation: float 4s ease-in-out infinite;
 
-    img {
-      width: 46px;
-      height: auto;
-    }
+  img {
+    display: block;
+    margin: 0 auto;
+    max-width: 78%;
+    max-height: 78%;
+    width: auto;
+    height: auto;
+    object-fit: contain;
   }
+}
 
   .tagline {
     font-size: .7rem;
@@ -128,12 +135,9 @@
 }
 
 @keyframes float {
-
-  0%,
-  100% {
+  0%, 100% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-8px);
   }

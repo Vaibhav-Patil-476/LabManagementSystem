@@ -77,7 +77,7 @@ export class LedgerSearchPage implements OnDestroy {
     private authService: AuthService,
     private loadingCtrl: LoadingController,
     private toastCtrl: ToastController
-  ) {}
+  ) { }
 
   ionViewWillEnter(): void {
     const today = new Date();
@@ -208,27 +208,27 @@ export class LedgerSearchPage implements OnDestroy {
       });
       await popup.present();
     }
+const apiStartDate = this.toApiStartDate(this.startDate);
+const apiEndDate = this.toApiEndDate(this.endDate);
 
-    const apiEndDate = this.toApiEndDate(this.endDate);
-
-    forkJoin({
-      summary: this.walletService.getLedger({
-        franchiseId: this.franchiseId,
-        startDate: this.startDate,
-        endDate: apiEndDate
-      }),
-      transactions: this.walletService.getWallet(
-        this.authService.labId,
-        this.franchiseId,
-        0,
-        this.pageSize,
-        true,
-        undefined,
-        this.startDate,
-        apiEndDate,
-        true
-      )
-    })
+forkJoin({
+  summary: this.walletService.getLedger({
+    franchiseId: this.franchiseId,
+    startDate: this.startDate,
+    endDate: apiEndDate
+  }),
+  transactions: this.walletService.getWallet(
+    this.authService.labId,
+    this.franchiseId,
+    0,
+    this.pageSize,
+    true,
+    undefined,
+    this.startDate,
+    apiEndDate,
+    true
+  )
+})
       .pipe(finalize(() => {
         this.loading = false;
         popup?.dismiss();
@@ -257,26 +257,25 @@ export class LedgerSearchPage implements OnDestroy {
       });
   }
 
-  // ✅ NEW: load more — next page फक्त wallet/transactions साठी (summary परत नको)
-  loadMorePastLedger(): void {
-    if (!this.franchiseId || this.isLoadingMore) return;
-    if (this.currentPage + 1 >= this.totalPages) return;
+loadMorePastLedger(): void {
+  if (!this.franchiseId || this.isLoadingMore) return;
+  if (this.currentPage + 1 >= this.totalPages) return;
 
-    this.isLoadingMore = true;
-    const nextPage = this.currentPage + 1;
-    const apiEndDate = this.toApiEndDate(this.endDate);
+  this.isLoadingMore = true;
+  const nextPage = this.currentPage + 1;
+  const apiEndDate = this.toApiEndDate(this.endDate);
 
-    this.walletService.getWallet(
-      this.authService.labId,
-      this.franchiseId,
-      nextPage,
-      this.pageSize,
-      true,
-      undefined,
-      this.startDate,
-      apiEndDate,
-      true
-    )
+  this.walletService.getWallet(
+    this.authService.labId,
+    this.franchiseId,
+    nextPage,
+    this.pageSize,
+    true,
+    undefined,
+    this.startDate,
+    apiEndDate,
+    true
+  )
       .pipe(finalize(() => (this.isLoadingMore = false)))
       .subscribe({
         next: (transactions: any) => {
@@ -321,8 +320,9 @@ export class LedgerSearchPage implements OnDestroy {
       const barcode = uniqueBarcodes.length ? uniqueBarcodes.join(', ') : '-';
 
       return {
-        bookingId: t.bookingId,
-        bookingDate: t.createdOn ? new Date(t.createdOn).toLocaleDateString() : '',
+        bookingId: t.bookingId ? t.bookingId : 'NULL',
+        bookingDate: t.createdOn ? this.formatDateTime(t.createdOn) : '',
+        bookingDateRaw: t.createdOn ?? null,
         type: t.transactionType,
         remark: t.description,
         amount: t.balance,
@@ -335,6 +335,24 @@ export class LedgerSearchPage implements OnDestroy {
     });
   }
 
+  private formatDateTime(value: string | number): string {
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return '-';
+
+    const datePart = d.toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric'
+    });
+    const timePart = d.toLocaleTimeString('en-IN', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true
+    });
+
+    return `${datePart}, ${timePart}`;
+  }
+
   get sortedPastLedger() {
     if (!this.ledger?.pastLedger) {
       return [];
@@ -343,14 +361,14 @@ export class LedgerSearchPage implements OnDestroy {
     switch (this.selectedSort) {
       case 'date_asc':
         return list.sort(
-          (a, b) => new Date(a.bookingDate).getTime() - new Date(b.bookingDate).getTime()
+          (a, b) => new Date(a['bookingDateRaw']).getTime() - new Date(b['bookingDateRaw']).getTime()
         );
       case 'type':
         return list.sort((a, b) => a.type.localeCompare(b.type));
       case 'date_desc':
       default:
         return list.sort(
-          (a, b) => new Date(b.bookingDate).getTime() - new Date(a.bookingDate).getTime()
+          (a, b) => new Date(b['bookingDateRaw']).getTime() - new Date(a['bookingDateRaw']).getTime()
         );
     }
   }
@@ -415,8 +433,8 @@ export class LedgerSearchPage implements OnDestroy {
               label: f.franchiseCode
                 ? `${f.franchiseCode}/${f.franchiseCode}`
                 : (f.code && f.name
-                    ? `${f.code}/${f.name}`
-                    : (f.name || f.franchiseName || `Franchise #${id}`))
+                  ? `${f.code}/${f.name}`
+                  : (f.name || f.franchiseName || `Franchise #${id}`))
             };
           });
         },
@@ -459,15 +477,19 @@ export class LedgerSearchPage implements OnDestroy {
     return `${year}-${month}-${day}`;
   }
 
-  // ✅ NEW: endDate exclusive असल्याचा संशय असल्याने, API ला पाठवायच्या आधी
-  // निवडलेल्या शेवटच्या दिवसाच्या पुढचा दिवस देतो — जेणेकरून तो दिवस पूर्ण cover होईल.
-  // UI मधलं this.endDate field (जे user ला दिसतं) यामुळे बदलत नाही.
-  private toApiEndDate(dateStr: string): string {
-    const d = new Date(dateStr);
-    d.setDate(d.getDate() + 1);
-    return this.toIsoDate(d);
-  }
- 
+private toApiEndDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return this.toIsoDate(d);
+}
+
+
+private toApiStartDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return this.toIsoDate(d);
+}
+
   private async presentToast(message: string): Promise<void> {
     const toast = await this.toastCtrl.create({ message, duration: 2500, position: 'bottom' });
     await toast.present();

@@ -225,14 +225,14 @@
               </ion-select-option>
             </ion-select>
 
-            <ion-buttons class="export-buttons">
+            <!-- <ion-buttons class="export-buttons">
               <ion-button fill="solid" class="export-btn export-pdf" (click)="exportPdf()">
                 <ion-icon name="document-text-outline"></ion-icon>
               </ion-button>
               <ion-button fill="solid" class="export-btn export-excel" (click)="exportExcel()">
                 <ion-icon name="grid-outline"></ion-icon>
               </ion-button>
-            </ion-buttons>
+            </ion-buttons> -->
           </div>
 
           <ion-searchbar
@@ -251,7 +251,7 @@
               <th>Sr.No</th>
               <th>Booking Id</th>
               <th>F.Id</th>
-              <th>Franchise Name</th>
+             
               <th>Type</th>
               <th>Amount</th>
               <th>Remark</th>
@@ -262,34 +262,34 @@
             </tr>
           </thead>
           <tbody>
-            <tr
-              *ngFor="let row of filteredTransactions; let i = index"
-              [class.row-selected]="selectedRowIndex === i"
-              (click)="selectRow(i)">
-              <td>{{ i + 1 }}</td>
-              <td>
-                <a *ngIf="row.bookingId" [href]="'/booking/' + row.bookingId">{{ row.bookingId }}</a>
-                <span *ngIf="!row.bookingId">-</span>
-                <div class="booking-date">{{ formatDateTime(row.createdOn) }}</div>
-              </td>
-              <td>{{ row.franchiseId ?? '-' }}</td>
-              <td>{{ row.franchiseName }}</td>
-              <td>
-                <ion-badge class="type-badge" [ngClass]="row.transactionType === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
-                  {{ row.transactionType }}
-                </ion-badge>
-              </td>
-              <td>{{ formatCurrency(row.balance) }}</td>
-              <td class="remark-cell">{{ row.description }}</td>
-              <td>{{ row.customerName }}</td>
-              <td class="wrap-cell">
-                <span *ngFor="let t of row.testNames">{{ t }}<br /></span>
-                <span class="add-badge" *ngIf="row.description?.includes('Add new test')">#ADD</span>
-                <span class="cancel-badge" *ngIf="row.description?.includes('cancelled')">CANCEL</span>
-              </td>
-              <td>{{ formatCurrency(row.openingBalance) }}</td>
-              <td>{{ formatCurrency(row.closingBalance) }}</td>
-            </tr>
+<tr
+  *ngFor="let row of filteredTransactions; let i = index"
+    [class.row-selected]="selectedRowIndex === i"
+    (click)="selectRow(i)">
+    <td>{{ i + 1 }}</td>
+<td>
+  <a *ngIf="row.bookingId" [href]="'/booking/' + row.bookingId">{{ row.bookingId }}</a>
+  <span *ngIf="!row.bookingId">Null</span>
+  <div class="booking-date">{{ formatDateTime(row.createdOn) }}</div>
+</td>
+   <td>{{ row.centerCode || 'Null' }}</td>
+    
+    <td>
+      <ion-badge class="type-badge" [ngClass]="row.transactionType === 'DEBIT' ? 'badge-cancel' : 'badge-ready'">
+        {{ row.transactionType }}
+      </ion-badge>
+    </td>
+    <td>{{ formatCurrency(row.balance) }}</td>
+    <td class="remark-cell">{{ row.description }}</td>
+    <td>{{ row.customerName }}</td>
+    <td class="wrap-cell">
+      <span *ngFor="let t of row.testNames">{{ t }}<br /></span>
+      <span class="add-badge" *ngIf="row.description?.includes('Add new test')">#ADD</span>
+      <span class="cancel-badge" *ngIf="row.description?.includes('cancelled')">CANCEL</span>
+    </td>
+    <td>{{ formatCurrency(row.openingBalance) }}</td>
+    <td>{{ formatCurrency(row.closingBalance) }}</td>
+</tr>
 
             <tr *ngIf="!filteredTransactions.length && !loadingTransactions">
               <td colspan="11" class="ion-text-center">Nivadlelya date range sathi kahi entries nahit.</td>

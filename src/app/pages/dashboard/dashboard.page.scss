@@ -4376,3 +4376,21 @@ ion-modal.admin-addfunds-popup .sheet-footer {
   box-shadow: 0 0 0 2px #ffffff;
   z-index: 2;
 }
+
+.sc-id {
+  cursor: pointer;
+}
+
+.printbill-select-box {
+  border: 1.5px solid #dde5e5;
+  border-radius: 12px;
+  background: #f8fafa;
+  padding: 0 14px;
+  height: 48px;
+  transition: border-color .2s ease, box-shadow .2s ease;
+
+  &.select-expanded {   // Ionic select उघडलं की हा class लागतो
+    border-color: #087b76;
+    box-shadow: 0 0 0 3px rgba(8, 123, 118, .12);
+  }
+}

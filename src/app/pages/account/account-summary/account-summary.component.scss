@@ -502,6 +502,8 @@
 .sort-select {
   flex: 1;
   --placeholder-color: #56696c;
+   max-width: 140px;      // रुंदी कमी
+    min-height: 34px;      // उंची कमी
   background: var(--section-bg);
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-sm);

@@ -29,6 +29,7 @@ interface TransactionRow {
   bookingId: number;
   franchiseId: number | null;
   franchiseName: string;
+  centerCode: string;   // ✅ NEW
   createdOn: number;
   transactionType: 'DEBIT' | 'CREDIT';
   balance: number;
@@ -68,11 +69,13 @@ export class AccountSummaryComponent implements OnInit {
   transactions: TransactionRow[] = [];
   loadingTransactions = false;
   searchBookingId = '';
-  sortBy: 'newest' | 'oldest' = 'newest';
-  sortOptions = [
-    { value: 'newest', label: 'Booking Date (Newest first)' },
-    { value: 'oldest', label: 'Booking Date (Oldest first)' }
-  ];
+sortBy: 'newest' | 'oldest' | 'credit' | 'debit' = 'newest';
+sortOptions = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'credit', label: 'Credit' },
+  { value: 'debit', label: 'Debit' }
+];
 
   currentPage = 0;
   pageSize = 100;
@@ -89,7 +92,7 @@ export class AccountSummaryComponent implements OnInit {
   constructor(
     private labApiService: LabApiService,
     private authService: AuthService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadFranchises();
@@ -184,6 +187,15 @@ export class AccountSummaryComponent implements OnInit {
     return `${yyyy}-${mm}-${dd}`;
   }
 
+  // ✅ backend कडे startDate आणि endDate दोन्ही exclusive झालेत,
+  // त्यामुळे निवडलेली संपूर्ण range cover होण्यासाठी दोन्हीकडे +1 day करून पाठवायचा.
+  // (backend team चा date fix deploy झाल्यावर हा helper आणि याचे calls काढून टाक)
+  private getApiDate(dateStr: string): string {
+    const d = new Date(dateStr);
+    d.setDate(d.getDate() + 1);
+    return this.toDateStr(d);
+  }
+
   openDateRangePicker(): void {
     this.rangeStart = this.toDateObj(this.startDate);
     this.rangeEnd = this.toDateObj(this.endDate);
@@ -242,7 +254,11 @@ export class AccountSummaryComponent implements OnInit {
     this.summaryLoadError = '';
 
     this.labApiService
-      .getWalletLedger(this.selectedFranchise.franchiseId, this.startDate, this.endDate)
+      .getWalletLedger(
+        this.selectedFranchise.franchiseId,
+        this.startDate,                    // ✅ plain, +1 नाही
+        this.getApiDate(this.endDate)       // ✅ फक्त endDate ला +1
+      )
       .subscribe({
         next: (res: any) => {
           const summary = res?.data ?? res;
@@ -260,7 +276,6 @@ export class AccountSummaryComponent implements OnInit {
         }
       });
   }
-
   loadTransactions(append: boolean = false): void {
     if (!this.selectedFranchise) return;
 
@@ -275,50 +290,55 @@ export class AccountSummaryComponent implements OnInit {
       .getWalletSummary(
         this.authService.labId,
         this.selectedFranchise.franchiseId,
-        this.startDate,
-        this.endDate,
+        this.startDate,                    // ✅ plain, +1 नाही
+        this.getApiDate(this.endDate),      // ✅ फक्त endDate ला +1
         this.currentPage,
         this.pageSize
       )
       .subscribe({
-        next: (res: any) => {
-          const page =
-            res?.transaction ??
-            res?.data?.transaction ??
-            res?.data ??
-            res;
+next: (res: any) => {
+  const page =
+    res?.transaction ??
+    res?.data?.transaction ??
+    res?.data ??
+    res;
 
-          const rows: any[] = page?.content ?? (Array.isArray(page) ? page : []);
+  const rows: any[] = page?.content ?? (Array.isArray(page) ? page : []);
 
-          const mapped: TransactionRow[] = rows.map((r: any) => ({
-            bookingId: r.bookingId || 0,
-            franchiseId:
-              r.franchiseId ??
-              r.bookingDto?.franchiseId ??
-              r.franchise?.franchiseId ??
-              r.company?.franchiseId ??
-              this.selectedFranchise?.franchiseId ??
-              null,
-            franchiseName:
-              r.company?.franchiseName ??
-              r.company?.companyName ??
-              r.company?.name ??
-              r.franchise?.franchiseName ??
-              r.franchiseName ??
-              this.selectedFranchise?.franchiseName ??
-              '-',
-            createdOn: r.createdOn,
-            transactionType: r.transactionType,
-            balance: r.balance,
-            description: r.description,
-            customerName: r.bookingDto?.customerName ?? r.customerName ?? 'N/A',
-            testNames: (r.bookingDto?.tests || r.testNames || []).map((t: any) =>
-              typeof t === 'string' ? t : t.testName
-            ),
-            openingBalance: r.openingBalance,
-            closingBalance: r.closingBalance
-          }));
+  console.log('FIRST RAW TRANSACTION ROW:', JSON.stringify(rows[0], null, 2)); // ✅ TEMP debug
 
+const mapped: TransactionRow[] = rows.map((r: any) => ({
+  bookingId: r.bookingId || 0,
+  franchiseId:
+    r.franchiseId ??
+    r.bookingDto?.franchiseId ??
+    r.franchise?.franchiseId ??
+    r.company?.franchiseId ??
+    this.selectedFranchise?.franchiseId ??
+    null,
+  franchiseName:
+    r.company?.franchiseName ??
+    r.company?.companyName ??
+    r.company?.name ??
+    r.franchise?.franchiseName ??
+    r.franchiseName ??
+    this.selectedFranchise?.franchiseName ??
+    '-',
+centerCode:
+  r.centreCode ??
+  r.bookingDto?.franchise?.centerCode ??
+  null,
+  createdOn: r.createdOn,
+  transactionType: r.transactionType,
+  balance: r.balance,
+  description: r.description,
+  customerName: r.bookingDto?.customerName ?? r.customerName ?? 'N/A',
+  testNames: (r.bookingDto?.tests || r.testNames || []).map((t: any) =>
+    typeof t === 'string' ? t : t.testName
+  ),
+  openingBalance: r.openingBalance,
+  closingBalance: r.closingBalance
+}));
           this.transactions = append ? [...this.transactions, ...mapped] : mapped;
 
           this.totalPages = page?.totalPages ?? 1;
@@ -342,23 +362,38 @@ export class AccountSummaryComponent implements OnInit {
   }
 
   // ---------------- Table: search / sort ----------------
-  get filteredTransactions(): TransactionRow[] {
-    let rows = [...this.transactions];
+get filteredTransactions(): TransactionRow[] {
+  let rows = [...this.transactions];
 
-    if (this.searchBookingId.trim()) {
-      rows = rows.filter(r => String(r.bookingId).includes(this.searchBookingId.trim()));
-    }
-
-    rows.sort((a, b) =>
-      this.sortBy === 'newest' ? b.createdOn - a.createdOn : a.createdOn - b.createdOn
-    );
-
-    return rows;
+  // Booking Id search
+  if (this.searchBookingId.trim()) {
+    rows = rows.filter(r => String(r.bookingId).includes(this.searchBookingId.trim()));
   }
 
-  onSortChange(value: 'newest' | 'oldest'): void {
-    this.sortBy = value;
+  // Sort / Filter logic
+  switch (this.sortBy) {
+    case 'newest':
+      rows.sort((a, b) => b.createdOn - a.createdOn);
+      break;
+    case 'oldest':
+      rows.sort((a, b) => a.createdOn - b.createdOn);
+      break;
+    case 'credit':
+      rows = rows.filter(r => r.transactionType === 'CREDIT');
+      rows.sort((a, b) => b.createdOn - a.createdOn);
+      break;
+    case 'debit':
+      rows = rows.filter(r => r.transactionType === 'DEBIT');
+      rows.sort((a, b) => b.createdOn - a.createdOn);
+      break;
   }
+
+  return rows;
+}
+
+onSortChange(value: 'newest' | 'oldest' | 'credit' | 'debit'): void {
+  this.sortBy = value;
+}
 
   selectRow(i: number): void {
     this.selectedRowIndex = this.selectedRowIndex === i ? null : i;
@@ -382,8 +417,8 @@ export class AccountSummaryComponent implements OnInit {
   }
 
   // ---------------- Export (TODO: connect actual export API) ----------------
-  exportPdf(): void {}
-  exportExcel(): void {}
+  exportPdf(): void { }
+  exportExcel(): void { }
 
   // ---------------- Template helpers ----------------
   formatDateTime(ts: number): string {

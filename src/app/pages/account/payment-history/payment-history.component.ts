@@ -205,6 +205,13 @@ private getApiEndDate(iso: string): string {
   d.setDate(d.getDate() + 1);
   return this.toIsoDate(d);
 }
+
+
+private getApiStartDate(iso: string): string {
+  const d = new Date(iso);
+  d.setDate(d.getDate() + 1);
+  return this.toIsoDate(d);
+}
   constructor(
     private labApi: LabApiService,
     private auth: AuthService,
@@ -345,7 +352,7 @@ private getApiEndDate(iso: string): string {
     await loading.present();
 
     try {
-   const res: any = await this.labApi.getOrderPayments(
+const res: any = await this.labApi.getOrderPayments(
   this.startDate,
   this.getApiEndDate(this.endDate),
   this.selectedFranchiseId ?? undefined
@@ -483,7 +490,7 @@ private getApiEndDate(iso: string): string {
   private async loadGatewaySummaries(): Promise<void> {
     if (!this.startDate || !this.endDate) return;
     try {
-   const res: any = await this.labApi.getOrderAnalysis(
+const res: any = await this.labApi.getOrderAnalysis(
   this.startDate,
   this.getApiEndDate(this.endDate),
   this.selectedFranchiseId ?? undefined
@@ -561,7 +568,7 @@ private buildGatewaySummaries(list: GatewayAnalysisItem[]): GatewaySummary[] {
     await loading.present();
 
     try {
-  const res: any = await this.labApi.getLabPayments(
+const res: any = await this.labApi.getLabPayments(
   this.startDate,
   this.getApiEndDate(this.endDate),
   this.selectedFranchiseId ?? undefined,

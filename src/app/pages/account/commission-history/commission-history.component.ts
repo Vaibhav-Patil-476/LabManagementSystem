@@ -202,43 +202,51 @@ export class CommissionHistoryPage implements OnInit, OnDestroy {
     await this.loadCommissionData();
   }
 
-  private async loadCommissionData(): Promise<void> {
-    if (this.selectedFranchiseId == null || this.labId == null) return;
-    this.isLoading = true;
-    const loading = await this.loadingCtrl.create({ message: 'Loading...' });
-    await loading.present();
+private async loadCommissionData(): Promise<void> {
+  if (this.selectedFranchiseId == null || this.labId == null) return;
+  this.isLoading = true;
+ const loading = await this.loadingCtrl.create({
+  message: 'Commission data loading...',
+  spinner: 'crescent',
+  cssClass: 'ledger-loading-popup',
+  backdropDismiss: false
+});
+await loading.present();
 
-    try {
-      this.allRecords = await this.labApi.getAllCommissionHistory(this.selectedFranchiseId);
-      this.applyFilters();
-    } catch {
-      this.showToast('Commission data load करताना error आली');
-    } finally {
-      this.isLoading = false;
-      loading.dismiss();
-    }
+  try {
+    const apiEndDate = this.endDate ? this.getApiEndDate(this.endDate) : undefined;
+    this.allRecords = await this.labApi.getAllCommissionHistory(
+      this.selectedFranchiseId,
+      this.startDate ?? undefined,
+      apiEndDate
+    );
+    this.applyFilters();
+  } catch {
+    this.showToast('Commission data load करताना error आली');
+  } finally {
+    this.isLoading = false;
+    loading.dismiss();
   }
+}
 
-  /** Re-applies the date-range filter (client-side -- API has no date params
-   *  for this endpoint) and rebuilds the display rows + summary stats. */
-  private applyFilters(): void {
-    const startMs = this.startDate ? new Date(this.startDate).setHours(0, 0, 0, 0) : null;
-    const endMs = this.endDate ? new Date(this.endDate).setHours(23, 59, 59, 999) : null;
+// ✅ NEW helper
+private getApiEndDate(dateStr: string): string {
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return this.toIsoDate(d);
+}
 
-    const filtered = this.allRecords.filter(r => {
-      if (startMs != null && (r.commissionDate == null || r.commissionDate < startMs)) return false;
-      if (endMs != null && (r.commissionDate == null || r.commissionDate > endMs)) return false;
-      return true;
-    });
+private applyFilters(): void {
+  const filtered = this.allRecords; // ✅ आता client-side date filter ची गरज नाही
 
-    this.filteredRows = filtered.map(r => this.toRow(r));
-    this.visibleRows = this.filteredRows.slice(0, PAGE_SIZE);
+  this.filteredRows = filtered.map(r => this.toRow(r));
+  this.visibleRows = this.filteredRows.slice(0, PAGE_SIZE);
 
-    this.totalBookings = filtered.length;
-    this.totalCommission = filtered.reduce((sum, r) => sum + (r.commission ?? 0), 0);
-    this.totalBookingAmount = filtered.reduce((sum, r) => sum + (r.bookingAmount ?? 0), 0);
-    this.avgCommission = this.totalBookings ? this.totalCommission / this.totalBookings : 0;
-  }
+  this.totalBookings = filtered.length;
+  this.totalCommission = filtered.reduce((sum, r) => sum + (r.commission ?? 0), 0);
+  this.totalBookingAmount = filtered.reduce((sum, r) => sum + (r.bookingAmount ?? 0), 0);
+  this.avgCommission = this.totalBookings ? this.totalCommission / this.totalBookings : 0;
+}
 
   // ✅ CHANGED: आता ion-infinite-scroll event ऐवजी साध्या button click वर call होतो
   loadMore(): void {

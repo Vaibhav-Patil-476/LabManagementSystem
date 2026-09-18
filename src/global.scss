@@ -472,3 +472,17 @@ ion-modal.invoice-modal-cls {
   --backdrop-opacity: 0 !important;
 }
 
+// ---------- Custom loading popup (ledger + commission शेअर करतात) ----------
+.ledger-loading-popup {
+  --background: #ffffff;
+  --spinner-color: #0f766e;
+}
+
+  .loading-content {
+    font-size: 14px;
+    font-weight: 600;
+    color: #0f766e;
+    margin-top: 10px;
+  }
+
+
