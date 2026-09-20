@@ -150,6 +150,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   generatingReportId: number | null = null;
   printBillItem: BookingListItem | null = null;
   selectedBillPriceType: string = 'myprice';
+  customBillAmount: any = null;
   isNoteModalOpen = false;
   noteBooking: BookingListItem | null = null;
   noteText = '';
@@ -1084,6 +1085,7 @@ ngOnInit(): void {
     this.closeActionMenu();
     this.printBillItem = item;
     this.selectedBillPriceType = 'myprice';
+     this.customBillAmount = null;
     this.isPrintBillModalOpen = true;
   }
 
@@ -1153,22 +1155,21 @@ closeReportNotReadyModal(): void {
     this.printBillItem = null;
   }
 
-  confirmPrintBill(letterHead: boolean): void {
-    const item = this.printBillItem;
-    if (!item) return;
+confirmPrintBill(letterHead: boolean): void {
+  const item = this.printBillItem;
+  if (!item) return;
+  if (this.generatingBillId === item.bookingId) return;
+  this.generatingBillId = item.bookingId;
+  this.isPrintBillModalOpen = false;
 
-    if (this.generatingBillId === item.bookingId) return;
-    this.generatingBillId = item.bookingId;
-    this.isPrintBillModalOpen = false;
+  const payload = this.labApi.buildBillPayload(
+    item.bookingId,
+    this.selectedBillPriceType,
+    this.customBillAmount || null,   
+    letterHead
+  );
 
-    const payload = this.labApi.buildBillPayload(
-      item.bookingId,
-      this.selectedBillPriceType,
-      null,
-      letterHead
-    );
-
-    this.labApi.printBill(payload).subscribe({
+  this.labApi.printBill(payload).subscribe({
       next: (res: any) => this.ngZone.run(() => {
         this.generatingBillId = null;
         this.printBillItem = null;

@@ -226,6 +226,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   isPrintBillModalOpen = false;      
   printBillItem: any = null;          
   selectedBillPriceType: string = 'myprice';   
+  customBillAmount: any = null; 
   clinicalUnseenCount = 0;
   cancelUnseenCount = 0;
 
@@ -757,6 +758,7 @@ openPrintBillModal(item: any, event?: MouseEvent): void {
   event?.stopPropagation();
   this.printBillItem = item;
   this.selectedBillPriceType = 'myprice';
+   this.customBillAmount = null;
   this.isPrintBillModalOpen = true;
 }
 
@@ -773,11 +775,10 @@ confirmPrintBill(letterHead: boolean): void {
   this.printingId = item.bookingId;
   this.isPrintBillModalOpen = false;
 
-  // booking-status.page.ts प्रमाणेच — billType (myprice/mrp) आणि letterHead दोन्ही पास होतात
   const payload = this.labApi.buildBillPayload(
     item.bookingId,
     this.selectedBillPriceType,
-    null,
+    this.customBillAmount || null,   
     letterHead
   );
 
@@ -785,14 +786,9 @@ confirmPrintBill(letterHead: boolean): void {
     next: (res: any) => {
       this.printingId = null;
       this.printBillItem = null;
-      if (res?.downloadUrl) {
-        window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-      }
+      if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
     },
-    error: () => {
-      this.printingId = null;
-      this.printBillItem = null;
-    }
+    error: () => { this.printingId = null; this.printBillItem = null; }
   });
 }
 

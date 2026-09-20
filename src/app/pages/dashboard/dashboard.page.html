@@ -178,16 +178,26 @@
 
       <div style="padding:18px;">
 
-        <div class="input-group" style="margin-bottom:16px;">
-          <label>Price Type</label>
-          <div class="input-wrap">
-            <ion-select interface="popover" placeholder="Select"
-              [(ngModel)]="selectedBillPriceType" class="premium-select">
-              <ion-select-option value="myprice">My Price</ion-select-option>
-              <ion-select-option value="mrp">MRP</ion-select-option>
-            </ion-select>
-          </div>
-        </div>
+<div style="display:flex; gap:12px; margin-bottom:16px;">
+  <div class="input-group" style="flex:1; min-width:0;">
+    <label>Price Type</label>
+    <div class="input-wrap">
+      <ion-select interface="popover" placeholder="Select"
+        [(ngModel)]="selectedBillPriceType" class="premium-select">
+        <ion-select-option value="myprice">My Price</ion-select-option>
+        <ion-select-option value="mrp">MRP</ion-select-option>
+      </ion-select>
+    </div>
+  </div>
+
+  <div class="input-group" style="flex:1; min-width:0;">
+    <label>Custom Amount</label>
+    <div class="input-wrap" style="display:flex; align-items:center;">
+      <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
+        style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
+    </div>
+  </div>
+</div>
 
         <ion-button expand="block" fill="solid" class="save-changes-btn"
           [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true)">
