@@ -165,56 +165,57 @@
     </ng-template>
   </ion-modal>
 
-<!-- Print Bill modal (Global search — Price Type + With/Without letterhead) -->
-<ion-modal cssClass="test-preview-popup" [isOpen]="isPrintBillModalOpen" (didDismiss)="closePrintBillModal()">
-  <ng-template>
-    <div class="modal-page">
-      <div class="modal-header">
-        <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId }}</span></h2>
-        <ion-button fill="clear" (click)="closePrintBillModal()">
-          <ion-icon name="close-outline"></ion-icon>
-        </ion-button>
+  <!-- Print Bill modal (Global search — Price Type + With/Without letterhead) -->
+  <ion-modal cssClass="test-preview-popup" [isOpen]="isPrintBillModalOpen" (didDismiss)="closePrintBillModal()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId
+              }}</span></h2>
+          <ion-button fill="clear" (click)="closePrintBillModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div style="padding:18px;">
+
+          <div style="display:flex; gap:12px; margin-bottom:16px;">
+            <div class="input-group" style="flex:1; min-width:0;">
+              <label>Price Type</label>
+              <div class="input-wrap">
+                <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
+                  class="premium-select">
+                  <ion-select-option value="myprice">My Price</ion-select-option>
+                  <ion-select-option value="mrp">MRP</ion-select-option>
+                </ion-select>
+              </div>
+            </div>
+
+            <div class="input-group" style="flex:1; min-width:0;">
+              <label>Custom Amount</label>
+              <div class="input-wrap" style="display:flex; align-items:center;">
+                <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
+                  style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
+              </div>
+            </div>
+          </div>
+
+          <ion-button expand="block" fill="solid" class="save-changes-btn"
+            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With letterHead' }}
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="save-changes-btn" style="margin-top:10px;"
+            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
+          </ion-button>
+
+        </div>
       </div>
-
-      <div style="padding:18px;">
-
-<div style="display:flex; gap:12px; margin-bottom:16px;">
-  <div class="input-group" style="flex:1; min-width:0;">
-    <label>Price Type</label>
-    <div class="input-wrap">
-      <ion-select interface="popover" placeholder="Select"
-        [(ngModel)]="selectedBillPriceType" class="premium-select">
-        <ion-select-option value="myprice">My Price</ion-select-option>
-        <ion-select-option value="mrp">MRP</ion-select-option>
-      </ion-select>
-    </div>
-  </div>
-
-  <div class="input-group" style="flex:1; min-width:0;">
-    <label>Custom Amount</label>
-    <div class="input-wrap" style="display:flex; align-items:center;">
-      <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
-        style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
-    </div>
-  </div>
-</div>
-
-        <ion-button expand="block" fill="solid" class="save-changes-btn"
-          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With letterHead' }}
-        </ion-button>
-
-        <ion-button expand="block" fill="solid" class="save-changes-btn" style="margin-top:10px;"
-          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
-        </ion-button>
-
-      </div>
-    </div>
-  </ng-template>
-</ion-modal>
+    </ng-template>
+  </ion-modal>
 
 
   <!-- Report Not Ready modal (Global search) -->
@@ -243,6 +244,111 @@
       </div>
     </ng-template>
   </ion-modal>
+
+  <!-- Combined Pending/Cancel Clinical Notification Popup -->
+
+  <!-- Combined Pending/Cancel Clinical Notification Popup -->
+<ion-modal cssClass="test-preview-popup" [isOpen]="showDashboardNotifModal"
+  (didDismiss)="showDashboardNotifModal = false">
+  <ng-template>
+    <div class="modal-page">
+      <div class="modal-header">
+        <h2>Notification</h2>
+        <ion-button fill="clear" (click)="showDashboardNotifModal = false">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </div>
+
+      <div style="padding:18px;">
+        <p style="font-size:15px; color:#6c7b86; line-height:1.5; margin-bottom:18px;">
+          {{ dashboardNotifData?.message }}
+        </p>
+
+        <div class="section-label-row">
+          <span class="section-label-title">Pending List</span>
+        </div>
+        <div style="border-radius:10px; border:1px solid #eef1f3; margin-bottom:22px; overflow:hidden;">
+          <table class="wallet-tx-table" style="width:100%; table-layout:fixed; font-size:12.5px;">
+            <thead>
+              <tr>
+                <th style="width:26px; padding:8px 4px;">Sr</th>
+                <th style="width:52px; padding:8px 4px;">Bkg</th>
+                <th style="padding:8px 4px;">Barcode</th>
+                <th style="padding:8px 4px;">Remark</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let p of dashboardNotifData?.pendingList; let i = index">
+                <td style="padding:8px 4px;">{{ i + 1 }}</td>
+                <td style="padding:8px 4px;">{{ p.bookingId }}</td>
+                <td style="padding:8px 4px; word-break:break-all;">
+                  <div>{{ p.barcode }}</div>
+                  <span class="status-badge" [ngClass]="testStatusClass(p.status)"
+                    style="font-size:9.5px; padding:2px 6px; display:inline-block; margin-top:3px;">
+                    {{ testStatusLabel(p.status) }}
+                  </span>
+                </td>
+                <td style="padding:8px 4px; word-break:break-word;">{{ p.remark || '-' }}</td>
+              </tr>
+              <tr *ngIf="!dashboardNotifData?.pendingList?.length">
+                <td colspan="4" class="empty-tests">No records found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="section-label-row">
+          <span class="section-label-title">Cancel List</span>
+        </div>
+        <div style="border-radius:10px; border:1px solid #eef1f3; margin-bottom:22px; overflow:hidden;">
+          <table class="wallet-tx-table" style="width:100%; table-layout:fixed; font-size:12.5px;">
+            <thead>
+              <tr>
+                <th style="width:26px; padding:8px 4px;">Sr</th>
+                <th style="width:52px; padding:8px 4px;">Bkg</th>
+                <th style="padding:8px 4px;">Barcode</th>
+                <th style="padding:8px 4px;">Test</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let c of dashboardNotifData?.cancelList; let i = index">
+                <td style="padding:8px 4px;">{{ i + 1 }}</td>
+                <td style="padding:8px 4px;">{{ c.bookingId }}</td>
+                <td style="padding:8px 4px; word-break:break-all;">{{ c.deletedBarcode || '-' }}</td>
+                <td style="padding:8px 4px; word-break:break-word;">{{ c.testName || '-' }}</td>
+              </tr>
+              <tr *ngIf="!dashboardNotifData?.cancelList?.length">
+                <td colspan="4" class="empty-tests">No records found</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div>
+          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="markDashboardNotifRead()">
+            Read
+          </ion-button>
+
+          <div style="display:flex; gap:10px; margin-top:10px;"
+            *ngIf="dashboardNotifData?.pendingList?.length || dashboardNotifData?.cancelList?.length">
+
+            <ion-button fill="solid" class="save-changes-btn" style="flex:1; --background:#3b7ddd;"
+              *ngIf="dashboardNotifData?.pendingList?.length"
+              (click)="markDashboardNotifRead(); openClinicalHistory();">
+              Go to Clinical
+            </ion-button>
+
+            <ion-button fill="solid" class="save-changes-btn" style="flex:1; --background:#3b7ddd;"
+              *ngIf="dashboardNotifData?.cancelList?.length"
+              (click)="markDashboardNotifRead(); openCancelTest();">
+              Go to Cancel
+            </ion-button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
 
   <!-- Test preview modal (eye icon — global search) -->
   <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">
@@ -850,6 +956,7 @@
   </ion-modal>
 
   <ion-content class="dashboard-content" [fullscreen]="true">
+
     <!-- ================= PREMIUM GRADIENT HEADER (profile-page style) ================= -->
     <header class="app-header-premium">
       <span class="ahp-orb ahp-orb-one" aria-hidden="true"></span>
@@ -873,6 +980,7 @@
             <ion-icon name="notifications-outline"></ion-icon>
             <span class="notification-pulse"></span>
           </button>
+
 
           <ion-menu-button menu="main-menu" class="menu-trigger" aria-label="Open account menu">
             <span class="menu-trigger-avatar"><ion-icon name="person-outline"></ion-icon></span>

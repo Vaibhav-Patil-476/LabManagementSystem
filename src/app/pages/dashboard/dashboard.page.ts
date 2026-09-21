@@ -17,7 +17,7 @@ import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 
 import { Subscription, interval, forkJoin, Observable } from "rxjs";
-import { map } from "rxjs/operators";
+import { map, startWith } from "rxjs/operators";
 import { firstValueFrom } from "rxjs";
 
 import { StackedBarComponent } from "../../shared/components/stacked-bar/stacked-bar.component";
@@ -66,6 +66,9 @@ const PAYMENT_VERIFY_INITIAL_DELAY_MS = 3000;
 const PAYMENT_VERIFY_RETRY_DELAY_MS = 5000;
 const PAYMENT_VERIFY_MAX_RETRIES = 8;
 const ADMIN_GST_RATE = 0.18;
+// company-side निरीक्षणावरून confirmed IDs — दोन्ही fixed/global आहेत
+const CANCEL_NOTIF_DAILY_UPDATE_ID = 4;
+const CLINICAL_NOTIF_DAILY_UPDATE_ID = 6;
 
 @Component({
   selector: "app-dashboard",
@@ -223,12 +226,17 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   downloadingReportId: any = null;
   printingId: any = null;
-  isPrintBillModalOpen = false;      
-  printBillItem: any = null;          
-  selectedBillPriceType: string = 'myprice';   
-  customBillAmount: any = null; 
+  isPrintBillModalOpen = false;
+  printBillItem: any = null;
+  selectedBillPriceType: string = 'myprice';
+  customBillAmount: any = null;
   clinicalUnseenCount = 0;
   cancelUnseenCount = 0;
+  showDashboardNotifModal = false;
+  dashboardNotifData: any = null;
+
+  private dashboardNotifPollSub?: Subscription;
+  private readonly DASHBOARD_NOTIF_POLL_INTERVAL_MS = 15000;
 
   private readonly NOTIF_LOOKBACK_DAYS = 30; // how far back we scan for "new" items
   private notifPollSub?: Subscription;
@@ -306,6 +314,8 @@ export class DashboardPage implements OnInit, OnDestroy {
       'alert-circle-outline': alertCircleOutline,
     });
   }
+
+
 
   // ============================================================
   // ROLE / PERMISSION GETTERS
@@ -436,6 +446,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.startPolling();
     this.loadNotificationCounts();        // ✅ NEW — initial fetch
     this.startNotificationPolling();      // ✅ NEW — keep badges fresh
+    this.startDashboardNotifPolling();
 
     if (this.canViewWallet) {
       this.startWalletPolling();
@@ -446,6 +457,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.pollSub?.unsubscribe();
     this.walletPollSub?.unsubscribe();
     this.notifPollSub?.unsubscribe();     // ✅ NEW
+    this.dashboardNotifPollSub?.unsubscribe();
   }
 
   private startPolling(): void {
@@ -516,6 +528,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     const isFranchiseUser = role === this.ROLE_FRANCHISE || role === this.ROLE_FRANCHISE_STAFF;
     const franchiseId = this.authService?.currentUserValue?.raw?.franchiseId
       ?? (this.authService as any)?.franchiseId;
+
+   
 
     if (isFranchiseUser && franchiseId != null && Number(franchiseId) > 0) {
       return Number(franchiseId);
@@ -754,43 +768,43 @@ export class DashboardPage implements OnInit, OnDestroy {
     };
   }
 
-openPrintBillModal(item: any, event?: MouseEvent): void {
-  event?.stopPropagation();
-  this.printBillItem = item;
-  this.selectedBillPriceType = 'myprice';
-   this.customBillAmount = null;
-  this.isPrintBillModalOpen = true;
-}
+  openPrintBillModal(item: any, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.printBillItem = item;
+    this.selectedBillPriceType = 'myprice';
+    this.customBillAmount = null;
+    this.isPrintBillModalOpen = true;
+  }
 
-closePrintBillModal(): void {
-  this.isPrintBillModalOpen = false;
-  this.printBillItem = null;
-}
+  closePrintBillModal(): void {
+    this.isPrintBillModalOpen = false;
+    this.printBillItem = null;
+  }
 
-confirmPrintBill(letterHead: boolean): void {
-  const item = this.printBillItem;
-  if (!item) return;
-  if (this.printingId === item.bookingId) return;
+  confirmPrintBill(letterHead: boolean): void {
+    const item = this.printBillItem;
+    if (!item) return;
+    if (this.printingId === item.bookingId) return;
 
-  this.printingId = item.bookingId;
-  this.isPrintBillModalOpen = false;
+    this.printingId = item.bookingId;
+    this.isPrintBillModalOpen = false;
 
-  const payload = this.labApi.buildBillPayload(
-    item.bookingId,
-    this.selectedBillPriceType,
-    this.customBillAmount || null,   
-    letterHead
-  );
+    const payload = this.labApi.buildBillPayload(
+      item.bookingId,
+      this.selectedBillPriceType,
+      this.customBillAmount || null,
+      letterHead
+    );
 
-  this.labApi.printBill(payload).subscribe({
-    next: (res: any) => {
-      this.printingId = null;
-      this.printBillItem = null;
-      if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-    },
-    error: () => { this.printingId = null; this.printBillItem = null; }
-  });
-}
+    this.labApi.printBill(payload).subscribe({
+      next: (res: any) => {
+        this.printingId = null;
+        this.printBillItem = null;
+        if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+      },
+      error: () => { this.printingId = null; this.printBillItem = null; }
+    });
+  }
 
   openGlobalDownloadModal(item: any, event?: MouseEvent): void {
     event?.stopPropagation();
@@ -2622,6 +2636,85 @@ confirmPrintBill(letterHead: boolean): void {
     });
   }
 
+  private startDashboardNotifPolling(): void {
+    this.dashboardNotifPollSub?.unsubscribe();
+    this.dashboardNotifPollSub = interval(this.DASHBOARD_NOTIF_POLL_INTERVAL_MS)
+      .pipe(startWith(0))
+      .subscribe(() => this.fetchDashboardNotifications());
+  }
+
+private fetchDashboardNotifications(): void {
+  this.loadNotificationCounts();
+
+  setTimeout(() => {
+    if (this.showDashboardNotifModal) return;
+    if (this.clinicalUnseenCount === 0 && this.cancelUnseenCount === 0) return;
+
+    const today = new Date();
+    const endDate = this.nextDay(this.formatDateParam(today));
+    const lookback = new Date(today);
+    lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
+    const startDate = this.formatDateParam(lookback);
+
+    forkJoin({
+      clinicalList: this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate),
+      cancelList: this.labApi.getCancelTests(startDate, endDate, 500)
+    }).subscribe({
+      next: ({ clinicalList, cancelList }: any) => {
+        const rawPending = clinicalList?.content || clinicalList?.data || clinicalList || [];
+        const rawCancel = cancelList?.content || cancelList?.data || cancelList || [];
+
+        // ✅ फक्त लास्ट-सीन नंतरचे (नवीन) records ठेवा — जुनं सगळं वगळा
+        const clinicalLastSeen = this.getLastSeen('clinical');
+        const cancelLastSeen = this.getLastSeen('cancel');
+
+        const newPending = rawPending.filter((r: any) => this.extractRecordTimestamp(r, 'clinical') > clinicalLastSeen);
+        const newCancel = rawCancel.filter((r: any) => this.extractRecordTimestamp(r, 'cancel') > cancelLastSeen);
+
+        if (newPending.length === 0 && newCancel.length === 0) return;
+
+        this.ngZone.run(() => {
+          this.dashboardNotifData = {
+            message: 'Please check below barcode for which "Clinical History is required". Reply to request to release report on time.',
+            pendingList: newPending,
+            cancelList: newCancel
+          };
+          this.showDashboardNotifModal = true;
+          this.cdr.detectChanges();
+        });
+      },
+      error: (err) => console.error('🔔 fetch ERROR:', err)
+    });
+  }, 800);
+}
+
+  testShowNotifPopup(): void {
+    this.dashboardNotifData = {
+      clinical: true,
+      clinicalForLab: true,
+      clinicalForFranchise: true,
+      message: 'Test message — dummy data',
+      pendingList: [
+        { bookingId: 9999, barcode: 'TEST123', remark: 'demo', status: 'pending', created_on: new Date().toISOString() }
+      ],
+      cancelList: null
+    };
+    this.showDashboardNotifModal = true;
+  }
+
+  private hasUnseenRecords(list: any[], category: 'clinical' | 'cancel'): boolean {
+    if (!Array.isArray(list) || list.length === 0) return false;
+    const lastSeen = this.getLastSeen(category);
+    return list.some((r: any) => this.extractRecordTimestamp(r, category) > lastSeen);
+  }
+
+  markDashboardNotifRead(): void {
+    this.markCategorySeen('clinical');
+    this.markCategorySeen('cancel');
+    this.showDashboardNotifModal = false;
+    this.dashboardNotifData = null;
+  }
+
   /** Marks a category as "seen right now" — badge drops to 0
    * immediately (no need to wait for the next poll tick). */
   private markCategorySeen(category: 'clinical' | 'cancel'): void {
@@ -2639,6 +2732,8 @@ confirmPrintBill(letterHead: boolean): void {
     this.markCategorySeen('cancel');   // ✅ क्लिक करताच count 0 होतो
     this.goToPage('cancel-test');
   }
+
+
 }
 
 

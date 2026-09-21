@@ -1003,4 +1003,18 @@ getOrderAnalysis(
   return this.http.get<any[]>(`${this.BASE_URL}/api/v1/order/order-analysis`, { params });
 }
 
+getDashboardNotifications(labId: any, franchiseId?: any): Observable<any> {
+  let url = `/api/v1/dashboard-notifications/dashboard?labId=${labId}`;
+  if (franchiseId) url += `&franchiseId=${franchiseId}`;
+  return this.http.get(this.BASE_URL + url);   // baseUrl तुमच्या existing pattern प्रमाणे
+}
+
+checkDailyUpdateRead(dailyUpdatesId: number): Observable<any> {
+  return this.http.get(`${this.BASE_URL}/api/v1/daily-update/read-status/check-exists/${dailyUpdatesId}`);
+}
+
+markDailyUpdateRead(dailyUpdatesId: number): Observable<any> {
+  return this.http.post(`${this.BASE_URL}/api/v1/daily-update/read-status/`, { dailyUpdatesId });
+}
+
 }
