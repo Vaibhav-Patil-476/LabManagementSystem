@@ -245,75 +245,92 @@
     </ng-template>
   </ion-modal>
 
-  <!-- Combined Pending/Cancel Clinical Notification Popup -->
-  <ion-modal cssClass="test-preview-popup" [isOpen]="showDashboardNotifModal"
-    (didDismiss)="showDashboardNotifModal = false">
-    <ng-template>
-      <div class="modal-page">
-        <div class="modal-header">
-          <h2>Notification</h2>
-          <ion-button fill="clear" (click)="showDashboardNotifModal = false">
-            <ion-icon name="close-outline"></ion-icon>
-          </ion-button>
-        </div>
+<!-- Combined Pending/Cancel Clinical Notification Popup -->
+<ion-modal cssClass="test-preview-popup" [isOpen]="showDashboardNotifModal"
+  (didDismiss)="showDashboardNotifModal = false">
+  <ng-template>
+    <div class="modal-page">
+      <div class="modal-header">
+        <h2>Notification</h2>
+        <ion-button fill="clear" (click)="showDashboardNotifModal = false">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </div>
 
-        <div class="notif-body">
-          <p class="notif-message">{{ dashboardNotifData?.message }}</p>
+      <div class="notif-body">
+        <p class="notif-message">{{ dashboardNotifData?.message }}</p>
 
+        <div class="notif-scroll-area">
           <div class="notif-section-label">Pending List</div>
-          <div class="notif-list">
-            <div class="notif-row" *ngFor="let p of dashboardNotifData?.pendingList">
-              <div class="notif-row-main">
-                <span class="notif-bkg">#{{ p.bookingId }}</span>
-                <span class="notif-barcode">{{ p.barcode }}</span>
-              </div>
-              <div class="notif-row-sub">
-                <span class="notif-remark">{{ p.remark || '-' }}</span>
-                <span class="status-badge" [ngClass]="testStatusClass(p.status)">
-                  {{ testStatusLabel(p.status) }}
-                </span>
-              </div>
-            </div>
-            <div class="notif-empty" *ngIf="!dashboardNotifData?.pendingList?.length">No records found</div>
+          <div class="notif-table-scroll">
+            <table class="notif-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Booking ID</th>
+                  <th>Barcode</th>
+                  <th>Remark</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let p of dashboardNotifData?.pendingList; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ p.bookingId }}</td>
+                  <td>{{ p.barcode }}</td>
+                  <td>{{ p.remark || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+          <div class="notif-empty" *ngIf="!dashboardNotifData?.pendingList?.length">No records found</div>
 
           <div class="notif-section-label notif-section-label-danger">Cancel List</div>
-          <div class="notif-list">
-            <div class="notif-row" *ngFor="let c of dashboardNotifData?.cancelList">
-              <div class="notif-row-main">
-                <span class="notif-bkg">#{{ c.bookingId }}</span>
-                <span class="notif-barcode">{{ c.deletedBarcode || '-' }}</span>
-              </div>
-              <div class="notif-row-sub">
-                <span class="notif-remark">{{ c.testName || '-' }}</span>
-              </div>
-            </div>
-            <div class="notif-empty" *ngIf="!dashboardNotifData?.cancelList?.length">No records found</div>
+          <div class="notif-table-scroll">
+            <table class="notif-table">
+              <thead>
+                <tr>
+                  <th>Sr</th>
+                  <th>Booking ID</th>
+                  <th>Barcode</th>
+                  <th>Test Name</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of dashboardNotifData?.cancelList; let i = index">
+                  <td>{{ i + 1 }}</td>
+                  <td>{{ c.bookingId }}</td>
+                  <td>{{ c.deletedBarcode || '-' }}</td>
+                  <td>{{ c.testName || '-' }}</td>
+                </tr>
+              </tbody>
+            </table>
           </div>
+          <div class="notif-empty" *ngIf="!dashboardNotifData?.cancelList?.length">No records found</div>
+        </div>
 
-          <div class="notif-actions">
-            <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="markDashboardNotifRead()">
-              Read
+        <div class="notif-actions">
+          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="markDashboardNotifRead()">
+            Read
+          </ion-button>
+
+          <div class="notif-goto-row"
+            *ngIf="dashboardNotifData?.pendingList?.length || dashboardNotifData?.cancelList?.length">
+
+            <ion-button fill="solid" class="notif-goto-btn" *ngIf="dashboardNotifData?.pendingList?.length"
+              (click)="goToClinicalFromNotif()">
+              Go to Clinical
             </ion-button>
 
-            <div class="notif-goto-row"
-              *ngIf="dashboardNotifData?.pendingList?.length || dashboardNotifData?.cancelList?.length">
-
-              <ion-button fill="solid" class="notif-goto-btn" *ngIf="dashboardNotifData?.pendingList?.length"
-                (click)="goToClinicalFromNotif()">
-                Go to Clinical
-              </ion-button>
-
-              <ion-button fill="solid" class="notif-goto-btn" *ngIf="dashboardNotifData?.cancelList?.length"
-                (click)="goToCancelFromNotif()">
-                Go to Cancel
-              </ion-button>
-            </div>
+            <ion-button fill="solid" class="notif-goto-btn" *ngIf="dashboardNotifData?.cancelList?.length"
+              (click)="goToCancelFromNotif()">
+              Go to Cancel
+            </ion-button>
           </div>
         </div>
       </div>
-    </ng-template>
-  </ion-modal>
+    </div>
+  </ng-template>
+</ion-modal>
 
   <!-- Test preview modal (eye icon — global search) -->
   <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">
