@@ -320,11 +320,13 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // ROLE / PERMISSION GETTERS
   // ============================================================
-  get canViewWallet(): boolean {
-    const role = this.authService.role;
-    if (role === this.ROLE_STAFF || role === this.ROLE_FRANCHISE_STAFF) return false;
-    return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
-  }
+get canViewWallet(): boolean {
+  const role = this.authService.role;
+  if (role === this.ROLE_STAFF || role === this.ROLE_FRANCHISE_STAFF) return false;
+  return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
+}
+
+
 
   get canEditPatient(): boolean {
     const role = this.authService.role;
@@ -529,7 +531,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     const franchiseId = this.authService?.currentUserValue?.raw?.franchiseId
       ?? (this.authService as any)?.franchiseId;
 
-   
+
 
     if (isFranchiseUser && franchiseId != null && Number(franchiseId) > 0) {
       return Number(franchiseId);
@@ -2036,46 +2038,79 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
   // WALLET — LOAD / POLL
   // ============================================================
-  loadWallet(): void {
-    const labId = this.authService.labId;
-    const franchiseId = this.authService.franchiseId;
+loadWallet(): void {
+  if (this.isAdminRole) {
+    this.loadAdminWalletSummary();
+    return;
+  }
+  const labId = this.authService.labId;
+  const franchiseId = this.authService.franchiseId;
 
-    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
-      next: (res: any) => {
-        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
-        this.cdr.detectChanges();
-      },
-      error: (err) => console.error('WALLET LOAD ERROR:', err)
-    });
+  this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+    next: (res: any) => {
+      this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+      this.cdr.detectChanges();
+    },
+    error: (err) => console.error('WALLET LOAD ERROR:', err)
+  });
+}
+
+private loadAdminWalletSummary(): void {
+  const labId = this.authService.labId;
+
+  this.labApi.getAdminWalletBalance(labId).subscribe({
+    next: (res: any) => {
+      this.wallet = res;
+      this.cdr.detectChanges();
+    },
+    error: (err) => console.error('ADMIN WALLET LOAD ERROR:', err)
+  });
+}
+
+
+private loadLabWallet(): void {
+  const labId = this.authService.labId;
+
+  this.labApi.getLabWallet(labId).subscribe({
+    next: (res: any) => {
+      this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+      this.cdr.detectChanges();
+    },
+    error: (err) => console.error('LAB WALLET LOAD ERROR:', err)
+  });
+}
+
+private refreshWalletSilently(): void {
+  if (this.isAdminRole) {
+    this.loadAdminWalletSummary();
+    return;
   }
 
-  private refreshWalletSilently(): void {
-    const labId = this.authService.labId;
-    const franchiseId = this.authService.franchiseId;
-    if (!labId || !franchiseId) return;
+  const labId = this.authService.labId;
+  const franchiseId = this.authService.franchiseId;
+  if (!labId || !franchiseId) return;
 
-    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
-      next: (res: any) => {
-        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
-        this.cdr.detectChanges();
-      },
-      error: (err) => console.error('SILENT WALLET REFRESH ERROR:', err)
-    });
+  this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+    next: (res: any) => {
+      this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+      this.cdr.detectChanges();
+    },
+    error: (err) => console.error('SILENT WALLET REFRESH ERROR:', err)
+  });
 
-    if (this.isWalletModalOpen) {
-      this.walletService.getWallet(labId, franchiseId, 0, this.walletSize, true, this.walletPaymentModeFilter)
-        .subscribe({
-          next: (res: any) => {
-            const content = res?.transaction?.content || [];
-            this.walletTransactions = content;
-            this.walletTotalRows = res?.transaction?.totalElements ?? content.length;
-            this.cdr.detectChanges();
-          },
-          error: (err) => console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err)
-        });
-    }
+  if (this.isWalletModalOpen) {
+    this.walletService.getWallet(labId, franchiseId, 0, this.walletSize, true, this.walletPaymentModeFilter)
+      .subscribe({
+        next: (res: any) => {
+          const content = res?.transaction?.content || [];
+          this.walletTransactions = content;
+          this.walletTotalRows = res?.transaction?.totalElements ?? content.length;
+          this.cdr.detectChanges();
+        },
+        error: (err) => console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err)
+      });
   }
-
+}
   // ============================================================
   // WALLET MODAL / TRANSACTIONS
   // ============================================================
@@ -2643,50 +2678,50 @@ export class DashboardPage implements OnInit, OnDestroy {
       .subscribe(() => this.fetchDashboardNotifications());
   }
 
-private fetchDashboardNotifications(): void {
-  this.loadNotificationCounts();
+  private fetchDashboardNotifications(): void {
+    this.loadNotificationCounts();
 
-  setTimeout(() => {
-    if (this.showDashboardNotifModal) return;
-    if (this.clinicalUnseenCount === 0 && this.cancelUnseenCount === 0) return;
+    setTimeout(() => {
+      if (this.showDashboardNotifModal) return;
+      if (this.clinicalUnseenCount === 0 && this.cancelUnseenCount === 0) return;
 
-    const today = new Date();
-    const endDate = this.nextDay(this.formatDateParam(today));
-    const lookback = new Date(today);
-    lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
-    const startDate = this.formatDateParam(lookback);
+      const today = new Date();
+      const endDate = this.nextDay(this.formatDateParam(today));
+      const lookback = new Date(today);
+      lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
+      const startDate = this.formatDateParam(lookback);
 
-    forkJoin({
-      clinicalList: this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate),
-      cancelList: this.labApi.getCancelTests(startDate, endDate, 500)
-    }).subscribe({
-      next: ({ clinicalList, cancelList }: any) => {
-        const rawPending = clinicalList?.content || clinicalList?.data || clinicalList || [];
-        const rawCancel = cancelList?.content || cancelList?.data || cancelList || [];
+      forkJoin({
+        clinicalList: this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate),
+        cancelList: this.labApi.getCancelTests(startDate, endDate, 500)
+      }).subscribe({
+        next: ({ clinicalList, cancelList }: any) => {
+          const rawPending = clinicalList?.content || clinicalList?.data || clinicalList || [];
+          const rawCancel = cancelList?.content || cancelList?.data || cancelList || [];
 
-        // ✅ फक्त लास्ट-सीन नंतरचे (नवीन) records ठेवा — जुनं सगळं वगळा
-        const clinicalLastSeen = this.getLastSeen('clinical');
-        const cancelLastSeen = this.getLastSeen('cancel');
+          // ✅ फक्त लास्ट-सीन नंतरचे (नवीन) records ठेवा — जुनं सगळं वगळा
+          const clinicalLastSeen = this.getLastSeen('clinical');
+          const cancelLastSeen = this.getLastSeen('cancel');
 
-        const newPending = rawPending.filter((r: any) => this.extractRecordTimestamp(r, 'clinical') > clinicalLastSeen);
-        const newCancel = rawCancel.filter((r: any) => this.extractRecordTimestamp(r, 'cancel') > cancelLastSeen);
+          const newPending = rawPending.filter((r: any) => this.extractRecordTimestamp(r, 'clinical') > clinicalLastSeen);
+          const newCancel = rawCancel.filter((r: any) => this.extractRecordTimestamp(r, 'cancel') > cancelLastSeen);
 
-        if (newPending.length === 0 && newCancel.length === 0) return;
+          if (newPending.length === 0 && newCancel.length === 0) return;
 
-        this.ngZone.run(() => {
-          this.dashboardNotifData = {
-            message: 'Please check below barcode for which "Clinical History is required". Reply to request to release report on time.',
-            pendingList: newPending,
-            cancelList: newCancel
-          };
-          this.showDashboardNotifModal = true;
-          this.cdr.detectChanges();
-        });
-      },
-      error: (err) => console.error('🔔 fetch ERROR:', err)
-    });
-  }, 800);
-}
+          this.ngZone.run(() => {
+            this.dashboardNotifData = {
+              message: 'Please check below barcode for which "Clinical History is required". Reply to request to release report on time.',
+              pendingList: newPending,
+              cancelList: newCancel
+            };
+            this.showDashboardNotifModal = true;
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => console.error('🔔 fetch ERROR:', err)
+      });
+    }, 800);
+  }
 
   testShowNotifPopup(): void {
     this.dashboardNotifData = {
@@ -2715,8 +2750,27 @@ private fetchDashboardNotifications(): void {
     this.dashboardNotifData = null;
   }
 
-  /** Marks a category as "seen right now" — badge drops to 0
-   * immediately (no need to wait for the next poll tick). */
+  goToClinicalFromNotif(): void {
+    this.markCategorySeen('clinical');
+    this.showDashboardNotifModal = false;
+    this.dashboardNotifData = null;
+
+    // Ionic modal ची closing animation पूर्ण होऊ द्या, नाहीतर
+    // navigation मुळे modal overlay मागे तसाच राहतो (visual glitch)
+    setTimeout(() => this.openClinicalHistory(), 300);
+  }
+
+  goToCancelFromNotif(): void {
+    this.markCategorySeen('cancel');
+    this.showDashboardNotifModal = false;
+    this.dashboardNotifData = null;
+
+    setTimeout(() => this.openCancelTest(), 300);
+  }
+
+
+
+
   private markCategorySeen(category: 'clinical' | 'cancel'): void {
     this.setLastSeen(category, Date.now());
     if (category === 'clinical') this.clinicalUnseenCount = 0;

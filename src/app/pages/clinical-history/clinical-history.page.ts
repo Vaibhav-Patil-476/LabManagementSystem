@@ -330,7 +330,7 @@ today(): string {
       )
     );
 
-    console.log('CLINICAL HISTORY RAW RESPONSE:', res);
+ 
 
     let rawList: any[] = [];
     if (Array.isArray(res)) rawList = res;
@@ -357,12 +357,7 @@ today(): string {
         e.status !== 'closed'
       ).length;
 
-      console.log(
-        'Booking', latest.bookingId,
-        '| currentUserId:', currentUserId,
-        '| unreadCount:', unreadCount,
-        '| entries:', entries.map(e => ({ createdBy: e.createdBy, status: e.status }))
-      );
+   
 
       return {
         bookingId: latest.bookingId,

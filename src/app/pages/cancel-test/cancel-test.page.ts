@@ -237,7 +237,7 @@ async loadCancelTests() {
       .getCancelTests(this.startDate, this.nextDay(this.endDate), 500)   // ✅ NEW — end date + 1 day
       .toPromise();
 
-    console.log('CANCEL TESTS RAW RESPONSE:', res);
+ 
 
     let rawList: any[] = [];
     if (Array.isArray(res)) {

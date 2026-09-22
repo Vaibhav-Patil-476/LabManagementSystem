@@ -4394,3 +4394,143 @@ ion-modal.admin-addfunds-popup .sheet-footer {
     box-shadow: 0 0 0 3px rgba(8, 123, 118, .12);
   }
 }
+
+// ===================== PREMIUM SLIM NOTIFICATION MODAL =====================
+.notif-body {
+  padding: 14px 16px 16px;
+}
+
+.notif-message {
+  margin: 0 0 14px !important;
+  font-size: 11.5px !important;
+  font-weight: 300 !important;
+  color: var(--muted) !important;
+  line-height: 1.5 !important;
+  letter-spacing: 0.005em !important;
+}
+
+.notif-section-label {
+  font-size: 9.5px;
+  font-weight: 750;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  color: var(--brand-deep, #075f5d);
+  margin: 0 0 6px;
+}
+
+.notif-list {
+  margin-bottom: 14px;
+}
+
+.notif-row {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: #f8fafa;
+  border: 1px solid #f0f3f3;
+
+  & + .notif-row {
+    margin-top: 5px;
+  }
+}
+
+.notif-row-main {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.notif-bkg {
+  font-size: 9.5px;
+  font-weight: 750;
+  color: var(--brand-deep, #075f5d);
+  background: #d9f0ee;
+  padding: 1.5px 7px;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.notif-barcode {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink);
+  font-family: 'Courier New', monospace;
+  overflow-wrap: anywhere;
+}
+
+.notif-row-sub {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.notif-remark {
+  font-size: 10.5px;
+  font-weight: 400;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+  flex: 1;
+}
+
+.notif-row .status-badge {
+  flex-shrink: 0;
+  padding: 2px 8px !important;
+  font-size: 8.5px !important;
+  box-shadow: none !important;
+}
+
+.notif-empty {
+  text-align: center;
+  padding: 12px 0;
+  color: #a3b1b5;
+  font-size: 11px;
+  font-weight: 500;
+  background: #f8fafa;
+  border-radius: 10px;
+}
+
+.notif-actions {
+  margin-top: 2px;
+}
+
+.notif-actions .save-changes-btn {
+  height: 40px;
+  font-size: 12.5px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  --box-shadow: none;
+}
+
+.notif-goto-row {
+  display: flex;
+  gap: 7px;
+  margin-top: 7px;
+}
+
+.notif-goto-btn {
+  flex: 1;
+  --background: linear-gradient(135deg, #2470b9, #1c5a91);
+  --color: #fff;
+  --border-radius: 9px;
+  --box-shadow: none;
+  height: 38px;
+  font-size: 11px;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  margin: 0;
+
+  &::part(native) {
+    box-shadow: 0 3px 8px rgba(28, 90, 145, .18);
+  }
+}
+
+.save-changes-btn::part(native) {
+  box-shadow: 0 3px 8px rgba(7, 95, 93, .18);
+}
+
+.notif-section-label-danger {
+  color: #dc3545;
+}

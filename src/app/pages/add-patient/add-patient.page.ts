@@ -573,8 +573,7 @@ get displayTestRows(): any[] {
         this.loadPackages();
 
         this.loadLastPatient();
-        console.log('MY ROLE:', this.role);
-        console.log('RAW USER:', (this.authService.currentUserValue as any)?.raw);
+        
       },
 
       error: (err) => {
@@ -1273,10 +1272,7 @@ get displayTestRows(): any[] {
         this.doctors =
           loadedDoctors;
 
-        console.log(
-          'LATEST DOCTORS:',
-          this.doctors
-        );
+
 
         // ======================================================
         // DEFAULT SELF DOCTOR
@@ -2827,10 +2823,7 @@ updateSampleBarcode(sample: any): void {
             ? list
             : [];
 
-        console.log(
-          'LOADED PACKAGES:',
-          this.allPackages
-        );
+
       },
 
       error: (err: any) => {
