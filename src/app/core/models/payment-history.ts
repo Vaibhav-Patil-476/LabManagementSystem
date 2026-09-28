@@ -14,7 +14,7 @@ export interface PaymentTransaction {
   status?: string;
   pgName?: string;
   transactionId?: string;
-  gatewayPaymentId?: string;
+  gatewayPaymentId?: string; 
   approvedBy?: string;
   franchiseId?: number;
   franchiseName?: string;
