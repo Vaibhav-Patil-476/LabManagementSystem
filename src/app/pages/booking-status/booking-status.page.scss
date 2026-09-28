@@ -3679,7 +3679,7 @@ ion-content.menu-open {
   text-align: center;
   font-size: 14px;
   font-weight: 600;
-  color: var(--text-mid, #56696c);
+  color: var(--gray-accent, #56696c);
   line-height: 1.55;
   margin: 0 0 22px;
   padding: 0 4px;
@@ -3689,14 +3689,13 @@ ion-content.menu-open {
   --background: linear-gradient(135deg, #dc3545, #a71d2a);
   --color: #fff;
   --box-shadow: 0 8px 20px rgba(220, 53, 69, 0.28);
+  height: 48px;
+  font-weight: 800;
 
   &::part(native) {
     background: linear-gradient(135deg, #dc3545, #a71d2a);
     color: #fff;
-  }
-
-  &:active::part(native) {
-    transform: scale(0.98);
+    font-weight: 800;
   }
 }
 

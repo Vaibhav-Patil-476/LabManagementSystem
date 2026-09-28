@@ -63,58 +63,59 @@ export class LoginPage {
     });
   }
 
-  login() {
+ login() {
 
-    if (!this.email || !this.password) {
-      this.toastService.error('Error', 'Username and Password required');
-      return;
-    }
-
-    this.loading = true;
-
-    this.authService.logout();
-
-    const body = {
-      username: this.email,
-      password: this.password
-    };
-
-    this.authService.login(body).subscribe({
-
-      next: (response) => {
-
-        this.authService.setToken(response.token);
-
-        this.authService.loadCurrentUser().subscribe({
-
-          next: (user) => {
-            this.loading = false;
-            this.toastService.success('Success', 'Login Successful');
-            this.router.navigate(['/dashboard']);
-          },
-
-          error: (err) => {
-            this.loading = false;
-            this.toastService.warning('Warning', 'Logged in, but role fetch failed.');
-            this.router.navigate(['/dashboard']);
-          }
-        });
-      },
-
-      error: (error) => {
-        this.loading = false;
-
-        if (error.status === 401) {
-          this.toastService.error('Login Failed', 'Invalid Username or Password');
-        } else if (error.status === 0) {
-          this.toastService.error('Server Error', 'Unable to connect server');
-        } else {
-          this.toastService.error(
-            'Error',
-            error.error?.message || 'Something went wrong'
-          );
-        }
-      }
-    });
+  if (!this.email || !this.password) {
+    this.toastService.error('Error', 'Username and Password required');
+    return;
   }
+
+  this.loading = true;
+
+  this.authService.logout();
+
+  const body = {
+    username: this.email,
+    password: this.password
+  };
+
+  this.authService.login(body).subscribe({
+
+    next: (response) => {
+
+      this.authService.setToken(response.token);
+
+      this.authService.loadCurrentUser().subscribe({
+
+        next: (user) => {
+          this.loading = false;
+
+          this.toastService.success('Success', 'Login Successful');
+          this.router.navigate(['/dashboard']);
+        },
+
+        error: (err) => {
+          this.loading = false;
+          this.toastService.warning('Warning', 'Logged in, but role fetch failed.');
+          this.router.navigate(['/dashboard']);
+        }
+      });
+    },
+
+    error: (error) => {
+      this.loading = false;
+
+      if (error.status === 401) {
+        this.toastService.error('Login Failed', 'Invalid Username or Password');
+      } else if (error.status === 0) {
+        this.toastService.error('Server Error', 'Unable to connect server');
+      } else {
+        this.toastService.error(
+          'Error',
+          error.error?.message || 'Something went wrong'
+        );
+      }
+    }
+  });
+}
 }

@@ -1,4 +1,4 @@
-package io.ionic.starter;
+package com.hypatholab.app;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;

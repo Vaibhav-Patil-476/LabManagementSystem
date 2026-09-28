@@ -6,7 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
 
 import {
-  IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
+  IonContent, IonIcon, IonMenu, IonMenuButton,
   IonModal, IonSpinner, IonSelect, IonSelectOption,
   IonDatetime, IonButton, IonSearchbar, MenuController, AlertController,
   LoadingController
@@ -78,7 +78,7 @@ const CLINICAL_NOTIF_DAILY_UPDATE_ID = 6;
   imports: [
     CommonModule,
     FormsModule,
-    IonContent, IonIcon, IonItem, IonLabel, IonList, IonMenu, IonMenuButton,
+    IonContent, IonIcon, IonMenu, IonMenuButton,
     IonModal, IonSpinner, IonSelect, IonSelectOption,
     IonDatetime, IonButton, IonSearchbar,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
@@ -102,7 +102,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   doctors: any[] = [];
   labs: any[] = [];
   samplesCanceled = 0;
-
+private franchiseCache: any[] = [];
   patientsPending = 0;
   patientsCompleted = 0;
   samplesMissing = 0;
@@ -577,6 +577,17 @@ get canViewWallet(): boolean {
     return new Date(dateStr);
   }
 
+  get printBillFranchiseHasLetterHead(): boolean {
+  const franchiseId = this.printBillItem?.franchiseId;
+  if (!franchiseId) return false;
+
+  const franchise = this.franchiseCache.find(
+    (f: any) => Number(f?.franchiseId) === Number(franchiseId)
+  );
+
+  return !!franchise?.ifLetterHead;
+}
+
   // ============================================================
   // DATE RANGE PICKER
   // ============================================================
@@ -770,43 +781,54 @@ get canViewWallet(): boolean {
     };
   }
 
-  openPrintBillModal(item: any, event?: MouseEvent): void {
-    event?.stopPropagation();
-    this.printBillItem = item;
-    this.selectedBillPriceType = 'myprice';
-    this.customBillAmount = null;
-    this.isPrintBillModalOpen = true;
-  }
+openPrintBillModal(item: any, event?: MouseEvent): void {
+  event?.stopPropagation();
+  this.printBillItem = item;
+  this.selectedBillPriceType = 'myprice';
+  this.customBillAmount = null;
+  this.isPrintBillModalOpen = true;
 
+  // franchise list once fetch करून cache करा (ifLetterHead चेक करायला लागतो)
+  if (this.franchiseCache.length === 0) {
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+        this.cdr.detectChanges();
+      },
+      error: () => { /* silent — buttons will just show default 2-button state */ }
+    });
+  }
+}
   closePrintBillModal(): void {
     this.isPrintBillModalOpen = false;
     this.printBillItem = null;
   }
 
-  confirmPrintBill(letterHead: boolean): void {
-    const item = this.printBillItem;
-    if (!item) return;
-    if (this.printingId === item.bookingId) return;
+confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
+  const item = this.printBillItem;
+  if (!item) return;
+  if (this.printingId === item.bookingId) return;
 
-    this.printingId = item.bookingId;
-    this.isPrintBillModalOpen = false;
+  this.printingId = item.bookingId;
+  this.isPrintBillModalOpen = false;
 
-    const payload = this.labApi.buildBillPayload(
-      item.bookingId,
-      this.selectedBillPriceType,
-      this.customBillAmount || null,
-      letterHead
-    );
+  const payload = this.labApi.buildBillPayload(
+    item.bookingId,
+    this.selectedBillPriceType,
+    this.customBillAmount || null,
+    letterHead,
+    fLetterHead
+  );
 
-    this.labApi.printBill(payload).subscribe({
-      next: (res: any) => {
-        this.printingId = null;
-        this.printBillItem = null;
-        if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-      },
-      error: () => { this.printingId = null; this.printBillItem = null; }
-    });
-  }
+  this.labApi.printBill(payload).subscribe({
+    next: (res: any) => {
+      this.printingId = null;
+      this.printBillItem = null;
+      if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+    },
+    error: () => { this.printingId = null; this.printBillItem = null; }
+  });
+}
 
   openGlobalDownloadModal(item: any, event?: MouseEvent): void {
     event?.stopPropagation();

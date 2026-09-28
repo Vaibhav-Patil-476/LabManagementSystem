@@ -302,21 +302,22 @@
         </button>
       </div>
 
-      <div class="printbill-modal-body">
-        <ion-button expand="block" fill="solid" class="modal-save-btn"
-          [disabled]="generatingReportId !== null" (click)="confirmDownloadReport(true)">
-          <ion-icon slot="start" name="download-outline" *ngIf="generatingReportId === null"></ion-icon>
-          <ion-spinner name="crescent" slot="start" *ngIf="generatingReportId !== null"></ion-spinner>
-          With letterHead
-        </ion-button>
+<div class="printbill-modal-body">
+  <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+    [disabled]="generatingReportId !== null" (click)="confirmDownloadReport(true)">
+    <ion-icon slot="start" name="download-outline" *ngIf="generatingReportId === null"></ion-icon>
+    <ion-spinner name="crescent" slot="start" *ngIf="generatingReportId !== null"></ion-spinner>
+    With letterHead
+  </ion-button>
 
-        <ion-button expand="block" fill="solid" class="modal-save-btn" style="margin-top:10px;"
-          [disabled]="generatingReportId !== null" (click)="confirmDownloadReport(false)">
-          <ion-icon slot="start" name="download-outline" *ngIf="generatingReportId === null"></ion-icon>
-          <ion-spinner name="crescent" slot="start" *ngIf="generatingReportId !== null"></ion-spinner>
-          Without letterHead
-        </ion-button>
-      </div>
+  <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
+    [disabled]="generatingReportId !== null" (click)="confirmDownloadReport(false)">
+    <ion-icon slot="start" name="download-outline" *ngIf="generatingReportId === null"></ion-icon>
+    <ion-spinner name="crescent" slot="start" *ngIf="generatingReportId !== null"></ion-spinner>
+    Without letterHead
+  </ion-button>
+</div>
+   
     </div>
   </ng-template>
 </ion-modal>

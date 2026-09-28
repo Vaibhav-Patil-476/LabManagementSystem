@@ -32,8 +32,8 @@
  */
 
 /* Core CSS required for Ionic components to work properly */
+@use "./theme/premium-tokens.scss" as *;
 @import "@ionic/angular/css/core.css";
-@import "./theme/premium-tokens.scss";
 /* Basic CSS for apps built with Ionic */
 @import "@ionic/angular/css/normalize.css";
 @import "@ionic/angular/css/structure.css";
@@ -484,5 +484,20 @@ ion-modal.invoice-modal-cls {
     color: #0f766e;
     margin-top: 10px;
   }
+
+  .printbill-btn-slim {
+  --border-radius: 12px;
+  height: 46px;                     // आधीच्या 48-52px पेक्षा compact
+  font-size: 12.5px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  text-transform: uppercase;
+  --background: linear-gradient(135deg, #087d78, #055f5d);
+  box-shadow: 0 4px 12px rgba(13, 71, 89, 0.25);
+
+  ion-icon {
+    font-size: 16px;
+  }
+}
 
 

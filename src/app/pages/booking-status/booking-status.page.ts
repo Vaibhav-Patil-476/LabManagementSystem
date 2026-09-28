@@ -590,6 +590,7 @@ ngOnInit(): void {
   private mapBookingItem(raw: any): BookingListItem {
     if (!raw) return raw;
 
+
     const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
       .filter((t: any) => !!t.testName);
 
@@ -959,6 +960,10 @@ ngOnInit(): void {
     return 'badge-pending';
   }
 
+  isReportComplete(status: string | undefined): boolean {
+  return (status || '').toLowerCase().includes('complete');
+}
+
   testStatusLabel(status?: string): string {
     const s = this.normalizeStatus(status, 'snr');
 
@@ -1155,7 +1160,7 @@ closeReportNotReadyModal(): void {
     this.printBillItem = null;
   }
 
-confirmPrintBill(letterHead: boolean): void {
+confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
   const item = this.printBillItem;
   if (!item) return;
   if (this.generatingBillId === item.bookingId) return;
@@ -1166,7 +1171,8 @@ confirmPrintBill(letterHead: boolean): void {
     item.bookingId,
     this.selectedBillPriceType,
     this.customBillAmount || null,   
-    letterHead
+    letterHead,
+     fLetterHead  
   );
 
   this.labApi.printBill(payload).subscribe({
@@ -1192,6 +1198,17 @@ confirmPrintBill(letterHead: boolean): void {
       }
     });
   }
+
+  get printBillFranchiseHasLetterHead(): boolean {
+  const franchiseId = this.printBillItem?.franchise?.franchiseId;
+  if (!franchiseId) return false;
+
+  const franchise = this.filterFranchises.find(
+    (f: any) => Number(f?.franchiseId) === Number(franchiseId)
+  );
+
+  return !!franchise?.ifLetterHead;
+}
 
   // ---------- print bill ----------
   async openPrintBillOptions(item: BookingListItem): Promise<void> {

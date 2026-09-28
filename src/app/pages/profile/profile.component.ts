@@ -1,7 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, OnInit } from '@angular/core';
 import { Router } from '@angular/router';
-import { IonContent, IonIcon, IonButton, IonSpinner } from '@ionic/angular/standalone';
+import { IonContent, IonIcon, IonSpinner } from '@ionic/angular/standalone';
 import { addIcons } from 'ionicons';
 import {
   arrowBackOutline, personOutline, businessOutline,
@@ -28,7 +28,7 @@ interface DisplayOrgInfo {
   standalone: true,
   templateUrl: './profile.component.html',
   styleUrls: ['./profile.component.scss'],
-  imports: [CommonModule, IonContent, IonIcon, IonButton, IonSpinner]
+  imports: [CommonModule, IonContent, IonIcon, IonSpinner]
 })
 export class ProfilePage implements OnInit {
 

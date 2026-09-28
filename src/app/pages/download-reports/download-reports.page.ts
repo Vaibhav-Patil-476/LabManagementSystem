@@ -3,8 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner,
-  IonSelect, IonSelectOption, IonModal
+  IonContent, IonButton, IonIcon, IonSpinner,
+  IonModal
 } from '@ionic/angular/standalone';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -71,8 +71,8 @@ export interface ReportBookingRow {
     CommonModule,
     FormsModule,
     IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-    IonContent, IonButton, IonIcon, IonCheckbox, IonSpinner,
-    IonSelect, IonSelectOption, IonModal,
+    IonContent, IonButton, IonIcon, IonSpinner,
+     IonModal,
     MatDatepickerModule, MatFormFieldModule, MatInputModule
   ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],

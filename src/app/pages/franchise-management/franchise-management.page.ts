@@ -24,18 +24,8 @@ import {
   IonContent,
   IonRefresher,
   IonRefresherContent,
-  IonSearchbar,
-  IonSelect,
-  IonSelectOption,
   IonInfiniteScroll,
   IonInfiniteScrollContent,
-  IonCard,
-  IonCardContent,
-  IonBadge,
-  IonSpinner,
-  IonChip,
-  IonLabel,
-  IonModal,
   RefresherCustomEvent,
   InfiniteScrollCustomEvent
 } from '@ionic/angular/standalone';
@@ -153,18 +143,8 @@ type TypeFilter = 'ALL' | 'SUPER' | 'FRANCHISE' | 'SUB';
     IonContent,
     IonRefresher,
     IonRefresherContent,
-    IonSearchbar,
-    IonSelect,
-    IonSelectOption,
     IonInfiniteScroll,
     IonInfiniteScrollContent,
-    IonCard,
-    IonCardContent,
-    IonBadge,
-    IonSpinner,
-    IonChip,
-    IonLabel,
-    IonModal,
     MatDatepickerModule,
     MatFormFieldModule,
     MatInputModule
@@ -843,7 +823,7 @@ export class FranchiseManagementPage implements OnInit, OnDestroy {
       const isNative = Capacitor.isNativePlatform();
 
       if (isNative) {
-        console.log('PDF EXPORT: Android native platform');
+   
 
         // ------------------------------------------------------
         // PDF -> DATA URI
@@ -871,7 +851,7 @@ export class FranchiseManagementPage implements OnInit, OnDestroy {
           data: base64Pdf
         });
 
-        console.log('PDF native result:', result);
+   
 
         // ------------------------------------------------------
         // SUCCESS

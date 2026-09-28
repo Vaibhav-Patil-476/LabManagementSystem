@@ -150,17 +150,21 @@
           </ion-button>
         </div>
 
-        <div style="padding:18px;">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" [disabled]="downloadingReportId !== null"
-            (click)="confirmGlobalDownload(true)">
-            {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
-          </ion-button>
+<div style="padding:18px;">
+  <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
+    (click)="confirmGlobalDownload(true)">
+    <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
+    <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
+    {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
+  </ion-button>
 
-          <ion-button expand="block" fill="solid" class="save-changes-btn" style="margin-top:10px;"
-            [disabled]="downloadingReportId !== null" (click)="confirmGlobalDownload(false)">
-            {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
-          </ion-button>
-        </div>
+  <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
+    [disabled]="downloadingReportId !== null" (click)="confirmGlobalDownload(false)">
+    <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
+    <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
+    {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
+  </ion-button>
+</div>
       </div>
     </ng-template>
   </ion-modal>
@@ -200,17 +204,31 @@
             </div>
           </div>
 
-          <ion-button expand="block" fill="solid" class="save-changes-btn"
-            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true)">
-            <ion-icon slot="start" name="print-outline"></ion-icon>
-            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With letterHead' }}
-          </ion-button>
+<ion-button expand="block" fill="solid" class="printbill-btn-slim"
+  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, false)">
+  <ion-icon slot="start" name="print-outline"></ion-icon>
+  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With LetterHead' }}
+</ion-button>
 
-          <ion-button expand="block" fill="solid" class="save-changes-btn" style="margin-top:10px;"
-            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false)">
-            <ion-icon slot="start" name="print-outline"></ion-icon>
-            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
-          </ion-button>
+<ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:8px;"
+  *ngIf="printBillFranchiseHasLetterHead"
+  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
+  <ion-icon slot="start" name="print-outline"></ion-icon>
+  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F With LetterHead' }}
+</ion-button>
+
+<ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:8px;"
+  *ngIf="printBillFranchiseHasLetterHead"
+  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
+  <ion-icon slot="start" name="print-outline"></ion-icon>
+  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F Without LetterHead' }}
+</ion-button>
+
+<ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:8px;"
+  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, false)">
+  <ion-icon slot="start" name="print-outline"></ion-icon>
+  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without LetterHead' }}
+</ion-button>
 
         </div>
       </div>
@@ -223,24 +241,23 @@
     (didDismiss)="closeGlobalReportNotReadyModal()">
     <ng-template>
       <div class="modal-page">
-        <div class="modal-header" style="background: linear-gradient(135deg, #dc3545, #a71d2a);">
-          <h2>Report Not Ready <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
-              globalReportNotReadyBookingId }}</span></h2>
-          <ion-button fill="clear" (click)="closeGlobalReportNotReadyModal()">
-            <ion-icon name="close-outline"></ion-icon>
-          </ion-button>
-        </div>
+<div class="modal-header global-report-not-ready-header">
+  <h2>Report Not Ready <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
+      globalReportNotReadyBookingId }}</span></h2>
+  <ion-button fill="clear" (click)="closeGlobalReportNotReadyModal()">
+    <ion-icon name="close-outline"></ion-icon>
+  </ion-button>
+</div>
 
-        <div style="padding:24px 20px; text-align:center;">
-          <ion-icon name="alert-circle-outline" style="font-size:54px; color:#dc3545; margin-bottom:14px;"></ion-icon>
-          <p style="font-size:14px; font-weight:600; color:#6c7b86; line-height:1.55; margin:0 0 22px;">
-            This report is not yet complete. Please try again once all tests for this booking have been completed.
-          </p>
-          <ion-button expand="block" fill="solid" class="save-changes-btn"
-            style="--background: linear-gradient(135deg, #dc3545, #a71d2a);" (click)="closeGlobalReportNotReadyModal()">
-            GOT IT
-          </ion-button>
-        </div>
+<div style="padding:24px 20px; text-align:center;">
+  <ion-icon name="alert-circle-outline" class="global-report-not-ready-icon"></ion-icon>
+  <p class="global-report-not-ready-text">
+    This report is not yet complete. Please try again once all tests for this booking have been completed.
+  </p>
+  <ion-button expand="block" fill="solid" class="global-danger-btn" (click)="closeGlobalReportNotReadyModal()">
+    GOT IT
+  </ion-button>
+</div>
       </div>
     </ng-template>
   </ion-modal>

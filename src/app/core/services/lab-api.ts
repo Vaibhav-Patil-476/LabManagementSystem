@@ -461,7 +461,8 @@
     bookingId: number,
     billType: string = 'myprice',
     customBillAmount: any = null,
-    letterHead: boolean = true
+    letterHead: boolean = true,
+     fLetterHead: boolean = false   
   ): any {
       const labId = this.getLabId();
       const token = this.authService.getToken();
@@ -473,13 +474,16 @@
           labSettingsApi: `${this.BASE_URL}/api/v1/lab/settings/${labId}`,
           currentUserApi: `${this.BASE_URL}/auth/current-user`,
           billType: billType,
-          letterHead: letterHead,   // ✅ NEW — company popup madhe "With/Without letterHead" sathi
+          letterHead: letterHead,   
+           fLetterHead: fLetterHead,
           token,
           customBillAmount,
           domain
         }
       };
     }
+
+
     updateBarcode(bookingId: number, payload: any[]): Observable<any> {
       return this.http.put(
         `${this.BASE_URL}/api/v1/sampleaccession/updateBarcode/${bookingId}`,

@@ -9,7 +9,7 @@ import {
   IonButtons,
   IonBackButton,
   IonButton,
-  IonIcon
+  
 } from '@ionic/angular/standalone';
 
 import { addIcons } from 'ionicons';
@@ -33,7 +33,7 @@ import {  Router } from '@angular/router';
     IonButtons,
     IonBackButton,
     IonButton,
-    IonIcon
+    
   ]
 })
 export class NotificationsPage {

@@ -1,12 +1,11 @@
-package io.ionic.starter;
+package com.hypatholab.app;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.os.Bundle;
-import android.view.WindowManager;
 import android.graphics.Color;
-
+import android.view.WindowManager;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
@@ -31,10 +30,10 @@ public class MainActivity extends BridgeActivity {
         // ⚠️ TEMPORARILY COMMENTED — screenshot घेण्यासाठी disable केलंय.
         // Testing झाल्यावर परत UNCOMMENT करायला विसरू नका (security साठी
         // हे production मध्ये असणं गरजेचं आहे).
-        // getWindow().setFlags(
-        //         WindowManager.LayoutParams.FLAG_SECURE,
-        //         WindowManager.LayoutParams.FLAG_SECURE
-        // );
+        //  getWindow().setFlags(
+        //          WindowManager.LayoutParams.FLAG_SECURE,
+        //          WindowManager.LayoutParams.FLAG_SECURE
+        //  );
 
         // ✅ NEW: Android 15 (API 35) edge-to-edge display मुळे
         // styles.xml cha android:navigationBarColor कधी कधी ignore

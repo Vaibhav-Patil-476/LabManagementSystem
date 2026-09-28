@@ -16,12 +16,8 @@ import {
   IonInput,
   IonSelect,
   IonSelectOption,
-  IonTextarea,
   IonCheckbox,
   IonModal,
-  IonRadioGroup,
-  IonRadio,
-  IonItem
 } from '@ionic/angular/standalone';
 import {
   HostListener
@@ -72,12 +68,8 @@ import { BookingRefreshService } from '../../core/services/booking-refresh';
     IonInput,
     IonSelect,
     IonSelectOption,
-    IonTextarea,
     IonCheckbox,
     IonModal,
-    IonRadioGroup,
-    IonRadio,
-    IonItem
   ]
 })
 export class AddPatientComponent {
@@ -879,23 +871,13 @@ get displayTestRows(): any[] {
         labId
     };
 
-    console.log(
-      'CREATE DOCTOR PAYLOAD:',
-      JSON.stringify(
-        payload,
-        null,
-        2
-      )
-    );
+  
 
     this.labApi.createDoctor(payload).subscribe({
 
       next: (res: any) => {
 
-        console.log(
-          'CREATE DOCTOR SUCCESS:',
-          res
-        );
+
 
         const createdDoctorId =
           Number(
@@ -911,10 +893,7 @@ get displayTestRows(): any[] {
             0
           );
 
-        console.log(
-          'CREATED DOCTOR ID:',
-          createdDoctorId
-        );
+
 
         const immediateDoctor =
           this.normalizeDoctor({
@@ -1235,10 +1214,7 @@ get displayTestRows(): any[] {
             );
         }
 
-        console.log(
-          'Doctors refreshed from backend:',
-          this.doctors
-        );
+
       },
 
       error: (err: any) => {
@@ -1434,15 +1410,7 @@ get displayTestRows(): any[] {
         this.showDoctorSuggestions =
           this.filteredDoctors.length > 0;
 
-        console.log(
-          'LATEST DOCTORS FROM BACKEND:',
-          this.doctors
-        );
 
-        console.log(
-          'FILTERED DOCTORS:',
-          this.filteredDoctors
-        );
       },
 
       error: (err: any) => {
@@ -1516,15 +1484,7 @@ get displayTestRows(): any[] {
     this.showDoctorSuggestions =
       false;
 
-    console.log(
-      'SELECTED DOCTOR:',
-      doctor
-    );
 
-    console.log(
-      'SELECTED DOCTOR ID:',
-      doctorId
-    );
   }
 
   // ============================================================
@@ -1886,10 +1846,7 @@ this.labApi
 
     this.labSearch = labName;
 
-    console.log(
-      'LAB SELECTED:',
-      lab
-    );
+
   }
 
   selectStaffLab(lab: any): void {
@@ -1958,20 +1915,7 @@ this.labApi
         this.showLabDropdown =
           this.filteredLabs.length > 0;
 
-        console.log(
-          'LATEST FRANCHISES FROM BACKEND:',
-          this.labs
-        );
 
-        console.log(
-          'SEARCHED LAB:',
-          q
-        );
-
-        console.log(
-          'FILTERED LABS:',
-          this.filteredLabs
-        );
       },
 
       error: (err: any) => {
@@ -2004,7 +1948,7 @@ this.labApi
     }
     this.labApi.getFranchiseLabs().subscribe({
       next: (res: any) => {
-        console.log('RAW RESPONSE:', res);
+
 
         const list = Array.isArray(res) ? res : (res?.content || []);
 
@@ -2222,10 +2166,7 @@ this.labApi
 
     this.showLabDropdown = false;
 
-    console.log(
-      'SELECTED LAB:',
-      lab
-    );
+
 
     this.loadTests();
 
@@ -2926,7 +2867,7 @@ updateSampleBarcode(sample: any): void {
         assignedPrice: realPrice
       };
     });
-console.log('DEBUG FILTERED PACKAGES:', JSON.stringify(this.filteredPackages[0], null, 2));
+
 
     this.showPackageSuggestions = this.filteredPackages.length > 0;
     this.showPackageSuggestions = this.filteredPackages.length > 0;
@@ -4190,48 +4131,9 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       tests
     };
 
-    // ✅ FIX: Company backend flat fields sobat ha stringified
-    // 'request' field pan expect karto — company web cha payload
-    // madhe ha field asto, apla madhe missing hota. Payload complete
-    // zalyavarach (sagle fields set zalyavar) generate karaycha, ani
-    // he sagle assignments/pushes zalya nantar shevatach karaycha
-    // jenekaruna string snapshot flat fields sarkhach rahil.
+
     payload.request = JSON.stringify(payload);
 
-    console.log(
-      'SELECTED DOCTOR:',
-      this.selectedDoctor
-    );
-
-    console.log(
-      'SELECTED DOCTOR ID:',
-      selectedDoctorId
-    );
-
-    console.log(
-      'SELF DOCTOR:',
-      selfDoctor
-    );
-
-    console.log(
-      'SELF DOCTOR ID:',
-      selfDoctorId
-    );
-
-    console.log(
-      'FINAL DOCTOR ID:',
-      finalDoctorId
-    );
-
-    console.log(
-      'CUSTOM DOCTOR NAME:',
-      customDoctorName
-    );
-
-    console.log(
-      'FINAL BOOKING PAYLOAD:',
-      JSON.stringify(payload, null, 2)
-    );
 
     this.proceedBookingSave(payload);
   }
@@ -4241,14 +4143,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
     payload: any
   ): void {
 
-    console.log(
-      'SENDING CREATE BOOKING BODY:',
-      JSON.stringify(
-        payload,
-        null,
-        2
-      )
-    );
+
 
     this.labApi.createBooking(
       payload
@@ -4260,10 +4155,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
       next: (res: any) => {
 
-        console.log(
-          'BOOKING SUCCESS:',
-          res
-        );
+
 
         this.bookingRefresh
           .triggerRefresh();
@@ -4271,10 +4163,6 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         setTimeout(() => {
 
           this.ngZone.run(() => {
-
-            console.log(
-              'Refreshing Last Patient without page reload...'
-            );
 
             this.loadLastPatient();
 
@@ -4310,10 +4198,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
           next: (patientRes: any) => {
 
-            console.log(
-              'PATIENT DETAILS RES:',
-              patientRes
-            );
+
 
             this.buildInvoiceAndShow(
               res,
@@ -4463,14 +4348,7 @@ private buildInvoiceAndShow(
       '—'
     ).trim();
 
-    // ============================================================
-    // ✅ FIX: khara auto-generated Patient Id (e.g. "3505001064")
-    // GET /api/v1/lab/booking/patient/{labId}/{bookingId} cha
-    // response madhe TOP-LEVEL "patientId" field madhech asto —
-    // confirm zala console log varun. UHID var fallback purna
-    // kadhla, कारण UHID rikami thevli tari he ID yetach (backend
-    // auto-generate karto).
-    // ============================================================
+
 
     const patientId = String(
       patientRes?.patientId ??
@@ -4694,10 +4572,7 @@ private buildInvoiceAndShow(
 
         this.isPrintingInvoice = false;
 
-        console.log(
-          'PRINT BILL RESPONSE:',
-          res
-        );
+
 
         if (res?.downloadUrl) {
 
