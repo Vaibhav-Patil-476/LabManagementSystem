@@ -149,7 +149,7 @@
   &:focus-within {
     border-color: var(--primary);
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.10);
   }
 }
 
@@ -495,7 +495,7 @@
 
   &::part(content) {
     border-radius: 22px;
-    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+    box-shadow: 0 24px 60px -12px rgba(var(--app-primary-dark-rgb), 0.35);
     overflow: hidden;
   }
 
@@ -509,7 +509,7 @@
   }
 
   .modal-header {
-    background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+    background: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
     border-bottom: none;
     border-top-left-radius: 22px;
     border-top-right-radius: 22px;
@@ -683,7 +683,7 @@
 
   background: var(--primary-light, #e8f7f5);
 
-  color: var(--primary, #087d78);
+  color: var(--primary, var(--app-primary-mid));
 
   ion-icon {
     font-size: 21px;

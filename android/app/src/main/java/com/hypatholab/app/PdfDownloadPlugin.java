@@ -7,6 +7,7 @@ import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.Color;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.MediaStore;
@@ -25,11 +26,10 @@ import java.io.OutputStream;
 @CapacitorPlugin(name = "PdfDownload")
 public class PdfDownloadPlugin extends Plugin {
 
-    // ✅ FIX: naveen channel id — jुना "pdf_downloads" phone var aधीच
-    // DEFAULT importance sobat save zalela ahे, ani Android channel
-    // importance ekada create zala ki code varun परत badalत नाही.
-    // Naveen id vaparlyavar fresh channel HIGH importance sobat
-    // tayar hoईल.
+    // FIX: new channel id. The old "pdf_downloads" channel was already saved on
+    // the phone with DEFAULT importance, and Android does not let code change
+    // the importance of an existing channel. A new id creates a fresh channel
+    // with HIGH importance.
     private static final String CHANNEL_ID = "pdf_downloads_v2";
     private static final String CHANNEL_NAME = "PDF Downloads";
     private static int notificationIdCounter = 1000;
@@ -107,8 +107,8 @@ public class PdfDownloadPlugin extends Plugin {
                 resolver.update(uri, completedValues, null, null);
             }
 
-            // ✅ Fires the Android heads-up "Download complete" notification,
-            // tapping it opens the PDF (same UX as Chrome/other apps' downloads)
+            // Shows the heads-up "Download complete" notification.
+            // Tapping it opens the PDF.
             showDownloadNotification(fileName, uri);
 
             JSObject result = new JSObject();
@@ -147,8 +147,8 @@ public class PdfDownloadPlugin extends Plugin {
 
             if (channel == null) {
 
-                // ✅ FIX: IMPORTANCE_HIGH — heads-up banner sathi required.
-                // IMPORTANCE_DEFAULT fakta silent tray entry deto.
+                // IMPORTANCE_HIGH is required for the heads-up banner.
+                // IMPORTANCE_DEFAULT only gives a silent tray entry.
                 channel = new NotificationChannel(
                         CHANNEL_ID,
                         CHANNEL_NAME,
@@ -181,13 +181,12 @@ public class PdfDownloadPlugin extends Plugin {
         );
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(android.R.drawable.stat_sys_download_done)
+                // CHANGED: your own icon (res/drawable/ic_stat_icon.png)
+                .setSmallIcon(R.drawable.ic_stat_icon)
+                // OPTIONAL: teal color behind the icon. Remove this line if not needed.
+                .setColor(Color.parseColor("#087b76"))
                 .setContentTitle("Download complete")
                 .setContentText(fileName)
-                // ✅ FIX: PRIORITY_HIGH — channel importance sobat he pan
-                // HIGH asayla lagते heads-up trigger honyasathi (Android 7
-                // ani khालच्या versions sathi backward-compat, Android 8+
-                // var channel importance च primarily matter karto).
                 .setPriority(NotificationCompat.PRIORITY_HIGH)
                 .setCategory(NotificationCompat.CATEGORY_STATUS)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)

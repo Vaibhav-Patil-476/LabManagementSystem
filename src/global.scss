@@ -1,34 +1,18 @@
 /*
  * App Global CSS — "Clinical Emerald" Premium Design System
  * ----------------------------------------------------------------------------
- * Redesign notes:
+ * THEME: to re-theme the whole app, edit ONLY the
+ * "THEME — EDIT ONLY THIS SECTION" block at the top of :root.
+ *
  * - Every CSS custom property name already used across the app (--app-bg,
- *   --card-bg, --text-primary, --brand-indigo, etc.) is PRESERVED so nothing
- *   in the component SCSS/HTML breaks. Only values + a small set of new
- *   tokens were added.
- * - Palette: deep clinical teal/ink + warm brass accent on alabaster paper —
- *   built to read as a paid diagnostics / banking-grade product, not a
- *   generic admin panel.
+ *   --card-bg, --text-primary, etc.) is PRESERVED so nothing in the
+ *   component SCSS/HTML breaks.
  * - Type: Plus Jakarta Sans (display) + Inter (body/UI) + JetBrains Mono
- *   (ids, barcodes, booking numbers) for a precise, clinical data feel.
+ *   (ids, barcodes, booking numbers).
  *
- * ✅ FIX ADDED (double scrollbar issue):
- *   html/body were allowed to scroll AT THE SAME TIME as ion-content's
- *   internal .inner-scroll, producing two visible scrollbars where only
- *   one (the native body one) actually moved. html/body/ion-app are now
- *   locked to overflow:hidden so ion-content is the single scroll owner,
- *   and the premium scrollbar styling is applied to ion-content's actual
- *   shadow-DOM scroll part (::part(scroll)) instead of the page body.
- *
- * ✅ FIX ADDED (invoice modal fullscreen):
- *   ion-modal.invoice-modal-cls now stretches to full viewport width/height
- *   instead of Ionic's default centered floating card, so the invoice no
- *   longer looks like a small card floating with gaps around it.
- *
- * ✅ FIX ADDED (one-hand touch-jump on scrollbar):
- *   The scrollbar track is now hidden (scrolling itself still works via
- *   swipe/drag). Previously the visible track caught accidental thumb
- *   touches during one-hand phone use and jump-scrolled the page.
+ * ✅ Single scroll owner (html/body/ion-app overflow hidden)
+ * ✅ Invoice modal true fullscreen
+ * ✅ Hidden scrollbars (one-hand touch-jump fix)
  */
 
 /* Core CSS required for Ionic components to work properly */
@@ -61,35 +45,125 @@
    DESIGN TOKENS
 ===================================================================== */
 :root {
-  /* ---- Brand ramp — deep clinical teal ---- */
-  --brand-950: #051612;
-  --brand-900: #0a2e27;
-  --brand-800: #0e3a33;
-  --brand-700: #146652;
-  --brand-600: #1b8570;
-  --brand-500: #22a386;
-  --brand-400: #4fbfa0;
-  --brand-300: #8ddbc3;
-  --brand-100: #e7f4ec;
+  /* ============================================================
+     THEME — EDIT ONLY THIS SECTION TO RE-THEME THE APP
+     (keep each -rgb value in sync with its hex color)
+  ============================================================ */
+  // --app-primary: #087b76;
+  // --app-primary-rgb: 8, 123, 118;       /* same color as --app-primary, as R,G,B (for rgba) */
+  // --app-primary-mid: #087d78;           /* gradient start */
+  // --app-primary-deep: #055f5d;          /* gradient end */
+  // --app-primary-dark: #075f5d;          /* titles, pressed states */
+  // --app-primary-dark-rgb: 7, 95, 93;    /* shadow tint */
+  // --app-primary-bright: #0b948d;        /* brighter teal accent (buttons, orbs) */
+  // --app-primary-light: #d9f0ee;         /* icon badges, chips, hover */
+  // --app-primary-lighter: #eef8f7;       /* soft panels */
 
-  /* ---- Brass accent — used sparingly, "premium" moments only ---- */
+  --app-primary: #1d4ed8;
+--app-primary-rgb: 29, 78, 216;
+--app-primary-mid: #2563eb;
+--app-primary-deep: #1e3a8a;
+--app-primary-dark: #1e40af;
+--app-primary-dark-rgb: 30, 64, 175;
+--app-primary-bright: #3b82f6;
+--app-primary-light: #dbeafe;
+--app-primary-lighter: #eff6ff;
+
+  --app-gradient: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
+
+  /* Semantic — intentionally independent of the brand color */
+  --app-success: #16866e;  --app-success-bg: #d8f2ed;
+  --app-warning: #bd7d19;  --app-warning-bg: #fff0d9;
+  --app-danger:  #c05262;  --app-danger-bg:  #ffebef;
+  --app-info:    #2470b9;  --app-info-bg:    #e1efff;
+  --app-purple:  #7856c9;  --app-purple-bg:  #eee8ff;
+
+  /* Neutrals */
+  --app-text: #14222e;
+  --app-text-muted: #6c7b86;
+  --app-text-faint: #8fa1a5;
+  --app-border: #e4eded;
+  --app-surface-alt: #f5f9f9;
+
+  /* ============================================================
+     IONIC BRIDGE
+  ============================================================ */
+  --ion-color-primary: var(--app-primary);
+  --ion-color-primary-rgb: var(--app-primary-rgb);
+  --ion-color-primary-contrast: #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade: var(--app-primary-dark);
+  --ion-color-primary-tint: var(--app-primary-bright);
+
+  --ion-color-success: var(--app-success);
+  --ion-color-warning: var(--app-warning);
+  --ion-color-danger: var(--app-danger);
+
+  /* ============================================================
+     LEGACY ALIASES — so existing var(--primary), var(--brand) etc.
+     in components keep working with zero edits
+  ============================================================ */
+  --primary: var(--app-primary);
+  --primary-dark: var(--app-primary-dark);
+  --primary-light: var(--app-primary-light);
+  --primary-lighter: var(--app-primary-lighter);
+  --brand: var(--app-primary);
+  --brand-deep: var(--app-primary-dark);
+  --brand-light: var(--app-primary-light);
+  --brand-soft: var(--app-primary-lighter);
+  --brand-gradient: var(--app-gradient);
+  --brand-gradient-soft: linear-gradient(135deg, var(--app-primary-lighter) 0%, #f2fbfa 100%);
+
+  --success: var(--app-success);   --success-bg: var(--app-success-bg);
+  --warning: var(--app-warning);   --warning-bg: var(--app-warning-bg);
+  --danger:  var(--app-danger);    --danger-bg:  var(--app-danger-bg);
+  --info:    var(--app-info);      --info-bg:    var(--app-info-bg);
+  --purple:  var(--app-purple);    --violet: var(--app-purple);
+
+  --border-color: var(--app-border);
+  --line: var(--app-border);
+  --line-soft: var(--app-border);
+  --section-bg: var(--app-surface-alt);
+  --ink: var(--app-text);
+  --muted: var(--app-text-muted);
+  --gray-accent: var(--app-text-faint);
+
+  --shadow-xs: 0 1px 2px rgba(var(--app-primary-dark-rgb), 0.05);
+  --shadow-sm: 0 2px 8px rgba(var(--app-primary-dark-rgb), 0.07);
+  --shadow-md: 0 6px 20px rgba(var(--app-primary-dark-rgb), 0.10);
+  --shadow-lg: 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16);
+  --shadow-glow: 0 8px 22px rgba(var(--app-primary-rgb), 0.28);
+  --shadow-brand: 0 14px 32px rgba(var(--app-primary-rgb), 0.26);
+
+  /* Old global green ramp — re-pointed so everything follows the theme */
+  --brand-950: var(--app-primary-deep);
+  --brand-900: var(--app-primary-deep);
+  --brand-800: var(--app-primary-dark);
+  --brand-700: var(--app-primary-dark);
+  --brand-600: var(--app-primary);
+  --brand-500: var(--app-primary-bright);
+  --brand-400: var(--app-primary-bright);
+  --brand-300: var(--app-primary-light);
+  --brand-100: var(--app-primary-lighter);
+
+  --status-ok: var(--app-success);
+  --status-warn: var(--app-warning);
+  --status-danger: var(--app-danger);
+  --status-info: var(--app-info);
+
+  --brand-gradient-soft-old: var(--app-gradient);
+  --ink-gradient: linear-gradient(160deg, var(--app-primary-dark) 0%, #051612 100%);
+
+  /* ============================================================
+     NOT PART OF THE BRAND THEME — brass accent (kept as-is)
+  ============================================================ */
   --gold-700: #8a6425;
   --gold-600: #a9782e;
   --gold-500: #c3924a;
   --gold-300: #e7ce9c;
   --gold-100: #f7ecd9;
-
-  /* ---- Status ---- */
-  --status-ok: #1f9e73;
-  --status-warn: #c98a2c;
-  --status-danger: #c4453a;
-  --status-info: #2e7fb8;
-
-  /* ---- Gradients ---- */
-  --brand-gradient: linear-gradient(135deg, #0e3a33 0%, #146652 45%, #1b8570 100%);
-  --brand-gradient-soft: linear-gradient(135deg, #146652 0%, #22a386 100%);
   --gold-gradient: linear-gradient(135deg, #8a6425 0%, #c3924a 55%, #e7ce9c 100%);
-  --ink-gradient: linear-gradient(160deg, #0a2e27 0%, #051612 100%);
+  --shadow-gold: 0 10px 26px rgba(169, 120, 46, 0.26);
 
   /* ---- Radius scale (8px system) ---- */
   --radius-xs: 8px;
@@ -99,23 +173,14 @@
   --radius-xl: 28px;
   --radius-pill: 999px;
 
-  /* ---- Elevation ---- */
-  --shadow-xs: 0 1px 2px rgba(10, 27, 23, 0.05);
-  --shadow-sm: 0 4px 12px rgba(10, 27, 23, 0.06);
-  --shadow-md: 0 10px 28px rgba(10, 27, 23, 0.09);
-  --shadow-lg: 0 22px 50px rgba(10, 27, 23, 0.14);
-  --shadow-brand: 0 14px 32px rgba(27, 133, 112, 0.26);
-  --shadow-gold: 0 10px 26px rgba(169, 120, 46, 0.26);
-
   /* ---- Fonts ---- */
   --font-display: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
 
-  /* =====================================================================
-     Existing app variables — REMAPPED to the new palette.
-     Names untouched so every component file keeps working as-is.
-  ===================================================================== */
+  /* ============================================================
+     Existing app surface/text variables (light mode)
+  ============================================================ */
   --app-bg: #f4f6f3;
   --card-bg: #ffffff;
   --card-border: #e4eae6;
@@ -133,7 +198,7 @@
   --mini-stat-bg: #f1f5f2;
   --icon-bg: #eaf3ee;
   --icon-border: #d7e6dd;
-  --icon-color: #146652;
+  --icon-color: var(--app-primary-dark);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -155,7 +220,7 @@
     --mini-stat-bg: #142822;
     --icon-bg: #14281f;
     --icon-border: #223c33;
-    --icon-color: #4fbfa0;
+    --icon-color: var(--app-primary-bright);
   }
 }
 
@@ -214,14 +279,8 @@ h3,
 
 /* =====================================================================
    ✅ HIDDEN SCROLLBARS (one-hand touch-jump fix)
-   -----------------------------------------------------------------
-   The old design used a visible 8px colored scrollbar track. On
-   mobile, resting/swiping a thumb near the right edge (normal
-   one-hand grip) would land on that track and the browser would
-   treat it as a "click-to-scroll" — jumping the page to a random
-   position. Scrolling itself (swipe/drag anywhere on the content)
-   still works exactly the same; only the visible, tappable track
-   is removed.
+   Scrolling itself (swipe/drag) still works; only the visible,
+   tappable track is removed.
 ===================================================================== */
 ion-content {
   --overflow: auto;
@@ -327,8 +386,8 @@ ion-modal::part(content) {
 
 ion-checkbox {
   --size: 19px;
-  --checkbox-background-checked: var(--brand-600);
-  --border-color-checked: var(--brand-600);
+  --checkbox-background-checked: var(--app-primary);
+  --border-color-checked: var(--app-primary);
   --border-radius: 6px;
 }
 
@@ -359,7 +418,7 @@ ion-alert.premium-alert {
 
   .alert-wrapper {
     border-radius: var(--radius-lg, 22px) !important;
-    box-shadow: var(--shadow-lg, 0 22px 50px rgba(10, 27, 23, 0.14)) !important;
+    box-shadow: var(--shadow-lg) !important;
   }
 
   .alert-head {
@@ -371,12 +430,12 @@ ion-alert.premium-alert {
     font-family: var(--font-display, 'Plus Jakarta Sans', sans-serif) !important;
     font-size: 18px !important;
     font-weight: 800 !important;
-    color: var(--text-primary, #0c201c) !important;
+    color: var(--text-primary) !important;
   }
 
   .alert-message {
     font-size: 14px !important;
-    color: var(--text-muted, #5c7671) !important;
+    color: var(--text-muted) !important;
     padding-top: 6px !important;
     line-height: 1.5 !important;
   }
@@ -399,13 +458,13 @@ ion-alert.premium-alert {
   // in the button config (add-patient.page.ts) — not Ionic's
   // internal naming — so they're guaranteed to exist on the button.
   .alert-btn-cancel {
-    color: var(--text-muted, #5c7671) !important;
-    background: var(--section-bg, #f6faf9) !important;
+    color: var(--text-muted) !important;
+    background: var(--section-bg) !important;
   }
 
   .alert-btn-danger {
     color: #ffffff !important;
-    background: var(--status-danger, #c14c5f) !important;
+    background: var(--app-danger) !important;
   }
 }
 
@@ -475,29 +534,64 @@ ion-modal.invoice-modal-cls {
 // ---------- Custom loading popup (ledger + commission शेअर करतात) ----------
 .ledger-loading-popup {
   --background: #ffffff;
-  --spinner-color: #0f766e;
+  --spinner-color: var(--app-primary);
 }
 
-  .loading-content {
-    font-size: 14px;
-    font-weight: 600;
-    color: #0f766e;
-    margin-top: 10px;
-  }
+.loading-content {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--app-primary);
+  margin-top: 10px;
+}
 
-  .printbill-btn-slim {
+.printbill-btn-slim {
   --border-radius: 12px;
-  height: 46px;                     // आधीच्या 48-52px पेक्षा compact
+  height: 46px;                     // compact (was 48-52px)
   font-size: 12.5px;
   font-weight: 700;
   letter-spacing: 0.4px;
   text-transform: uppercase;
-  --background: linear-gradient(135deg, #087d78, #055f5d);
-  box-shadow: 0 4px 12px rgba(13, 71, 89, 0.25);
+  --background: var(--app-gradient);
+  box-shadow: 0 4px 12px rgba(var(--app-primary-dark-rgb), 0.25);
 
   ion-icon {
     font-size: 16px;
   }
 }
 
+/* =====================================================================
+   THEME OVERRIDES — shadows that components still hard-code in teal.
+   !important is needed because component styles are scoped and win
+   over plain global rules. Remove this block once the component
+   SCSS files are cleaned up.
+===================================================================== */
 
+/* Dashboard header (the green shadow under the top banner) */
+.app-header-premium {
+  box-shadow: 0 16px 34px rgba(var(--app-primary-dark-rgb), 0.28) !important;
+}
+
+/* Dashboard focus card and wallet card */
+.focus-card {
+  box-shadow: 0 12px 25px rgba(var(--app-primary-rgb), 0.18) !important;
+}
+
+.wallet-mini-card {
+  box-shadow: 0 8px 18px rgba(var(--app-primary-rgb), 0.16) !important;
+}
+
+/* Page headers used by the other screens */
+.booking-header,
+.ct-header,
+.ch-header,
+.tl-header,
+.fr-header,
+.report-header {
+  box-shadow: 0 2px 14px rgba(var(--app-primary-dark-rgb), 0.18) !important;
+}
+
+/* Pop-up / modal shadows that use the brand tint */
+.test-preview-popup::part(content),
+.pkg-preview-popup::part(content) {
+  box-shadow: 0 24px 60px -12px rgba(var(--app-primary-dark-rgb), 0.35) !important;
+}

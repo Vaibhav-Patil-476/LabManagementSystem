@@ -1,36 +1,36 @@
   // ==========================================================
   // PREMIUM ENTERPRISE DESIGN SYSTEM — Report Status / Download
-  // Recolored to match Dashboard's teal identity (--brand: #087b76).
+  // Recolored to match Dashboard's teal identity (--brand: var(--app-primary)).
   // Same token set as booking-status.page.scss — keep in sync.
   // ==========================================================
   :host {
-    --primary: #087b76;
-    --primary-dark: #075f5d;
-    --primary-light: #d9f0ee;
-    --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
-    --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
+    --primary: var(--app-primary);
+    --primary-dark: var(--app-primary-dark);
+    --primary-light: var(--app-primary-light);
+    --brand-gradient: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
+    --brand-gradient-soft: linear-gradient(135deg, var(--app-primary-lighter) 0%, #f2fbfa 100%);
 
-    --success: #16866e;
-    --success-bg: #d8f2ed;
-    --warning: #bd7d19;
-    --warning-bg: #fff0d9;
-    --danger: #c05262;
-    --danger-bg: #ffebef;
-    --info: #2470b9;
-    --info-bg: #e1efff;
-    --teal: #087b76;
+    --success: var(--app-success);
+    --success-bg: var(--app-success-bg);
+    --warning: var(--app-warning);
+    --warning-bg: var(--app-warning-bg);
+    --danger: var(--app-danger);
+    --danger-bg: var(--app-danger-bg);
+    --info: var(--app-info);
+    --info-bg: var(--app-info-bg);
+    --teal: var(--app-primary);
     --pink: #bd526f;
-    --purple: #7856c9;
-    --gray-accent: #8fa1a5;
+    --purple: var(--app-purple);
+    --gray-accent: var(--app-text-faint);
 
-    --border-color: #e4eded;
-    --section-bg: #f5f9f9;
+    --border-color: var(--app-border);
+    --section-bg: var(--app-surface-alt);
 
-    --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
-    --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
-    --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
-    --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
-    --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
+    --shadow-xs: 0 1px 2px rgba(var(--app-primary-dark-rgb), 0.05);
+    --shadow-sm: 0 2px 8px rgba(var(--app-primary-dark-rgb), 0.07);
+    --shadow-md: 0 6px 20px rgba(var(--app-primary-dark-rgb), 0.10);
+    --shadow-lg: 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16);
+    --shadow-glow: 0 8px 22px rgba(var(--app-primary-rgb), 0.28);
 
     --r-sm: 10px;
     --r-md: 14px;
@@ -164,7 +164,7 @@
       height: 100%;
       font-size: 13px;
       font-weight: 500;
-      color: var(--text-dark, #14222e);
+      color: var(--text-dark, var(--app-text));
     }
 
     ion-icon {
@@ -177,7 +177,7 @@
     &:focus-within {
       border-color: var(--primary);
       background: var(--primary-light);
-      box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
+      box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.10);
     }
   }
 
@@ -218,7 +218,7 @@
     input {
       font-size: 16px;
       font-weight: 600;
-      color: var(--text-dark, #14222e);
+      color: var(--text-dark, var(--app-text));
     }
 
     input::placeholder {
@@ -260,7 +260,7 @@
       --placeholder-opacity: 1;
       font-size: 16px;
       font-weight: 600;
-      color: var(--text-dark, #14222e);
+      color: var(--text-dark, var(--app-text));
       display: flex;
       align-items: center;
       box-sizing: border-box;
@@ -330,7 +330,7 @@
     .date-trigger-btn {
       font-size: 16px;
       font-weight: 600;
-      color: var(--text-dark, #14222e);
+      color: var(--text-dark, var(--app-text));
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
@@ -338,7 +338,7 @@
     }
 
     &:hover {
-      border-color: rgba(8, 123, 118, 0.4);
+      border-color: rgba(var(--app-primary-rgb), 0.4);
       background: var(--primary-light);
     }
   }
@@ -406,7 +406,7 @@
     z-index: 99999 !important;
     background-color: #ffffff !important;
     border-radius: 12px !important;
-    box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16)) !important;
+    box-shadow: var(--shadow-lg, 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16)) !important;
   }
 
   ::ng-deep .mat-calendar {
@@ -414,27 +414,27 @@
   }
 
   ::ng-deep .mat-calendar-body-selected {
-    background-color: var(--primary, #087b76) !important;
+    background-color: var(--primary, var(--app-primary)) !important;
     color: #ffffff !important;
   }
 
   ::ng-deep .mat-calendar-body-in-range::before {
-    background: var(--primary-light, #d9f0ee) !important;
+    background: var(--primary-light, var(--app-primary-light)) !important;
   }
 
   ::ng-deep .mat-calendar-body-comparison-bridge-start::before,
   ::ng-deep .mat-calendar-body-comparison-bridge-end::before,
   ::ng-deep .mat-calendar-body-range-start::before,
   ::ng-deep .mat-calendar-body-range-end::before {
-    background: var(--primary-light, #d9f0ee) !important;
+    background: var(--primary-light, var(--app-primary-light)) !important;
   }
 
   ::ng-deep .mat-calendar-body-today:not(.mat-calendar-body-selected) {
-    border-color: var(--primary, #087b76) !important;
+    border-color: var(--primary, var(--app-primary)) !important;
   }
 
   ::ng-deep .mat-calendar-body-cell:hover .mat-calendar-body-cell-content:not(.mat-calendar-body-selected) {
-    background-color: var(--primary-light, #d9f0ee) !important;
+    background-color: var(--primary-light, var(--app-primary-light)) !important;
   }
 
   // =========================
@@ -517,11 +517,11 @@
       }
 
       &.badge-clinical {
-    background: #2470b9;
+    background: var(--app-info);
   }
 
     &.badge-snr {
-      background: var(--purple, #7856c9) !important;
+      background: var(--purple, var(--app-purple)) !important;
       color: #fff !important;
     }
 
@@ -597,7 +597,7 @@
     // HOVER
     // =========================
     &:hover {
-      border-color: rgba(8, 123, 118, 0.35);
+      border-color: rgba(var(--app-primary-rgb), 0.35);
       box-shadow: var(--shadow-sm);
     }
 
@@ -730,8 +730,8 @@
   .download-btn {
     --background: var(--brand-gradient);
     --background-activated: linear-gradient(135deg, #06635f, #044c4a);
-    --background-hover: linear-gradient(135deg, #0a938c, #087b76);
-    --box-shadow: 0 4px 14px rgba(8, 123, 118, 0.24);
+    --background-hover: linear-gradient(135deg, #0a938c, var(--app-primary));
+    --box-shadow: 0 4px 14px rgba(var(--app-primary-rgb), 0.24);
     --color: #ffffff;
     --border-radius: var(--r-pill);
     --padding-start: 16px;
@@ -768,7 +768,7 @@
     }
 
     &:not([disabled]):hover {
-      --box-shadow: 0 6px 18px rgba(8, 123, 118, 0.32);
+      --box-shadow: 0 6px 18px rgba(var(--app-primary-rgb), 0.32);
     }
 
     &:not([disabled]):active {
@@ -861,49 +861,49 @@
     box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
 
     &.status-in\ process {
-      background: #bd7d19 !important;
+      background: var(--app-warning) !important;
     }
 
     &.status-pending {
-      background: #bd7d19 !important;
+      background: var(--app-warning) !important;
     }
 
     &.status-complete {
-      background: #16866e !important;
+      background: var(--app-success) !important;
     }
 
     &.status-clinical {
-      background: #2470b9 !important;
+      background: var(--app-info) !important;
     }
 
     &.status-snr {
-      background: #7856c9 !important;
+      background: var(--app-purple) !important;
     }
 
     &.badge-ready {
-      background: #16866e !important;
+      background: var(--app-success) !important;
     }
 
     &.badge-inprocess {
-      background: #2470b9 !important;
+      background: var(--app-info) !important;
     }
 
     &.badge-snr {
-      background: #7856c9 !important;
+      background: var(--app-purple) !important;
       color: #fff !important;
     }
 
     &.badge-clinical {
-      background: #2470b9 !important;
+      background: var(--app-info) !important;
       color: #fff !important;
     }
 
     &.badge-pending {
-      background: #bd7d19 !important;
+      background: var(--app-warning) !important;
     }
 
     &.badge-recheck {
-      background: #bd7d19 !important;
+      background: var(--app-warning) !important;
     }
 
     // ✅ FIX: Booking Status सारखा solid red — outline नाही
@@ -997,13 +997,13 @@
   }
 
   .booking-card.expanded {
-    border-color: rgba(8, 123, 118, 0.32);
+    border-color: rgba(var(--app-primary-rgb), 0.32);
     box-shadow: var(--shadow-md);
   }
 
   .booking-card.row-selected {
     background: var(--primary-light);
-    border-color: rgba(8, 123, 118, 0.35);
+    border-color: rgba(var(--app-primary-rgb), 0.35);
   }
 
   .bcard-header {
@@ -1410,7 +1410,7 @@
     padding: 12px 16px;
     font-size: 13.5px;
     font-weight: 600;
-    color: var(--text-dark, #14222e);
+    color: var(--text-dark, var(--app-text));
     cursor: pointer;
     border-bottom: 1px solid var(--border-color);
     transition: background 0.12s ease;
@@ -1440,17 +1440,17 @@
     padding: 10px 14px;
     margin-bottom: 12px;
     border-radius: 14px;
-    background: #eef8f7;
-    border: 1px solid #d6efed;
+    background: var(--app-primary-lighter);
+    border: 1px solid var(--app-primary-light);
 
     .selected-count {
       font-size: 13px;
       font-weight: 700;
-      color: var(--brand-deep, #075f5d);
+      color: var(--brand-deep, var(--app-primary-dark));
     }
 
     ion-button {
-      --background: linear-gradient(135deg, #087d78, #055f5d);
+      --background: linear-gradient(135deg, var(--app-primary-mid), var(--app-primary-deep));
       --color: #fff;
       --border-radius: 10px;
     }
@@ -1470,19 +1470,19 @@
 
     padding: 6px 12px;
     border-radius: var(--r-pill);
-    border: 1.5px solid var(--primary-light, #d9f0ee);
-    background: var(--primary-light, #d9f0ee);
+    border: 1.5px solid var(--primary-light, var(--app-primary-light));
+    background: var(--primary-light, var(--app-primary-light));
     transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 
     .bcard-tests-label {
       font-size: 12px;
       font-weight: 700;
-      color: var(--primary-dark, #075f5d);
+      color: var(--primary-dark, var(--app-primary-dark));
     }
 
     .test-eye-icon {
       font-size: 16px;
-      color: var(--primary, #087b76);
+      color: var(--primary, var(--app-primary));
     }
 
     &:active {
@@ -1504,7 +1504,7 @@
 
     &::part(content) {
       border-radius: 22px;
-      box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+      box-shadow: 0 24px 60px -12px rgba(var(--app-primary-dark-rgb), 0.35);
       overflow: hidden;
     }
 
@@ -1572,14 +1572,14 @@
       display: grid;
       grid-template-columns: 0.4fr 2.2fr 1fr;
       gap: 8px;
-      background: var(--primary-light, #d9f0ee);
-      color: var(--primary-dark, #075f5d);
+      background: var(--primary-light, var(--app-primary-light));
+      color: var(--primary-dark, var(--app-primary-dark));
       font-size: 10.5px;
       font-weight: 800;
       text-transform: uppercase;
       letter-spacing: 0.4px;
       padding: 10px 18px;
-      border-bottom: 1px solid #d9f0ee;
+      border-bottom: 1px solid var(--app-primary-light);
     }
 
     .pkg-preview-row-full {

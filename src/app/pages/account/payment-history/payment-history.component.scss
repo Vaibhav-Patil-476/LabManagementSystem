@@ -1,12 +1,12 @@
 // payment-history.component.scss
 
 :host {
-    --primary: #0f766e;
+    --primary: var(--app-primary);
     --primary-dark: #0c5f59;
-    --border-color: #e4eded;
-    --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
-    --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
-    --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
+    --border-color: var(--app-border);
+    --shadow-xs: 0 1px 2px rgba(var(--app-primary-dark-rgb), 0.05);
+    --shadow-sm: 0 2px 8px rgba(var(--app-primary-dark-rgb), 0.07);
+    --shadow-md: 0 6px 20px rgba(var(--app-primary-dark-rgb), 0.10);
     --r-sm: 10px;
     --r-md: 14px;
 }
@@ -17,7 +17,7 @@
 
 // ---------- Header ----------
 .app-toolbar {
-    --background: #0f766e;
+    --background: var(--app-primary);
     --color: #fff;
 
     ion-back-button {
@@ -33,7 +33,7 @@
 
 // ---------- Filter card ----------
 .filter-card {
-    background: linear-gradient(135deg, #0f766e, #14b8a6);
+    background: linear-gradient(135deg, var(--app-primary), var(--app-primary-bright));
     border-radius: 0 0 20px 20px;
     padding: 16px;
 }
@@ -86,7 +86,7 @@
 
 .search-btn {
     --background: #fff;
-    --color: #0f766e;
+    --color: var(--app-primary);
     --border-radius: 12px;
     font-weight: 700;
     margin-top: 4px;
@@ -102,13 +102,13 @@
     .accent-bar {
         width: 4px;
         height: 18px;
-        background: #0f766e;
+        background: var(--app-primary);
         border-radius: 2px;
     }
 
     ion-icon {
         font-size: 18px;
-        color: #0f766e;
+        color: var(--app-primary);
     }
 
     h2 {
@@ -127,7 +127,7 @@
   background: linear-gradient(180deg, #ffffff 0%, #fbfcfd 100%);
   box-shadow:
     0 1px 2px rgba(16, 24, 40, 0.04),
-    0 1px 5px rgba(15, 118, 110, 0.05);
+    0 1px 5px rgba(var(--app-primary-rgb), 0.05);
   border: 1px solid rgba(16, 24, 40, 0.04);
   overflow: hidden;
   transition: box-shadow 0.15s ease, transform 0.15s ease;
@@ -233,7 +233,7 @@
   text-align: center;
   font-size: 10px;
   font-weight: 700;
-  color: #0f766e;
+  color: var(--app-primary);
   padding: 5px;
   border-radius: 7px;
   background: #fff;
@@ -242,7 +242,7 @@
   transition: background 0.15s ease, color 0.15s ease;
 
   &.active-all {
-    background: #0f766e;
+    background: var(--app-primary);
     color: #fff;
   }
 }
@@ -464,7 +464,7 @@
 
     &.active {
         background: #fff;
-        color: #0f766e;
+        color: var(--app-primary);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
 }
@@ -622,7 +622,7 @@
         padding: 32px 28px;
         border-radius: 20px;
         background: #ffffff;
-        box-shadow: 0 14px 38px rgba(7, 95, 93, 0.16);
+        box-shadow: 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16);
         min-width: 240px;
         max-width: 300px;
     }
@@ -631,17 +631,17 @@
     // custom property वापरूनच रंग बदलता येतो.
     .loading-spinner,
     ion-spinner {
-        --color: #0f766e;
+        --color: var(--app-primary);
         width: 46px;
         height: 46px;
-        color: #0f766e;
+        color: var(--app-primary);
     }
 
     .loading-content {
         text-align: center;
         font-size: 15px;
         font-weight: 700;
-        color: #0f766e;
+        color: var(--app-primary);
         line-height: 1.4;
     }
 }
@@ -672,10 +672,10 @@
   margin: 20px 12px 28px;
   padding: 18px 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%);
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.12);
   border-radius: 16px;
   box-shadow:
-    0 2px 8px rgba(15, 118, 110, 0.06),
+    0 2px 8px rgba(var(--app-primary-rgb), 0.06),
     0 1px 2px rgba(0, 0, 0, 0.03);
   position: relative;
 
@@ -686,7 +686,7 @@
     left: 16px;
     right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--app-primary-rgb), 0.15), transparent);
   }
 }
 
@@ -700,11 +700,11 @@
 
 .load-more-btn {
   --border-radius: 999px;
-  --background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  --background: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-bright) 100%);
   --background-hover: linear-gradient(135deg, #0d6b64 0%, #0c857a 100%);
   --background-activated: linear-gradient(135deg, #0c5f59 0%, #0b756b 100%);
   --color: #ffffff;
-  --box-shadow: 0 3px 10px rgba(15, 118, 110, 0.28);
+  --box-shadow: 0 3px 10px rgba(var(--app-primary-rgb), 0.28);
 
   min-width: 160px;
   height: 42px;
@@ -722,7 +722,7 @@
 
   &:not([disabled]):hover {
     transform: translateY(-1px);
-    box-shadow: 0 5px 16px rgba(15, 118, 110, 0.35);
+    box-shadow: 0 5px 16px rgba(var(--app-primary-rgb), 0.35);
   }
 
   &:not([disabled]):active {

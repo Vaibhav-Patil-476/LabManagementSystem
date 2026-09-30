@@ -1,11 +1,11 @@
 :host {
-  --ink: #14222e;
-  --muted: #6c7b86;
-  --line: #e8edf0;
+  --ink: var(--app-text);
+  --muted: var(--app-text-muted);
+  --line: var(--app-border);
   --canvas: #f5f8f8;
   --surface: #ffffff;
-  --brand: #087b76;
-  --brand-deep: #075f5d;
+  --brand: var(--app-primary);
+  --brand-deep: var(--app-primary-dark);
 }
 
 ion-content.profile-content { --background: var(--canvas); }
@@ -24,7 +24,7 @@ ion-content.profile-content { --background: var(--canvas); }
   margin-bottom: 22px;
   background: linear-gradient(135deg, var(--brand), var(--brand-deep));
   border-radius: 0 0 20px 20px;
-  box-shadow: 0 6px 18px rgba(7, 95, 93, .18);
+  box-shadow: 0 6px 18px rgba(var(--app-primary-dark-rgb), .18);
 
   h1 { margin: 0; font-size: 21px; font-weight: 800; letter-spacing: -.03em; color: #fff; }
 }
@@ -90,7 +90,7 @@ ion-content.profile-content { --background: var(--canvas); }
 
 .update-pass-btn {
   margin-top: 14px;
-  --background: linear-gradient(135deg, #087d78, #055f5d);
+  --background: linear-gradient(135deg, var(--app-primary-mid), var(--app-primary-deep));
   --color: #fff;
   --border-radius: 12px;
   height: 46px;
@@ -98,18 +98,18 @@ ion-content.profile-content { --background: var(--canvas); }
 }
 
 .plan-card {
-  border-top: 3px solid #16866e;
+  border-top: 3px solid var(--app-success);
 }
 
 .status-pill {
   padding: 4px 12px;
   border-radius: 999px;
-  background: #d8f2ed;
-  color: #16866e;
+  background: var(--app-success-bg);
+  color: var(--app-success);
   font-size: 11px;
   font-weight: 800;
 
-  &.expired { background: #ffebef; color: #c0392b; }
+  &.expired { background: var(--app-danger-bg); color: #c0392b; }
 }
 
 .no-plan-text {

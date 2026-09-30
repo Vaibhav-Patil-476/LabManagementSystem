@@ -78,18 +78,18 @@
   }
 
   &.toast-success {
-    .toast-bar { background: #22c55e; }
-    .toast-title { color: #16a34a; }
+    .toast-bar { background: var(--app-primary); }
+    .toast-title { color: var(--app-primary-dark); }
   }
 
   &.toast-error {
-    .toast-bar { background: #ef4444; }
-    .toast-title { color: #dc2626; }
+    .toast-bar { background: var(--app-danger); }
+    .toast-title { color: var(--app-danger); }
   }
 
   &.toast-warning {
-    .toast-bar { background: #f59e0b; }
-    .toast-title { color: #d97706; }
+    .toast-bar { background: var(--app-warning); }
+    .toast-title { color: var(--app-warning); }
   }
 }
 

@@ -96,7 +96,7 @@
 .search-mode-note {
   color: var(--primary-dark);
   background: var(--primary-light);
-  border-color: rgba(8, 123, 118, 0.14);
+  border-color: rgba(var(--app-primary-rgb), 0.14);
 }
 
 .filter-bar {
@@ -147,7 +147,7 @@
   &:focus-within {
     border-color: var(--primary);
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.10);
   }
 }
 
@@ -251,7 +251,7 @@
   }
 
   &:hover {
-    border-color: rgba(8, 123, 118, 0.4);
+    border-color: rgba(var(--app-primary-rgb), 0.4);
     background: var(--primary-lighter);
   }
 }
@@ -332,7 +332,7 @@
   }
 
   &.badge-clinical {
-    background: #2470b9 !important;
+    background: var(--app-info) !important;
     color: #fff !important;
   }
 
@@ -627,7 +627,7 @@
 
   &:hover {
     border-color: var(--brand);
-    background: #eef8f7;
+    background: var(--app-primary-lighter);
   }
 }
 
@@ -637,7 +637,7 @@
   gap: 6px;
   font-size: 12px;
   font-weight: 600;
-  color: #16866e;
+  color: var(--app-success);
   margin-top: 6px;
 
   ion-icon {
@@ -647,8 +647,8 @@
 
 .form-section {
   background: #fff;
-  border: 1px solid rgba(8, 123, 118, 0.08);
-  box-shadow: 0 1px 3px rgba(7, 95, 93, 0.05);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.08);
+  box-shadow: 0 1px 3px rgba(var(--app-primary-dark-rgb), 0.05);
 }
 
 /* Doctor / Lab picker modals */
@@ -666,7 +666,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #087d78, #055f5d);
+  background: linear-gradient(135deg, var(--app-primary-mid), var(--app-primary-deep));
 
   h2 {
     color: #fff;
@@ -690,7 +690,7 @@
   label {
     font-size: 11px;
     font-weight: 700;
-    color: #8fa1a5;
+    color: var(--app-text-faint);
     text-transform: uppercase;
   }
 }
@@ -711,7 +711,7 @@
 }
 
 .modal-save-btn {
-  --background: linear-gradient(135deg, #087d78, #055f5d);
+  --background: linear-gradient(135deg, var(--app-primary-mid), var(--app-primary-deep));
   --color: #fff;
   --border-radius: var(--r-sm);
   height: 48px;
@@ -827,7 +827,7 @@
     display: block;
     font-size: 11px;
     font-weight: 700;
-    color: var(--gray-accent, #6c7b86);
+    color: var(--gray-accent, var(--app-text-muted));
     margin-top: 1px;
   }
 }
@@ -1010,7 +1010,7 @@
 .summary-field select:focus {
   border-color: var(--primary);
   background: #ffffff;
-  box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.12);
+  box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.12);
 }
 
 .summary-field input.zero {
@@ -1060,7 +1060,7 @@
 .summary-field textarea:focus {
   border-color: var(--primary);
   background: #ffffff;
-  box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+  box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.10);
 }
 
 .save-changes-btn {
@@ -1094,7 +1094,7 @@
 
 .form-section {
   background: var(--card-bg, #fff);
-  border: 1px solid rgba(8, 123, 118, 0.08);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.08);
   border-radius: var(--r-lg);
   padding: var(--sp-4) var(--sp-4) var(--sp-3);
   margin-bottom: var(--sp-4);
@@ -1153,7 +1153,7 @@
   margin: 0;
   flex-shrink: 0;
   --border-radius: var(--r-sm);
-  --box-shadow: 0 6px 16px rgba(8, 123, 118, .22);
+  --box-shadow: 0 6px 16px rgba(var(--app-primary-rgb), .22);
 }
 
 .inline-input-btn ion-button::part(native) {
@@ -1347,7 +1347,7 @@
     outline: none;
     border-color: var(--primary);
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.10);
   }
 }
 
@@ -1442,7 +1442,7 @@
 
   &:hover {
     box-shadow: var(--shadow-sm);
-    border-color: rgba(8, 123, 118, 0.25);
+    border-color: rgba(var(--app-primary-rgb), 0.25);
   }
 }
 
@@ -1528,7 +1528,7 @@
   &:focus {
     border-color: var(--primary);
     background: #fff;
-    box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.10);
+    box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.10);
   }
 
   &.readonly {
@@ -1868,7 +1868,7 @@
     }
 
     &.badge-snr {
-      background: var(--purple, #7856c9);
+      background: var(--purple, var(--app-purple));
     }
   }
 
@@ -1907,12 +1907,12 @@
     }
 
     &.badge-snr {
-      background: var(--purple, #7856c9);
+      background: var(--purple, var(--app-purple));
     }
   }
 
   &:hover {
-    border-color: rgba(8, 123, 118, 0.35);
+    border-color: rgba(var(--app-primary-rgb), 0.35);
     box-shadow: var(--shadow-sm);
   }
 
@@ -1939,9 +1939,9 @@
 
     // ALL - TEAL
     &.badge-all {
-      background: #087b76 !important;
-      border-color: #087b76 !important;
-      box-shadow: 0 8px 22px rgba(8, 123, 118, 0.28) !important;
+      background: var(--app-primary) !important;
+      border-color: var(--app-primary) !important;
+      box-shadow: 0 8px 22px rgba(var(--app-primary-rgb), 0.28) !important;
     }
 
     // COMPLETED - GREEN
@@ -1964,8 +1964,8 @@
 
     // SNR - PURPLE
     &.badge-snr {
-      background: var(--purple, #7856c9) !important;
-      border-color: var(--purple, #7856c9) !important;
+      background: var(--purple, var(--app-purple)) !important;
+      border-color: var(--purple, var(--app-purple)) !important;
     }
 
     // CANCEL - RED
@@ -1975,8 +1975,8 @@
     }
 
     &.active-clinical {
-      background: #2470b9 !important;
-      border-color: #2470b9 !important;
+      background: var(--app-info) !important;
+      border-color: var(--app-info) !important;
 
       .tab-dot,
       .tab-label {
@@ -2008,7 +2008,7 @@
   transition: box-shadow 0.18s ease, border-color 0.18s ease, transform 0.12s ease;
 
   &.expanded {
-    border-color: rgba(8, 123, 118, 0.32);
+    border-color: rgba(var(--app-primary-rgb), 0.32);
     box-shadow: var(--shadow-md);
   }
 }
@@ -2045,7 +2045,7 @@
 }
 
 .status-tab.active.active-snr {
-  background: var(--purple, #7856c9) !important;
+  background: var(--purple, var(--app-purple)) !important;
 }
 
 .status-tab.active.active-cancel {
@@ -2171,7 +2171,7 @@
 }
 
 .booking-card.expanded {
-  border-color: rgba(8, 123, 118, 0.32);
+  border-color: rgba(var(--app-primary-rgb), 0.32);
   box-shadow: var(--shadow-md);
 }
 
@@ -2330,7 +2330,7 @@
   }
 
   &:hover {
-    border-color: rgba(8, 123, 118, 0.3);
+    border-color: rgba(var(--app-primary-rgb), 0.3);
     background: #ffffff;
   }
 
@@ -2587,7 +2587,7 @@ ion-content.menu-open {
   ion-item {
     --min-height: 46px;
     font-size: 13.5px;
-    --background-hover: var(--primary-lighter, #eef8f7);
+    --background-hover: var(--primary-lighter, var(--app-primary-lighter));
   }
 }
 
@@ -2732,7 +2732,7 @@ ion-content.menu-open {
     &:focus {
       background: #ffffff;
       border-color: var(--primary);
-      box-shadow: 0 0 0 3px rgba(8, 123, 118, 0.12);
+      box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.12);
     }
   }
 
@@ -2886,7 +2886,7 @@ ion-content.menu-open {
 
 
 .patient-edit-body .field-row .summary-field.wide .overlay-dropdown .suggestion-item:hover {
-  background: rgba(8, 123, 118, 0.08) !important;
+  background: rgba(var(--app-primary-rgb), 0.08) !important;
 }
 
 
@@ -3111,7 +3111,7 @@ ion-content.menu-open {
   color: #1f2937 !important;
 
   &:hover {
-    background: rgba(8, 123, 118, 0.08) !important;
+    background: rgba(var(--app-primary-rgb), 0.08) !important;
   }
 }
 
@@ -3404,19 +3404,19 @@ ion-content.menu-open {
   flex-shrink: 0;
   padding: 5px 10px;
   border-radius: var(--r-pill, 999px);
-  background: var(--brand-soft, #eef8f7);
-  border: 1px solid var(--brand-light, #d9f0ee);
+  background: var(--brand-soft, var(--app-primary-lighter));
+  border: 1px solid var(--brand-light, var(--app-primary-light));
 
   .bcard-tests-label {
     font-size: 11px;
     font-weight: 700;
-    color: var(--brand-deep, #075f5d);
+    color: var(--brand-deep, var(--app-primary-dark));
     white-space: nowrap;
   }
 
   .test-eye-icon {
     font-size: 16px;
-    color: var(--brand, #087b76);
+    color: var(--brand, var(--app-primary));
   }
 
   &:active {
@@ -3436,7 +3436,7 @@ ion-content.menu-open {
 
   &::part(content) {
     border-radius: 22px;
-    box-shadow: 0 24px 60px -12px rgba(7, 95, 93, 0.35);
+    box-shadow: 0 24px 60px -12px rgba(var(--app-primary-dark-rgb), 0.35);
     overflow: hidden;
   }
 
@@ -3450,7 +3450,7 @@ ion-content.menu-open {
   }
 
   .modal-header {
-    background: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+    background: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
     border-bottom: none;
     border-top-left-radius: 22px;
     border-top-right-radius: 22px;
@@ -3504,14 +3504,14 @@ ion-content.menu-open {
     display: grid;
     grid-template-columns: 0.4fr 2.2fr 1fr;
     gap: 8px;
-    background: #eef8f7;
-    color: #075f5d;
+    background: var(--app-primary-lighter);
+    color: var(--app-primary-dark);
     font-size: 10.5px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.4px;
     padding: 10px 18px;
-    border-bottom: 1px solid #d9f0ee;
+    border-bottom: 1px solid var(--app-primary-light);
   }
 
   .pkg-preview-row-full {

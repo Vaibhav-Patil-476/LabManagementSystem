@@ -146,7 +146,7 @@
   &:focus-within {
     border-color: var(--primary);
     background: #ffffff;
-    box-shadow: 0 0 0 4px rgba(8, 123, 118, 0.10);
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.10);
   }
 }
 
@@ -290,7 +290,7 @@
   }
 
   &:hover {
-    border-color: rgba(8, 123, 118, 0.35);
+    border-color: rgba(var(--app-primary-rgb), 0.35);
     box-shadow: var(--shadow-sm);
   }
 
@@ -312,9 +312,9 @@
   }
 
   &.active.active-all {
-    background: #087b76 !important;
-    border-color: #087b76 !important;
-    box-shadow: 0 8px 22px rgba(8, 123, 118, 0.28) !important;
+    background: var(--app-primary) !important;
+    border-color: var(--app-primary) !important;
+    box-shadow: 0 8px 22px rgba(var(--app-primary-rgb), 0.28) !important;
   }
 
   &.active.active-complete {

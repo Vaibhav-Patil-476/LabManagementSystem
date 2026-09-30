@@ -6,7 +6,7 @@
 
 // ---------- Header ----------
 .app-toolbar {
-  --background: #0f766e;
+  --background: var(--app-primary);
   --color: #fff;
 
   ion-back-button {
@@ -22,7 +22,7 @@
 
 // ---------- Filter card ----------
 .filter-card {
-  background: linear-gradient(135deg, #0f766e, #14b8a6);
+  background: linear-gradient(135deg, var(--app-primary), var(--app-primary-bright));
   border-radius: 0 0 20px 20px;
   padding: 16px;
 }
@@ -64,7 +64,7 @@
 
 .search-btn {
   --background: #fff;
-  --color: #0f766e;
+  --color: var(--app-primary);
   --border-radius: 12px;
   font-weight: 700;
   margin-top: 4px;
@@ -80,13 +80,13 @@
   .accent-bar {
     width: 4px;
     height: 18px;
-    background: #0f766e;
+    background: var(--app-primary);
     border-radius: 2px;
   }
 
   ion-icon {
     font-size: 18px;
-    color: #0f766e;
+    color: var(--app-primary);
   }
 
   h2 {
@@ -129,7 +129,7 @@
     font-size: 18px;
   }
 
-  &.teal { background: #14b8a6; }
+  &.teal { background: var(--app-primary-bright); }
   &.blue { background: #2563eb; }
   &.gold { background: #d97706; }
   &.purple { background: #7c3aed; }
@@ -232,7 +232,7 @@ thead th {
 
 .profile-name {
   font-weight: 700;
-  color: #0f766e;
+  color: var(--app-primary);
 }
 
 .commission-pill {
@@ -279,10 +279,10 @@ thead th {
   margin: 20px 12px 28px;
   padding: 18px 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%);
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.12);
   border-radius: 16px;
   box-shadow:
-    0 2px 8px rgba(15, 118, 110, 0.06),
+    0 2px 8px rgba(var(--app-primary-rgb), 0.06),
     0 1px 2px rgba(0, 0, 0, 0.03);
   position: relative;
 
@@ -293,7 +293,7 @@ thead th {
     left: 16px;
     right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--app-primary-rgb), 0.15), transparent);
   }
 }
 
@@ -307,11 +307,11 @@ thead th {
 
 .load-more-btn {
   --border-radius: 999px;
-  --background: linear-gradient(135deg, #0f766e 0%, #0d9488 100%);
+  --background: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-bright) 100%);
   --background-hover: linear-gradient(135deg, #0d6b64 0%, #0c857a 100%);
   --background-activated: linear-gradient(135deg, #0c5f59 0%, #0b756b 100%);
   --color: #ffffff;
-  --box-shadow: 0 3px 10px rgba(15, 118, 110, 0.28);
+  --box-shadow: 0 3px 10px rgba(var(--app-primary-rgb), 0.28);
 
   min-width: 160px;
   height: 42px;
@@ -329,7 +329,7 @@ thead th {
 
   &:not([disabled]):hover {
     transform: translateY(-1px);
-    box-shadow: 0 5px 16px rgba(15, 118, 110, 0.35);
+    box-shadow: 0 5px 16px rgba(var(--app-primary-rgb), 0.35);
   }
 
   &:not([disabled]):active {

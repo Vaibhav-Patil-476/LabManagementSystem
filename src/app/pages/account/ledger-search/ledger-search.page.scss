@@ -1,33 +1,33 @@
 // ==========================================================
 // PREMIUM ENTERPRISE DESIGN SYSTEM — Search Ledger
 // Recolored to match Report Download / Dashboard's teal identity
-// (--brand: #087b76). Same token set as booking-status.page.scss
+// (--brand: var(--app-primary)). Same token set as booking-status.page.scss
 // and report-status.page.scss — keep in sync.
 // ==========================================================
 :host {
-  --primary: #087b76;
-  --primary-dark: #075f5d;
-  --primary-light: #d9f0ee;
-  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
-  --brand-gradient-soft: linear-gradient(135deg, #eef8f7 0%, #f2fbfa 100%);
+  --primary: var(--app-primary);
+  --primary-dark: var(--app-primary-dark);
+  --primary-light: var(--app-primary-light);
+  --brand-gradient: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
+  --brand-gradient-soft: linear-gradient(135deg, var(--app-primary-lighter) 0%, #f2fbfa 100%);
 
-  --success: #16866e;
-  --success-bg: #d8f2ed;
-  --warning: #bd7d19;
-  --warning-bg: #fff0d9;
-  --danger: #c05262;
-  --danger-bg: #ffebef;
-  --info: #2470b9;
-  --info-bg: #e1efff;
+  --success: var(--app-success);
+  --success-bg: var(--app-success-bg);
+  --warning: var(--app-warning);
+  --warning-bg: var(--app-warning-bg);
+  --danger: var(--app-danger);
+  --danger-bg: var(--app-danger-bg);
+  --info: var(--app-info);
+  --info-bg: var(--app-info-bg);
 
-  --border-color: #e4eded;
-  --section-bg: #f5f9f9;
+  --border-color: var(--app-border);
+  --section-bg: var(--app-surface-alt);
 
-  --shadow-xs: 0 1px 2px rgba(7, 95, 93, 0.05);
-  --shadow-sm: 0 2px 8px rgba(7, 95, 93, 0.07);
-  --shadow-md: 0 6px 20px rgba(7, 95, 93, 0.10);
-  --shadow-lg: 0 14px 38px rgba(7, 95, 93, 0.16);
-  --shadow-glow: 0 8px 22px rgba(8, 123, 118, 0.28);
+  --shadow-xs: 0 1px 2px rgba(var(--app-primary-dark-rgb), 0.05);
+  --shadow-sm: 0 2px 8px rgba(var(--app-primary-dark-rgb), 0.07);
+  --shadow-md: 0 6px 20px rgba(var(--app-primary-dark-rgb), 0.10);
+  --shadow-lg: 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16);
+  --shadow-glow: 0 8px 22px rgba(var(--app-primary-rgb), 0.28);
 
   --r-sm: 10px;
   --r-md: 14px;
@@ -143,7 +143,7 @@
 
   .search-btn {
     --background: #ffffff;
-    --background-activated: #eef8f7;
+    --background-activated: var(--app-primary-lighter);
     --background-hover: #f5fbfa;
     --color: var(--primary);
     --box-shadow: var(--shadow-sm);
@@ -195,7 +195,7 @@
   padding: 12px 16px;
   font-size: 13.5px;
   font-weight: 600;
-  color: #14222e;
+  color: var(--app-text);
   cursor: pointer;
   border-bottom: 1px solid var(--border-color);
 
@@ -216,7 +216,7 @@
   justify-content: center;
   gap: 8px;
   padding: 20px 16px;
-  color: #8fa1a5;
+  color: var(--app-text-faint);
   font-size: 13px;
   font-weight: 600;
 
@@ -243,7 +243,7 @@
   font-size: 1rem;
   font-weight: 800;
   letter-spacing: -0.1px;
-  color: #14222e;
+  color: var(--app-text);
   position: relative;
 
   &::before {
@@ -345,23 +345,23 @@
 
   &.st-icon-open,
   &.st-icon-close {
-    background: linear-gradient(135deg, #087d78, #055f5d);
+    background: linear-gradient(135deg, var(--app-primary-mid), var(--app-primary-deep));
   }
 
   &.st-icon-book {
-    background: linear-gradient(135deg, #2470b9, #1a5187);
+    background: linear-gradient(135deg, var(--app-info), #1a5187);
   }
 
   &.st-icon-refund {
-    background: linear-gradient(135deg, #c05262, #9c3f4d);
+    background: linear-gradient(135deg, var(--app-danger), #9c3f4d);
   }
 
   &.st-icon-comm {
-    background: linear-gradient(135deg, #bd7d19, #a3690f);
+    background: linear-gradient(135deg, var(--app-warning), #a3690f);
   }
 
   &.st-icon-dep {
-    background: linear-gradient(135deg, #16866e, #106251);
+    background: linear-gradient(135deg, var(--app-success), #106251);
   }
 
   &.st-icon-rzp,
@@ -374,7 +374,7 @@
   }
 
   &.st-icon-adj {
-    background: linear-gradient(135deg, #2470b9, #1a5187);
+    background: linear-gradient(135deg, var(--app-info), #1a5187);
   }
 }
 
@@ -390,7 +390,7 @@
 .st-label {
   font-size: 0.66rem;
   font-weight: 600;
-  color: #8fa1a5;
+  color: var(--app-text-faint);
   text-transform: uppercase;
   letter-spacing: 0.2px;
   white-space: nowrap;
@@ -403,7 +403,7 @@
 .st-value {
   font-size: 0.92rem;
   font-weight: 800;
-  color: #14222e;
+  color: var(--app-text);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -434,7 +434,7 @@
   gap: 8px;
   padding: 12px 16px;
   background: var(--section-bg);
-  color: #14222e;
+  color: var(--app-text);
   font-weight: 800;
   font-size: 0.85rem;
   letter-spacing: 0.3px;
@@ -474,15 +474,15 @@
 }
 
 .nb-debit {
-  background: linear-gradient(160deg, #c05262, #9c3f4d);
+  background: linear-gradient(160deg, var(--app-danger), #9c3f4d);
 }
 
 .nb-credit {
-  background: linear-gradient(160deg, #16866e, #106251);
+  background: linear-gradient(160deg, var(--app-success), #106251);
 }
 
 .nb-net {
-  background: linear-gradient(160deg, #2470b9, #1a5187);
+  background: linear-gradient(160deg, var(--app-info), #1a5187);
 }
 
 @media (max-width: 480px) {
@@ -529,7 +529,7 @@
   padding: 8px 12px;
   font-weight: 600;
   font-size: 0.85rem;
-  color: #14222e;
+  color: var(--app-text);
 }
 
 .franchise-search {
@@ -554,7 +554,7 @@
   width: 38px;
 
   &.export-pdf {
-    --background: linear-gradient(135deg, #bd7d19, #a3690f);
+    --background: linear-gradient(135deg, var(--app-warning), #a3690f);
   }
 
   &.export-excel {
@@ -596,7 +596,7 @@
 
     .booking-date {
       font-size: 0.72rem;
-      color: #8fa1a5;
+      color: var(--app-text-faint);
     }
   }
 }
@@ -740,7 +740,7 @@
     padding: 32px 28px;
     border-radius: var(--r-lg, 20px);
     background: #ffffff;
-    box-shadow: var(--shadow-lg, 0 14px 38px rgba(7, 95, 93, 0.16));
+    box-shadow: var(--shadow-lg, 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16));
     min-width: 240px;
     max-width: 300px;
   }
@@ -751,10 +751,10 @@
   // be set from outside; that's the only reliable way to recolor it.
   .loading-spinner,
   ion-spinner {
-    --color: #087b76;
+    --color: var(--app-primary);
     width: 46px;
     height: 46px;
-    color: #087b76;
+    color: var(--app-primary);
   }
 
   // ✅ Green text — bold, centered.
@@ -762,7 +762,7 @@
     text-align: center;
     font-size: 15px;
     font-weight: 700;
-    color: #087b76;
+    color: var(--app-primary);
     line-height: 1.4;
   }
 }
@@ -837,10 +837,10 @@
   margin: 20px 12px 28px;
   padding: 18px 16px;
   background: linear-gradient(180deg, #ffffff 0%, #f7faf9 100%);
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid rgba(var(--app-primary-rgb), 0.12);
   border-radius: 16px;
   box-shadow:
-    0 2px 8px rgba(15, 118, 110, 0.06),
+    0 2px 8px rgba(var(--app-primary-rgb), 0.06),
     0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
@@ -855,11 +855,11 @@
 .lg-loadmore-btn {
   --border-radius: 999px;
   --border-width: 1.5px;
-  --border-color: #0f766e;
-  --color: #0f766e;
+  --border-color: var(--app-primary);
+  --color: var(--app-primary);
   --background: transparent;
-  --background-hover: rgba(15, 118, 110, 0.08);
-  --background-activated: rgba(15, 118, 110, 0.14);
+  --background-hover: rgba(var(--app-primary-rgb), 0.08);
+  --background-activated: rgba(var(--app-primary-rgb), 0.14);
   --box-shadow: none;
 
   min-width: 160px;
@@ -878,7 +878,7 @@
 
   &:not([disabled]):hover {
     transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(15, 118, 110, 0.18);
+    box-shadow: 0 4px 12px rgba(var(--app-primary-rgb), 0.18);
   }
 
   &:not([disabled]):active {
@@ -888,7 +888,7 @@
   ion-spinner {
     width: 18px;
     height: 18px;
-    color: #0f766e;
+    color: var(--app-primary);
   }
 }
 
@@ -904,6 +904,6 @@
     left: 16px;
     right: 16px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(15, 118, 110, 0.15), transparent);
+    background: linear-gradient(90deg, transparent, rgba(var(--app-primary-rgb), 0.15), transparent);
   }
 }

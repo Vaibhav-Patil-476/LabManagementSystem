@@ -2,18 +2,18 @@
 // NOTIFICATIONS — EMPTY STATE (illustration style)
 // Flat-illustration bell + person + notification badges, drawn
 // as inline SVG and recolored to the app's teal brand identity
-// (--primary: #087b76) instead of a generic stock illustration's
+// (--primary: var(--app-primary)) instead of a generic stock illustration's
 // yellow/orange palette.
 // ==========================================================
 :host {
-  --primary: #087b76;
-  --primary-dark: #075f5d;
-  --primary-light: #d9f0ee;
-  --brand-gradient: linear-gradient(135deg, #087d78 0%, #055f5d 100%);
+  --primary: var(--app-primary);
+  --primary-dark: var(--app-primary-dark);
+  --primary-light: var(--app-primary-light);
+  --brand-gradient: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
 
-  --gray-accent: #8fa1a5;
+  --gray-accent: var(--app-text-faint);
 
-  --shadow-glow: 0 10px 28px rgba(8, 123, 118, 0.24);
+  --shadow-glow: 0 10px 28px rgba(var(--app-primary-rgb), 0.24);
 
   // ---- illustration palette (brand-derived, not generic stock colors) ----
   --illus-blob: #d9f0ee;
@@ -36,7 +36,7 @@
 
 .notif-header {
   --background: transparent;
-  --color: var(--text-primary, #14222e);
+  --color: var(--text-primary, var(--app-text));
 
   ion-title {
     font-weight: 700;
@@ -71,7 +71,7 @@
   width: 100%;
   max-width: 320px;
   margin-bottom: 18px;
-  filter: drop-shadow(0 14px 26px rgba(8, 123, 118, 0.14));
+  filter: drop-shadow(0 14px 26px rgba(var(--app-primary-rgb), 0.14));
 }
 
 .notif-illustration {
@@ -94,7 +94,7 @@ h2 {
   font-size: 21px;
   font-weight: 800;
   letter-spacing: -0.3px;
-  color: var(--text-primary, #14222e);
+  color: var(--text-primary, var(--app-text));
 }
 
 p {
@@ -115,7 +115,7 @@ p {
   --border-radius: 999px;
   --background: var(--brand-gradient);
   --background-activated: linear-gradient(135deg, #06635f, #044c4a);
-  --background-hover: linear-gradient(135deg, #0a938c, #087b76);
+  --background-hover: linear-gradient(135deg, #0a938c, var(--app-primary));
   --box-shadow: var(--shadow-glow);
   --color: #ffffff;
 
