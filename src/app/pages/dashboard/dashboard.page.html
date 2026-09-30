@@ -668,33 +668,60 @@
               </div>
             </div>
 
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
-                Attachment</div>
-              <div class="patient-form-grid">
-                <div class="summary-field span-3">
-                  <label>Clinical History</label>
-                  <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
-                </div>
-                <div class="summary-field span-3">
-                  <label>Attachment</label>
-                  <input #patientFile type="file" hidden (change)="onPatientFileSelected($event)">
-                  <button class="attach-btn" (click)="patientFile.click()">
-                    <ion-icon name="attach-outline"></ion-icon>
-                    {{ editPatientData?.attachmentName || 'Choose File' }}
-                  </button>
-                  <div class="selected-file" *ngIf="editPatientData?.attachmentName">
-                    <ion-icon name="checkmark-outline"></ion-icon> {{ editPatientData.attachmentName }}
-                  </div>
-                </div>
-              </div>
-            </div>
+<div class="form-section">
+  <div class="form-section-title">
+    <ion-icon name="document-text-outline"></ion-icon> Attachments
+  </div>
+  <div class="patient-form-grid">
+    <div class="summary-field span-3">
+      <label>Add Attachments</label>
+      <input #patientFile type="file" hidden multiple accept="image/*,application/pdf"
+        (change)="onPatientFileSelected($event)">
+
+      <button type="button" class="attach-btn" (click)="patientFile.click()">
+        <ion-icon name="attach-outline"></ion-icon> Choose
+      </button>
+
+      <div class="attachment-row" *ngFor="let att of editPatientData.attachments; let i = index">
+        <span class="att-index">{{ i + 1 }}.</span>
+        <ion-icon
+          [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
+          class="att-type-icon"></ion-icon>
+        <span class="att-name">{{ att.name }}</span>
+        <span class="att-actions">
+          <ion-icon name="eye-outline" class="att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
+          <ion-icon name="trash-outline" class="att-del" (click)="removePatientAttachment(i)"></ion-icon>
+        </span>
+      </div>
+    </div>
+  </div>
+</div>
 
           </div>
         </div>
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
           <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="savePatientChanges()">Save
             Changes</ion-button>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
+    <!-- Attachment preview modal -->
+  <ion-modal [isOpen]="isAttachmentPreviewOpen" cssClass="test-preview-popup"
+    (didDismiss)="closeAttachmentPreview()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>{{ attachmentPreviewName || 'Attachment' }}</h2>
+          <ion-button fill="clear" (click)="closeAttachmentPreview()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+        <div class="att-preview-body">
+          <img *ngIf="attachmentPreviewIsImage" [src]="attachmentPreviewUrl" alt="Attachment">
+          <iframe *ngIf="!attachmentPreviewIsImage && attachmentPreviewSafeUrl"
+            [src]="attachmentPreviewSafeUrl"></iframe>
         </div>
       </div>
     </ng-template>

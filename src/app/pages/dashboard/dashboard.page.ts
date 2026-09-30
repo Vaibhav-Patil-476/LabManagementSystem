@@ -30,7 +30,8 @@ import {
   closeCircleOutline, chevronForwardOutline, chevronDownOutline,
   printOutline, cashOutline, qrCodeOutline, attachOutline,
   checkmarkOutline, walletOutline, cardOutline,
-  addCircleOutline, lockClosedOutline, eyeOutline, homeOutline, alertCircleOutline
+  addCircleOutline, lockClosedOutline, eyeOutline, homeOutline, alertCircleOutline,
+  trashOutline, imageOutline, documentOutline,medkitOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -39,7 +40,7 @@ import { ToastService } from "../../core/services/toast";
 import { BookingRefreshService } from "../../core/services/booking-refresh";
 import { RoleService } from "../../core/services/role";
 import { WalletService } from "../../core/services/wallet";
-
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 /** Barcode-edit row shape used only by this page's barcode modal. */
 type BarcodeRow = {
   accessionId?: number;
@@ -82,7 +83,7 @@ const CLINICAL_NOTIF_DAILY_UPDATE_ID = 6;
     IonModal, IonSpinner, IonSelect, IonSelectOption,
     IonDatetime, IonButton, IonSearchbar,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    StackedBarComponent
+    StackedBarComponent,
   ]
 })
 export class DashboardPage implements OnInit, OnDestroy {
@@ -102,7 +103,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   doctors: any[] = [];
   labs: any[] = [];
   samplesCanceled = 0;
-private franchiseCache: any[] = [];
+  private franchiseCache: any[] = [];
   patientsPending = 0;
   patientsCompleted = 0;
   samplesMissing = 0;
@@ -273,6 +274,7 @@ private franchiseCache: any[] = [];
     private loadingController: LoadingController,
     private walletService: WalletService,
     private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer,
   ) {
     this.registerIcons();
     this.fromDate = this.toKey(new Date());
@@ -286,6 +288,7 @@ private franchiseCache: any[] = [];
       'document-text-outline': documentTextOutline,
       'calendar-outline': calendarOutline,
       'person-add-outline': personAddOutline,
+      'medkit-outline': medkitOutline,
       'notifications-outline': notificationsOutline,
       'person-outline': personOutline,
       'person-circle-outline': personCircleOutline,
@@ -312,6 +315,9 @@ private franchiseCache: any[] = [];
       'eye-outline': eyeOutline,
       'home-outline': homeOutline,
       'alert-circle-outline': alertCircleOutline,
+      'trash-outline': trashOutline,
+      'image-outline': imageOutline,
+      'document-outline': documentOutline,
     });
   }
 
@@ -320,11 +326,11 @@ private franchiseCache: any[] = [];
   // ============================================================
   // ROLE / PERMISSION GETTERS
   // ============================================================
-get canViewWallet(): boolean {
-  const role = this.authService.role;
-  if (role === this.ROLE_STAFF || role === this.ROLE_FRANCHISE_STAFF) return false;
-  return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
-}
+  get canViewWallet(): boolean {
+    const role = this.authService.role;
+    if (role === this.ROLE_STAFF || role === this.ROLE_FRANCHISE_STAFF) return false;
+    return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
+  }
 
 
 
@@ -578,15 +584,15 @@ get canViewWallet(): boolean {
   }
 
   get printBillFranchiseHasLetterHead(): boolean {
-  const franchiseId = this.printBillItem?.franchiseId;
-  if (!franchiseId) return false;
+    const franchiseId = this.printBillItem?.franchiseId;
+    if (!franchiseId) return false;
 
-  const franchise = this.franchiseCache.find(
-    (f: any) => Number(f?.franchiseId) === Number(franchiseId)
-  );
+    const franchise = this.franchiseCache.find(
+      (f: any) => Number(f?.franchiseId) === Number(franchiseId)
+    );
 
-  return !!franchise?.ifLetterHead;
-}
+    return !!franchise?.ifLetterHead;
+  }
 
   // ============================================================
   // DATE RANGE PICKER
@@ -781,54 +787,54 @@ get canViewWallet(): boolean {
     };
   }
 
-openPrintBillModal(item: any, event?: MouseEvent): void {
-  event?.stopPropagation();
-  this.printBillItem = item;
-  this.selectedBillPriceType = 'myprice';
-  this.customBillAmount = null;
-  this.isPrintBillModalOpen = true;
+  openPrintBillModal(item: any, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.printBillItem = item;
+    this.selectedBillPriceType = 'myprice';
+    this.customBillAmount = null;
+    this.isPrintBillModalOpen = true;
 
-  // franchise list once fetch करून cache करा (ifLetterHead चेक करायला लागतो)
-  if (this.franchiseCache.length === 0) {
-    this.labApi.getFranchises().subscribe({
-      next: (res: any) => {
-        this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
-        this.cdr.detectChanges();
-      },
-      error: () => { /* silent — buttons will just show default 2-button state */ }
-    });
+    // franchise list once fetch करून cache करा (ifLetterHead चेक करायला लागतो)
+    if (this.franchiseCache.length === 0) {
+      this.labApi.getFranchises().subscribe({
+        next: (res: any) => {
+          this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+          this.cdr.detectChanges();
+        },
+        error: () => { /* silent — buttons will just show default 2-button state */ }
+      });
+    }
   }
-}
   closePrintBillModal(): void {
     this.isPrintBillModalOpen = false;
     this.printBillItem = null;
   }
 
-confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
-  const item = this.printBillItem;
-  if (!item) return;
-  if (this.printingId === item.bookingId) return;
+  confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
+    const item = this.printBillItem;
+    if (!item) return;
+    if (this.printingId === item.bookingId) return;
 
-  this.printingId = item.bookingId;
-  this.isPrintBillModalOpen = false;
+    this.printingId = item.bookingId;
+    this.isPrintBillModalOpen = false;
 
-  const payload = this.labApi.buildBillPayload(
-    item.bookingId,
-    this.selectedBillPriceType,
-    this.customBillAmount || null,
-    letterHead,
-    fLetterHead
-  );
+    const payload = this.labApi.buildBillPayload(
+      item.bookingId,
+      this.selectedBillPriceType,
+      this.customBillAmount || null,
+      letterHead,
+      fLetterHead
+    );
 
-  this.labApi.printBill(payload).subscribe({
-    next: (res: any) => {
-      this.printingId = null;
-      this.printBillItem = null;
-      if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-    },
-    error: () => { this.printingId = null; this.printBillItem = null; }
-  });
-}
+    this.labApi.printBill(payload).subscribe({
+      next: (res: any) => {
+        this.printingId = null;
+        this.printBillItem = null;
+        if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
+      },
+      error: () => { this.printingId = null; this.printBillItem = null; }
+    });
+  }
 
   openGlobalDownloadModal(item: any, event?: MouseEvent): void {
     event?.stopPropagation();
@@ -1278,6 +1284,12 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
         data.doctorId = fresh.doctorId || null;
         data.franchiseId = fresh.franchiseId || null;
 
+        console.log('ATTACHMENT-LIKE FIELDS:', Object.keys(res).filter(k =>
+          /doc|attach|file|upload|url/i.test(k)
+        ).map(k => [k, String(res[k]).substring(0, 80)]));
+
+        data.attachments = this.extractExistingAttachments(res);
+        data.attachmentsChanged = false;
         this.editPatientData = data;
         this.doctorSearch = data.doctor;
         this.labSearch = data.lab;
@@ -1332,7 +1344,7 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
     const customDoctorName = String(this.editPatientData.customDoctorName || '').trim();
     const customFranchiseLab = String(this.editPatientData.customFranchiseLab || '').trim();
 
-    const body = {
+    const body: any = {
       bookingId: this.editPatientData.bookingId,
       customerName: this.editPatientData.name,
       title: this.editPatientData.title,
@@ -1347,6 +1359,11 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
       customFranchiseLab,
       createdOn: this.editPatientData.createdOn
     };
+
+  if (this.editPatientData.attachmentsChanged) {
+  // junya + navin sagle ekatra; sagle delete kele tar '' jail
+  body.uploadDoc = this.serializeAttachments(this.editPatientData.attachments || []);
+}
 
     const bookingId = this.editPatientData.bookingId;
 
@@ -1515,17 +1532,123 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
     this.showLabDropdown = false;
   }
 
-  onPatientFileSelected(event: any): void {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // ============================================================
+  // ATTACHMENT (edit patient)
+  // ============================================================
+  isAttachmentPreviewOpen = false;
+  attachmentPreviewUrl = '';
+  attachmentPreviewSafeUrl: SafeResourceUrl | null = null;
+  attachmentPreviewIsImage = true;
+  attachmentPreviewName = '';
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.editPatientData.attachment = reader.result;
-      this.editPatientData.attachmentName = file.name;
-    };
-    reader.readAsDataURL(file);
+  private readonly ATTACHMENT_FIELDS = [
+    'uploadDoc', 'uploadDocUrl', 'uploadedDocument', 'documentUrl', 'document',
+    'attachmentUrl', 'attachment', 'docUrl', 'fileUrl'
+  ];
+
+private extractExistingAttachments(raw: any): { name: string; url: string; isNew: boolean }[] {
+  for (const f of this.ATTACHMENT_FIELDS) {
+    const v = raw?.[f];
+    if (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null') {
+      // data URL madhe comma asto, mhanun data: paryant split karu naka
+      const parts = v.includes('data:') ? v.split(/,(?=data:)/) : v.split(',');
+      return parts
+        .map(p => p.trim())
+        .filter(Boolean)
+        .map((url, i) => ({ url, name: this.guessFileName(url, i), isNew: false }));
+    }
   }
+  return [];
+}
+
+ private guessFileName(url: string, index = 0): string {
+  if (!url) return `Attachment ${index + 1}`;
+  if (url.startsWith('data:')) {
+    const mime = url.substring(5, url.indexOf(';'));
+    const ext = mime.split('/')[1] || 'file';
+    return `Attachment ${index + 1}.${ext}`;
+  }
+  try {
+    const clean = url.split('?')[0];
+    const last = decodeURIComponent(clean.substring(clean.lastIndexOf('/') + 1));
+    return last || `Attachment ${index + 1}`;
+  } catch {
+    return `Attachment ${index + 1}`;
+  }
+}
+
+  isImageSource(url: string, name: string): boolean {
+    if (!url) return false;
+    if (url.startsWith('data:image')) return true;
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || url.split('?')[0]);
+  }
+previewPatientAttachment(att: { url: string; name: string }): void {
+  this.attachmentPreviewName = att.name;
+  this.attachmentPreviewUrl = att.url;
+  this.attachmentPreviewIsImage = this.isImageSource(att.url, att.name);
+  this.attachmentPreviewSafeUrl = this.attachmentPreviewIsImage
+    ? null
+    : this.sanitizer.bypassSecurityTrustResourceUrl(att.url);
+  this.isAttachmentPreviewOpen = true;
+}
+
+  closeAttachmentPreview(): void {
+    this.isAttachmentPreviewOpen = false;
+    this.attachmentPreviewUrl = '';
+    this.attachmentPreviewSafeUrl = null;
+  }
+
+async removePatientAttachment(index: number): Promise<void> {
+  const alert = await this.alertController.create({
+    cssClass: 'premium-alert',
+    header: 'Delete Attachment',
+    message: 'Are you sure you want to delete this attachment?',
+    buttons: [
+      { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
+      {
+        text: 'Yes, Delete',
+        role: 'destructive',
+        cssClass: 'alert-btn-danger',
+        handler: () => {
+          this.ngZone.run(() => {
+            if (!this.editPatientData) return;
+            this.editPatientData.attachments.splice(index, 1);
+            this.editPatientData.attachmentsChanged = true;
+            this.cdr.detectChanges();
+          });
+        }
+      }
+    ]
+  });
+  await alert.present();
+}
+
+  private serializeAttachments(list: { url: string }[]): string {
+  return list.map(a => a.url).join(',');
+}
+
+async onPatientFileSelected(event: any): Promise<void> {
+  const files: File[] = Array.from(event.target.files || []);
+  if (!files.length) return;
+
+  for (const file of files) {
+    if (file.size > 5 * 1024 * 1024) {
+      this.toastService.error('Error', `${file.name} is over 5MB, skipped.`);
+      continue;
+    }
+    const url = await new Promise<string>((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.readAsDataURL(file);
+    });
+    this.ngZone.run(() => {
+      this.editPatientData.attachments.push({ name: file.name, url, isNew: true });
+      this.editPatientData.attachmentsChanged = true;
+    });
+  }
+  event.target.value = '';
+  this.cdr.detectChanges();
+}
 
   // ============================================================
   // BARCODE MODAL
@@ -2060,79 +2183,79 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
   // ============================================================
   // WALLET — LOAD / POLL
   // ============================================================
-loadWallet(): void {
-  if (this.isAdminRole) {
-    this.loadAdminWalletSummary();
-    return;
-  }
-  const labId = this.authService.labId;
-  const franchiseId = this.authService.franchiseId;
+  loadWallet(): void {
+    if (this.isAdminRole) {
+      this.loadAdminWalletSummary();
+      return;
+    }
+    const labId = this.authService.labId;
+    const franchiseId = this.authService.franchiseId;
 
-  this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
-    next: (res: any) => {
-      this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
-      this.cdr.detectChanges();
-    },
-    error: (err) => console.error('WALLET LOAD ERROR:', err)
-  });
-}
-
-private loadAdminWalletSummary(): void {
-  const labId = this.authService.labId;
-
-  this.labApi.getAdminWalletBalance(labId).subscribe({
-    next: (res: any) => {
-      this.wallet = res;
-      this.cdr.detectChanges();
-    },
-    error: (err) => console.error('ADMIN WALLET LOAD ERROR:', err)
-  });
-}
-
-
-private loadLabWallet(): void {
-  const labId = this.authService.labId;
-
-  this.labApi.getLabWallet(labId).subscribe({
-    next: (res: any) => {
-      this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
-      this.cdr.detectChanges();
-    },
-    error: (err) => console.error('LAB WALLET LOAD ERROR:', err)
-  });
-}
-
-private refreshWalletSilently(): void {
-  if (this.isAdminRole) {
-    this.loadAdminWalletSummary();
-    return;
+    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+      next: (res: any) => {
+        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('WALLET LOAD ERROR:', err)
+    });
   }
 
-  const labId = this.authService.labId;
-  const franchiseId = this.authService.franchiseId;
-  if (!labId || !franchiseId) return;
+  private loadAdminWalletSummary(): void {
+    const labId = this.authService.labId;
 
-  this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
-    next: (res: any) => {
-      this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
-      this.cdr.detectChanges();
-    },
-    error: (err) => console.error('SILENT WALLET REFRESH ERROR:', err)
-  });
-
-  if (this.isWalletModalOpen) {
-    this.walletService.getWallet(labId, franchiseId, 0, this.walletSize, true, this.walletPaymentModeFilter)
-      .subscribe({
-        next: (res: any) => {
-          const content = res?.transaction?.content || [];
-          this.walletTransactions = content;
-          this.walletTotalRows = res?.transaction?.totalElements ?? content.length;
-          this.cdr.detectChanges();
-        },
-        error: (err) => console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err)
-      });
+    this.labApi.getAdminWalletBalance(labId).subscribe({
+      next: (res: any) => {
+        this.wallet = res;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('ADMIN WALLET LOAD ERROR:', err)
+    });
   }
-}
+
+
+  private loadLabWallet(): void {
+    const labId = this.authService.labId;
+
+    this.labApi.getLabWallet(labId).subscribe({
+      next: (res: any) => {
+        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('LAB WALLET LOAD ERROR:', err)
+    });
+  }
+
+  private refreshWalletSilently(): void {
+    if (this.isAdminRole) {
+      this.loadAdminWalletSummary();
+      return;
+    }
+
+    const labId = this.authService.labId;
+    const franchiseId = this.authService.franchiseId;
+    if (!labId || !franchiseId) return;
+
+    this.walletService.getWallet(labId, franchiseId, 0, 1).subscribe({
+      next: (res: any) => {
+        this.wallet = res?.content ? { ...res, ...(res.content[0] || {}) } : res;
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('SILENT WALLET REFRESH ERROR:', err)
+    });
+
+    if (this.isWalletModalOpen) {
+      this.walletService.getWallet(labId, franchiseId, 0, this.walletSize, true, this.walletPaymentModeFilter)
+        .subscribe({
+          next: (res: any) => {
+            const content = res?.transaction?.content || [];
+            this.walletTransactions = content;
+            this.walletTotalRows = res?.transaction?.totalElements ?? content.length;
+            this.cdr.detectChanges();
+          },
+          error: (err) => console.error('SILENT WALLET TRANSACTION REFRESH ERROR:', err)
+        });
+    }
+  }
   // ============================================================
   // WALLET MODAL / TRANSACTIONS
   // ============================================================

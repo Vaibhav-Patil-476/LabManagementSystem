@@ -1,11 +1,13 @@
 import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+
 
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-  IonSelect, IonSelectOption, IonDatetime, AlertController
+  IonSelect, IonSelectOption, IonDatetime, IonSpinner, AlertController
 } from '@ionic/angular/standalone';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -15,7 +17,7 @@ import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline, downloadOutline,alertCircleOutline
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline, downloadOutline, alertCircleOutline, imageOutline, documentOutline
 } from 'ionicons/icons';
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
@@ -90,13 +92,13 @@ export interface BookingListItem {
 @Component({
   selector: 'app-booking-status',
   standalone: true,
-  imports: [
-    CommonModule, FormsModule,
-    IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-    IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-    IonSelect, IonSelectOption, IonDatetime,
-    MatDatepickerModule, MatFormFieldModule, MatInputModule
-  ],
+imports: [
+  CommonModule, FormsModule,
+  IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
+  IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
+  IonSelect, IonSelectOption, IonDatetime, IonSpinner,
+  MatDatepickerModule, MatFormFieldModule, MatInputModule
+],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './booking-status.page.html',
   styleUrls: ['./booking-status.page.scss']
@@ -133,6 +135,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   isPatientModalOpen = false;
   isPatientLoading = false;
+  isSavingPatient = false;
   editPatientData: any = null;
   doctorSearch = '';
   customLabSearch = '';
@@ -172,8 +175,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   isBillHistoryModalOpen = false;
   billHistoryBooking: BookingListItem | null = null;
-isReportNotReadyModalOpen = false;
-reportNotReadyBookingId: number | null = null;
+  isReportNotReadyModalOpen = false;
+  reportNotReadyBookingId: number | null = null;
   openActionRowId: number | null = null;
   generatingBillId: number | null = null;
   sharingWhatsappId: number | null = null;
@@ -411,16 +414,16 @@ reportNotReadyBookingId: number | null = null;
     return this.totalBookingsFromServer;
   }
 
-get isDefaultTodayRange(): boolean {
-  const today = new Date();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 6);
+  get isDefaultTodayRange(): boolean {
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6);
 
-  return (
-    this.fromDate === this.formatDateForInput(sevenDaysAgo) &&
-    this.toDate === this.formatDateForInput(today)
-  );
-}
+    return (
+      this.fromDate === this.formatDateForInput(sevenDaysAgo) &&
+      this.toDate === this.formatDateForInput(today)
+    );
+  }
 
   constructor(
     private toast: ToastService,
@@ -430,27 +433,30 @@ get isDefaultTodayRange(): boolean {
     private alertController: AlertController,
     private authService: AuthService,
     private router: Router,
-    private toastService: ToastService
+    private toastService: ToastService,
+    private sanitizer: DomSanitizer
   ) {
     addIcons({
       flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
       addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
       documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, 'copy-outline': copyOutline, downloadOutline,alertCircleOutline
+      refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline,
+      'copy-outline': copyOutline, downloadOutline, alertCircleOutline,
+      imageOutline, documentOutline
     });
   }
 
   // ---------- lifecycle ----------
-ngOnInit(): void {
-  const today = new Date();
-  const sevenDaysAgo = new Date();
-  sevenDaysAgo.setDate(today.getDate() - 6); // aaj धरून एकूण 7 days
+  ngOnInit(): void {
+    const today = new Date();
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(today.getDate() - 6); // aaj धरून एकूण 7 days
 
-  this.fromDate = this.formatDateForInput(sevenDaysAgo);
-  this.toDate = this.formatDateForInput(today);
+    this.fromDate = this.formatDateForInput(sevenDaysAgo);
+    this.toDate = this.formatDateForInput(today);
 
-  this.loadCurrentUser();
-}
+    this.loadCurrentUser();
+  }
 
   ionViewWillEnter(): void {
     this.loadCurrentUser();
@@ -466,6 +472,118 @@ ngOnInit(): void {
       this.searchDebounceTimer = null;
     }
   }
+  // ---------- ATTACHMENT (edit patient) ----------
+  isAttachmentPreviewOpen = false;
+  attachmentPreviewUrl = '';
+  attachmentPreviewSafeUrl: SafeResourceUrl | null = null;
+  attachmentPreviewIsImage = true;
+  attachmentPreviewName = '';
+
+
+  private extractExistingAttachments(raw: any): { name: string; url: string; isNew: boolean }[] {
+    for (const f of this.ATTACHMENT_FIELDS) {
+      const v = raw?.[f];
+      if (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null') {
+        const parts = v.includes('data:') ? v.split(/,(?=data:)/) : v.split(',');
+        return parts
+          .map(p => p.trim())
+          .filter(Boolean)
+          .map((url, i) => ({ url, name: this.guessFileName(url, i), isNew: false }));
+      }
+    }
+    return [];
+  }
+
+  private guessFileName(url: string, index = 0): string {
+    if (!url) return `Attachment ${index + 1}`;
+    if (url.startsWith('data:')) {
+      const mime = url.substring(5, url.indexOf(';'));
+      const ext = mime.split('/')[1] || 'file';
+      return `Attachment ${index + 1}.${ext}`;
+    }
+    const clean = url.split('?')[0];
+    return decodeURIComponent(clean.substring(clean.lastIndexOf('/') + 1)) || `Attachment ${index + 1}`;
+  }
+
+  isImageSource(url: string, name?: string): boolean {
+    if (!url) return false;
+    if (url.startsWith('data:')) return url.startsWith('data:image/');
+    return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test((name || url).split('?')[0]);
+  }
+
+  // saving cha format ithech ahe, company web cha format kalala ki fakt hi ek line badalaychi
+  private serializeAttachments(list: { url: string }[]): string {
+    return list.map(a => a.url).join(',');
+  }
+
+  previewPatientAttachment(att: { url: string; name: string }): void {
+    this.attachmentPreviewName = att.name;
+    this.attachmentPreviewUrl = att.url;
+    this.attachmentPreviewIsImage = this.isImageSource(att.url, att.name);
+    this.attachmentPreviewSafeUrl = this.attachmentPreviewIsImage
+      ? null
+      : this.sanitizer.bypassSecurityTrustResourceUrl(att.url);
+    this.isAttachmentPreviewOpen = true;
+  }
+
+  closeAttachmentPreview(): void {
+    this.isAttachmentPreviewOpen = false;
+    this.attachmentPreviewUrl = '';
+    this.attachmentPreviewSafeUrl = null;
+  }
+
+  async removePatientAttachment(index: number): Promise<void> {
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Delete Attachment',
+      message: 'Are you sure you want to delete this attachment?',
+      buttons: [
+        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
+        {
+          text: 'Yes, Delete',
+          role: 'destructive',
+          cssClass: 'alert-btn-danger',
+          handler: () => {
+            this.ngZone.run(() => {
+              this.editPatientData.attachments.splice(index, 1);
+              this.editPatientData.attachmentsChanged = true;
+              this.cdr.detectChanges();
+            });
+          }
+        }
+      ]
+    });
+    await alert.present();
+  }
+
+  async onPatientFileSelected(event: any): Promise<void> {
+    const files: File[] = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        this.showToast(`${file.name} is over 5MB, skipped.`, 'error');
+        continue;
+      }
+      const url = await new Promise<string>((resolve) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.readAsDataURL(file);
+      });
+      this.ngZone.run(() => {
+        this.editPatientData.attachments.push({ name: file.name, url, isNew: true });
+        this.editPatientData.attachmentsChanged = true;
+      });
+    }
+    event.target.value = '';
+    this.cdr.detectChanges();
+  }
+  // backend kontya field madhe file dete te confirm karun fakt ekach thev
+  private readonly ATTACHMENT_FIELDS = [
+    'uploadDoc', 'uploadDocUrl', 'uploadedDocument', 'documentUrl', 'document',
+    'attachmentUrl', 'attachment', 'docUrl', 'fileUrl'
+  ];
+
 
   @HostListener('window:resize')
   @HostListener('window:orientationchange')
@@ -961,8 +1079,8 @@ ngOnInit(): void {
   }
 
   isReportComplete(status: string | undefined): boolean {
-  return (status || '').toLowerCase().includes('complete');
-}
+    return (status || '').toLowerCase().includes('complete');
+  }
 
   testStatusLabel(status?: string): string {
     const s = this.normalizeStatus(status, 'snr');
@@ -1090,34 +1208,34 @@ ngOnInit(): void {
     this.closeActionMenu();
     this.printBillItem = item;
     this.selectedBillPriceType = 'myprice';
-     this.customBillAmount = null;
+    this.customBillAmount = null;
     this.isPrintBillModalOpen = true;
   }
 
- async openDownloadReportModal(item: BookingListItem, event?: MouseEvent): Promise<void> {
-  event?.stopPropagation();
-  this.closeActionMenu();
+  async openDownloadReportModal(item: BookingListItem, event?: MouseEvent): Promise<void> {
+    event?.stopPropagation();
+    this.closeActionMenu();
 
-  const tests = item.tests || [];
+    const tests = item.tests || [];
 
-  const isReportReady =
-    tests.length > 0 &&
-    tests.every(t => this.isCompleteOrReady(this.normalizeStatus(t.status)));
+    const isReportReady =
+      tests.length > 0 &&
+      tests.every(t => this.isCompleteOrReady(this.normalizeStatus(t.status)));
 
-  if (!isReportReady) {
-    this.reportNotReadyBookingId = item.bookingId;
-    this.isReportNotReadyModalOpen = true;
-    return;
+    if (!isReportReady) {
+      this.reportNotReadyBookingId = item.bookingId;
+      this.isReportNotReadyModalOpen = true;
+      return;
+    }
+
+    this.downloadReportItem = item;
+    this.isDownloadReportModalOpen = true;
   }
 
-  this.downloadReportItem = item;
-  this.isDownloadReportModalOpen = true;
-}
-
-closeReportNotReadyModal(): void {
-  this.isReportNotReadyModalOpen = false;
-  this.reportNotReadyBookingId = null;
-}
+  closeReportNotReadyModal(): void {
+    this.isReportNotReadyModalOpen = false;
+    this.reportNotReadyBookingId = null;
+  }
   closeDownloadReportModal(): void {
     this.isDownloadReportModalOpen = false;
     this.downloadReportItem = null;
@@ -1160,22 +1278,22 @@ closeReportNotReadyModal(): void {
     this.printBillItem = null;
   }
 
-confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
-  const item = this.printBillItem;
-  if (!item) return;
-  if (this.generatingBillId === item.bookingId) return;
-  this.generatingBillId = item.bookingId;
-  this.isPrintBillModalOpen = false;
+  confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
+    const item = this.printBillItem;
+    if (!item) return;
+    if (this.generatingBillId === item.bookingId) return;
+    this.generatingBillId = item.bookingId;
+    this.isPrintBillModalOpen = false;
 
-  const payload = this.labApi.buildBillPayload(
-    item.bookingId,
-    this.selectedBillPriceType,
-    this.customBillAmount || null,   
-    letterHead,
-     fLetterHead  
-  );
+    const payload = this.labApi.buildBillPayload(
+      item.bookingId,
+      this.selectedBillPriceType,
+      this.customBillAmount || null,
+      letterHead,
+      fLetterHead
+    );
 
-  this.labApi.printBill(payload).subscribe({
+    this.labApi.printBill(payload).subscribe({
       next: (res: any) => this.ngZone.run(() => {
         this.generatingBillId = null;
         this.printBillItem = null;
@@ -1200,15 +1318,15 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
   }
 
   get printBillFranchiseHasLetterHead(): boolean {
-  const franchiseId = this.printBillItem?.franchise?.franchiseId;
-  if (!franchiseId) return false;
+    const franchiseId = this.printBillItem?.franchise?.franchiseId;
+    if (!franchiseId) return false;
 
-  const franchise = this.filterFranchises.find(
-    (f: any) => Number(f?.franchiseId) === Number(franchiseId)
-  );
+    const franchise = this.filterFranchises.find(
+      (f: any) => Number(f?.franchiseId) === Number(franchiseId)
+    );
 
-  return !!franchise?.ifLetterHead;
-}
+    return !!franchise?.ifLetterHead;
+  }
 
   // ---------- print bill ----------
   async openPrintBillOptions(item: BookingListItem): Promise<void> {
@@ -1646,6 +1764,8 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
       data.doctorTitle = '';
       data.customDoctorName = fresh.customDoctorName || '';
       data.customFranchiseLab = fresh.customFranchiseLab || '';
+      data.attachments = this.extractExistingAttachments(fresh);
+      data.attachmentsChanged = false;
       this.editPatientData = data;
 
       this.doctorSearch = data.doctor;
@@ -1662,6 +1782,7 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
     this.isPatientLoading = false;
     this.editPatientData = null;
     this.doctorSearch = '';
+    this.isSavingPatient = false;
     this.customLabSearch = '';
     this.filteredCustomLabs = [];
     this.showCustomLabDropdown = false;
@@ -1682,78 +1803,91 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
     // 'dr' / 'master' / 'baby' -> gender untouched
   }
 
-  updatePatient(): void {
-    if (!this.canEditPatient || !this.editPatientData) return;
+updatePatient(): void {
+  if (!this.canEditPatient || !this.editPatientData || this.isSavingPatient) return;
 
-    const doctorId = Number(this.editPatientData.doctorId || 0);
-    const doctorName = String(this.editPatientData.doctor || '').trim();
-    const franchiseId = Number(this.editPatientData.franchiseId || 0);
-    const labName = String(this.editPatientData.lab || '').trim();
+  this.isSavingPatient = true;
+  this.cdr.detectChanges();   // spinner lagech dista
 
-    const body = {
-      bookingId: this.editPatientData.bookingId,
-      customerName: this.editPatientData.name,
-      title: this.editPatientData.title,
-      ageType: this.editPatientData.ageType,
-      age: this.editPatientData.age,
-      gender: this.editPatientData.gender,
-      mobileNumber: this.editPatientData.mobileNumber,
-      aadhaarNumber: this.editPatientData.aadhaarNumber,
-      uhidNumber: this.editPatientData.uhidNumber,
-      doctorid: doctorId > 0 ? doctorId : 0,
-      customDoctorName: String(this.editPatientData.customDoctorName || '').trim(),
-      franchiseId: franchiseId > 0 ? franchiseId : (this.editPatientData.franchiseId || 0),
-      customFranchiseLab: String(this.editPatientData.customFranchiseLab || '').trim(),
-      createdOn: this.editPatientData.createdOn
-    };
+  const doctorId = Number(this.editPatientData.doctorId || 0);
+  const doctorName = String(this.editPatientData.doctor || '').trim();
+  const franchiseId = Number(this.editPatientData.franchiseId || 0);
+  const labName = String(this.editPatientData.lab || '').trim();
 
-    const bookingId = this.editPatientData.bookingId;
+  const body: any = {
+    bookingId: this.editPatientData.bookingId,
+    customerName: this.editPatientData.name,
+    title: this.editPatientData.title,
+    ageType: this.editPatientData.ageType,
+    age: this.editPatientData.age,
+    gender: this.editPatientData.gender,
+    mobileNumber: this.editPatientData.mobileNumber,
+    aadhaarNumber: this.editPatientData.aadhaarNumber,
+    uhidNumber: this.editPatientData.uhidNumber,
+    doctorid: doctorId > 0 ? doctorId : 0,
+    customDoctorName: String(this.editPatientData.customDoctorName || '').trim(),
+    franchiseId: franchiseId > 0 ? franchiseId : (this.editPatientData.franchiseId || 0),
+    customFranchiseLab: String(this.editPatientData.customFranchiseLab || '').trim(),
+    createdOn: this.editPatientData.createdOn
+  };
 
-    this.labApi.updatePatient(this.labApi.getCurrentLabId(), bookingId, body).subscribe({
-      next: () => this.ngZone.run(() => {
-        this.showToast('Patient updated successfully', 'success');
-        const idx = this.bookings.findIndex(b => b.bookingId === bookingId);
-
-        if (idx > -1) {
-          const updated: BookingListItem = { ...this.bookings[idx] };
-          const customDoctorName = String(this.editPatientData.customDoctorName || '').trim();
-          const customFranchiseLab = String(this.editPatientData.customFranchiseLab || '').trim();
-
-          updated.customerName = this.editPatientData.name;
-          updated.title = this.editPatientData.title;
-          updated.age = this.editPatientData.age;
-          updated.ageType = this.editPatientData.ageType;
-          updated.gender = this.editPatientData.gender;
-          updated.aadhaarNumber = this.editPatientData.aadhaarNumber;
-          updated.uhidNumber = this.editPatientData.uhidNumber;
-          updated.customDoctorName = customDoctorName;
-          updated.customFranchiseLab = customFranchiseLab;
-
-          updated.doctor = {
-            doctorId: doctorId > 0 ? doctorId : undefined,
-            doctor_name: customDoctorName || doctorName || 'self'
-          };
-          updated.franchise = {
-            franchiseId: franchiseId > 0 ? franchiseId : undefined,
-            franchiseName: customFranchiseLab || labName || 'SELF'
-          };
-
-          this.bookings = [
-            ...this.bookings.slice(0, idx),
-            updated,
-            ...this.bookings.slice(idx + 1)
-          ];
-        }
-
-        this.closePatientModal();
-        this.cdr.detectChanges();
-      }),
-      error: () => {
-        this.ngZone.run(() => this.showToast('Patient update fail zala', 'error'));
-      }
-    });
+  // Multiple attachments: kahi badalla nasel tar uploadDoc pathvat nahi (junya files rahtat)
+  if (this.editPatientData.attachmentsChanged) {
+    body.uploadDoc = this.serializeAttachments(this.editPatientData.attachments || []);
   }
 
+  const bookingId = this.editPatientData.bookingId;
+
+  this.labApi.updatePatient(this.labApi.getCurrentLabId(), bookingId, body).subscribe({
+    next: () => this.ngZone.run(() => {
+      this.isSavingPatient = false;
+      this.showToast('Patient updated successfully', 'success');
+
+      const idx = this.bookings.findIndex(b => b.bookingId === bookingId);
+
+      if (idx > -1) {
+        const updated: BookingListItem = { ...this.bookings[idx] };
+        const customDoctorName = String(this.editPatientData.customDoctorName || '').trim();
+        const customFranchiseLab = String(this.editPatientData.customFranchiseLab || '').trim();
+
+        updated.customerName = this.editPatientData.name;
+        updated.title = this.editPatientData.title;
+        updated.age = this.editPatientData.age;
+        updated.ageType = this.editPatientData.ageType;
+        updated.gender = this.editPatientData.gender;
+        updated.aadhaarNumber = this.editPatientData.aadhaarNumber;
+        updated.uhidNumber = this.editPatientData.uhidNumber;
+        updated.customDoctorName = customDoctorName;
+        updated.customFranchiseLab = customFranchiseLab;
+
+        updated.doctor = {
+          doctorId: doctorId > 0 ? doctorId : undefined,
+          doctor_name: customDoctorName || doctorName || 'self'
+        };
+        updated.franchise = {
+          franchiseId: franchiseId > 0 ? franchiseId : undefined,
+          franchiseName: customFranchiseLab || labName || 'SELF'
+        };
+
+        this.bookings = [
+          ...this.bookings.slice(0, idx),
+          updated,
+          ...this.bookings.slice(idx + 1)
+        ];
+      }
+
+      this.closePatientModal();
+      this.cdr.detectChanges();
+    }),
+    error: () => {
+      this.ngZone.run(() => {
+        this.isSavingPatient = false;
+        this.showToast('Patient update fail zala', 'error');
+        this.cdr.detectChanges();
+      });
+    }
+  });
+}
   openDoctorPicker(): void {
     this.selectedDoctorPick = null;
     this.showDoctorPicker = true;
@@ -1826,17 +1960,7 @@ confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
     this.showCustomLabDropdown = false;
   }
 
-  onPatientFileSelected(event: any): void {
-    const file = event.target.files?.[0];
-    if (!file) return;
 
-    const reader = new FileReader();
-    reader.onload = () => {
-      this.editPatientData.attachment = reader.result;
-      this.editPatientData.attachmentName = file.name;
-    };
-    reader.readAsDataURL(file);
-  }
 
   // ---------- notes ----------
   openNoteModal(item: BookingListItem): void {
