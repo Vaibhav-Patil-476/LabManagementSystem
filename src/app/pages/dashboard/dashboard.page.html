@@ -137,103 +137,99 @@
       </div>
     </ng-template>
   </ion-modal>
+
   <!-- Download Report modal (Global search — With/Without letterhead) -->
-  <ion-modal cssClass="test-preview-popup" [isOpen]="isGlobalDownloadModalOpen"
-    (didDismiss)="closeGlobalDownloadModal()">
-    <ng-template>
-      <div class="modal-page">
-        <div class="modal-header">
-          <h2>Download Report <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
-              globalDownloadItem?.bookingId }}</span></h2>
-          <ion-button fill="clear" (click)="closeGlobalDownloadModal()">
-            <ion-icon name="close-outline"></ion-icon>
-          </ion-button>
-        </div>
-
-<div style="padding:18px;">
-  <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
-    (click)="confirmGlobalDownload(true)">
-    <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
-    <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
-    {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
-  </ion-button>
-
-  <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
-    [disabled]="downloadingReportId !== null" (click)="confirmGlobalDownload(false)">
-    <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
-    <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
-    {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
-  </ion-button>
-</div>
+<ion-modal cssClass="test-preview-popup download-report-modal" [isOpen]="isGlobalDownloadModalOpen"
+  (didDismiss)="closeGlobalDownloadModal()">
+  <ng-template>
+    <div class="modal-page">
+      <div class="modal-header">
+        <h2>Download Report <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ globalDownloadItem?.bookingId }}</span></h2>
+        <ion-button fill="clear" (click)="closeGlobalDownloadModal()">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
       </div>
-    </ng-template>
-  </ion-modal>
+
+      <div class="global-btn-row">
+        <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
+          (click)="confirmGlobalDownload(true)">
+          <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
+          <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
+          {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
+          (click)="confirmGlobalDownload(false)">
+          <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
+          <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
+          {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
+        </ion-button>
+      </div>
+    </div>
+  </ng-template>
+</ion-modal>
 
   <!-- Print Bill modal (Global search — Price Type + With/Without letterhead) -->
-  <ion-modal cssClass="test-preview-popup" [isOpen]="isPrintBillModalOpen" (didDismiss)="closePrintBillModal()">
-    <ng-template>
-      <div class="modal-page">
-        <div class="modal-header">
-          <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId
-              }}</span></h2>
-          <ion-button fill="clear" (click)="closePrintBillModal()">
-            <ion-icon name="close-outline"></ion-icon>
-          </ion-button>
-        </div>
+<ion-modal cssClass="test-preview-popup print-bill-modal" [isOpen]="isPrintBillModalOpen" (didDismiss)="closePrintBillModal()">
+  <ng-template>
+    <div class="modal-page">
+      <div class="modal-header">
+        <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId }}</span></h2>
+        <ion-button fill="clear" (click)="closePrintBillModal()">
+          <ion-icon name="close-outline"></ion-icon>
+        </ion-button>
+      </div>
 
-        <div style="padding:18px;">
+      <div class="global-print-grid">
 
-          <div style="display:flex; gap:12px; margin-bottom:16px;">
-            <div class="input-group" style="flex:1; min-width:0;">
-              <label>Price Type</label>
-              <div class="input-wrap">
-                <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
-                  class="premium-select">
-                  <ion-select-option value="myprice">My Price</ion-select-option>
-                  <ion-select-option value="mrp">MRP</ion-select-option>
-                </ion-select>
-              </div>
-            </div>
-
-            <div class="input-group" style="flex:1; min-width:0;">
-              <label>Custom Amount</label>
-              <div class="input-wrap" style="display:flex; align-items:center;">
-                <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
-                  style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
-              </div>
+        <div class="global-print-top">
+          <div class="input-group">
+            <label>Price Type</label>
+            <div class="input-wrap">
+              <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType" class="premium-select">
+                <ion-select-option value="myprice">My Price</ion-select-option>
+                <ion-select-option value="mrp">MRP</ion-select-option>
+              </ion-select>
             </div>
           </div>
 
-<ion-button expand="block" fill="solid" class="printbill-btn-slim"
-  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, false)">
-  <ion-icon slot="start" name="print-outline"></ion-icon>
-  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With LetterHead' }}
-</ion-button>
-
-<ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:8px;"
-  *ngIf="printBillFranchiseHasLetterHead"
-  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
-  <ion-icon slot="start" name="print-outline"></ion-icon>
-  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F With LetterHead' }}
-</ion-button>
-
-<ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:8px;"
-  *ngIf="printBillFranchiseHasLetterHead"
-  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
-  <ion-icon slot="start" name="print-outline"></ion-icon>
-  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F Without LetterHead' }}
-</ion-button>
-
-<ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:8px;"
-  [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, false)">
-  <ion-icon slot="start" name="print-outline"></ion-icon>
-  {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without LetterHead' }}
-</ion-button>
-
+          <div class="input-group">
+            <label>Custom Amount</label>
+            <div class="input-wrap" style="display:flex; align-items:center;">
+              <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
+                style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
+            </div>
+          </div>
         </div>
+
+        <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, false)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With LetterHead' }}
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, false)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without LetterHead' }}
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F With LetterHead' }}
+        </ion-button>
+
+        <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
+          <ion-icon slot="start" name="print-outline"></ion-icon>
+          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F Without LetterHead' }}
+        </ion-button>
+
       </div>
-    </ng-template>
-  </ion-modal>
+    </div>
+  </ng-template>
+</ion-modal>
 
 
   <!-- Report Not Ready modal (Global search) -->

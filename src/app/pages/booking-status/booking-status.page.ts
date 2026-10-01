@@ -1,9 +1,8 @@
-import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild, ElementRef } from '@angular/core';
+import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDetectorRef, HostListener, ViewChild, ElementRef, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-
-
+import { firstValueFrom } from 'rxjs';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
@@ -22,6 +21,7 @@ import {
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
 import { AuthService } from '../../core/services/auth';
+import { PdfDownloadService } from '../../core/services/pdf-download';
 import { Router } from '@angular/router';
 
 export interface BookingSample {
@@ -92,20 +92,26 @@ export interface BookingListItem {
 @Component({
   selector: 'app-booking-status',
   standalone: true,
-imports: [
-  CommonModule, FormsModule,
-  IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
-  IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-  IonSelect, IonSelectOption, IonDatetime, IonSpinner,
-  MatDatepickerModule, MatFormFieldModule, MatInputModule
-],
+  imports: [
+    CommonModule, FormsModule,
+    IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
+    IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
+    IonSelect, IonSelectOption, IonDatetime, IonSpinner,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule
+  ],
   schemas: [CUSTOM_ELEMENTS_SCHEMA],
   templateUrl: './booking-status.page.html',
   styleUrls: ['./booking-status.page.scss']
 })
 export class BookingStatusPage implements OnInit, OnDestroy {
 
+  private pdfDownload = inject(PdfDownloadService);
+
   bookings: BookingListItem[] = [];
+  /** Full-history dataset used only while the quick search is active. */
+  searchDataset: BookingListItem[] = [];
+  hasSearchLoaded = false;
+
   isLoadingList = false;
   isLoadingMore = false;
   hasMore = false;
@@ -184,43 +190,80 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   actionMenuPosition = { top: 0, left: 0 };
   role = '';
 
-  // ✅ Reference to the rendered dropdown element — used to measure its
-  // REAL height/width before finally positioning it (see toggleActionMenu).
   @ViewChild('actionDropdown') actionDropdownRef?: ElementRef<HTMLElement>;
 
-  readonly statusTabs: { key: string; label: string; badgeClass: string }[] = [
+  readonly statusTabs = [
     { key: 'all', label: 'All', badgeClass: 'badge-all' },
     { key: 'completed', label: 'Completed', badgeClass: 'badge-complete' },
     { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
+    { key: 'partial', label: 'Partially Complete', badgeClass: 'badge-partial' },   // ✅ नवीन
     { key: 'pending', label: 'Pending', badgeClass: 'badge-pending' },
     { key: 'snr', label: 'SNR', badgeClass: 'badge-snr' },
     { key: 'cancel', label: 'Cancel', badgeClass: 'badge-cancel' }
   ];
 
-  get statusBucketCount(): Record<string, number> {
-    const counts: Record<string, number> = { all: 0, completed: 0, CLINICAL: 0, pending: 0, snr: 0, cancel: 0 };
+  // ============================================================
+  // SEARCH / FILTER (same rules as the Download Reports page)
+  // ============================================================
 
-    let source = [...this.bookings];
+  /** Search mode uses the full-history dataset, otherwise the date-range data. */
+  private get baseList(): BookingListItem[] {
+    return this.isSearchMode ? this.searchDataset : this.bookings;
+  }
 
+  /** Rows after applying the quick-search rules. */
+  private get queryFiltered(): BookingListItem[] {
+    const list = [...this.baseList];
     const q = this.quickSearch?.trim().toLowerCase();
-    if (q) {
-      source = source.filter(b =>
-        String(b.bookingId).includes(q) ||
-        (b.patientId || '').toLowerCase().includes(q) ||
-        (b.customerName || '').toLowerCase().includes(q) ||
-        (b.doctor?.doctor_name || '').toLowerCase().includes(q)
-      );
-    }
+    if (!q) return list;
 
+    const numeric = /^\d+$/.test(q);
+
+    return list.filter(b => {
+      if (numeric) {
+        return String(b.bookingId) === q || String(b.patientId ?? '') === q;
+      }
+      return (
+        (b.customerName || '').toLowerCase().includes(q) ||
+        String(b.bookingId).includes(q) ||
+        String(b.patientId ?? '').toLowerCase().includes(q) ||
+        (b.doctor?.doctor_name || '').toLowerCase().includes(q) ||
+        (b.tests || []).some(t => (t.testName || '').toLowerCase().includes(q)) ||
+        (b.samples || []).some(s => (s.barcode || '').toLowerCase().includes(q))
+      );
+    });
+  }
+
+  get statusBucketCount(): Record<string, number> {
+    const counts: Record<string, number> = {
+      all: 0, completed: 0, CLINICAL: 0, partial: 0, pending: 0, snr: 0, cancel: 0
+    };
+
+    const source = this.queryFiltered;
     counts['all'] = source.length;
 
-    ['completed', 'CLINICAL', 'pending', 'snr', 'cancel'].forEach(key => {
-      counts[key] = source.filter(b =>
-        (b.tests || []).some(t => this.testMatchesTab(t.status, key))
-      ).length;
+    source.forEach(b => {
+      const key = this.getBookingBucket(b);
+      counts[key] = (counts[key] || 0) + 1;
     });
 
     return counts;
+  }
+  get filteredBookings(): BookingListItem[] {
+    let list = this.queryFiltered;
+
+    if (!this.isSearchMode && this.selectedReportStatus && this.selectedReportStatus !== 'all') {
+      list = list.filter(b => this.getBookingBucket(b) === this.selectedReportStatus);
+    }
+
+    return list;
+  }
+
+  get totalBookingsCount(): number {
+    if (this.isSearchMode) {
+      return this.queryFiltered.length;
+    }
+    return this.totalBookingsFromServer;
   }
 
   setStatusTab(key: string): void {
@@ -237,14 +280,11 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   showFranchiseDropdown = false;
 
   onFranchiseBlur(): void {
-    // Delay closing the dropdown so a click on a dropdown item
-    // (which fires slightly after blur) is processed first.
     setTimeout(() => {
       this.showFranchiseDropdown = false;
     }, 200);
   }
 
-  // ---------- franchise search ----------
   onFranchiseSearch(): void {
     const q = this.franchiseSearchTerm.trim().toLowerCase();
 
@@ -252,12 +292,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       this.filteredFranchiseList = [];
       this.showFranchiseDropdown = false;
 
-      /*
-       * When the text box is cleared manually (not via the X icon),
-       * clear the filter — except for franchise-role users — and
-       * reload all data. Previously only the dropdown was hidden
-       * and the data wasn't reloaded.
-       */
       const isFranchiseUser =
         this.role === this.ROLE_FRANCHISE ||
         this.role === this.ROLE_FRANCHISE_STAFF;
@@ -277,7 +311,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.showFranchiseDropdown = true;
   }
 
-  // ---------- select franchise ----------
   selectFranchise(f: any): void {
     const franchiseId = f?.franchiseId ?? f?.id ?? null;
 
@@ -307,6 +340,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   get isFranchiseOnlyRole(): boolean { return this.role === this.ROLE_FRANCHISE; }
 
   get canEditPatient(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
+
   isSampleReceivedForBooking(item: BookingListItem): boolean {
     return (item.samples || []).some(s => (s.status || '').toString().toUpperCase() === 'RECEIVED');
   }
@@ -329,39 +363,25 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
   get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
 
-  get filteredBookings(): BookingListItem[] {
-    let list: BookingListItem[] = [...this.bookings];
 
-    /*
-     * Report status filter — this is a TEST-level check, not booking-level:
-     * a booking is shown if at least one of its tests matches the status.
-     */
-    if (this.selectedReportStatus && this.selectedReportStatus !== 'all') {
-      list = list.filter((booking: BookingListItem) =>
-        (booking.tests || []).some(t => this.testMatchesTab(t.status, this.selectedReportStatus))
-      );
-    }
 
-    // Quick search filter
-    const q = this.quickSearch?.trim().toLowerCase();
+  private testCategory(status: string | undefined): string {
+    const s = this.normalizeStatus(status, 'snr');
+    if (s === 'cancel' || s === 'cancelled') return 'cancel';
+    if (s === 'snr') return 'snr';
+    if (s.includes('clinical')) return 'CLINICAL';
+    if (this.isCompleteOrReady(s)) return 'completed';
+    return 'pending';
+  }
 
-    if (q) {
-      list = list.filter((booking: BookingListItem) => {
-        const bookingId = String(booking.bookingId ?? '').toLowerCase();
-        const patientId = String(booking.patientId ?? '').toLowerCase();
-        const customerName = String(booking.customerName ?? '').toLowerCase();
-        const doctorName = String(booking.doctor?.doctor_name ?? '').toLowerCase();
+  private getBookingBucket(b: BookingListItem): string {
+    const tests = b.tests || [];
+    if (tests.length === 0) return 'pending';
 
-        return (
-          bookingId.includes(q) ||
-          patientId.includes(q) ||
-          customerName.includes(q) ||
-          doctorName.includes(q)
-        );
-      });
-    }
+    const categories = new Set(tests.map(t => this.testCategory(t.status)));
 
-    return list;
+    // सगळे tests एकाच status चे असतील तर तोच tab, नाहीतर mix = partial
+    return categories.size === 1 ? [...categories][0] : 'partial';
   }
 
   private testMatchesTab(status: string | undefined, tabKey: string): boolean {
@@ -388,30 +408,12 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     }
   }
 
-  /** Lower-cases a status string, falling back to `fallback` (default '') when empty/undefined. */
   private normalizeStatus(status: string | undefined, fallback: string = ''): string {
     return (status || fallback).toLowerCase();
   }
 
-  /** True when an already-normalized (lower-cased) status string represents a completed/ready test. */
   private isCompleteOrReady(normalizedStatus: string): boolean {
     return normalizedStatus.includes('complete') || normalizedStatus.includes('ready');
-  }
-
-  get totalBookingsCount(): number {
-    /*
-     * While the user is searching, show the currently visible filtered
-     * count. The status-tab filter (Completed/Pending/SNR/etc.) should
-     * not affect this badge — it only filters the list below.
-     */
-    const hasQuickSearch = !!this.quickSearch?.trim();
-
-    if (hasQuickSearch) {
-      return this.filteredBookings.length;
-    }
-
-    // Otherwise show the backend total (stays fixed when the status tab changes).
-    return this.totalBookingsFromServer;
   }
 
   get isDefaultTodayRange(): boolean {
@@ -450,7 +452,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   ngOnInit(): void {
     const today = new Date();
     const sevenDaysAgo = new Date();
-    sevenDaysAgo.setDate(today.getDate() - 6); // aaj धरून एकूण 7 days
+    sevenDaysAgo.setDate(today.getDate() - 6); // today + previous 6 days = 7 days
 
     this.fromDate = this.formatDateForInput(sevenDaysAgo);
     this.toDate = this.formatDateForInput(today);
@@ -472,6 +474,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       this.searchDebounceTimer = null;
     }
   }
+
   // ---------- ATTACHMENT (edit patient) ----------
   isAttachmentPreviewOpen = false;
   attachmentPreviewUrl = '';
@@ -479,6 +482,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   attachmentPreviewIsImage = true;
   attachmentPreviewName = '';
 
+  private readonly ATTACHMENT_FIELDS = [
+    'uploadDoc', 'uploadDocUrl', 'uploadedDocument', 'documentUrl', 'document',
+    'attachmentUrl', 'attachment', 'docUrl', 'fileUrl'
+  ];
 
   private extractExistingAttachments(raw: any): { name: string; url: string; isNew: boolean }[] {
     for (const f of this.ATTACHMENT_FIELDS) {
@@ -511,7 +518,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test((name || url).split('?')[0]);
   }
 
-  // saving cha format ithech ahe, company web cha format kalala ki fakt hi ek line badalaychi
   private serializeAttachments(list: { url: string }[]): string {
     return list.map(a => a.url).join(',');
   }
@@ -562,7 +568,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
     for (const file of files) {
       if (file.size > 5 * 1024 * 1024) {
-        this.showToast(`${file.name} is over 5MB, skipped.`, 'error');
+        this.showToast(`${file.name} is over 5 MB and was skipped.`, 'error');
         continue;
       }
       const url = await new Promise<string>((resolve) => {
@@ -578,12 +584,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     event.target.value = '';
     this.cdr.detectChanges();
   }
-  // backend kontya field madhe file dete te confirm karun fakt ekach thev
-  private readonly ATTACHMENT_FIELDS = [
-    'uploadDoc', 'uploadDocUrl', 'uploadedDocument', 'documentUrl', 'document',
-    'attachmentUrl', 'attachment', 'docUrl', 'fileUrl'
-  ];
-
 
   @HostListener('window:resize')
   @HostListener('window:orientationchange')
@@ -611,11 +611,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       this.role = this.authService.role;
       this.currentUserId = cachedUser?.raw?.id ?? cachedUser?.userId ?? 0;
 
-      /*
-       * IMPORTANT: do not call loadBookings() here.
-       * loadFilterFranchises() first resolves the logged-in franchise
-       * ID and then loads bookings.
-       */
+      // loadFilterFranchises() resolves the franchise first and then loads bookings.
       this.loadFilterFranchises();
 
       this.cdr.detectChanges();
@@ -630,7 +626,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
           const currentUser = this.authService.currentUserValue;
           this.currentUserId = currentUser?.raw?.id ?? currentUser?.userId ?? 0;
 
-          // Current user is now available — resolve franchise first, then load bookings.
           this.loadFilterFranchises();
 
           this.cdr.detectChanges();
@@ -642,7 +637,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
           this.role = this.authService.role || '';
           this.currentUserId = 0;
 
-          // Even if the current-user API fails, still try loading the franchise filter.
           this.loadFilterFranchises();
 
           this.cdr.detectChanges();
@@ -700,14 +694,25 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     }
 
     this.searchDebounceTimer = setTimeout(() => {
-      this.loadBookings();
+      if (this.isSearchMode) {
+        // Full history is fetched only once; further typing filters locally.
+        if (!this.hasSearchLoaded) {
+          this.loadBookings();
+        } else {
+          this.cdr.detectChanges();
+        }
+      } else {
+        // Search cleared: go back to the normal date-range data.
+        this.searchDataset = [];
+        this.hasSearchLoaded = false;
+        this.loadBookings();
+      }
     }, this.SEARCH_DEBOUNCE_MS);
   }
 
   // ---------- mapping ----------
   private mapBookingItem(raw: any): BookingListItem {
     if (!raw) return raw;
-
 
     const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
       .filter((t: any) => !!t.testName);
@@ -732,7 +737,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     const tests: BookingTest[] = rawTestMappings.map((t: any) => {
       const mappingId = t.testMappingId ?? t.bookingWithTestMappingId;
 
-      // Match the sample directly via testId — the sample object already carries testId.
       const matchedSample = (raw.sampleAccessions || raw.samples || [])
         .find((s: any) => Number(s.testId) === Number(t.testId));
 
@@ -838,15 +842,20 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         ? Number(this.selectedFranchiseId)
         : undefined;
 
-    /*
-     * All cases (All / Completed / SNR / Cancel / search) share a single
-     * path — fetch the entire date-range dataset up front. This removes
-     * the separate Load More logic that could cause tab-count mismatches.
-     */
     this.fetchAllPagesForRange(labId, startDate, endDateExclusive, franchiseId).then((allResults) => {
       this.ngZone.run(() => {
-        this.bookings = allResults.map((booking: any) => this.mapBookingItem(booking));
-        this.totalBookingsFromServer = this.bookings.length;
+        const mapped = allResults.map((booking: any) => this.mapBookingItem(booking));
+
+        if (searchActive) {
+          this.searchDataset = mapped;
+          this.hasSearchLoaded = true;
+        } else {
+          this.bookings = mapped;
+          this.totalBookingsFromServer = mapped.length;
+          this.searchDataset = [];
+          this.hasSearchLoaded = false;
+        }
+
         this.hasMore = false;
         this.isLoadingList = false;
         this.isLoadingMore = false;
@@ -855,7 +864,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     });
   }
 
-  // ---------- template aliases ----------
   loadData(): void {
     this.loadBookings();
   }
@@ -892,23 +900,19 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     });
   }
 
-  // ---------- load more ----------
   loadMoreBookings(): void {
   }
 
-  // ---------- apply filters ----------
   applyFilters(): void {
     this.loadBookings();
   }
 
   // ---------- franchise filter loading ----------
   private loadFilterFranchises(): void {
-    // Read the current logged-in user data dynamically from AuthService.
     const currentRole = this.authService?.role;
     const currentFranchiseId = this.authService?.franchiseId;
     const currentFranchiseName = this.authService?.franchiseName;
 
-    // Franchise users should always have their own franchise selected.
     const isFranchiseUser =
       currentRole === 'ROLE_FRANCHISE' ||
       currentRole === 'ROLE_FRANCHISE_STAFF';
@@ -919,7 +923,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
           this.filterFranchises = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
 
           if (isFranchiseUser) {
-            // Find the logged-in franchise in the available franchise list.
             const matchedFranchise = this.filterFranchises.find((f: any) =>
               Number(f?.franchiseId) === Number(currentFranchiseId)
             );
@@ -932,7 +935,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
               currentFranchiseId !== undefined &&
               Number(currentFranchiseId) > 0
             ) {
-              // Franchise not found in the dropdown, but AuthService has a valid ID — use it directly.
               this.selectedFranchiseId = Number(currentFranchiseId);
               this.franchiseSearchTerm = currentFranchiseName || '';
             } else {
@@ -940,12 +942,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
               this.franchiseSearchTerm = '';
             }
           } else {
-            // LAB_ADMIN / STAFF: null means All Franchises.
             this.selectedFranchiseId = null;
             this.franchiseSearchTerm = '';
           }
 
-          // Important: the booking API is only called once franchise selection is ready.
           this.loadBookings();
 
           this.cdr.detectChanges();
@@ -956,10 +956,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           this.filterFranchises = [];
 
-          /*
-           * Even if the franchise list API fails, franchise users can still
-           * load their own bookings using the dynamic AuthService franchise ID.
-           */
           if (
             isFranchiseUser &&
             currentFranchiseId !== null &&
@@ -969,7 +965,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
             this.selectedFranchiseId = Number(currentFranchiseId);
             this.franchiseSearchTerm = currentFranchiseName || '';
           } else {
-            // Admin / Staff: no franchise filter.
             this.selectedFranchiseId = null;
             this.franchiseSearchTerm = '';
           }
@@ -982,9 +977,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     });
   }
 
-  // ---------- clear franchise ----------
   clearFranchise(): void {
-    // Franchise users cannot clear their own franchise filter.
     if (this.role === 'ROLE_FRANCHISE' || this.role === 'ROLE_FRANCHISE_STAFF') {
       const currentFranchiseId = this.authService?.franchiseId;
       const currentFranchiseName = this.authService?.franchiseName;
@@ -994,7 +987,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       return;
     }
 
-    // Admin / Staff: clear means All Franchises.
     this.franchiseSearchTerm = '';
     this.selectedFranchiseId = null;
     this.filteredFranchiseList = [];
@@ -1024,7 +1016,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
       error: () => {
         this.ngZone.run(() => {
-          this.showToast('Booking detail load fail zala', 'error');
+          this.showToast('Failed to load booking details.', 'error');
           onError?.();
           this.cdr.detectChanges();
         });
@@ -1037,7 +1029,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   previewBooking: BookingListItem | null = null;
 
   openTestPreview(item: BookingListItem, event?: MouseEvent): void {
-    event?.stopPropagation(); // prevent the card-level click from firing
+    event?.stopPropagation();
     this.previewBooking = item;
     this.isTestPreviewModalOpen = true;
   }
@@ -1096,19 +1088,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   // ---------- action menu ----------
-
-  /**
-   * ✅ FIXED VERSION
-   * The old logic guessed the dropdown's height with a hardcoded
-   * `menuHeightEstimate = 260`. The real menu now has up to 9 items
-   * (~350-400px), so the guess was wrong and the menu could render
-   * partially off the bottom of the screen (web + Capacitor APK both).
-   *
-   * Fix: open the menu off-screen first (invisible), let Angular render
-   * it, measure its REAL height/width on the next animation frame, and
-   * only then calculate the final on-screen position (flip up if it
-   * doesn't fit below, clamp inside viewport as a last resort).
-   */
   toggleActionMenu(item: BookingListItem, event: MouseEvent): void {
     event.stopPropagation();
 
@@ -1119,7 +1098,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
     const anchorRect = (event.currentTarget as HTMLElement).getBoundingClientRect();
 
-    // Render off-screen first so we can measure the real size.
+    // Render off-screen first so the real size can be measured.
     this.actionMenuPosition = { top: -9999, left: -9999 };
     this.openActionRowId = item.bookingId;
     this.openActionItem = item;
@@ -1127,7 +1106,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.cdr.detectChanges();
 
     requestAnimationFrame(() => {
-      // Guard: user might have closed the menu again before this frame runs.
       if (this.openActionRowId !== item.bookingId) return;
       this.positionActionMenu(anchorRect);
       this.cdr.detectChanges();
@@ -1137,7 +1115,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   private positionActionMenu(anchorRect: DOMRect): void {
     const menuEl = this.actionDropdownRef?.nativeElement;
 
-    // Real measured size — fallback estimate only if the element wasn't found.
     const menuWidth = menuEl?.offsetWidth || 216;
     const menuHeight = menuEl?.offsetHeight || 320;
 
@@ -1145,22 +1122,16 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     const viewportH = window.innerHeight;
     const margin = 8;
 
-    // ---- horizontal ----
     let left = anchorRect.right - menuWidth;
     if (left < margin) left = margin;
     if (left + menuWidth > viewportW - margin) left = viewportW - menuWidth - margin;
 
-    // ---- vertical: try below the button first ----
     let top = anchorRect.bottom + 6;
 
-    // Doesn't fit below → flip above the button.
     if (top + menuHeight > viewportH - margin) {
       top = anchorRect.top - menuHeight - 6;
     }
 
-    // Still doesn't fit (e.g. button is near the top of a short screen) →
-    // clamp inside the viewport. CSS max-height + overflow-y:auto on
-    // .action-dropdown handles scrolling for whatever doesn't fit.
     if (top < margin) top = margin;
     if (top + menuHeight > viewportH - margin) {
       top = Math.max(margin, viewportH - menuHeight - margin);
@@ -1175,35 +1146,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     document.body.classList.remove('action-menu-open');
   }
 
-  // // ---------- print bill ----------
-  // printBill(item: BookingListItem): void {
-  //   this.closeActionMenu();
-  //   if (this.generatingBillId === item.bookingId) return;
-  //   this.generatingBillId = item.bookingId;
-
-  //   const payload = this.labApi.buildBillPayload(item.bookingId);
-  //   this.labApi.printBill(payload).subscribe({
-  //     next: (res: any) => this.ngZone.run(() => {
-  //       this.generatingBillId = null;
-  //       if (res?.downloadUrl) {
-  //         window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-  //         this.showToast('Bill ready', 'success');
-  //       } else {
-  //         this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
-  //       }
-  //       this.cdr.detectChanges();
-  //     }),
-  //     error: () => {
-  //       this.ngZone.run(() => {
-  //         this.generatingBillId = null;
-  //         this.showToast('Bill generate karnyat error aali', 'error');
-  //         this.cdr.detectChanges();
-  //       });
-  //     }
-  //   });
-  // }
-
-
+  // ---------- print bill ----------
   openPrintBillModal(item: BookingListItem): void {
     this.closeActionMenu();
     this.printBillItem = item;
@@ -1212,6 +1155,100 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.isPrintBillModalOpen = true;
   }
 
+  closePrintBillModal(): void {
+    this.isPrintBillModalOpen = false;
+    this.printBillItem = null;
+  }
+
+  async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
+    const item = this.printBillItem;
+    if (!item) return;
+    if (this.generatingBillId === item.bookingId) return;
+    this.generatingBillId = item.bookingId;
+    this.isPrintBillModalOpen = false;
+
+    const payload = this.labApi.buildBillPayload(
+      item.bookingId,
+      this.selectedBillPriceType,
+      this.customBillAmount || null,
+      letterHead,
+      fLetterHead
+    );
+
+    try {
+      const res: any = await firstValueFrom(this.labApi.printBill(payload));
+
+      if (res?.downloadUrl) {
+        const fileName = res.fileName || `bill-${item.bookingId}.pdf`;
+        await this.pdfDownload.download(res.downloadUrl, fileName);
+        this.showToast('Bill downloaded successfully.', 'success');
+      } else {
+        this.showToast(res?.message || 'Unable to generate the bill PDF.', 'error');
+      }
+    } catch (err: any) {
+      this.showToast('Failed to generate the bill: ' + (err?.error?.message || err?.message || 'Unknown error'), 'error');
+    } finally {
+      this.ngZone.run(() => {
+        this.generatingBillId = null;
+        this.printBillItem = null;
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  get printBillFranchiseHasLetterHead(): boolean {
+    const franchiseId = this.printBillItem?.franchise?.franchiseId;
+    if (!franchiseId) return false;
+
+    const franchise = this.filterFranchises.find(
+      (f: any) => Number(f?.franchiseId) === Number(franchiseId)
+    );
+
+    return !!franchise?.ifLetterHead;
+  }
+
+  async openPrintBillOptions(item: BookingListItem): Promise<void> {
+    this.closeActionMenu();
+
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Print Bill',
+      message: 'Select bill type',
+      buttons: [
+        { text: 'My Price', handler: () => this.printBill(item, 'myprice') },
+        { text: 'MRP', handler: () => this.printBill(item, 'mrp') },
+        { text: 'Cancel', role: 'cancel', cssClass: 'alert-btn-cancel' }
+      ]
+    });
+
+    await alert.present();
+  }
+
+  async printBill(item: BookingListItem, billType: string = 'myprice'): Promise<void> {
+    if (this.generatingBillId === item.bookingId) return;
+    this.generatingBillId = item.bookingId;
+
+    try {
+      const payload = this.labApi.buildBillPayload(item.bookingId, billType);
+      const res: any = await firstValueFrom(this.labApi.printBill(payload));
+
+      if (res?.downloadUrl) {
+        await this.pdfDownload.download(res.downloadUrl, res.fileName || `bill-${item.bookingId}.pdf`);
+        this.showToast('Bill downloaded successfully.', 'success');
+      } else {
+        this.showToast(res?.message || 'Unable to generate the bill PDF.', 'error');
+      }
+    } catch {
+      this.showToast('Failed to generate the bill.', 'error');
+    } finally {
+      this.ngZone.run(() => {
+        this.generatingBillId = null;
+        this.cdr.detectChanges();
+      });
+    }
+  }
+
+  // ---------- download report ----------
   async openDownloadReportModal(item: BookingListItem, event?: MouseEvent): Promise<void> {
     event?.stopPropagation();
     this.closeActionMenu();
@@ -1236,12 +1273,13 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.isReportNotReadyModalOpen = false;
     this.reportNotReadyBookingId = null;
   }
+
   closeDownloadReportModal(): void {
     this.isDownloadReportModalOpen = false;
     this.downloadReportItem = null;
   }
 
-  confirmDownloadReport(letterHead: boolean): void {
+  async confirmDownloadReport(letterHead: boolean): Promise<void> {
     const item = this.downloadReportItem;
     if (!item) return;
 
@@ -1249,138 +1287,29 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.generatingReportId = item.bookingId;
     this.isDownloadReportModalOpen = false;
 
-    this.labApi.generatePdfReport([item.bookingId], { letterHead, single: true }).subscribe({
-      next: (res: any) => this.ngZone.run(() => {
+    try {
+      const res: any = await firstValueFrom(
+        this.labApi.generatePdfReport([item.bookingId], { letterHead, single: true })
+      );
+
+      if (res?.downloadUrl) {
+        const fileName = res.fileName || `report-${item.bookingId}.pdf`;
+        await this.pdfDownload.download(res.downloadUrl, fileName);
+        this.showToast('Report downloaded successfully.', 'success');
+      } else {
+        this.showToast(res?.message || 'Unable to generate the report PDF.', 'error');
+      }
+    } catch (err: any) {
+      this.showToast('Failed to generate the report: ' + (err?.error?.message || err?.message || 'Unknown error'), 'error');
+    } finally {
+      this.ngZone.run(() => {
         this.generatingReportId = null;
         this.downloadReportItem = null;
-
-        if (res?.downloadUrl) {
-          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-          this.showToast('Report ready', 'success');
-        } else {
-          this.showToast(res?.message || 'Report PDF banवता aala nahi', 'error');
-        }
         this.cdr.detectChanges();
-      }),
-      error: (err) => {
-        this.ngZone.run(() => {
-          this.generatingReportId = null;
-          this.downloadReportItem = null;
-          this.showToast('Report generate karnyat error aali: ' + (err?.error?.message || 'Unknown error'), 'error');
-          this.cdr.detectChanges();
-        });
-      }
-    });
+      });
+    }
   }
 
-  closePrintBillModal(): void {
-    this.isPrintBillModalOpen = false;
-    this.printBillItem = null;
-  }
-
-  confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
-    const item = this.printBillItem;
-    if (!item) return;
-    if (this.generatingBillId === item.bookingId) return;
-    this.generatingBillId = item.bookingId;
-    this.isPrintBillModalOpen = false;
-
-    const payload = this.labApi.buildBillPayload(
-      item.bookingId,
-      this.selectedBillPriceType,
-      this.customBillAmount || null,
-      letterHead,
-      fLetterHead
-    );
-
-    this.labApi.printBill(payload).subscribe({
-      next: (res: any) => this.ngZone.run(() => {
-        this.generatingBillId = null;
-        this.printBillItem = null;
-
-        if (res?.downloadUrl) {
-          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-          this.showToast('Bill ready', 'success');
-        } else {
-          this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
-        }
-        this.cdr.detectChanges();
-      }),
-      error: () => {
-        this.ngZone.run(() => {
-          this.generatingBillId = null;
-          this.printBillItem = null;
-          this.showToast('Bill generate karnyat error aali', 'error');
-          this.cdr.detectChanges();
-        });
-      }
-    });
-  }
-
-  get printBillFranchiseHasLetterHead(): boolean {
-    const franchiseId = this.printBillItem?.franchise?.franchiseId;
-    if (!franchiseId) return false;
-
-    const franchise = this.filterFranchises.find(
-      (f: any) => Number(f?.franchiseId) === Number(franchiseId)
-    );
-
-    return !!franchise?.ifLetterHead;
-  }
-
-  // ---------- print bill ----------
-  async openPrintBillOptions(item: BookingListItem): Promise<void> {
-    this.closeActionMenu();
-
-    const alert = await this.alertController.create({
-      cssClass: 'premium-alert',
-      header: 'Print Bill',
-      message: 'Select bill type',
-      buttons: [
-        {
-          text: 'My Price',
-          handler: () => this.printBill(item, 'myprice')
-        },
-        {
-          text: 'MRP',
-          handler: () => this.printBill(item, 'mrp')
-        },
-        {
-          text: 'Cancel',
-          role: 'cancel',
-          cssClass: 'alert-btn-cancel'
-        }
-      ]
-    });
-
-    await alert.present();
-  }
-
-  printBill(item: BookingListItem, billType: string = 'myprice'): void {
-    if (this.generatingBillId === item.bookingId) return;
-    this.generatingBillId = item.bookingId;
-
-    const payload = this.labApi.buildBillPayload(item.bookingId, billType);
-    this.labApi.printBill(payload).subscribe({
-      next: (res: any) => this.ngZone.run(() => {
-        this.generatingBillId = null;
-        if (res?.downloadUrl) {
-          window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-          this.showToast('Bill ready', 'success');
-        } else {
-          this.showToast(res?.message || 'Bill PDF banवता aala nahi', 'error');
-        }
-        this.cdr.detectChanges();
-      }),
-      error: () => {
-        this.ngZone.run(() => {
-          this.generatingBillId = null;
-          this.showToast('Bill generate karnyat error aali', 'error');
-          this.cdr.detectChanges();
-        });
-      }
-    });
-  }
   // ---------- share report via whatsapp ----------
   shareViaWhatsApp(item: BookingListItem): void {
     this.closeActionMenu();
@@ -1461,8 +1390,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
     const labId = this.labApi.getCurrentLabId();
 
-    // The booking's own franchise decides the B2B price shown here
-    // (not the list filter) — that's the actual franchise this booking belongs to.
     const franchiseId =
       this.selectedBooking?.franchise?.franchiseId ??
       this.selectedFranchiseId ??
@@ -1480,9 +1407,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
             testId: t.testId,
             testName: String(t.test_name || 'Unnamed Test').trim(),
             testMrp: t.test_price ?? 0,
-
-            // Admin always sees the base rate (price2); Franchise/Staff see their
-            // franchise-specific assignedPrice — same rule as add-patient.
             testPrice: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0)
           }));
       },
@@ -1500,29 +1424,19 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   async removeTest(test: BookingTest): Promise<void> {
-    // ---------------------------------------------------------------
-    // Confirm-delete popup
-    // ---------------------------------------------------------------
     const alert = await this.alertController.create({
       cssClass: 'premium-alert',
       header: 'Delete Test',
       message: `Are you sure you want to delete "${test.testName}"?`,
       buttons: [
-        {
-          text: 'No',
-          role: 'cancel',
-          cssClass: 'alert-btn-cancel'
-        },
+        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
         {
           text: 'Yes, Delete',
           role: 'destructive',
           cssClass: 'alert-btn-danger',
 
           handler: () => {
-            /*
-             * Newly added test — not yet saved to the database.
-             * Only remove the selected test from the UI.
-             */
+            // Newly added test: not saved yet, only remove it from the UI.
             if (test.isNewlyAdded) {
               this.selectedTests = this.selectedTests.filter(t => t !== test);
 
@@ -1530,16 +1444,11 @@ export class BookingStatusPage implements OnInit, OnDestroy {
                 this.selectedBooking.tests = this.selectedBooking.tests.filter((t: BookingTest) => t !== test);
               }
 
-              // Emptying the booking (selectedTests = []) is allowed.
-
               this.showToast(`${test.testName} removed`, 'warning');
               this.cdr.detectChanges();
               return;
             }
 
-            // ---------------------------------------------------------
-            // Existing database test
-            // ---------------------------------------------------------
             if (!test.testMappingId) {
               this.showToast('Test ID missing. Cannot delete this test.', 'error');
               return;
@@ -1559,12 +1468,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
               return;
             }
 
-            // Delete only the selected test from the database.
             this.labApi.deleteTestFromBooking(labId, bookingId, test.testMappingId).subscribe({
               next: () => {
                 this.ngZone.run(() => {
-                  // Remove only the selected test — the rest stay as-is.
-                  // If it was the last test, this results in [].
                   this.selectedTests = this.selectedTests.filter(t => t.testMappingId !== test.testMappingId);
 
                   if (this.selectedBooking?.tests) {
@@ -1613,8 +1519,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   updateTestBooking(): void {
     if (!this.selectedBooking || this.isSavingTest) return;
 
-    // Empty test lists are allowed — a user can delete all tests and still save/update the booking.
-
     this.isSavingTest = true;
 
     const labId = this.labApi.getCurrentLabId();
@@ -1635,13 +1539,11 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       franchiseId: this.selectedBooking.franchise?.franchiseId,
       createdOn: this.selectedBooking.createdOn,
 
-      // Existing tests — [] if all tests were deleted (this is allowed).
       tests: existingTests.map(t => ({
         testId: t.testId,
         profileId: 0
       })),
 
-      // Billing
       subTotalAmount: this.subTotal,
       discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
       totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
@@ -1653,7 +1555,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
     this.labApi.updatePatient(labId, bookingId, patientBody).subscribe({
       next: () => {
-        // If new tests are present, add only the newly added ones.
         if (newTests.length > 0) {
           const addTestBody: any = {
             bookingId,
@@ -1665,12 +1566,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
             tests: newTests.map(t => ({
               testId: t.testId,
               testName: t.testName,
-              // B2B/billing price goes into "testPrice".
               testPrice: t.testPrice ?? t.testMrp,
               doctorTestDiscountPrice: 0,
               doctorTestCommissionPrice: 0,
-              // MRP goes into "test_price" — naming kept consistent with the
-              // convention used elsewhere for test pricing.
               test_price: t.testMrp,
               assignedPrice: [t.testPrice ?? t.testMrp],
               source: t.method || 'RPL',
@@ -1687,12 +1585,11 @@ export class BookingStatusPage implements OnInit, OnDestroy {
             error: (err) => {
               this.ngZone.run(() => {
                 this.isSavingTest = false;
-                this.showToast('Naveen test add nahi zala: ' + (err.error?.message || 'Unknown error'), 'error');
+                this.showToast('Failed to add the new test: ' + (err.error?.message || 'Unknown error'), 'error');
               });
             }
           });
         } else {
-          // No new tests — also covers selectedTests = []. The booking is still saved/updated.
           this.verifyAndFinishSave(bookingId, []);
         }
       },
@@ -1718,7 +1615,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
           if (missingNewTests.length > 0) {
             const names = missingNewTests.map(t => t.testName).join(', ');
             this.showToast(
-              `Yeh test add nahi zala: ${names}. Kripya thodya vela nantar punha try kara, ki system admin la sanga.`,
+              `The following test(s) could not be added: ${names}. Please try again later or contact the system administrator.`,
               'error'
             );
             this.selectedTests = this.selectedTests.filter(
@@ -1736,7 +1633,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       error: () => {
         this.ngZone.run(() => {
           this.isSavingTest = false;
-          this.showToast('Saved, but refresh failed — please reopen', 'warning');
+          this.showToast('Saved, but refresh failed. Please reopen.', 'warning');
           this.closeTestModal();
           this.loadBookings();
         });
@@ -1800,94 +1697,94 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     } else if (title === 'mrs' || title === 'ms') {
       this.editPatientData.gender = 'female';
     }
-    // 'dr' / 'master' / 'baby' -> gender untouched
   }
 
-updatePatient(): void {
-  if (!this.canEditPatient || !this.editPatientData || this.isSavingPatient) return;
+  updatePatient(): void {
+    if (!this.canEditPatient || !this.editPatientData || this.isSavingPatient) return;
 
-  this.isSavingPatient = true;
-  this.cdr.detectChanges();   // spinner lagech dista
+    this.isSavingPatient = true;
+    this.cdr.detectChanges();
 
-  const doctorId = Number(this.editPatientData.doctorId || 0);
-  const doctorName = String(this.editPatientData.doctor || '').trim();
-  const franchiseId = Number(this.editPatientData.franchiseId || 0);
-  const labName = String(this.editPatientData.lab || '').trim();
+    const doctorId = Number(this.editPatientData.doctorId || 0);
+    const doctorName = String(this.editPatientData.doctor || '').trim();
+    const franchiseId = Number(this.editPatientData.franchiseId || 0);
+    const labName = String(this.editPatientData.lab || '').trim();
 
-  const body: any = {
-    bookingId: this.editPatientData.bookingId,
-    customerName: this.editPatientData.name,
-    title: this.editPatientData.title,
-    ageType: this.editPatientData.ageType,
-    age: this.editPatientData.age,
-    gender: this.editPatientData.gender,
-    mobileNumber: this.editPatientData.mobileNumber,
-    aadhaarNumber: this.editPatientData.aadhaarNumber,
-    uhidNumber: this.editPatientData.uhidNumber,
-    doctorid: doctorId > 0 ? doctorId : 0,
-    customDoctorName: String(this.editPatientData.customDoctorName || '').trim(),
-    franchiseId: franchiseId > 0 ? franchiseId : (this.editPatientData.franchiseId || 0),
-    customFranchiseLab: String(this.editPatientData.customFranchiseLab || '').trim(),
-    createdOn: this.editPatientData.createdOn
-  };
+    const body: any = {
+      bookingId: this.editPatientData.bookingId,
+      customerName: this.editPatientData.name,
+      title: this.editPatientData.title,
+      ageType: this.editPatientData.ageType,
+      age: this.editPatientData.age,
+      gender: this.editPatientData.gender,
+      mobileNumber: this.editPatientData.mobileNumber,
+      aadhaarNumber: this.editPatientData.aadhaarNumber,
+      uhidNumber: this.editPatientData.uhidNumber,
+      doctorid: doctorId > 0 ? doctorId : 0,
+      customDoctorName: String(this.editPatientData.customDoctorName || '').trim(),
+      franchiseId: franchiseId > 0 ? franchiseId : (this.editPatientData.franchiseId || 0),
+      customFranchiseLab: String(this.editPatientData.customFranchiseLab || '').trim(),
+      createdOn: this.editPatientData.createdOn
+    };
 
-  // Multiple attachments: kahi badalla nasel tar uploadDoc pathvat nahi (junya files rahtat)
-  if (this.editPatientData.attachmentsChanged) {
-    body.uploadDoc = this.serializeAttachments(this.editPatientData.attachments || []);
-  }
+    // Attachments are sent only when changed (existing files are otherwise kept).
+    if (this.editPatientData.attachmentsChanged) {
+      body.uploadDoc = this.serializeAttachments(this.editPatientData.attachments || []);
+    }
 
-  const bookingId = this.editPatientData.bookingId;
+    const bookingId = this.editPatientData.bookingId;
 
-  this.labApi.updatePatient(this.labApi.getCurrentLabId(), bookingId, body).subscribe({
-    next: () => this.ngZone.run(() => {
-      this.isSavingPatient = false;
-      this.showToast('Patient updated successfully', 'success');
+    this.labApi.updatePatient(this.labApi.getCurrentLabId(), bookingId, body).subscribe({
+      next: () => this.ngZone.run(() => {
+        this.isSavingPatient = false;
+        this.showToast('Patient updated successfully', 'success');
 
-      const idx = this.bookings.findIndex(b => b.bookingId === bookingId);
-
-      if (idx > -1) {
-        const updated: BookingListItem = { ...this.bookings[idx] };
         const customDoctorName = String(this.editPatientData.customDoctorName || '').trim();
         const customFranchiseLab = String(this.editPatientData.customFranchiseLab || '').trim();
+        const edited = this.editPatientData;
 
-        updated.customerName = this.editPatientData.name;
-        updated.title = this.editPatientData.title;
-        updated.age = this.editPatientData.age;
-        updated.ageType = this.editPatientData.ageType;
-        updated.gender = this.editPatientData.gender;
-        updated.aadhaarNumber = this.editPatientData.aadhaarNumber;
-        updated.uhidNumber = this.editPatientData.uhidNumber;
-        updated.customDoctorName = customDoctorName;
-        updated.customFranchiseLab = customFranchiseLab;
+        const patch = (list: BookingListItem[]): BookingListItem[] => {
+          const idx = list.findIndex(b => b.bookingId === bookingId);
+          if (idx === -1) return list;
 
-        updated.doctor = {
-          doctorId: doctorId > 0 ? doctorId : undefined,
-          doctor_name: customDoctorName || doctorName || 'self'
+          const updated: BookingListItem = { ...list[idx] };
+          updated.customerName = edited.name;
+          updated.title = edited.title;
+          updated.age = edited.age;
+          updated.ageType = edited.ageType;
+          updated.gender = edited.gender;
+          updated.aadhaarNumber = edited.aadhaarNumber;
+          updated.uhidNumber = edited.uhidNumber;
+          updated.customDoctorName = customDoctorName;
+          updated.customFranchiseLab = customFranchiseLab;
+          updated.doctor = {
+            doctorId: doctorId > 0 ? doctorId : undefined,
+            doctor_name: customDoctorName || doctorName || 'self'
+          };
+          updated.franchise = {
+            franchiseId: franchiseId > 0 ? franchiseId : undefined,
+            franchiseName: customFranchiseLab || labName || 'SELF'
+          };
+
+          return [...list.slice(0, idx), updated, ...list.slice(idx + 1)];
         };
-        updated.franchise = {
-          franchiseId: franchiseId > 0 ? franchiseId : undefined,
-          franchiseName: customFranchiseLab || labName || 'SELF'
-        };
 
-        this.bookings = [
-          ...this.bookings.slice(0, idx),
-          updated,
-          ...this.bookings.slice(idx + 1)
-        ];
-      }
+        this.bookings = patch(this.bookings);
+        this.searchDataset = patch(this.searchDataset);
 
-      this.closePatientModal();
-      this.cdr.detectChanges();
-    }),
-    error: () => {
-      this.ngZone.run(() => {
-        this.isSavingPatient = false;
-        this.showToast('Patient update fail zala', 'error');
+        this.closePatientModal();
         this.cdr.detectChanges();
-      });
-    }
-  });
-}
+      }),
+      error: () => {
+        this.ngZone.run(() => {
+          this.isSavingPatient = false;
+          this.showToast('Failed to update the patient.', 'error');
+          this.cdr.detectChanges();
+        });
+      }
+    });
+  }
+
   openDoctorPicker(): void {
     this.selectedDoctorPick = null;
     this.showDoctorPicker = true;
@@ -1960,8 +1857,6 @@ updatePatient(): void {
     this.showCustomLabDropdown = false;
   }
 
-
-
   // ---------- notes ----------
   openNoteModal(item: BookingListItem): void {
     this.closeActionMenu();
@@ -1978,7 +1873,7 @@ updatePatient(): void {
 
   saveNote(): void {
     if (!this.noteBooking || !this.noteText.trim()) {
-      this.showToast('Kripya note lihi', 'warning');
+      this.showToast('Please enter a note.', 'warning');
       return;
     }
     this.isSavingNote = true;
@@ -2011,13 +1906,12 @@ updatePatient(): void {
         error: () => {
           this.ngZone.run(() => {
             this.isSavingNote = false;
-            this.showToast('Note save fail zala', 'error');
+            this.showToast('Failed to save the note.', 'error');
           });
         }
       });
     }, () => {
       this.isSavingNote = false;
-      this.showToast('Booking detail load fail zala', 'error');
     });
   }
 
@@ -2106,8 +2000,7 @@ updatePatient(): void {
     const tests = item.tests || [];
     if (tests.length === 0) return false;
 
-    // Delete is only allowed when every test is SNR — if any test is
-    // complete/in-process/cancel, deletion is not shown.
+    // Deletion is allowed only when every test is SNR.
     return tests.every(t => (t.status || '').toLowerCase() === 'snr');
   }
 
@@ -2117,7 +2010,7 @@ updatePatient(): void {
     const alert = await this.alertController.create({
       cssClass: 'premium-alert',
       header: 'Confirmation',
-      message: 'Are you sure you want to Delete this booking? Deleting a booking will remove all associated data, including tests, samples, and reports.',
+      message: 'Are you sure you want to delete this booking? Deleting a booking will remove all associated data, including tests, samples, and reports.',
       buttons: [
         { text: 'Cancel', role: 'cancel', cssClass: 'alert-btn-cancel' },
         {
@@ -2131,7 +2024,7 @@ updatePatient(): void {
                 this.loadBookings();
               }),
               error: (err) => this.ngZone.run(() => {
-                this.showToast('Booking delete fail zala: ' + (err.error?.message || 'Unknown error'), 'error');
+                this.showToast('Failed to delete the booking: ' + (err.error?.message || 'Unknown error'), 'error');
               })
             });
           }
@@ -2146,11 +2039,11 @@ updatePatient(): void {
     receiveDate: string; status: string; canEditBarcode: boolean; saving: boolean;
   }): void {
     if (!row.canEditBarcode) {
-      this.showToast('Ha barcode edit karayla allowed nahi (test in-process/complete ahe)', 'warning');
+      this.showToast('This barcode cannot be edited (the test is in process or completed).', 'warning');
       return;
     }
     if (!row.newBarcode?.trim()) {
-      this.showToast('Barcode rikama thevu naka', 'warning');
+      this.showToast('Barcode cannot be empty.', 'warning');
       return;
     }
     if (!this.barcodeBooking) {
@@ -2164,7 +2057,6 @@ updatePatient(): void {
       return;
     }
 
-    // Confirm another row in this same booking doesn't already use this barcode (local check).
     const isDuplicateLocally = this.barcodeRows.some(
       r => r !== row && String(r.oldBarcode || '').trim() === trimmedNewBarcode
     );
@@ -2186,11 +2078,8 @@ updatePatient(): void {
 
     this.labApi.updateBarcode(bookingId, payload).subscribe({
       next: () => {
-
-        // The backend can occasionally return HTTP 200 for a duplicate barcode
-        // without actually updating the row (silent no-op). Re-fetch the
-        // booking to verify the new barcode really was saved before trusting
-        // the HTTP success.
+        // The backend can return HTTP 200 for a duplicate barcode without saving it,
+        // so re-fetch the booking and verify the new barcode was really stored.
         this.labApi.getSingleBooking(bookingId).subscribe({
 
           next: (freshRes: any) => {
@@ -2201,14 +2090,6 @@ updatePatient(): void {
 
               const freshSamples = freshRes?.sampleAccessions || freshRes?.samples || [];
 
-              // ✅ FIX: match only by testId — testId already uniquely
-              // identifies one sampleAccession record. The earlier extra
-              // sampleTypeId check used reversed field-priority compared to
-              // mapBookingItem() (sampleTypeData?.sample_type_id ?? sampleTypeId
-              // there, vs sampleTypeId ?? sampleTypeData?.sample_type_id here),
-              // so a genuinely-updated record could fail to match and show a
-              // false "already used" error even when the backend had saved
-              // it correctly — which is exactly the bug reported.
               const matchedFreshSample = freshSamples.find(
                 (s: any) => Number(s?.testId) === Number(row.testId)
               );
@@ -2219,7 +2100,6 @@ updatePatient(): void {
 
               if (savedBarcode && savedBarcode === trimmedNewBarcode) {
 
-                // Confirmed saved in the backend.
                 row.oldBarcode = trimmedNewBarcode;
                 row.status = 'RECEIVED';
                 this.showToast('Barcode updated successfully', 'success');
@@ -2228,8 +2108,6 @@ updatePatient(): void {
 
               } else {
 
-                // Backend silently rejected it (barcode already used elsewhere) —
-                // revert the UI instead of showing a false success.
                 row.newBarcode = row.oldBarcode;
                 this.showToast(
                   'This barcode has already been used elsewhere. Please enter a different barcode.',
@@ -2243,7 +2121,7 @@ updatePatient(): void {
           error: () => {
             this.ngZone.run(() => {
               row.saving = false;
-              this.showToast('Barcode update sent, but could not confirm. Please refresh and check.', 'warning');
+              this.showToast('Barcode update was sent, but it could not be confirmed. Please refresh and check.', 'warning');
             });
           }
         });
@@ -2251,7 +2129,7 @@ updatePatient(): void {
       error: (err) => {
         this.ngZone.run(() => {
           row.saving = false;
-          this.showToast('Barcode update fail zala: ' + (err.error?.message || 'Unknown error'), 'error');
+          this.showToast('Failed to update the barcode: ' + (err.error?.message || 'Unknown error'), 'error');
         });
       }
     });
@@ -2271,33 +2149,21 @@ updatePatient(): void {
     this.billHistoryBooking = null;
   }
 
-  // ============================================================
-  // COPY BARCODE TO CLIPBOARD
-  // ============================================================
-
+  // ---------- copy barcode ----------
   async copyBarcode(barcode: string): Promise<void> {
 
     const value = String(barcode || '').trim();
 
     if (!value || value === '—') {
-      this.toastService.warning(
-        'Nothing to Copy',
-        'No barcode available.'
-      );
+      this.toastService.warning('Nothing to Copy', 'No barcode available.');
       return;
     }
 
     try {
-
       await navigator.clipboard.writeText(value);
-
-      this.toastService.success(
-        'Copied',
-        'Barcode ' + value + ' copied to clipboard.'
-      );
+      this.toastService.success('Copied', 'Barcode ' + value + ' copied to clipboard.');
 
     } catch (err) {
-
       console.error('COPY BARCODE ERROR:', err);
 
       // Fallback for older WebViews where navigator.clipboard is unavailable
@@ -2311,15 +2177,9 @@ updatePatient(): void {
 
       try {
         document.execCommand('copy');
-        this.toastService.success(
-          'Copied',
-          'Barcode ' + value + ' copied to clipboard.'
-        );
+        this.toastService.success('Copied', 'Barcode ' + value + ' copied to clipboard.');
       } catch {
-        this.toastService.error(
-          'Copy Failed',
-          'Could not copy barcode. Please copy manually.'
-        );
+        this.toastService.error('Copy Failed', 'Could not copy barcode. Please copy manually.');
       } finally {
         document.body.removeChild(tempInput);
       }

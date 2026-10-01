@@ -3754,3 +3754,387 @@ ion-content.menu-open {
     display: none; // mobile वर जागा वाचवायला लपवा
   }
 }
+/* ---------- button styel strat  ---------- */
+/* =====================================================================
+   DOWNLOAD REPORT MODAL — buttons left/right + red X
+   Booking Status page chya .scss chya SHEVTI paste kara
+   (booking-status-buttons.scss chya khali)
+===================================================================== */
+
+/* ---------- 1. Donhi buttons ekach row madhe: left + right ---------- */
+ion-modal.download-report-modal .printbill-modal-body {
+  display: flex;
+  flex-direction: row;
+  gap: 12px;
+  padding: 18px 16px 22px;
+}
+
+ion-modal.download-report-modal .printbill-modal-body ion-button {
+  flex: 1 1 0;
+  min-width: 0;
+  /* HTML madhla inline style="margin-top:10px" kadhto */
+  margin: 0 !important;
+ height: 36px !important;
+  --padding-start: 8px;
+  --padding-end: 8px;
+  font-size: 13px;
+}
+
+/* Icon + text tight, lamb text khali jau naye */
+ion-modal.download-report-modal .printbill-modal-body ion-button ion-icon,
+ion-modal.download-report-modal .printbill-modal-body ion-button ion-spinner {
+  margin-inline-end: 6px;
+  font-size: 17px;
+}
+
+/* ---------- 2. X (close) button — RED ---------- */
+.close-modal-btn {
+  background: rgba(255, 255, 255, 0.92) !important;
+  border: 1px solid rgba(229, 112, 127, 0.45) !important;
+  color: var(--app-danger) !important;
+  box-shadow: 0 4px 12px rgba(229, 112, 127, 0.25);
+}
+
+.close-modal-btn ion-icon {
+  color: var(--app-danger) !important;
+  font-size: 20px;
+}
+
+.close-modal-btn:active {
+  background: var(--app-danger-bg) !important;
+  transform: scale(0.92);
+}
+
+/* ---------- 3. Header ajun hirva aahe — theme blue kara ---------- */
+.printbill-modal-header {
+  background: var(--app-gradient) !important;
+}
+
+/* =====================================================================
+   DOWNLOAD REPORT MODAL — v3
+   - Modal thoda ruund (buttons madhe text basto)
+   - Buttons: transparent + fakta blue border
+   - Icon ani text ekatra centered
+   - X button: red background + white cross
+
+   Junya v2 block chya jagi he paste kara (page scss chya SHEVTI).
+===================================================================== */
+
+/* ---------- 1. Modal width (HTML madhe cssClass la download-report-modal joda) ---------- */
+::ng-deep ion-modal.printbill-modal.download-report-modal {
+  --width: 360px !important;
+}
+
+/* ---------- 2. Row layout ---------- */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  padding: 20px 16px 24px !important;
+}
+
+/* ---------- 3. Buttons: transparent + blue border only ---------- */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  height: 52px;
+
+  --background: transparent !important;
+  --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
+  --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
+  --color: var(--app-primary) !important;
+  --color-activated: var(--app-primary-dark) !important;
+  --border-color: var(--app-primary) !important;
+  --border-width: 2px !important;
+  --border-style: solid !important;
+  --border-radius: 14px !important;
+  --box-shadow: none !important;
+  --padding-start: 4px;
+  --padding-end: 4px;
+
+  box-shadow: none !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  text-transform: none !important;
+  letter-spacing: 0.1px;
+  white-space: nowrap;
+}
+
+/* Icon + text ekatra madhyam madhe */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button::part(native) {
+  justify-content: center;
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button ion-icon,
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button ion-spinner {
+  margin: 0 6px 0 0 !important;
+  font-size: 17px;
+  color: var(--app-primary);
+}
+
+/* ---------- 4. X (close) — red background, white cross ---------- */
+.close-modal-btn {
+  background: linear-gradient(135deg, #f08a95 0%, var(--app-danger) 100%) !important;
+  border: none !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 14px rgba(229, 112, 127, 0.35) !important;
+}
+
+.close-modal-btn ion-icon {
+  color: #ffffff !important;
+  font-size: 20px;
+}
+
+.close-modal-btn:hover,
+.close-modal-btn:active {
+  background: var(--app-danger) !important;
+  color: #ffffff !important;
+}
+
+/* =====================================================================
+   REPORT NOT READY MODAL — Download Report sarkha style
+   Page scss chya SHEVTI paste kara (download-report-row-v3 chya khali).
+   HTML madhe kahich badalaycha nahi (cssClass madhe report-not-ready-modal
+   already aahe).
+===================================================================== */
+
+/* ---------- 1. Header: theme blue (junya red/danger header chya jagi) ---------- */
+::ng-deep ion-modal.report-not-ready-modal .printbill-modal-header {
+  background: var(--app-gradient) !important;
+}
+
+/* ---------- 2. Warning icon: soft red circle ---------- */
+.report-not-ready-icon ion-icon {
+  font-size: 44px;
+  padding: 16px;
+  border-radius: 50%;
+  color: var(--app-danger) !important;
+  background: var(--app-danger-bg);
+}
+
+/* ---------- 3. Message text: thoda spasht ---------- */
+.report-not-ready-text {
+  color: var(--text-muted) !important;
+  font-weight: 600;
+}
+
+/* ---------- 4. "Got it" button: transparent + fakta border ----------
+   Border/text cha color badalayla: --rn-accent
+     blue (default): var(--app-primary)
+     red:            var(--app-danger)                                   */
+::ng-deep ion-modal.report-not-ready-modal .printbill-modal-body > ion-button.danger-btn {
+  --rn-accent: var(--app-primary);
+
+  --background: transparent !important;
+  --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
+  --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
+  --color: var(--rn-accent) !important;
+  --color-activated: var(--app-primary-dark) !important;
+  --border-color: var(--rn-accent) !important;
+  --border-width: 2px !important;
+  --border-style: solid !important;
+  --border-radius: 14px !important;
+  --box-shadow: none !important;
+
+  box-shadow: none !important;
+  height: 50px;
+  text-transform: none !important;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+/* Page scss ne ::part(native) war direct red gradient dila aahe — to kadha */
+::ng-deep ion-modal.report-not-ready-modal .printbill-modal-body > ion-button.danger-btn::part(native) {
+  background: transparent !important;
+  color: var(--app-primary) !important;
+  box-shadow: none !important;
+  border: 2px solid var(--app-primary) !important;
+}
+ion-button.refresh-btn {
+ 
+  height: 36px !important;
+  align-self: flex-end;
+  --border-radius: 10px !important;
+  --padding-start: 0;
+  --padding-end: 0;
+}
+ion-button.refresh-btn ion-icon { font-size: 18px; }
+
+/* =====================================================================
+   1) TEST PREVIEW MODAL (eye icon) — X button red
+   2) PRINT BILL MODAL — transparent + blue border buttons
+   Booking Status page chya .scss chya SHEVTI paste kara.
+===================================================================== */
+
+/* ---------- 1. Test preview + Attachment preview: X = red bg + white cross ----------
+   Ya modals madhe X "close-modal-btn" nahi, ion-button aahe,
+   mhanun junya red rule chi tyala asar zali nahi. */
+::ng-deep ion-modal.test-preview-popup .modal-header ion-button {
+  --background: transparent !important;
+  --background-hover: transparent !important;
+  --background-activated: transparent !important;
+  --color: #ffffff !important;
+  --box-shadow: none !important;
+  --padding-start: 0;
+  --padding-end: 0;
+  --ripple-color: transparent;
+  width: 36px !important;
+  height: 36px !important;
+  margin: 0 !important;
+}
+
+::ng-deep ion-modal.test-preview-popup .modal-header ion-button::part(native) {
+  background: linear-gradient(135deg, #f08a95 0%, var(--app-danger) 100%) !important;
+  color: #ffffff !important;
+  width: 36px !important;
+  height: 36px !important;
+  padding: 0 !important;
+  border-radius: 10px !important;
+  box-shadow: 0 6px 14px rgba(229, 112, 127, 0.35) !important;
+}
+
+::ng-deep ion-modal.test-preview-popup .modal-header ion-button ion-icon {
+  color: #ffffff !important;
+  font-size: 20px !important;
+}
+// Partially Complete: inactive (dot + count)
+.tab-dot.badge-partial { background: #BD526F; }
+
+.tab-count.badge-partial {
+  background: #BD526F;
+  color: #fff;
+}
+
+// Partially Complete: active (Clinical सारखा solid)
+.status-tab.active.active-partial {
+  background: #BD526F;
+  border-color: #BD526F;
+  
+  .tab-label { color: #fff; }
+
+  .tab-dot.badge-partial { background: #fff; }
+
+  .tab-count.badge-partial {
+    background: rgba(255, 255, 255, 0.28);
+    color: #fff;
+  }
+}
+
+/* ---------- 2. Print Bill buttons: transparent + fakta blue border ---------- */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim {
+  --background: transparent !important;
+  --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
+  --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
+  --color: var(--app-primary) !important;
+  --color-activated: var(--app-primary-dark) !important;
+  --border-color: var(--app-primary) !important;
+  --border-width: 2px !important;
+  --border-style: solid !important;
+  --border-radius: 14px !important;
+  --box-shadow: none !important;
+
+  box-shadow: none !important;
+  height: 40px  !important;
+  text-transform: none !important;   /* UPPERCASE band */
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim ion-icon,
+::ng-deep ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim ion-spinner {
+  color: var(--app-primary);
+  font-size: 18px;
+}
+
+/* ---------- 3. Print Bill: Price Type + Custom Amount ek-sarkhe ---------- */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body .input-wrap {
+  border: 1.5px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--section-bg);
+  overflow: hidden;
+}
+
+/* select chya aatli double border kadha */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body .input-wrap ion-select.premium-select {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  height: 48px;
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body .input-wrap input {
+  height: 48px;
+  color: var(--text-primary);
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body .input-wrap:focus-within {
+  border-color: var(--app-primary);
+  box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.12);
+}/* =====================================================================
+   PRINT BILL MODAL — buttons LEFT + RIGHT (2 column), size kami
+   Page scss chya SHEVTI paste kara (test-preview-print-bill.scss chya khali).
+
+   Layout:
+     Price Type | Custom Amount          (full width, vartun)
+     With letterHead   | Without letterHead
+     F With LetterHead | F Without LetterHead   (fakta franchise la letterhead asel tar)
+===================================================================== */
+
+/* ---------- 1. Modal thoda ruund (HTML madhe cssClass la print-bill-modal joda) ---------- */
+::ng-deep ion-modal.printbill-modal.print-bill-modal {
+  --width: min(360px, 94vw) !important;
+}
+
+/* ---------- 2. Body = 2 column grid ---------- */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  padding: 18px 16px 22px !important;
+}
+
+/* Price Type + Custom Amount wali row: purna width */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > div:first-child {
+  grid-column: 1 / -1;
+  margin-bottom: 6px !important;
+}
+
+/* ---------- 3. Buttons: chhote, nowrap, icon + text madhyam madhe ---------- */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim {
+  width: auto !important;
+  min-width: 0 !important;
+  margin: 0 !important;             /* HTML madhla inline margin-top:10px kadhto */
+  height: 48px;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 12px !important;
+  font-weight: 700 !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+  order: 3;                         /* F buttons khali */
+}
+
+/* Order: With | Without  (row 1),  F With | F Without (row 2) */
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim:first-of-type {
+  order: 1;
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim:last-of-type {
+  order: 2;
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim::part(native) {
+  justify-content: center;
+}
+
+::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim ion-icon {
+  margin: 0 5px 0 0 !important;
+  font-size: 16px;
+}

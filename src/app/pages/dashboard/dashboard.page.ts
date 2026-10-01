@@ -1,9 +1,10 @@
 import { CommonModule } from "@angular/common";
-import { Component, OnInit, OnDestroy, ViewChild, NgZone, ChangeDetectorRef } from "@angular/core";
+import { Component, OnInit, OnDestroy, ViewChild, NgZone, ChangeDetectorRef, inject } from "@angular/core";
 import { Router } from "@angular/router";
 import { Checkout } from 'capacitor-razorpay';
 import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
+import { PdfDownloadService } from "../../core/services/pdf-download";
 
 import {
   IonContent, IonIcon, IonMenu, IonMenuButton,
@@ -31,7 +32,7 @@ import {
   printOutline, cashOutline, qrCodeOutline, attachOutline,
   checkmarkOutline, walletOutline, cardOutline,
   addCircleOutline, lockClosedOutline, eyeOutline, homeOutline, alertCircleOutline,
-  trashOutline, imageOutline, documentOutline,medkitOutline
+  trashOutline, imageOutline, documentOutline, medkitOutline
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -97,6 +98,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   totalBookings = 0;
   totalReports = 0;
   totalSamples = 0;
+  private pdfDownload = inject(PdfDownloadService);
 
   rawBookings: any[] = [];
   dailyBookings: any[] = [];
@@ -810,7 +812,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.printBillItem = null;
   }
 
-  confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): void {
+  async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
     const item = this.printBillItem;
     if (!item) return;
     if (this.printingId === item.bookingId) return;
@@ -826,14 +828,26 @@ export class DashboardPage implements OnInit, OnDestroy {
       fLetterHead
     );
 
-    this.labApi.printBill(payload).subscribe({
-      next: (res: any) => {
+    try {
+      const res: any = await firstValueFrom(this.labApi.printBill(payload));
+
+      if (res?.downloadUrl) {
+        const fileName = res.fileName || `bill-${item.bookingId}.pdf`;
+        await this.pdfDownload.download(res.downloadUrl, fileName);
+        this.toastService.success('Success', 'Bill downloaded successfully.');
+      } else {
+        this.toastService.error('Error', res?.message || 'Unable to generate the bill PDF.');
+      }
+    } catch (err) {
+      console.error('PRINT BILL ERROR:', err);
+      this.toastService.error('Error', 'Failed to generate the bill. Please try again.');
+    } finally {
+      this.ngZone.run(() => {
         this.printingId = null;
         this.printBillItem = null;
-        if (res?.downloadUrl) window.open(res.downloadUrl, '_blank', 'noopener,noreferrer');
-      },
-      error: () => { this.printingId = null; this.printBillItem = null; }
-    });
+        this.cdr.detectChanges();
+      });
+    }
   }
 
   openGlobalDownloadModal(item: any, event?: MouseEvent): void {
@@ -867,7 +881,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     const allowed = role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE || role === this.ROLE_FRANCHISE_STAFF;
 
     if (!allowed) {
-      this.toastService.error('Not allowed', 'Download फक्त Admin/Franchise ला उपलब्ध आहे');
+      this.toastService.error('Not Allowed', 'Report download is available only to Admin and Franchise users.');
       this.closeGlobalDownloadModal();   // ✅ fixed
       return;
     }
@@ -887,14 +901,15 @@ export class DashboardPage implements OnInit, OnDestroy {
       );
 
       if (res?.success && res?.downloadUrl) {
-        window.open(res.downloadUrl, '_blank');
-        this.toastService.success('Success', 'Report ready');
+        const fileName = res.fileName || `report-${bookingId}.pdf`;
+        await this.pdfDownload.download(res.downloadUrl, fileName);
+        this.toastService.success('Success', 'Report downloaded successfully.');
       } else {
-        this.toastService.error('Error', res?.message || 'PDF generate karta aala nahi');
+        this.toastService.error('Error', res?.message || 'Unable to generate the PDF report.');
       }
     } catch (err) {
       console.error('DOWNLOAD REPORT ERROR:', err);
-      this.toastService.error('Error', 'PDF generate karnyat error aali');
+      this.toastService.error('Error', 'Failed to generate the PDF report. Please try again.');
     } finally {
       this.ngZone.run(() => {
         this.downloadingReportId = null;
@@ -1211,7 +1226,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       },
       error: () => {
         this.isSavingTest = false;
-        this.toastService.error('Error', 'Update fail zala');
+        this.toastService.error('Error', 'Failed to update the booking. Please try again.');
       }
     });
   }
@@ -1243,7 +1258,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       next: () => this.finishTestSave(),
       error: () => {
         this.isSavingTest = false;
-        this.toastService.error('Error', 'Test add fail zala');
+        this.toastService.error('Error', 'Failed to add the new test(s). Please try again.');
       }
     });
   }
@@ -1360,10 +1375,10 @@ export class DashboardPage implements OnInit, OnDestroy {
       createdOn: this.editPatientData.createdOn
     };
 
-  if (this.editPatientData.attachmentsChanged) {
-  // junya + navin sagle ekatra; sagle delete kele tar '' jail
-  body.uploadDoc = this.serializeAttachments(this.editPatientData.attachments || []);
-}
+    if (this.editPatientData.attachmentsChanged) {
+      // junya + navin sagle ekatra; sagle delete kele tar '' jail
+      body.uploadDoc = this.serializeAttachments(this.editPatientData.attachments || []);
+    }
 
     const bookingId = this.editPatientData.bookingId;
 
@@ -1375,7 +1390,7 @@ export class DashboardPage implements OnInit, OnDestroy {
         });
         this.closePatientModal();
       },
-      error: () => this.toastService.error('Error', 'Patient update fail zala')
+      error: () => this.toastService.error('Error', 'Failed to update the patient. Please try again.')
     });
   }
 
@@ -1546,51 +1561,51 @@ export class DashboardPage implements OnInit, OnDestroy {
     'attachmentUrl', 'attachment', 'docUrl', 'fileUrl'
   ];
 
-private extractExistingAttachments(raw: any): { name: string; url: string; isNew: boolean }[] {
-  for (const f of this.ATTACHMENT_FIELDS) {
-    const v = raw?.[f];
-    if (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null') {
-      // data URL madhe comma asto, mhanun data: paryant split karu naka
-      const parts = v.includes('data:') ? v.split(/,(?=data:)/) : v.split(',');
-      return parts
-        .map(p => p.trim())
-        .filter(Boolean)
-        .map((url, i) => ({ url, name: this.guessFileName(url, i), isNew: false }));
+  private extractExistingAttachments(raw: any): { name: string; url: string; isNew: boolean }[] {
+    for (const f of this.ATTACHMENT_FIELDS) {
+      const v = raw?.[f];
+      if (typeof v === 'string' && v.trim() && v.trim().toLowerCase() !== 'null') {
+        // data URL madhe comma asto, mhanun data: paryant split karu naka
+        const parts = v.includes('data:') ? v.split(/,(?=data:)/) : v.split(',');
+        return parts
+          .map(p => p.trim())
+          .filter(Boolean)
+          .map((url, i) => ({ url, name: this.guessFileName(url, i), isNew: false }));
+      }
+    }
+    return [];
+  }
+
+  private guessFileName(url: string, index = 0): string {
+    if (!url) return `Attachment ${index + 1}`;
+    if (url.startsWith('data:')) {
+      const mime = url.substring(5, url.indexOf(';'));
+      const ext = mime.split('/')[1] || 'file';
+      return `Attachment ${index + 1}.${ext}`;
+    }
+    try {
+      const clean = url.split('?')[0];
+      const last = decodeURIComponent(clean.substring(clean.lastIndexOf('/') + 1));
+      return last || `Attachment ${index + 1}`;
+    } catch {
+      return `Attachment ${index + 1}`;
     }
   }
-  return [];
-}
-
- private guessFileName(url: string, index = 0): string {
-  if (!url) return `Attachment ${index + 1}`;
-  if (url.startsWith('data:')) {
-    const mime = url.substring(5, url.indexOf(';'));
-    const ext = mime.split('/')[1] || 'file';
-    return `Attachment ${index + 1}.${ext}`;
-  }
-  try {
-    const clean = url.split('?')[0];
-    const last = decodeURIComponent(clean.substring(clean.lastIndexOf('/') + 1));
-    return last || `Attachment ${index + 1}`;
-  } catch {
-    return `Attachment ${index + 1}`;
-  }
-}
 
   isImageSource(url: string, name: string): boolean {
     if (!url) return false;
     if (url.startsWith('data:image')) return true;
     return /\.(png|jpe?g|gif|webp|bmp|svg)$/i.test(name || url.split('?')[0]);
   }
-previewPatientAttachment(att: { url: string; name: string }): void {
-  this.attachmentPreviewName = att.name;
-  this.attachmentPreviewUrl = att.url;
-  this.attachmentPreviewIsImage = this.isImageSource(att.url, att.name);
-  this.attachmentPreviewSafeUrl = this.attachmentPreviewIsImage
-    ? null
-    : this.sanitizer.bypassSecurityTrustResourceUrl(att.url);
-  this.isAttachmentPreviewOpen = true;
-}
+  previewPatientAttachment(att: { url: string; name: string }): void {
+    this.attachmentPreviewName = att.name;
+    this.attachmentPreviewUrl = att.url;
+    this.attachmentPreviewIsImage = this.isImageSource(att.url, att.name);
+    this.attachmentPreviewSafeUrl = this.attachmentPreviewIsImage
+      ? null
+      : this.sanitizer.bypassSecurityTrustResourceUrl(att.url);
+    this.isAttachmentPreviewOpen = true;
+  }
 
   closeAttachmentPreview(): void {
     this.isAttachmentPreviewOpen = false;
@@ -1598,57 +1613,57 @@ previewPatientAttachment(att: { url: string; name: string }): void {
     this.attachmentPreviewSafeUrl = null;
   }
 
-async removePatientAttachment(index: number): Promise<void> {
-  const alert = await this.alertController.create({
-    cssClass: 'premium-alert',
-    header: 'Delete Attachment',
-    message: 'Are you sure you want to delete this attachment?',
-    buttons: [
-      { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
-      {
-        text: 'Yes, Delete',
-        role: 'destructive',
-        cssClass: 'alert-btn-danger',
-        handler: () => {
-          this.ngZone.run(() => {
-            if (!this.editPatientData) return;
-            this.editPatientData.attachments.splice(index, 1);
-            this.editPatientData.attachmentsChanged = true;
-            this.cdr.detectChanges();
-          });
+  async removePatientAttachment(index: number): Promise<void> {
+    const alert = await this.alertController.create({
+      cssClass: 'premium-alert',
+      header: 'Delete Attachment',
+      message: 'Are you sure you want to delete this attachment?',
+      buttons: [
+        { text: 'No', role: 'cancel', cssClass: 'alert-btn-cancel' },
+        {
+          text: 'Yes, Delete',
+          role: 'destructive',
+          cssClass: 'alert-btn-danger',
+          handler: () => {
+            this.ngZone.run(() => {
+              if (!this.editPatientData) return;
+              this.editPatientData.attachments.splice(index, 1);
+              this.editPatientData.attachmentsChanged = true;
+              this.cdr.detectChanges();
+            });
+          }
         }
-      }
-    ]
-  });
-  await alert.present();
-}
+      ]
+    });
+    await alert.present();
+  }
 
   private serializeAttachments(list: { url: string }[]): string {
-  return list.map(a => a.url).join(',');
-}
-
-async onPatientFileSelected(event: any): Promise<void> {
-  const files: File[] = Array.from(event.target.files || []);
-  if (!files.length) return;
-
-  for (const file of files) {
-    if (file.size > 5 * 1024 * 1024) {
-      this.toastService.error('Error', `${file.name} is over 5MB, skipped.`);
-      continue;
-    }
-    const url = await new Promise<string>((resolve) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result));
-      r.readAsDataURL(file);
-    });
-    this.ngZone.run(() => {
-      this.editPatientData.attachments.push({ name: file.name, url, isNew: true });
-      this.editPatientData.attachmentsChanged = true;
-    });
+    return list.map(a => a.url).join(',');
   }
-  event.target.value = '';
-  this.cdr.detectChanges();
-}
+
+  async onPatientFileSelected(event: any): Promise<void> {
+    const files: File[] = Array.from(event.target.files || []);
+    if (!files.length) return;
+
+    for (const file of files) {
+      if (file.size > 5 * 1024 * 1024) {
+        this.toastService.error('Error', `${file.name} is larger than 5 MB and was skipped.`);
+        continue;
+      }
+      const url = await new Promise<string>((resolve) => {
+        const r = new FileReader();
+        r.onload = () => resolve(String(r.result));
+        r.readAsDataURL(file);
+      });
+      this.ngZone.run(() => {
+        this.editPatientData.attachments.push({ name: file.name, url, isNew: true });
+        this.editPatientData.attachmentsChanged = true;
+      });
+    }
+    event.target.value = '';
+    this.cdr.detectChanges();
+  }
 
   // ============================================================
   // BARCODE MODAL
@@ -1705,7 +1720,7 @@ async onPatientFileSelected(event: any): Promise<void> {
         this.isBarcodeLoading = false;
       },
       error: () => {
-        this.toastService.error('Error', 'Barcode detail load fail zala');
+        this.toastService.error('Error', 'Failed to load barcode details. Please try again.');
         this.isBarcodeLoading = false;
         this.isBarcodeModalOpen = false;
       }
@@ -1739,15 +1754,15 @@ async onPatientFileSelected(event: any): Promise<void> {
   updateBarcodeRow(row: BarcodeRow): void {
     if (this.roleService.currentRole === this.ROLE_STAFF ||
       this.roleService.currentRole === this.ROLE_FRANCHISE_STAFF) {
-      this.toastService.warning('Warning', 'You are not authorized to edit the barcode');
+      this.toastService.warning('Warning', 'You are not authorized to edit the barcode.');
       return;
     }
     if (!row.canEditBarcode) {
-      this.toastService.warning('Warning', 'This barcode cannot be edited (test is in-process/completed)');
+      this.toastService.warning('Warning', 'This barcode cannot be edited because the test is in process or completed.');
       return;
     }
     if (!row.newBarcode?.trim()) {
-      this.toastService.warning('Warning', 'Barcode cannot be empty');
+      this.toastService.warning('Warning', 'Barcode cannot be empty.');
       return;
     }
     if (!this.barcodeBooking) return;
@@ -1764,7 +1779,7 @@ async onPatientFileSelected(event: any): Promise<void> {
 
     this.labApi.updateBarcode(bookingId, payload).subscribe({
       next: () => {
-        this.toastService.success('Success', 'Barcode updated successfully');
+        this.toastService.success('Success', 'Barcode updated successfully.');
         this.labApi.getSingleBooking(bookingId).subscribe({
           next: (res: any) => {
             const fresh = this.mapBooking(res);
@@ -1778,7 +1793,7 @@ async onPatientFileSelected(event: any): Promise<void> {
       },
       error: () => {
         row.saving = false;
-        this.toastService.error('Error', 'Failed to update barcode');
+        this.toastService.error('Error', 'Failed to update the barcode. Please try again.');
       }
     });
   }
@@ -2295,7 +2310,7 @@ async onPatientFileSelected(event: any): Promise<void> {
       error: (err) => {
         console.error('WALLET TRANSACTIONS ERROR:', err);
         this.isWalletLoading = false;
-        this.toastService.error('Error', 'Wallet transactions load fail zala');
+        this.toastService.error('Error', 'Failed to load wallet transactions. Please try again.');
         this.cdr.detectChanges();
       }
     });
@@ -2322,7 +2337,7 @@ async onPatientFileSelected(event: any): Promise<void> {
 
   submitAddFunds(): void {
     if (!this.addFundsAmount || Number(this.addFundsAmount) <= 0) {
-      this.toastService.warning('Warning', 'Please enter a valid amount');
+      this.toastService.warning('Warning', 'Please enter a valid amount.');
       return;
     }
     this.confirmAddFunds();
@@ -2369,7 +2384,7 @@ async onPatientFileSelected(event: any): Promise<void> {
 
       if (!payload.walletId) {
         this.isAddFundsSaving = false;
-        this.toastService.error('Error', 'Wallet not loaded yet, please try again');
+        this.toastService.error('Error', 'Wallet is not loaded yet. Please try again.');
         return;
       }
 
@@ -2382,7 +2397,7 @@ async onPatientFileSelected(event: any): Promise<void> {
           this.isAddFundsSaving = false;
 
           if (!orderRes?.paymentDetails?.razorpayOrderId) {
-            this.toastService.error('Error', 'Order create झाला पण payment details missing आहेत');
+            this.toastService.error('Error', 'The order was created, but the payment details are missing. Please try again.');
             return;
           }
 
@@ -2395,7 +2410,7 @@ async onPatientFileSelected(event: any): Promise<void> {
         },
         error: (err) => {
           this.isAddFundsSaving = false;
-          this.toastService.error('Error', err?.error?.message || 'Order create fail zala');
+          this.toastService.error('Error', err?.error?.message || 'Failed to create the payment order. Please try again.');
         }
       });
     };
@@ -2411,7 +2426,7 @@ async onPatientFileSelected(event: any): Promise<void> {
         },
         error: () => {
           this.isAddFundsSaving = false;
-          this.toastService.error('Error', 'Wallet load fail zala');
+          this.toastService.error('Error', 'Failed to load the wallet. Please try again.');
         }
       });
     } else {
@@ -2428,7 +2443,7 @@ async onPatientFileSelected(event: any): Promise<void> {
       const script = document.createElement('script');
       script.src = 'https://checkout.razorpay.com/v1/checkout.js';
       script.onload = () => resolve();
-      script.onerror = () => reject('Razorpay script load fail zala');
+      script.onerror = () => reject('Failed to load the Razorpay script');
       document.body.appendChild(script);
     });
   }
@@ -2454,7 +2469,7 @@ async onPatientFileSelected(event: any): Promise<void> {
           this.verifyWalletPayment(data.razorpay_payment_id, this.orderId);
         });
       } catch {
-        this.ngZone.run(() => this.toastService.warning('Warning', 'Payment cancelled or failed'));
+        this.ngZone.run(() => this.toastService.warning('Warning', 'Payment was cancelled or failed.'));
       }
       return;
     }
@@ -2462,7 +2477,7 @@ async onPatientFileSelected(event: any): Promise<void> {
     try {
       await this.ensureRazorpayScriptLoaded();
     } catch {
-      this.toastService.error('Error', 'Payment gateway load fale');
+      this.toastService.error('Error', 'Failed to load the payment gateway. Please try again.');
       return;
     }
 
@@ -2476,7 +2491,7 @@ async onPatientFileSelected(event: any): Promise<void> {
       },
       modal: {
         ondismiss: () => {
-          this.ngZone.run(() => this.toastService.warning('Warning', 'Payment cancelled'));
+          this.ngZone.run(() => this.toastService.warning('Warning', 'Payment was cancelled.'));
         }
       }
     };
@@ -2520,7 +2535,7 @@ async onPatientFileSelected(event: any): Promise<void> {
             this.dismissVerifyLoading();
             this.isAddFundsModalOpen = false;
             this.isWalletModalOpen = true;
-            this.toastService.error('Error', 'Payment verification failed, please contact support');
+            this.toastService.error('Error', 'Payment verification failed. Please contact support.');
             this.cdr.detectChanges();
           }
         },
@@ -2553,7 +2568,7 @@ async onPatientFileSelected(event: any): Promise<void> {
     this.dismissVerifyLoading();
     this.isAddFundsModalOpen = false;
     this.isWalletModalOpen = true;
-    this.toastService.success('Success', 'Wallet recharge successful');
+    this.toastService.success('Success', 'Wallet recharged successfully.');
     this.cdr.detectChanges();
 
     this.walletService.getWallet(this.authService.labId, this.authService.franchiseId, 0, 1).subscribe({
@@ -2579,11 +2594,11 @@ async onPatientFileSelected(event: any): Promise<void> {
     if (err?.status === 401 || err?.status === 400) {
       this.toastService.error(
         'Session Expired',
-        'Payment झाला आहे, पण session expire झाल्याने verify करता आला नाही. ' +
-        'Krupya पुन्हा login करून Wallet cha balance check kara. Payment ID: ' + razorpayPaymentId
+        'Your payment was successful, but it could not be verified because your session expired. ' +
+        'Please log in again and check your wallet balance. Payment ID: ' + razorpayPaymentId
       );
     } else {
-      this.toastService.error('Error', err?.error?.message || 'Payment verification error');
+      this.toastService.error('Error', err?.error?.message || 'An error occurred while verifying the payment.');
     }
 
     this.cdr.detectChanges();
@@ -2595,7 +2610,7 @@ async onPatientFileSelected(event: any): Promise<void> {
   approveOfflinePayment(paymentId: any): void {
     this.walletService.approveOfflineOrder(paymentId).subscribe({
       next: () => {
-        this.toastService.success('Success', 'Offline payment approved');
+        this.toastService.success('Success', 'Offline payment approved successfully.');
         this.loadWallet();
         if (this.isWalletModalOpen) {
           this.walletPage = 0;
@@ -2604,7 +2619,7 @@ async onPatientFileSelected(event: any): Promise<void> {
         }
       },
       error: (err) => {
-        this.toastService.error('Error', err?.error?.message || 'Approve fail zala');
+        this.toastService.error('Error', err?.error?.message || 'Failed to approve the offline payment.');
       }
     });
   }
@@ -2934,5 +2949,3 @@ async onPatientFileSelected(event: any): Promise<void> {
 
 
 }
-
-

@@ -1,5 +1,5 @@
 /*
- * App Global CSS — "Clinical Emerald" Premium Design System
+ * App Global CSS — Light & Soft Design System
  * ----------------------------------------------------------------------------
  * THEME: to re-theme the whole app, edit ONLY the
  * "THEME — EDIT ONLY THIS SECTION" block at the top of :root.
@@ -13,6 +13,7 @@
  * ✅ Single scroll owner (html/body/ion-app overflow hidden)
  * ✅ Invoice modal true fullscreen
  * ✅ Hidden scrollbars (one-hand touch-jump fix)
+ * ✅ Lighter colors, softer popups/shadows, soft dark mode
  */
 
 /* Core CSS required for Ionic components to work properly */
@@ -49,41 +50,31 @@
      THEME — EDIT ONLY THIS SECTION TO RE-THEME THE APP
      (keep each -rgb value in sync with its hex color)
   ============================================================ */
-  // --app-primary: #087b76;
-  // --app-primary-rgb: 8, 123, 118;       /* same color as --app-primary, as R,G,B (for rgba) */
-  // --app-primary-mid: #087d78;           /* gradient start */
-  // --app-primary-deep: #055f5d;          /* gradient end */
-  // --app-primary-dark: #075f5d;          /* titles, pressed states */
-  // --app-primary-dark-rgb: 7, 95, 93;    /* shadow tint */
-  // --app-primary-bright: #0b948d;        /* brighter teal accent (buttons, orbs) */
-  // --app-primary-light: #d9f0ee;         /* icon badges, chips, hover */
-  // --app-primary-lighter: #eef8f7;       /* soft panels */
-
-  --app-primary: #1d4ed8;
---app-primary-rgb: 29, 78, 216;
---app-primary-mid: #2563eb;
---app-primary-deep: #1e3a8a;
---app-primary-dark: #1e40af;
---app-primary-dark-rgb: 30, 64, 175;
---app-primary-bright: #3b82f6;
---app-primary-light: #dbeafe;
---app-primary-lighter: #eff6ff;
+  --app-primary: #3b82f6;
+  --app-primary-rgb: 59, 130, 246;
+  --app-primary-mid: #60a5fa;           /* gradient start */
+  --app-primary-deep: #3b82f6;          /* gradient end */
+  --app-primary-dark: #2563eb;          /* titles, pressed states */
+  --app-primary-dark-rgb: 37, 99, 235;  /* shadow tint */
+  --app-primary-bright: #60a5fa;        /* brighter accent */
+  --app-primary-light: #e0edff;         /* icon badges, chips, hover */
+  --app-primary-lighter: #f3f8ff;       /* soft panels */
 
   --app-gradient: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
 
-  /* Semantic — intentionally independent of the brand color */
-  --app-success: #16866e;  --app-success-bg: #d8f2ed;
-  --app-warning: #bd7d19;  --app-warning-bg: #fff0d9;
-  --app-danger:  #c05262;  --app-danger-bg:  #ffebef;
+  /* Semantic — intentionally independent of the brand color (softer shades) */
+  --app-success: #34a98f;  --app-success-bg: #d8f2ed;
+  --app-warning: #e0a040;  --app-warning-bg: #fff0d9;
+  --app-danger:  #e5707f;  --app-danger-bg:  #ffebef;
   --app-info:    #2470b9;  --app-info-bg:    #e1efff;
   --app-purple:  #7856c9;  --app-purple-bg:  #eee8ff;
 
   /* Neutrals */
-  --app-text: #14222e;
-  --app-text-muted: #6c7b86;
-  --app-text-faint: #8fa1a5;
-  --app-border: #e4eded;
-  --app-surface-alt: #f5f9f9;
+  --app-text: #1f2a3d;
+  --app-text-muted: #6b7a94;
+  --app-text-faint: #94a1ba;
+  --app-border: #e4e9f2;
+  --app-surface-alt: #f5f7fb;
 
   /* ============================================================
      IONIC BRIDGE
@@ -112,7 +103,7 @@
   --brand-light: var(--app-primary-light);
   --brand-soft: var(--app-primary-lighter);
   --brand-gradient: var(--app-gradient);
-  --brand-gradient-soft: linear-gradient(135deg, var(--app-primary-lighter) 0%, #f2fbfa 100%);
+  --brand-gradient-soft: linear-gradient(135deg, var(--app-primary-lighter) 0%, #ffffff 100%);
 
   --success: var(--app-success);   --success-bg: var(--app-success-bg);
   --warning: var(--app-warning);   --warning-bg: var(--app-warning-bg);
@@ -129,13 +120,13 @@
   --gray-accent: var(--app-text-faint);
 
   --shadow-xs: 0 1px 2px rgba(var(--app-primary-dark-rgb), 0.05);
-  --shadow-sm: 0 2px 8px rgba(var(--app-primary-dark-rgb), 0.07);
-  --shadow-md: 0 6px 20px rgba(var(--app-primary-dark-rgb), 0.10);
-  --shadow-lg: 0 14px 38px rgba(var(--app-primary-dark-rgb), 0.16);
-  --shadow-glow: 0 8px 22px rgba(var(--app-primary-rgb), 0.28);
-  --shadow-brand: 0 14px 32px rgba(var(--app-primary-rgb), 0.26);
+  --shadow-sm: 0 2px 8px rgba(var(--app-primary-dark-rgb), 0.06);
+  --shadow-md: 0 6px 18px rgba(var(--app-primary-dark-rgb), 0.08);
+  --shadow-lg: 0 10px 28px rgba(var(--app-primary-dark-rgb), 0.12);
+  --shadow-glow: 0 8px 22px rgba(var(--app-primary-rgb), 0.20);
+  --shadow-brand: 0 12px 28px rgba(var(--app-primary-rgb), 0.20);
 
-  /* Old global green ramp — re-pointed so everything follows the theme */
+  /* Old global ramp — re-pointed so everything follows the theme */
   --brand-950: var(--app-primary-deep);
   --brand-900: var(--app-primary-deep);
   --brand-800: var(--app-primary-dark);
@@ -152,7 +143,7 @@
   --status-info: var(--app-info);
 
   --brand-gradient-soft-old: var(--app-gradient);
-  --ink-gradient: linear-gradient(160deg, var(--app-primary-dark) 0%, #051612 100%);
+  --ink-gradient: linear-gradient(160deg, var(--app-primary-dark) 0%, #1e3a8a 100%);
 
   /* ============================================================
      NOT PART OF THE BRAND THEME — brass accent (kept as-is)
@@ -163,7 +154,7 @@
   --gold-300: #e7ce9c;
   --gold-100: #f7ecd9;
   --gold-gradient: linear-gradient(135deg, #8a6425 0%, #c3924a 55%, #e7ce9c 100%);
-  --shadow-gold: 0 10px 26px rgba(169, 120, 46, 0.26);
+  --shadow-gold: 0 10px 26px rgba(169, 120, 46, 0.20);
 
   /* ---- Radius scale (8px system) ---- */
   --radius-xs: 8px;
@@ -181,45 +172,51 @@
   /* ============================================================
      Existing app surface/text variables (light mode)
   ============================================================ */
-  --app-bg: #f4f6f3;
+  --app-bg: #f5f7fb;
   --card-bg: #ffffff;
-  --card-border: #e4eae6;
-  --card-shadow: rgba(10, 27, 23, 0.07);
-  --text-primary: #0c201c;
-  --text-secondary: #1e3833;
-  --text-muted: #5c7671;
-  --text-faint: #93a9a4;
-  --input-bg: #fbfcfb;
-  --input-border: #dce5e1;
-  --skeleton-base: #eaeeea;
-  --skeleton-shine: #f7f9f7;
-  --menu-bg: #0a2e27;
-  --divider: #e4eae6;
-  --mini-stat-bg: #f1f5f2;
-  --icon-bg: #eaf3ee;
-  --icon-border: #d7e6dd;
+  --card-border: #e4e9f2;
+  --card-shadow: rgba(30, 64, 175, 0.06);
+  --text-primary: #1f2a3d;
+  --text-secondary: #33405a;
+  --text-muted: #6b7a94;
+  --text-faint: #94a1ba;
+  --input-bg: #fafbfe;
+  --input-border: #dde4f0;
+  --skeleton-base: #e9edf5;
+  --skeleton-shine: #f6f8fc;
+  --menu-bg: #3b5ea8;
+  --divider: #e4e9f2;
+  --mini-stat-bg: #f0f4fb;
+  --icon-bg: #e8f0fe;
+  --icon-border: #d3e1fb;
   --icon-color: var(--app-primary-dark);
 }
 
+/* Soft dark mode — only applies when the user's phone is in dark mode */
 @media (prefers-color-scheme: dark) {
   :root {
-    --app-bg: #0a1512;
-    --card-bg: #0f1d19;
-    --card-border: #1c342c;
-    --card-shadow: rgba(0, 0, 0, 0.35);
-    --text-primary: #eef5f1;
-    --text-secondary: #cdded6;
-    --text-muted: #8ba69d;
-    --text-faint: #5f7a72;
-    --input-bg: #12211c;
-    --input-border: #223c33;
-    --skeleton-base: #16281f;
-    --skeleton-shine: #1c352b;
-    --menu-bg: #071310;
-    --divider: #1c342c;
-    --mini-stat-bg: #142822;
-    --icon-bg: #14281f;
-    --icon-border: #223c33;
+    --app-primary: #6aa8ff;
+    --app-primary-rgb: 106, 168, 255;
+    --app-primary-light: #1f2d4a;
+    --app-primary-lighter: #182238;
+
+    --app-bg: #121826;
+    --card-bg: #1a2233;
+    --card-border: #28324a;
+    --card-shadow: rgba(0, 0, 0, 0.25);
+    --text-primary: #eef2fa;
+    --text-secondary: #d0d8e8;
+    --text-muted: #94a1ba;
+    --text-faint: #66738c;
+    --input-bg: #1e2740;
+    --input-border: #2c3856;
+    --skeleton-base: #1e2740;
+    --skeleton-shine: #26314f;
+    --menu-bg: #151d30;
+    --divider: #28324a;
+    --mini-stat-bg: #1e2740;
+    --icon-bg: #1f2d4a;
+    --icon-border: #2c3856;
     --icon-color: var(--app-primary-bright);
   }
 }
@@ -340,7 +337,7 @@ ion-modal .invoice-header h2 {
 
 ion-popover {
   --backdrop-opacity: 0;
-  --box-shadow: 0 18px 40px rgba(10, 27, 23, 0.18);
+  --box-shadow: 0 12px 30px rgba(var(--app-primary-dark-rgb), 0.12);
   --width: auto;
 }
 
@@ -376,7 +373,7 @@ ion-item ion-select {
 ion-modal {
   --background: var(--card-bg);
   --ion-background-color: var(--card-bg);
-  --backdrop-opacity: 0.45 !important;
+  --backdrop-opacity: 0.25 !important;
 }
 
 ion-modal::part(content) {
@@ -394,7 +391,7 @@ ion-checkbox {
 .mat-datepicker-content {
   background-color: #ffffff !important;
   border-radius: 12px;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 24px rgba(var(--app-primary-dark-rgb), 0.12);
 }
 
 .mat-calendar {
@@ -414,11 +411,12 @@ ion-checkbox {
 // specificity (Ionic's own docs example: ".my-class .alert-wrapper").
 // ==========================================================
 ion-alert.premium-alert {
-  --backdrop-opacity: 0.5;
+  --backdrop-opacity: 0.25;
 
   .alert-wrapper {
     border-radius: var(--radius-lg, 22px) !important;
     box-shadow: var(--shadow-lg) !important;
+    background: var(--card-bg) !important;
   }
 
   .alert-head {
@@ -476,7 +474,7 @@ ion-modal.admin-addfunds-popup {
   --height: auto;
   --max-height: 90vh;
   --border-radius: 22px;
-  --box-shadow: 0 20px 60px rgba(10, 27, 23, 0.28);
+  --box-shadow: 0 14px 40px rgba(var(--app-primary-dark-rgb), 0.16);
 }
 
 ion-modal.admin-addfunds-popup::part(content) {
@@ -533,7 +531,7 @@ ion-modal.invoice-modal-cls {
 
 // ---------- Custom loading popup (ledger + commission शेअर करतात) ----------
 .ledger-loading-popup {
-  --background: #ffffff;
+  --background: var(--card-bg);
   --spinner-color: var(--app-primary);
 }
 
@@ -552,7 +550,7 @@ ion-modal.invoice-modal-cls {
   letter-spacing: 0.4px;
   text-transform: uppercase;
   --background: var(--app-gradient);
-  box-shadow: 0 4px 12px rgba(var(--app-primary-dark-rgb), 0.25);
+  box-shadow: 0 4px 12px rgba(var(--app-primary-dark-rgb), 0.18);
 
   ion-icon {
     font-size: 16px;
@@ -566,18 +564,18 @@ ion-modal.invoice-modal-cls {
    SCSS files are cleaned up.
 ===================================================================== */
 
-/* Dashboard header (the green shadow under the top banner) */
+/* Dashboard header (the shadow under the top banner) */
 .app-header-premium {
-  box-shadow: 0 16px 34px rgba(var(--app-primary-dark-rgb), 0.28) !important;
+  box-shadow: 0 10px 24px rgba(var(--app-primary-dark-rgb), 0.14) !important;
 }
 
 /* Dashboard focus card and wallet card */
 .focus-card {
-  box-shadow: 0 12px 25px rgba(var(--app-primary-rgb), 0.18) !important;
+  box-shadow: 0 8px 20px rgba(var(--app-primary-rgb), 0.12) !important;
 }
 
 .wallet-mini-card {
-  box-shadow: 0 8px 18px rgba(var(--app-primary-rgb), 0.16) !important;
+  box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.12) !important;
 }
 
 /* Page headers used by the other screens */
@@ -587,11 +585,640 @@ ion-modal.invoice-modal-cls {
 .tl-header,
 .fr-header,
 .report-header {
-  box-shadow: 0 2px 14px rgba(var(--app-primary-dark-rgb), 0.18) !important;
+  box-shadow: 0 2px 10px rgba(var(--app-primary-dark-rgb), 0.12) !important;
 }
 
 /* Pop-up / modal shadows that use the brand tint */
 .test-preview-popup::part(content),
 .pkg-preview-popup::part(content) {
-  box-shadow: 0 24px 60px -12px rgba(var(--app-primary-dark-rgb), 0.35) !important;
+  box-shadow: 0 16px 40px -12px rgba(var(--app-primary-dark-rgb), 0.18) !important;
+}
+
+/* =====================================================================
+   OUTLINE BUTTON — reference image sarkha (white bg + blue border + icon)
+   Paste at the END of global.scss (glass-buttons.scss chya khali)
+===================================================================== */
+
+/* Sab fill="outline" buttons la ha look */
+ion-button[fill="outline"] {
+  --background: #ffffff;
+  --background-activated: var(--app-primary-lighter);
+  --background-hover: var(--app-primary-lighter);
+  --border-color: var(--app-primary);
+  --border-width: 2px;
+  --border-style: solid;
+  --border-radius: 12px;
+  --color: var(--app-primary);
+  --color-activated: var(--app-primary-dark);
+  --box-shadow: none;
+  --padding-top: 14px;
+  --padding-bottom: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  text-transform: none;
+}
+
+/* Icon + text madhe jaga */
+ion-button[fill="outline"] ion-icon[slot="start"] {
+  font-size: 24px;
+  margin-inline-end: 14px;
+}
+
+/* Dark mode: white aivaji card color */
+@media (prefers-color-scheme: dark) {
+  ion-button[fill="outline"] {
+    --background: transparent;
+    --background-activated: rgba(var(--app-primary-rgb), 0.12);
+    --background-hover: rgba(var(--app-primary-rgb), 0.12);
+  }
+}
+
+/* =====================================================================
+   GLOBAL UI KIT — saglya pages che buttons + modals + X (close)
+   --------------------------------------------------------------------
+   Ethe ekda badalla ki saglikade badalto.
+   Save: src/theme/ui-kit.scss
+   Import: global.scss chya agdi SHEVTI ->  @import "./theme/ui-kit.scss";
+
+   Ha file 3 groups madhe buttons vibhagto:
+     A) PRIMARY (gradient)      -> Save / Search / Pay / Update / OK / Send
+     B) SECONDARY (outline)     -> Download / Print / Refresh / Load More / Got it
+     C) X (red)                 -> sarkhya modals cha close button
+   Ek button dusrya group madhe hvay asel tar tyacha selector
+   ek list madhun dusrya list madhe hala.
+
+   NOTE: ":root:root" prefix mhanje page chya scoped scss peksha
+   jaast specificity, mhanun page cha junya styles la override karto.
+===================================================================== */
+
+:root {
+  --ui-btn-radius: 14px;
+  --ui-x-bg: linear-gradient(135deg, #f08a95 0%, var(--app-danger) 100%);
+  --ui-x-shadow: 0 6px 14px rgba(229, 112, 127, 0.35);
+}
+
+/* =====================================================================
+   0) BASE — sab ion-button
+===================================================================== */
+:root:root ion-button {
+  --ripple-color: transparent;
+  --border-radius: var(--ui-btn-radius);
+  text-transform: none;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  transition: transform 0.15s ease, box-shadow 0.25s ease;
+}
+
+:root:root ion-button:active {
+  transform: scale(0.97);
+}
+
+:root:root ion-button[disabled] {
+  opacity: 0.45;
+}
+
+/* =====================================================================
+   A) PRIMARY — gradient + halka glow + glossy edge
+===================================================================== */
+:root:root {
+
+  ion-button.save-changes-btn,
+  ion-button.update-barcode-btn,
+  ion-button.modal-save-btn:not(.danger-btn),
+  ion-button.ok-btn,
+  ion-button.save-btn,
+  ion-button.print-btn,
+  ion-button.search-btn,
+  ion-button.send-btn,
+  ion-button.notif-goto-btn,
+  ion-button.wallet-addfunds-btn,
+  ion-button.add-btn,
+  .download-action-bar ion-button {
+    --background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+    --background-hover: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+    --background-activated: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-dark) 100%) !important;
+    --color: #ffffff !important;
+    --border-radius: var(--ui-btn-radius) !important;
+    --box-shadow: 0 8px 20px rgba(var(--app-primary-rgb), 0.28),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+  }
+}
+
+/* Native <button> CTA (Add Doctor / Add Lab modals) */
+:root:root .modal-add-btn {
+  background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: var(--ui-btn-radius) !important;
+  box-shadow: 0 8px 20px rgba(var(--app-primary-rgb), 0.28),
+              inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+/* Dashboard wallet card "Add Funds" — glass pill */
+:root:root .wm-add-btn {
+  background: rgba(255, 255, 255, 0.2) !important;
+  color: #ffffff !important;
+  border: 1px solid rgba(255, 255, 255, 0.45) !important;
+  border-radius: 999px !important;
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.4) !important;
+}
+
+/* =====================================================================
+   B) SECONDARY — transparent + fakta blue border
+===================================================================== */
+:root:root {
+
+  ion-button[fill="outline"],
+  ion-button.printbill-btn-slim,
+  ion-button.refresh-btn,
+  ion-button.danger-btn,
+  ion-button.global-danger-btn,
+  ion-button.load-more-btn,
+  ion-button.pdf-export-btn,
+  ion-button.tl-download-btn {
+    --background: transparent !important;
+    --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
+    --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
+    --color: var(--app-primary) !important;
+    --color-activated: var(--app-primary-dark) !important;
+    --border-color: var(--app-primary) !important;
+    --border-width: 2px !important;
+    --border-style: solid !important;
+    --border-radius: var(--ui-btn-radius) !important;
+    --box-shadow: none !important;
+    box-shadow: none !important;
+  }
+
+  /* Pages ne ::part(native) war direct gradient dilela asto — to kadha */
+  ion-button[fill="outline"]::part(native),
+  ion-button.printbill-btn-slim::part(native),
+  ion-button.refresh-btn::part(native),
+  ion-button.danger-btn::part(native),
+  ion-button.global-danger-btn::part(native),
+  ion-button.load-more-btn::part(native),
+  ion-button.pdf-export-btn::part(native),
+  ion-button.tl-download-btn::part(native) {
+    background: transparent !important;
+    color: var(--app-primary) !important;
+    border: 2px solid var(--app-primary) !important;
+    box-shadow: none !important;
+  }
+
+  ion-button[fill="outline"]:active::part(native),
+  ion-button.printbill-btn-slim:active::part(native),
+  ion-button.refresh-btn:active::part(native),
+  ion-button.danger-btn:active::part(native),
+  ion-button.global-danger-btn:active::part(native),
+  ion-button.load-more-btn:active::part(native),
+  ion-button.pdf-export-btn:active::part(native),
+  ion-button.tl-download-btn:active::part(native) {
+    background: rgba(var(--app-primary-rgb), 0.14) !important;
+  }
+
+  ion-button.printbill-btn-slim ion-icon,
+  ion-button.printbill-btn-slim ion-spinner,
+  ion-button.refresh-btn ion-icon {
+    color: var(--app-primary);
+  }
+
+  ion-button[fill="outline"] ion-icon[slot="start"] {
+    margin-inline-end: 8px;
+  }
+}
+
+/* Refresh button — width motha, height 36px fix, COLOR fill */
+:root:root ion-button.refresh-btn {
+
+  min-width: 56px !important;
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  align-self: flex-end;
+  margin: 0;
+  --padding-start: 0;
+  --padding-end: 0;
+  --padding-top: 0;
+  --padding-bottom: 0;
+  --border-radius: 10px !important;
+  --border-width: 0 !important;
+  --background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  --background-hover: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  --background-activated: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-dark) 100%) !important;
+  --color: #ffffff !important;
+  --box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.28) !important;
+}
+
+:root:root ion-button.refresh-btn::part(native) {
+  height: 36px !important;
+  min-height: 36px !important;
+  max-height: 36px !important;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 10px !important;
+  background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  color: #ffffff !important;
+  box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.28) !important;
+  
+}
+
+:root:root ion-button.refresh-btn:active::part(native) {
+  background: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-dark) 100%) !important;
+  
+}
+
+:root:root ion-button.refresh-btn ion-icon {
+  font-size: 18px;
+  color: #ffffff !important;
+}
+
+/* =====================================================================
+   C) X (close) — red background + white cross  (saglya modals)
+===================================================================== */
+:root:root {
+
+  .close-modal-btn,
+  .sm-close-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border: none !important;
+    border-radius: 10px;
+    background: var(--ui-x-bg) !important;
+    color: #ffffff !important;
+    box-shadow: var(--ui-x-shadow) !important;
+    transition: transform 0.15s ease;
+  }
+
+  .close-modal-btn:hover,
+  .close-modal-btn:active,
+  .sm-close-btn:hover,
+  .sm-close-btn:active {
+    background: var(--app-danger) !important;
+    color: #ffffff !important;
+    transform: scale(0.94);
+  }
+
+  .close-modal-btn ion-icon,
+  .sm-close-btn ion-icon {
+    color: #ffffff !important;
+    font-size: 20px;
+  }
+
+  /* Je modals madhe X "ion-button" aahe (.modal-header madhe) */
+  ion-modal .modal-header > ion-button {
+    --background: transparent !important;
+    --background-hover: transparent !important;
+    --background-activated: transparent !important;
+    --color: #ffffff !important;
+    --box-shadow: none !important;
+    --padding-start: 0;
+    --padding-end: 0;
+    width: 36px;
+    height: 36px;
+    margin: 0;
+  }
+
+  ion-modal .modal-header > ion-button::part(native) {
+    background: var(--ui-x-bg) !important;
+    color: #ffffff !important;
+    width: 36px;
+    height: 36px;
+    padding: 0 !important;
+    border: none !important;
+    border-radius: 10px !important;
+    box-shadow: var(--ui-x-shadow) !important;
+  }
+
+  ion-modal .modal-header > ion-button ion-icon {
+    color: #ffffff !important;
+    font-size: 20px !important;
+  }
+}
+
+/* =====================================================================
+   D) MODAL SHELL — printbill-modal family (Download / Print Bill / Not Ready)
+===================================================================== */
+:root:root .printbill-modal-header {
+  background: var(--app-gradient) !important;   /* hirva/red header band */
+}
+
+:root:root ion-modal.report-not-ready-modal .printbill-modal-header {
+  background: var(--app-gradient) !important;
+}
+
+/* Download / Print Bill modal thoda ruund (buttons madhe text basto) */
+:root:root ion-modal.printbill-modal.download-report-modal,
+:root:root ion-modal.printbill-modal.print-bill-modal {
+  --width: min(360px, 94vw) !important;
+}
+
+:root:root ion-modal.printbill-modal:has(.printbill-modal-body > ion-button.printbill-btn-slim) {
+  --width: min(360px, 94vw) !important;
+}
+
+/* Report Not Ready */
+:root:root .report-not-ready-icon ion-icon {
+  font-size: 44px;
+  padding: 16px;
+  border-radius: 50%;
+  color: var(--app-danger) !important;
+  background: var(--app-danger-bg);
+}
+
+:root:root .report-not-ready-text {
+  color: var(--text-muted) !important;
+  font-weight: 600;
+}
+
+/* =====================================================================
+   E) LAYOUT — buttons LEFT + RIGHT
+   (1) Class wale:  .download-btn-row  /  .print-bill-grid
+   (2) Auto (HTML na badalta): :has() — Chrome/WebView 105+
+===================================================================== */
+
+/* ---- E1) DOWNLOAD REPORT: 2 buttons ek row ---- */
+:root:root ion-modal.printbill-modal .printbill-modal-body.download-btn-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  padding: 20px 16px 24px !important;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(> ion-button.printbill-btn-slim):not(:has(.input-group)) {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  padding: 20px 16px 24px !important;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button.printbill-btn-slim,
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(> ion-button.printbill-btn-slim):not(:has(.input-group)) > ion-button.printbill-btn-slim {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  height: 38px !important;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 12.5px !important;
+  white-space: nowrap;
+}
+
+/* ---- E2) PRINT BILL: Price row vartun, khali 2 x 2 grid ---- */
+:root:root ion-modal.printbill-modal .printbill-modal-body.print-bill-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  padding: 18px 16px 22px !important;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(> ion-button.printbill-btn-slim):has(.input-group) {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  padding: 18px 16px 22px !important;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > div:first-child,
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(.input-group) > div:first-child {
+  grid-column: 1 / -1;
+  margin-bottom: 6px !important;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim,
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(.input-group) > ion-button.printbill-btn-slim {
+  width: auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  height: 38px !important;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+  order: 3;                    /* F buttons khali */
+}
+
+/* Row 1: With | Without     Row 2: F With | F Without */
+:root:root ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim:first-of-type,
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(.input-group) > ion-button.printbill-btn-slim:first-of-type {
+  order: 1;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim:last-of-type,
+:root:root ion-modal.printbill-modal .printbill-modal-body:has(.input-group) > ion-button.printbill-btn-slim:last-of-type {
+  order: 2;
+}
+
+/* Icon + text ekatra madhyam madhe */
+:root:root ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim::part(native) {
+  justify-content: center;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim ion-icon,
+:root:root ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim ion-spinner {
+  margin: 0 5px 0 0 !important;
+  font-size: 16px;
+}
+
+/* ---- Print Bill: Price Type + Custom Amount ek-sarkhe ---- */
+:root:root ion-modal.printbill-modal .printbill-modal-body .input-wrap {
+  border: 1.5px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--section-bg);
+  overflow: hidden;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body .input-wrap ion-select.premium-select {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  height: 48px;
+}
+
+:root:root ion-modal.printbill-modal .printbill-modal-body .input-wrap input {
+  height: 48px;
+  color: var(--text-primary);
+}
+
+/* =====================================================================
+   F) CHHOTE COMPONENTS (page-specific buttons / chips)
+===================================================================== */
+
+/* Booking Status card: cash / person / 3-dots icon buttons */
+:root:root ion-button.action-icon-btn {
+  --background: rgba(var(--app-primary-rgb), 0.10) !important;
+  --background-hover: rgba(var(--app-primary-rgb), 0.16) !important;
+  --background-activated: rgba(var(--app-primary-rgb), 0.20) !important;
+  --color: var(--app-primary-dark) !important;
+  --border-radius: 12px !important;
+  --box-shadow: none !important;
+  --padding-start: 0;
+  --padding-end: 0;
+  width: 38px;
+  height: 38px;
+  margin: 0 3px;
+}
+
+:root:root ion-button.action-icon-btn::part(native) {
+  background: rgba(var(--app-primary-rgb), 0.10) !important;
+  border: none !important;
+  border-radius: 12px !important;
+}
+
+:root:root ion-button.action-icon-btn.dots {
+  --background: var(--mini-stat-bg) !important;
+  --color: var(--text-muted) !important;
+}
+
+:root:root ion-button.action-icon-btn.dots::part(native) {
+  background: var(--mini-stat-bg) !important;
+}
+
+/* Attachment "Choose" */
+:root:root .attach-btn {
+  border: 1.5px dashed rgba(var(--app-primary-rgb), 0.5) !important;
+  background: rgba(var(--app-primary-rgb), 0.06) !important;
+  color: var(--app-primary-dark) !important;
+  border-radius: 14px !important;
+}
+
+/* Status tabs (All / Completed / Pending ...) — pill + press effect */
+:root:root .status-tab {
+  border-radius: 999px;
+  transition: transform 0.15s ease, box-shadow 0.2s ease, background 0.2s ease;
+}
+
+:root:root .status-tab:active {
+  transform: scale(0.96);
+}
+
+/* 3-dot dropdown — glass menu */
+:root:root .action-dropdown {
+  background: var(--card-bg);
+  background: color-mix(in srgb, var(--card-bg) 82%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(170%);
+  backdrop-filter: blur(16px) saturate(170%);
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  box-shadow: 0 12px 30px rgba(var(--app-primary-dark-rgb), 0.14);
+}
+
+:root:root .action-dropdown .action-item {
+  border-radius: 12px;
+}
+
+:root:root .action-dropdown .action-item:active {
+  background: rgba(var(--app-primary-rgb), 0.12);
+}
+
+:root:root .action-dropdown .action-icon-wrap {
+  border-radius: 10px;
+  background: rgba(var(--app-primary-rgb), 0.10);
+  color: var(--app-primary-dark);
+}
+
+/* ---- E3) DASHBOARD modals (test-preview-popup + .modal-page) ---- */
+
+/* Download Report: 2 buttons ek row madhe */
+:root:root ion-modal .modal-page .global-btn-row {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: stretch !important;
+  gap: 12px !important;
+  padding: 20px 16px 24px !important;
+}
+
+:root:root ion-modal .modal-page .global-btn-row > ion-button.printbill-btn-slim {
+  flex: 1 1 0 !important;
+  width: auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  height: 38px !important;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 12.5px !important;
+  white-space: nowrap;
+}
+
+/* Print Bill: vartun Price row, khali 2 x 2 grid */
+:root:root ion-modal .modal-page .global-print-grid {
+  display: grid !important;
+  grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  gap: 10px !important;
+  align-items: stretch !important;
+  padding: 18px 16px 22px !important;
+}
+
+:root:root ion-modal .modal-page .global-print-grid .global-print-top {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
+:root:root ion-modal .modal-page .global-print-grid .global-print-top .input-group {
+  flex: 1;
+  min-width: 0;
+}
+
+:root:root ion-modal .modal-page .global-print-grid > ion-button.printbill-btn-slim {
+  width: auto !important;
+  min-width: 0 !important;
+  display: block !important;
+  margin: 0 !important;
+  height: 38px !important;
+  --padding-start: 4px;
+  --padding-end: 4px;
+  font-size: 12px !important;
+  letter-spacing: 0 !important;
+  white-space: nowrap;
+}
+
+/* Icon + text madhyam madhe */
+:root:root ion-modal .modal-page .global-btn-row > ion-button.printbill-btn-slim::part(native),
+:root:root ion-modal .modal-page .global-print-grid > ion-button.printbill-btn-slim::part(native) {
+  justify-content: center;
+}
+
+:root:root ion-modal .modal-page .global-btn-row > ion-button.printbill-btn-slim ion-icon,
+:root:root ion-modal .modal-page .global-btn-row > ion-button.printbill-btn-slim ion-spinner,
+:root:root ion-modal .modal-page .global-print-grid > ion-button.printbill-btn-slim ion-icon,
+:root:root ion-modal .modal-page .global-print-grid > ion-button.printbill-btn-slim ion-spinner {
+  margin: 0 5px 0 0 !important;
+  font-size: 16px;
+}
+
+/* Price Type + Custom Amount box (Booking Status sarkhe) */
+:root:root ion-modal .modal-page .global-print-top .input-wrap {
+  border: 1.5px solid var(--card-border);
+  border-radius: 14px;
+  background: var(--section-bg);
+  overflow: hidden;
+}
+
+:root:root ion-modal .modal-page .global-print-top .input-wrap ion-select.premium-select {
+  border: none !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  height: 48px;
+}
+
+/* Modal width (Image 3/4 sarkhi) */
+:root:root ion-modal.download-report-modal,
+:root:root ion-modal.print-bill-modal {
+  --width: min(360px, 94vw) !important;
 }

@@ -93,7 +93,7 @@
     </div>
 
     <!-- ===================== STATUS TABS ===================== -->
-    <div class="status-tabs-wrapper">
+    <div class="status-tabs-wrapper" *ngIf="!isSearchMode">
       <div class="status-tabs">
 
         <div *ngFor="let tab of statusTabs" class="status-tab" [class.active]="selectedReportStatus === tab.key"
@@ -102,6 +102,7 @@
     'active-complete': tab.key === 'completed',
     'active-pending': tab.key === 'pending',
     'active-clinical': tab.key === 'CLINICAL',
+    'active-partial': tab.key === 'partial',
     'active-snr': tab.key === 'snr',
     'active-cancel': tab.key === 'cancel'
   }" (click)="setStatusTab(tab.key)">
@@ -472,13 +473,13 @@
           </ng-container>
         </div>
 
-<div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
-  <ion-button expand="block" fill="solid" class="save-changes-btn"
-    [disabled]="isSavingPatient" (click)="updatePatient()">
-    <span class="btn-spinner" *ngIf="isSavingPatient"></span>
-    <span>{{ isSavingPatient ? 'Saving...' : 'Save Changes' }}</span>
-  </ion-button>
-</div>
+        <div class="sheet-footer" *ngIf="!isTestLoading && canSaveBooking">
+          <ion-button expand="block" fill="solid" class="save-changes-btn"
+            [disabled]="isSavingTest || selectedTests.length === 0" (click)="updateTestBooking()">
+            <span class="btn-spinner" *ngIf="isSavingTest"></span>
+            <span>{{ isSavingTest ? 'Saving...' : 'Save Changes' }}</span>
+          </ion-button>
+        </div>
       </div>
     </ng-template>
   </ion-modal>
@@ -623,45 +624,46 @@
               </div>
             </div>
 
-<div class="form-section">
-  <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
-    Attachment</div>
-  <div class="patient-form-grid">
-    <div class="summary-field span-3">
-      <label>Clinical History</label>
-      <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
-    </div>
+            <div class="form-section">
+              <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
+                Attachment</div>
+              <div class="patient-form-grid">
+                <div class="summary-field span-3">
+                  <label>Clinical History</label>
+                  <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
+                </div>
 
-<div class="summary-field span-3">
-  <label>Add Attachments</label>
-  <input #patientFile type="file" hidden multiple accept="image/*,application/pdf"
-    (change)="onPatientFileSelected($event)">
+                <div class="summary-field span-3">
+                  <label>Add Attachments</label>
+                  <input #patientFile type="file" hidden multiple accept="image/*,application/pdf"
+                    (change)="onPatientFileSelected($event)">
 
-  <button type="button" class="attach-btn" (click)="patientFile.click()">
-    <ion-icon name="add-outline"></ion-icon> Choose
-  </button>
+                  <button type="button" class="attach-btn" (click)="patientFile.click()">
+                    <ion-icon name="add-outline"></ion-icon> Choose
+                  </button>
 
-  <div class="attachment-row" *ngFor="let att of editPatientData.attachments; let i = index">
-    <span class="att-index">{{ i + 1 }}.</span>
-    <ion-icon
-      [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
-      class="att-type-icon"></ion-icon>
-    <span class="att-name">{{ att.name }}</span>
-    <span class="att-actions">
-      <ion-icon name="eye-outline" class="att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
-      <ion-icon name="trash-outline" class="att-del" (click)="removePatientAttachment(i)"></ion-icon>
-    </span>
-  </div>
-</div>
-  </div>
-</div>
+                  <div class="attachment-row" *ngFor="let att of editPatientData.attachments; let i = index">
+                    <span class="att-index">{{ i + 1 }}.</span>
+                    <ion-icon [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
+                      class="att-type-icon"></ion-icon>
+                    <span class="att-name">{{ att.name }}</span>
+                    <span class="att-actions">
+                      <ion-icon name="eye-outline" class="att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
+                      <ion-icon name="trash-outline" class="att-del" (click)="removePatientAttachment(i)"></ion-icon>
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
 
           </div>
         </div>
 
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="updatePatient()">
-            Save Changes
+          <ion-button expand="block" fill="solid" class="save-changes-btn" [disabled]="isSavingPatient"
+            (click)="updatePatient()">
+            <span class="btn-spinner" *ngIf="isSavingPatient"></span>
+            <span>{{ isSavingPatient ? 'Saving...' : 'Save Changes' }}</span>
           </ion-button>
         </div>
       </div>
@@ -716,8 +718,7 @@
             <div class="history-card" *ngFor="let rep of historyBooking.reports">
               <div class="hc-name">Report #{{ rep.reportId }}</div>
               <div class="hc-sub">
-                <span class="status"
-                  [ngClass]="isReportComplete(rep.reportStatus) ? 'completed' : 'pending'">
+                <span class="status" [ngClass]="isReportComplete(rep.reportStatus) ? 'completed' : 'pending'">
                   {{ rep.reportStatus }}
                 </span>
               </div>
@@ -985,7 +986,8 @@
 
 
   <!-- ===================== PRINT BILL MODAL ===================== -->
-  <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal" [keepContentsMounted]="false"
+  <!-- ✅ CHANGE 1: cssClass madhe print-bill-modal joda -->
+  <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal print-bill-modal" [keepContentsMounted]="false"
     [canDismiss]="true" (didDismiss)="closePrintBillModal()">
     <ng-template>
       <div class="printbill-modal-page">
@@ -996,7 +998,8 @@
           </button>
         </div>
 
-        <div class="printbill-modal-body">
+        <!-- ✅ CHANGE 2: print-bill-grid class joda -->
+        <div class="printbill-modal-body print-bill-grid">
 
           <div style="display:flex; gap:12px; margin-bottom:16px;">
             <div class="input-group" style="flex:1; min-width:0;">
@@ -1019,29 +1022,25 @@
             </div>
           </div>
 
-
-
           <ion-button expand="block" fill="solid" class="printbill-btn-slim"
             [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(true, false)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             With letterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
-            *ngIf="printBillFranchiseHasLetterHead" [disabled]="generatingBillId === printBillItem?.bookingId"
-            (click)="confirmPrintBill(true, true)">
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+            [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             F With LetterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
-            *ngIf="printBillFranchiseHasLetterHead" [disabled]="generatingBillId === printBillItem?.bookingId"
-            (click)="confirmPrintBill(false, true)">
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+            [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             F Without LetterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
             [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(false, false)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             Without letterHead
@@ -1052,10 +1051,11 @@
     </ng-template>
   </ion-modal>
 
+
   <!-- ===================== DOWANLOAD REPORT MODAL ===================== -->
 
-  <ion-modal [isOpen]="isDownloadReportModalOpen" cssClass="printbill-modal" [keepContentsMounted]="false"
-    [canDismiss]="true" (didDismiss)="closeDownloadReportModal()">
+  <ion-modal [isOpen]="isDownloadReportModalOpen" cssClass="printbill-modal download-report-modal"
+    [keepContentsMounted]="false" [canDismiss]="true" (didDismiss)="closeDownloadReportModal()">
     <ng-template>
       <div class="printbill-modal-page">
         <div class="printbill-modal-header">
@@ -1065,7 +1065,8 @@
           </button>
         </div>
 
-        <div class="printbill-modal-body">
+        <!-- ✅ NEW: download-btn-row class (left + right buttons) -->
+        <div class="printbill-modal-body download-btn-row">
           <ion-button expand="block" fill="solid" class="printbill-btn-slim"
             [disabled]="generatingReportId === downloadReportItem?.bookingId" (click)="confirmDownloadReport(true)">
             <ion-icon slot="start" name="download-outline"
@@ -1075,7 +1076,8 @@
             With letterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" style="margin-top:10px;"
+          <!-- ✅ inline style="margin-top:10px" kadhla -->
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
             [disabled]="generatingReportId === downloadReportItem?.bookingId" (click)="confirmDownloadReport(false)">
             <ion-icon slot="start" name="download-outline"
               *ngIf="generatingReportId !== downloadReportItem?.bookingId"></ion-icon>
@@ -1155,22 +1157,21 @@
       </div>
     </ng-template>
   </ion-modal>
-<ion-modal [isOpen]="isAttachmentPreviewOpen" cssClass="test-preview-popup"
-  (didDismiss)="closeAttachmentPreview()">
-  <ng-template>
-    <div class="modal-page">
-      <div class="modal-header">
-        <h2>{{ attachmentPreviewName || 'Attachment' }}</h2>
-        <ion-button fill="clear" (click)="closeAttachmentPreview()">
-          <ion-icon name="close-outline"></ion-icon>
-        </ion-button>
+  <ion-modal [isOpen]="isAttachmentPreviewOpen" cssClass="test-preview-popup" (didDismiss)="closeAttachmentPreview()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>{{ attachmentPreviewName || 'Attachment' }}</h2>
+          <ion-button fill="clear" (click)="closeAttachmentPreview()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+        <div class="att-preview-body">
+          <img *ngIf="attachmentPreviewIsImage" [src]="attachmentPreviewUrl" alt="Attachment">
+          <iframe *ngIf="!attachmentPreviewIsImage && attachmentPreviewSafeUrl"
+            [src]="attachmentPreviewSafeUrl"></iframe>
+        </div>
       </div>
-      <div class="att-preview-body">
-        <img *ngIf="attachmentPreviewIsImage" [src]="attachmentPreviewUrl" alt="Attachment">
-        <iframe *ngIf="!attachmentPreviewIsImage && attachmentPreviewSafeUrl"
-          [src]="attachmentPreviewSafeUrl"></iframe>
-      </div>
-    </div>
-  </ng-template>
-</ion-modal>
+    </ng-template>
+  </ion-modal>
 </ion-content>
