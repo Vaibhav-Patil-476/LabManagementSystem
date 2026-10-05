@@ -6,7 +6,7 @@ import { firstValueFrom } from 'rxjs';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
-  IonSelect, IonSelectOption, IonDatetime, IonSpinner, AlertController
+  IonSelect, IonSelectOption, IonDatetime, IonSpinner, AlertController,
 } from '@ionic/angular/standalone';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
@@ -16,7 +16,7 @@ import {
   flaskOutline, personOutline, printOutline, closeOutline, trashOutline,
   addOutline, checkmarkOutline, ellipsisVerticalOutline, cashOutline,
   documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
-  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline, downloadOutline, alertCircleOutline, imageOutline, documentOutline
+  refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline, copyOutline, downloadOutline, alertCircleOutline, imageOutline, documentOutline, lockClosedOutline
 } from 'ionicons/icons';
 import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
@@ -143,6 +143,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   isPatientLoading = false;
   isSavingPatient = false;
   editPatientData: any = null;
+  isPatientReadOnly = false;
   doctorSearch = '';
   customLabSearch = '';
   filteredCustomLabs: any[] = [];
@@ -269,6 +270,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   setStatusTab(key: string): void {
     this.selectedReportStatus = key;
   }
+  goToNewBooking(): void {
+    this.closeActionMenu();
+    this.router.navigate(['/add-patient']);   // <- tujhya New Booking page cha route
+  }
 
   private currentUserId = 0;
 
@@ -346,10 +351,14 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   canEditPatientForItem(item: BookingListItem): boolean {
-    if (!this.canEditPatient) return false;
-    if (this.isFranchiseOnlyRole && this.isSampleReceivedForBooking(item)) return false;
-    return true;
+    return this.canEditPatient;
   }
+
+  /** Franchise + sample received = details locked, fakt attachment allowed */
+  isPatientLocked(item?: BookingListItem | null): boolean {
+    return this.isFranchiseOnlyRole && !!item && this.isSampleReceivedForBooking(item);
+  }
+
   get canViewAmount(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
   get canEditBilling(): boolean { return this.isAdminRole || this.isStaffRole; }
   get canViewPayment(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
@@ -444,7 +453,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       documentTextOutline, timeOutline, qrCodeOutline, receiptOutline, attachOutline,
       refreshOutline, searchOutline, closeCircleOutline, logoWhatsapp, eyeOutline,
       'copy-outline': copyOutline, downloadOutline, alertCircleOutline,
-      imageOutline, documentOutline
+      imageOutline, documentOutline, lockClosedOutline
     });
   }
 
@@ -1648,6 +1657,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.closeActionMenu();
     this.editPatientData = null;
     this.isPatientLoading = true;
+    this.isPatientReadOnly = this.isPatientLocked(item);
     this.isPatientModalOpen = true;
 
     this.fetchSingleBooking(item.bookingId, (fresh) => {
@@ -1664,6 +1674,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       data.attachments = this.extractExistingAttachments(fresh);
       data.attachmentsChanged = false;
       this.editPatientData = data;
+      this.isPatientReadOnly = this.isPatientLocked(fresh);
 
       this.doctorSearch = data.doctor;
       this.customLabSearch = data.customFranchiseLab || '';
@@ -1678,6 +1689,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.isPatientModalOpen = false;
     this.isPatientLoading = false;
     this.editPatientData = null;
+    this.isPatientReadOnly = false;
     this.doctorSearch = '';
     this.isSavingPatient = false;
     this.customLabSearch = '';
@@ -1700,6 +1712,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   updatePatient(): void {
+    if (this.isPatientReadOnly && !this.editPatientData?.attachmentsChanged) {
+      this.showToast('Add an attachment to update.', 'warning');
+      return;
+    }
     if (!this.canEditPatient || !this.editPatientData || this.isSavingPatient) return;
 
     this.isSavingPatient = true;

@@ -1,9 +1,13 @@
-import { Component, NgZone } from '@angular/core';
+import { Component, NgZone, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular/standalone';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+
+
+import { firstValueFrom } from 'rxjs';
+import { PdfDownloadService } from '../../core/services/pdf-download';
 import {
   IonHeader,
   IonToolbar,
@@ -18,6 +22,7 @@ import {
   IonSelectOption,
   IonCheckbox,
   IonModal,
+  IonFooter
 } from '@ionic/angular/standalone';
 import {
   HostListener
@@ -39,7 +44,13 @@ import {
   documentOutline,
   checkmarkOutline,
   chevronDownOutline,
-  eyeOutline
+  eyeOutline,
+  arrowForwardOutline,
+  arrowBackOutline,
+  checkmarkCircle,
+  listOutline,
+  addCircleOutline,
+  receiptOutline
 } from 'ionicons/icons';
 
 import { RoleService } from '../../core/services/role';
@@ -70,6 +81,7 @@ import { BookingRefreshService } from '../../core/services/booking-refresh';
     IonSelectOption,
     IonCheckbox,
     IonModal,
+    IonFooter,
   ]
 })
 export class AddPatientComponent {
@@ -79,6 +91,23 @@ export class AddPatientComponent {
   // ============================================================
 
   role: string = '';
+
+  // ✅ NEW: 2-step booking flow
+  //   step 1 = Patient Info
+  //   step 2 = Tests + Billing + Barcode
+  step: 1 | 2 = 1;
+  isSavingBooking = false;
+  private pdfDownload = inject(PdfDownloadService);
+
+  // booking save झाल्यावर true -> bottom bar (New Booking / Status / Print)
+  bookingSaved = false;
+
+  // Print Bill modal
+  isPrintBillModalOpen = false;
+  selectedBillPriceType = 'myprice';
+  customBillAmount: any = null;
+  printBillFranchiseHasLetterHead = false;
+  generatingBill = false;
 
   lastPatient = '—';
   customDoctorName: string = '';
@@ -120,13 +149,6 @@ export class AddPatientComponent {
 
   // ============================================================
   // FIELD-LEVEL VALIDATION ERRORS
-  //
-  // Each key here maps to one input's [class.field-error] binding
-  // in the HTML. validatePatientForm() sets these to `true` for
-  // whichever field fails first (and resets all of them at the
-  // start of every validation run). clearFieldError() is wired to
-  // each input's (ionInput) so the red border disappears the
-  // moment the user starts typing again.
   // ============================================================
 
   fieldErrors: any = {
@@ -188,8 +210,6 @@ export class AddPatientComponent {
     percentValue: '',
     percentType: 'percent'
   };
-
-
 
   // ============================================================
   // LAB / FRANCHISE
@@ -254,11 +274,8 @@ export class AddPatientComponent {
 
   showPackageSuggestions = false;
 
-  // ✅ NEW: A package added to the bill is kept as ONE collapsed row
-  // (name + eye icon) instead of exploding into every individual
-  // test — matches company web. Each entry keeps the underlying
-  // tests so billing/barcode/invoice logic still has everything it
-  // needs, they're just not rendered as separate rows.
+  // A package added to the bill is kept as ONE collapsed row
+  // (name + eye icon) instead of exploding into every individual test.
   selectedPackages: any[] = [];
 
   showPackageTestsModal = false;
@@ -279,8 +296,6 @@ export class AddPatientComponent {
 
   showInvoice = false;
 
-  // ✅ NEW: toggles the branded header on the invoice (matches the
-  // "Show Header" switch on the company web app invoice screen).
   showInvoiceHeader = true;
 
   savedPatient: any = null;
@@ -351,10 +366,10 @@ export class AddPatientComponent {
   }
 
   get hasHistopathologyTest(): boolean {
-  return this.selectedTests.some((t: any) =>
-    String(t?.name || '').toLowerCase().includes('histopathology')
-  );
-}
+    return this.selectedTests.some((t: any) =>
+      String(t?.name || '').toLowerCase().includes('histopathology')
+    );
+  }
 
   get isFranchiseRole(): boolean {
     return (
@@ -399,8 +414,7 @@ export class AddPatientComponent {
     return this.getSubTotal();
   }
 
-get displayTestRows(): any[] {
-
+  get displayTestRows(): any[] {
 
     const individualRows = this.selectedTests
       .filter((t: any) => !t.packageName)
@@ -423,6 +437,75 @@ get displayTestRows(): any[] {
   trackByRow(index: number, row: any): any {
     return row?.isPackage ? ('pkg-' + row.name) : ('test-' + row.name);
   }
+
+  // ============================================================
+  // ✅ 2-STEP FLOW
+  // ============================================================
+
+  // Step 1 che 3 required fields bharlyashivay "Next" button disabled rahto.
+  get isStep1Valid(): boolean {
+    const name = String(this.patient?.name || '').trim();
+    const age = Number(this.patient?.age);
+    const doctor = String(this.doctorSearch || '').trim();
+
+    // फक्त * (required) fields: Name, Age, Ref Doctor
+    return name.length > 0 && !isNaN(age) && age > 0 && doctor.length > 0;
+  }
+
+  goNext(): void {
+
+    const err = this.validatePatientForm();
+
+    // tests chi error step 1 la ignore kara — ti step 2 chich ahe.
+    // Baki konatihi field-error asel tar ithech thambaycha.
+    if (err && !this.fieldErrors.tests) {
+      this.toastService.error('Validation Error', err);
+      return;
+    }
+
+    this.fieldErrors.tests = false;
+
+    this.step = 2;
+
+    this.scrollTop();
+  }
+
+
+
+  private scrollTop(): void {
+    setTimeout(() => {
+      (document.querySelector('ion-content.booking-content') as any)
+        ?.scrollToTop?.(200);
+    }, 50);
+  }
+
+  // ---------- Success popup actions ----------
+
+  goBackStep(): void {
+    if (this.bookingSaved) return;   // save झाल्यावर Step 1 ला जाऊ नये
+    this.step = 1;
+    this.scrollTop();
+  }
+
+  newBookingFromSaved(): void {
+    this.bookingSaved = false;
+    this.resetFormKeepingDoctorAndFranchise();   // doctor + collection center तसेच राहतात
+    this.step = 1;
+    this.loadLastPatient();
+    this.scrollTop();
+  }
+
+  goToBookingStatus(): void {
+    this.bookingSaved = false;
+    this.resetFormKeepingDoctorAndFranchise();
+    this.step = 1;
+    this.router.navigate(['/booking-status']);   // तुझा route check कर
+  }
+
+  viewInvoice(): void {      // फक्त admin
+    this.showInvoice = true;
+  }
+
   // ============================================================
   // CONSTRUCTOR
   // ============================================================
@@ -455,7 +538,13 @@ get displayTestRows(): any[] {
       'document-outline': documentOutline,
       'checkmark-outline': checkmarkOutline,
       'chevron-down-outline': chevronDownOutline,
-      'eye-outline': eyeOutline
+      'eye-outline': eyeOutline,
+      'arrow-forward-outline': arrowForwardOutline,
+      'arrow-back-outline': arrowBackOutline,
+      'checkmark-circle': checkmarkCircle,
+      'list-outline': listOutline,
+      'add-circle-outline': addCircleOutline,
+      'receipt-outline': receiptOutline
     });
   }
 
@@ -483,11 +572,6 @@ get displayTestRows(): any[] {
 
   // ============================================================
   // ✅ FIELD ERROR HELPERS
-  //
-  // clearFieldError(field) is bound to (ionInput) on every required
-  // input in the HTML. The moment the user types, the red border
-  // for that specific field disappears — no need to re-submit the
-  // form to see it clear.
   // ============================================================
 
   clearFieldError(field: string): void {
@@ -565,7 +649,7 @@ get displayTestRows(): any[] {
         this.loadPackages();
 
         this.loadLastPatient();
-        
+
       },
 
       error: (err) => {
@@ -757,15 +841,10 @@ get displayTestRows(): any[] {
   // ============================================================
   // SAVE DOCTOR
   //
-  // IMPORTANT:
   // 1. Doctor is saved in database.
   // 2. Doctor list is updated immediately.
   // 3. No page refresh required.
   // 4. Newly created doctor is selected automatically.
-  // ============================================================
-
-  // ============================================================
-  // SAVE DOCTOR
   // ============================================================
   saveDoctor(): void {
     const doctorName = String(
@@ -871,13 +950,9 @@ get displayTestRows(): any[] {
         labId
     };
 
-  
-
     this.labApi.createDoctor(payload).subscribe({
 
       next: (res: any) => {
-
-
 
         const createdDoctorId =
           Number(
@@ -892,8 +967,6 @@ get displayTestRows(): any[] {
             res?.doctor?.id ??
             0
           );
-
-
 
         const immediateDoctor =
           this.normalizeDoctor({
@@ -1141,13 +1214,6 @@ get displayTestRows(): any[] {
   // ============================================================
   // BACKGROUND DOCTOR REFRESH
   //
-  // Does not block UI.
-  // Newly created doctor remains selected.
-  // ============================================================
-
-  // ============================================================
-  // BACKGROUND DOCTOR REFRESH
-  //
   // DB मधून latest doctors आणतो.
   // Page refresh लागत नाही.
   // Newly selected doctor preserve केला जातो.
@@ -1248,8 +1314,6 @@ get displayTestRows(): any[] {
         this.doctors =
           loadedDoctors;
 
-
-
         // ======================================================
         // DEFAULT SELF DOCTOR
         // ======================================================
@@ -1342,15 +1406,15 @@ get displayTestRows(): any[] {
   }
 
   onTitleChange(): void {
-  const title = String(this.patient?.title || '').toLowerCase();
+    const title = String(this.patient?.title || '').toLowerCase();
 
-  if (title === 'mr') {
-    this.patient.gender = 'male';
-  } else if (title === 'mrs' || title === 'ms') {
-    this.patient.gender = 'female';
+    if (title === 'mr') {
+      this.patient.gender = 'male';
+    } else if (title === 'mrs' || title === 'ms') {
+      this.patient.gender = 'female';
+    }
+    // 'dr' -> gender untouched
   }
-  // 'dr' -> gender untouched
-}
 
   searchDoctorInput(): void {
     const searchTerm = String(
@@ -1358,6 +1422,9 @@ get displayTestRows(): any[] {
     ).trim().toLowerCase();
 
     this.selectedDoctor = null;
+    this.selectedDoctorId = 0;
+    this.patient.doctor = '';
+    this.patient.doctorId = null;
     this.selectedDoctorId = 0;
 
     if (!searchTerm) {
@@ -1367,8 +1434,6 @@ get displayTestRows(): any[] {
     }
 
     // Always fetch latest doctors from backend.
-    // त्यामुळे Company Web वर नवीन Doctor save केल्यानंतर
-    // Page Refresh करण्याची गरज नाही.
     this.labApi.getDoctors().subscribe({
       next: (res: any) => {
 
@@ -1489,17 +1554,11 @@ get displayTestRows(): any[] {
 
   // ============================================================
   // RESOLVE DOCTOR BEFORE BOOKING
-  //
-  // This is the MAIN FIX for:
-  // "Doctor is required please reload or select doctor."
   // ============================================================
 
   private resolveDoctorForBooking(): any {
 
-    // ==========================================================
     // CASE 1: Selected Doctor object
-    // ==========================================================
-
     if (
       this.selectedDoctor
     ) {
@@ -1530,10 +1589,7 @@ get displayTestRows(): any[] {
       }
     }
 
-    // ==========================================================
     // CASE 2: patient.doctorId already exists
-    // ==========================================================
-
     const patientDoctorId =
       Number(
         this.patient?.doctorId ||
@@ -1558,10 +1614,7 @@ get displayTestRows(): any[] {
       };
     }
 
-    // ==========================================================
     // CASE 3: Find doctor by typed name
-    // ==========================================================
-
     const typedDoctorName =
       String(
         this.doctorSearch ||
@@ -1634,10 +1687,7 @@ get displayTestRows(): any[] {
       }
     }
 
-    // ==========================================================
     // CASE 4: No doctor selected
-    // ==========================================================
-
     return null;
   }
 
@@ -1749,83 +1799,79 @@ get displayTestRows(): any[] {
       return;
     }
 
-this.labApi
-  .getFranchises()
-  .subscribe({
+    this.labApi
+      .getFranchises()
+      .subscribe({
 
-    next: (res: any) => {
+        next: (res: any) => {
 
-      this.labs =
-        res?.content ||
-        res ||
-        [];
+          this.labs =
+            res?.content ||
+            res ||
+            [];
 
-      this.filteredLabs =
-        [
-          ...this.labs
-        ];
+          this.filteredLabs =
+            [
+              ...this.labs
+            ];
 
-      // ✅ FIX: DEFAULT_FRANCHISE (franchiseId 2541) हा फक्त
-      // development DB मध्ये valid आहे — production मध्ये असा
-      // franchise नसल्यास booking चा test-search चुकीच्या/invalid
-      // franchiseId ला जाऊन तिथे tests रिकामे यायचे. आता backend
-      // कडून आलेल्या list मधला 2541 सापडला तरच तो वापरायचा,
-      // नाहीतर त्याच list मधला पहिला खरा franchise निवडायचा —
-      // हार्डकोडेड dummy franchise कधीच inject करायचा नाही.
-      let defaultLab =
-        this.labs.find(
-          (x: any) =>
-            Number(
-              x?.franchiseId ??
-              x?.id ??
-              0
-            ) ===
-            Number(
-              this.DEFAULT_FRANCHISE
-                .franchiseId
-            )
-        );
+          // ✅ FIX: DEFAULT_FRANCHISE (franchiseId 2541) हा फक्त
+          // development DB मध्ये valid आहे. backend कडून आलेल्या list
+          // मधला 2541 सापडला तरच तो वापरायचा, नाहीतर त्याच list मधला
+          // पहिला खरा franchise निवडायचा.
+          let defaultLab =
+            this.labs.find(
+              (x: any) =>
+                Number(
+                  x?.franchiseId ??
+                  x?.id ??
+                  0
+                ) ===
+                Number(
+                  this.DEFAULT_FRANCHISE
+                    .franchiseId
+                )
+            );
 
-      if (!defaultLab) {
-        defaultLab = this.labs[0] || null;
-      }
+          if (!defaultLab) {
+            defaultLab = this.labs[0] || null;
+          }
 
-      this.selectedLab =
-        defaultLab;
+          this.selectedLab =
+            defaultLab;
 
-      this.labSearch =
-        defaultLab?.franchiseName || '';
+          this.labSearch =
+            defaultLab?.franchiseName || '';
 
-      this.staffLabSearch =
-        defaultLab?.franchiseName || '';
+          this.staffLabSearch =
+            defaultLab?.franchiseName || '';
 
-      this.patient.lab =
-        defaultLab?.franchiseName || '';
-    },
+          this.patient.lab =
+            defaultLab?.franchiseName || '';
+        },
 
-    error: () => {
+        error: () => {
 
-      // ✅ FIX: API fail झाली तरी DEFAULT_FRANCHISE (dev-only id)
-      // silently select करू नये — production मध्ये तो चुकीचा
-      // franchise ठरतो आणि पुढे tests/booking चुकीच्या ठिकाणी जातात.
-      this.labs = [];
+          // ✅ FIX: API fail झाली तरी DEFAULT_FRANCHISE silently
+          // select करू नये.
+          this.labs = [];
 
-      this.filteredLabs = [];
+          this.filteredLabs = [];
 
-      this.selectedLab = null;
+          this.selectedLab = null;
 
-      this.labSearch = '';
+          this.labSearch = '';
 
-      this.staffLabSearch = '';
+          this.staffLabSearch = '';
 
-      this.patient.lab = '';
+          this.patient.lab = '';
 
-      this.toastService.error(
-        'Error',
-        'Failed to load collection centers. Please refresh.'
-      );
-    }
-  });
+          this.toastService.error(
+            'Error',
+            'Failed to load collection centers. Please refresh.'
+          );
+        }
+      });
   }
 
   selectLab(lab: any): void {
@@ -1883,10 +1929,7 @@ this.labApi
     this.patient.lab = this.labSearch;
 
     // ✅ FIX: Collection Center साठी actual FRANCHISES varun search
-    // व्हायला हवं (getFranchises) — getFranchiseLabs() नाही, तो
-    // वेगळाच "staff sub-lab" list आहे (franchiseLabId वापरतो, real
-    // franchiseId नाही). त्यामुळेच booking चुकीच्या collection center
-    // ला जात होता.
+    // (getFranchises) — getFranchiseLabs() नाही.
     this.labApi.getFranchises().subscribe({
       next: (res: any) => {
 
@@ -2084,8 +2127,6 @@ this.labApi
           newFranchiseLab.franchiseName + ' added successfully.'
         );
 
-        // Background madhe latest labs sync kara (company web var
-        // add kelele labs pan yenar text kelyavar).
         this.refreshFranchiseLabsInBackground();
       },
       error: (err: any) => {
@@ -2157,7 +2198,6 @@ this.labApi
     ).trim();
 
     // Textbox clear करू नका.
-    // Selected lab चा name textbox मध्ये राहील.
     this.labSearch = labName;
 
     this.patient.lab = labName;
@@ -2165,8 +2205,6 @@ this.labApi
     this.selectedLab = lab;
 
     this.showLabDropdown = false;
-
-
 
     this.loadTests();
 
@@ -2331,15 +2369,10 @@ this.labApi
   // TESTS
   // ============================================================
 
- loadTests() {
+  loadTests() {
 
-    // ✅ FIX: Test List page प्रमाणेच — franchiseId फक्त franchise/staff
-    // roles साठी पाठवायचा. Admin (ROLE_LAB_ADMIN) साठी franchiseId
-    // undefined ठेवायचा, जेणेकरून backend पूर्ण lab-wide master test
-    // list देईल. आधी selectedLab (auto-selected franchise) चा
-    // franchiseId नेहमीच पाठवला जायचा — त्यामुळे Admin लाही त्या एका
-    // franchise पुरतेच (मर्यादित) tests दिसायचे, Test List / Company
-    // web सारखे पूर्ण lab-wide tests दिसत नव्हते.
+    // ✅ FIX: franchiseId फक्त franchise/staff roles साठी पाठवायचा.
+    // Admin साठी undefined — पूर्ण lab-wide master test list.
     const franchiseId = this.isAdminRole
       ? undefined
       : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
@@ -2367,7 +2400,7 @@ this.labApi
     });
   }
 
-private testSearchTimer: any = null;
+  private testSearchTimer: any = null;
 
   searchTest(): void {
     const q = String(this.testSearch || '').trim();
@@ -2386,9 +2419,7 @@ private testSearchTimer: any = null;
 
       const labId = this.labApi.getCurrentLabId();
 
-      // ✅ FIX: Admin साठी franchiseId undefined पाठवायचा (Test List
-      // page सारखं) — जेणेकरून backend पूर्ण lab-wide test list
-      // search करेल, फक्त एका franchise पुरता मर्यादित subset नाही.
+      // ✅ FIX: Admin साठी franchiseId undefined पाठवायचा
       const franchiseId = this.isAdminRole
         ? undefined
         : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
@@ -2434,18 +2465,6 @@ private testSearchTimer: any = null;
 
   // ============================================================
   // BARCODE GENERATION
-  //
-  // Company web app auto-generates a random Barcode Id per sample
-  // (image 2 reference). We mirror that here: every time a test /
-  // package is added, a 10-digit random barcode is generated once
-  // and used to seed BOTH:
-  //   - barcode         -> the auto/random one (readonly display)
-  //   - confirmBarcode  -> the editable "update barcode" value
-  //
-  // NOTE: confirmBarcode is already what savePatient()/proceedBookingSave()
-  // sends to the backend (see `barcode: String(sample?.confirmBarcode || barcode)`
-  // in savePatient()), so editing it here already flows into the booking
-  // payload with zero extra wiring.
   // ============================================================
 
   private generateBarcode(): string {
@@ -2458,21 +2477,12 @@ private testSearchTimer: any = null;
   // ============================================================
   // ✅ SAMPLE-TYPE GROUPED BARCODES
   //
-  // Company web gives ONE barcode per SAMPLE TYPE (e.g. one for
-  // all EDTA tests, one for all SERUM tests) — not one barcode
-  // per individual test. Every test that shares a sample type
-  // joins the same group and the same barcode; only a brand-new
-  // sample type gets a freshly generated barcode.
-  //
-  // ✅ FIX: addTest() / addPackage() / removeRow() / removeTest()
-  // were pushing/filtering selectedSampleTests directly (one entry
-  // per TEST) instead of calling these two helpers — that's why 11
-  // tests produced 11 separate barcodes instead of grouping by
-  // sample type (2 barcodes: EDTA + SERUM), unlike company web.
-  // Every add/remove now routes through these two functions only.
+  // ONE barcode per SAMPLE TYPE (e.g. one for all EDTA tests,
+  // one for all SERUM tests). Every add/remove routes through
+  // these two functions only.
   // ============================================================
 
-private addTestToSampleGroup(test: any): void {
+  private addTestToSampleGroup(test: any): void {
 
     const sampleId = Number(test?.sampleId || 0);
     const sampleType = String(test?.sampleType || 'OTHER');
@@ -2483,8 +2493,7 @@ private addTestToSampleGroup(test: any): void {
 
     if (!group) {
 
-      // ✅ FIX: barcode auto-generate करायचा नाही — user manually
-      // टाकेल तेव्हाच भरायचा. textbox रिकामाच दिसेल.
+      // barcode auto-generate करायचा नाही — user manually टाकेल.
       group = {
         sampleId: test?.sampleId,
         sampleType,
@@ -2497,7 +2506,7 @@ private addTestToSampleGroup(test: any): void {
 
       this.selectedSampleTests.push(group);
     }
-    
+
 
     const testId = Number(test?.id ?? test?.testId ?? 0);
 
@@ -2535,157 +2544,143 @@ private addTestToSampleGroup(test: any): void {
 
   // ============================================================
   // UPDATE BARCODE (invoice screen)
-  //
-  // User edits the "Update Barcode" box, taps Save -> the edited
-  // value becomes the sample's actual barcode (shown in the
-  // "Barcode Id" column too) AND stays as confirmBarcode, which is
-  // what savePatient()/proceedBookingSave() already sends to the
-  // backend.
   // ============================================================
 
-updateSampleBarcode(sample: any): void {
+  updateSampleBarcode(sample: any): void {
 
-  const newBarcode = String(sample?.confirmBarcode || '').trim();
+    const newBarcode = String(sample?.confirmBarcode || '').trim();
 
-  if (!newBarcode) {
-    this.toastService.error('Invalid Barcode', 'Please enter a barcode before saving.');
-    return;
-  }
+    if (!newBarcode) {
+      this.toastService.error('Invalid Barcode', 'Please enter a barcode before saving.');
+      return;
+    }
 
-  const bookingId = Number(this.savedPatient?.id || 0);
+    const bookingId = Number(this.savedPatient?.id || 0);
 
-  if (!bookingId) {
-    this.toastService.error('Update Error', 'Booking not found. Cannot update barcode.');
-    return;
-  }
+    if (!bookingId) {
+      this.toastService.error('Update Error', 'Booking not found. Cannot update barcode.');
+      return;
+    }
 
-  const oldBarcode = String(sample?.barcode || '').trim();
+    const oldBarcode = String(sample?.barcode || '').trim();
 
-  if (newBarcode === oldBarcode) {
-    this.toastService.warning('No Change', 'Barcode is unchanged.');
-    return;
-  }
+    if (newBarcode === oldBarcode) {
+      this.toastService.warning('No Change', 'Barcode is unchanged.');
+      return;
+    }
 
-  // ✅ याच booking मधल्या दुसऱ्या sample ला हाच barcode आधीच दिलेला नाहीये ना
-  const isDuplicateLocally = (this.savedPatient?.sampleTests || []).some(
-    (s: any) => s !== sample && String(s?.barcode || '').trim() === newBarcode
-  );
-
-  if (isDuplicateLocally) {
-    this.toastService.error(
-      'Duplicate Barcode',
-      'This barcode is already used for another sample in this booking.'
+    // ✅ याच booking मधल्या दुसऱ्या sample ला हाच barcode आधीच दिलेला नाहीये ना
+    const isDuplicateLocally = (this.savedPatient?.sampleTests || []).some(
+      (s: any) => s !== sample && String(s?.barcode || '').trim() === newBarcode
     );
-    return;
-  }
 
-  const payload = [{
-    oldBarcode: oldBarcode,
-    updatedBarcode: newBarcode,
-    receiveDate: '',
-    sampleTypeId: sample?.sampleId,
-    bookingId
-  }];
+    if (isDuplicateLocally) {
+      this.toastService.error(
+        'Duplicate Barcode',
+        'This barcode is already used for another sample in this booking.'
+      );
+      return;
+    }
 
-  sample.saving = true;
+    const payload = [{
+      oldBarcode: oldBarcode,
+      updatedBarcode: newBarcode,
+      receiveDate: '',
+      sampleTypeId: sample?.sampleId,
+      bookingId
+    }];
 
-  this.labApi.updateBarcode(bookingId, payload).subscribe({
+    sample.saving = true;
 
-    next: () => {
+    this.labApi.updateBarcode(bookingId, payload).subscribe({
 
-      // ✅ FIX: backend कधी कधी duplicate barcode वर पण HTTP 200
-      // देतो पण प्रत्यक्षात row update करत नाही (silent no-op).
-      // त्यामुळे HTTP success वर आंधळेपणे विश्वास न ठेवता, booking
-      // परत fetch करून खरंच नवीन barcode save झालाय का verify करतो.
-      this.labApi.getSingleBooking(bookingId).subscribe({
+      next: () => {
 
-        next: (freshRes: any) => {
+        // ✅ FIX: backend कधी कधी duplicate barcode वर पण HTTP 200
+        // देतो पण update करत नाही. म्हणून booking परत fetch करून verify.
+        this.labApi.getSingleBooking(bookingId).subscribe({
 
-          sample.saving = false;
+          next: (freshRes: any) => {
 
-          const freshSamples =
-            freshRes?.sampleAccessions ||
-            freshRes?.samples ||
-            [];
+            sample.saving = false;
 
-          const matchedFreshSample = freshSamples.find(
-            (s: any) =>
-              Number(s?.sampleTypeId ?? s?.sampleTypeData?.sample_type_id) === Number(sample?.sampleId)
-          );
+            const freshSamples =
+              freshRes?.sampleAccessions ||
+              freshRes?.samples ||
+              [];
 
-          const savedBarcode = String(
-            matchedFreshSample?.barCode ||
-            matchedFreshSample?.barcode ||
-            ''
-          ).trim();
-
-          if (savedBarcode && savedBarcode === newBarcode) {
-
-            // ✅ खरंच backend मध्ये save झालं
-            sample.barcode = newBarcode;
-            sample.confirmBarcode = newBarcode;
-
-            this.toastService.success(
-              'Barcode Updated',
-              'Barcode updated to ' + newBarcode + '.'
+            const matchedFreshSample = freshSamples.find(
+              (s: any) =>
+                Number(s?.sampleTypeId ?? s?.sampleTypeData?.sample_type_id) === Number(sample?.sampleId)
             );
 
-          } else {
+            const savedBarcode = String(
+              matchedFreshSample?.barCode ||
+              matchedFreshSample?.barcode ||
+              ''
+            ).trim();
 
-            // ❌ backend नी silently reject केलं (duplicate barcode
-            // दुसऱ्या कुठल्या तरी booking मध्ये आधीच वापरलेला आहे) —
-            // UI revert करा, चुकीचा success दाखवू नका.
-            sample.confirmBarcode = sample.barcode;
+            if (savedBarcode && savedBarcode === newBarcode) {
 
-            this.toastService.error(
-              'Barcode Already Used',
-              'This barcode has already been used elsewhere. Please enter a different barcode.'
+              sample.barcode = newBarcode;
+              sample.confirmBarcode = newBarcode;
+
+              this.toastService.success(
+                'Barcode Updated',
+                'Barcode updated to ' + newBarcode + '.'
+              );
+
+            } else {
+
+              sample.confirmBarcode = sample.barcode;
+
+              this.toastService.error(
+                'Barcode Already Used',
+                'This barcode has already been used elsewhere. Please enter a different barcode.'
+              );
+            }
+          },
+
+          error: () => {
+            sample.saving = false;
+
+            this.toastService.warning(
+              'Please Verify',
+              'Barcode update sent, but could not confirm. Please refresh and check.'
             );
           }
-        },
+        });
+      },
 
-        error: () => {
-          sample.saving = false;
+      error: (err: any) => {
 
-          // Verify call fail झाली तरी update झालं असण्याची शक्यता आहे,
-          // पण खात्री नाही म्हणून optimistic success न दाखवता warn करा.
-          this.toastService.warning(
-            'Please Verify',
-            'Barcode update sent, but could not confirm. Please refresh and check.'
+        sample.saving = false;
+
+        console.error('UPDATE BARCODE ERROR:', err);
+
+        const message = String(
+          err?.error?.message || err?.error?.error || ''
+        ).toLowerCase();
+
+        const isDuplicateOnServer =
+          message.includes('barcode') &&
+          (message.includes('already') || message.includes('exist') || message.includes('duplicate') || message.includes('used'));
+
+        if (isDuplicateOnServer) {
+          this.toastService.error(
+            'Barcode Already Used',
+            'This barcode has already been used elsewhere. Please enter a different barcode.'
           );
+          return;
         }
-      });
-    },
 
-    error: (err: any) => {
-
-      sample.saving = false;
-
-      console.error('UPDATE BARCODE ERROR:', err);
-
-      const message = String(
-        err?.error?.message || err?.error?.error || ''
-      ).toLowerCase();
-
-      const isDuplicateOnServer =
-        message.includes('barcode') &&
-        (message.includes('already') || message.includes('exist') || message.includes('duplicate') || message.includes('used'));
-
-      if (isDuplicateOnServer) {
         this.toastService.error(
-          'Barcode Already Used',
-          'This barcode has already been used elsewhere. Please enter a different barcode.'
+          'Update Error',
+          err?.error?.message || err?.error?.error || 'Failed to update barcode on server.'
         );
-        return;
       }
-
-      this.toastService.error(
-        'Update Error',
-        err?.error?.message || err?.error?.error || 'Failed to update barcode on server.'
-      );
-    }
-  });
-}
+    });
+  }
 
   addTest(
     test: any
@@ -2704,8 +2699,7 @@ updateSampleBarcode(sample: any): void {
         test
       );
 
-      // ✅ FIX: group by sample type instead of pushing a fresh
-      // barcode entry per test.
+      // ✅ FIX: group by sample type
       this.addTestToSampleGroup(test);
 
       this.toastService.success(
@@ -2784,53 +2778,8 @@ updateSampleBarcode(sample: any): void {
 
   private packageSearchTimer: any = null;
 
-  //devlopment code 
-  // searchPackage(): void {
-  //   const q = String(this.packageSearch || '').trim();
-
-  //   if (this.packageSearchTimer) {
-  //     clearTimeout(this.packageSearchTimer);
-  //   }
-
-  //   if (!q) {
-  //     this.filteredPackages = [];
-  //     this.showPackageSuggestions = false;
-  //     return;
-  //   }
-
-  //   this.packageSearchTimer = setTimeout(() => {
-
-  //     const labId = this.labApi.getCurrentLabId();
-
-  //     const franchiseId =
-  //       this.selectedLab?.franchiseId ??
-  //       this.selectedLab?.id ??
-  //       undefined;
-
-  //     this.labApi.searchProfiles(labId, franchiseId, q).subscribe({
-  //       next: (res: any) => {
-  //         this.filteredPackages = Array.isArray(res?.content) ? res.content : [];
-  //         this.showPackageSuggestions = this.filteredPackages.length > 0;
-  //       },
-  //       error: () => {
-  //         this.filteredPackages = [];
-  //         this.showPackageSuggestions = false;
-  //       }
-  //     });
-
-  //   }, 250);
-  // }
-
   // ============================================================
-  // ✅ PACKAGE PREVIEW (eye icon click -> shows bundled tests)
-  // ============================================================
-
-  //production code 
-
-//production code 
-
-  // ============================================================
-  // ✅ PACKAGE PREVIEW (eye icon click -> shows bundled tests)
+  // ✅ PACKAGE SEARCH (production code)
   // ============================================================
 
   searchPackage(): void {
@@ -2838,7 +2787,7 @@ updateSampleBarcode(sample: any): void {
 
     if (!q) {
       this.filteredPackages = [];
-          
+
       this.showPackageSuggestions = false;
       return;
     }
@@ -2854,25 +2803,24 @@ updateSampleBarcode(sample: any): void {
 
         return name.includes(q);
       })
-    .map((p: any) => {
-   
-      const realPrice = Number(p?.profileAssignedPrice || 0) > 0
-        ? Number(p.profileAssignedPrice)
-        : Number(p?.total_amount || 0);
+      .map((p: any) => {
 
-      return {
-        ...p,
-        profileAssignedPrice: realPrice,
-        b2b: realPrice,
-        assignedPrice: realPrice
-      };
-    });
+        const realPrice = Number(p?.profileAssignedPrice || 0) > 0
+          ? Number(p.profileAssignedPrice)
+          : Number(p?.total_amount || 0);
 
+        return {
+          ...p,
+          profileAssignedPrice: realPrice,
+          b2b: realPrice,
+          assignedPrice: realPrice
+        };
+      });
 
-    this.showPackageSuggestions = this.filteredPackages.length > 0;
     this.showPackageSuggestions = this.filteredPackages.length > 0;
   }
-addPackage(pkg: any): void {
+
+  addPackage(pkg: any): void {
 
     const packageName = String(
       pkg?.profileName ||
@@ -2909,18 +2857,8 @@ addPackage(pkg: any): void {
 
       if (!test) {
 
-        // ✅ FIX: testId `allTests` (getTests() cha active/franchise
-        // list) madhe sapadla nahi (bahuteka inactive/deleted test —
-        // profile-list.page.ts madhe same testId sathi confirm zalay,
-        // e.g. testId 46951 "LIVER FUNCTION TESTS") mhanun aadhi ithe
-        // silently `return` hot hote ani to test bill madhe kadhach
-        // yet navhta (count ani names donhi kami distayche, exactly
-        // profile-list.page.ts sarkhach issue, pan ithe patient cha
-        // bill madhe). Pan raw package item (`pt`) madheच
-        // testName/price/tat/sampleType aadhichach astat, tyamule to
-        // drop na karता, ekach synthetic test object banवून pudhe
-        // vaparaycha — barobar tyachach pattern jasa
-        // profile-list.page.ts madhe fallback lावlay.
+        // ✅ FIX: testId `allTests` madhe sapadla nahi (inactive/deleted
+        // test) tar raw package item (`pt`) madhun synthetic test banvaycha.
         const fallbackName = String(
           pt?.testName ?? pt?.test_name ?? ''
         ).trim();
@@ -2968,8 +2906,7 @@ addPackage(pkg: any): void {
 
       this.selectedTests.push({ ...test, packageName });
 
-      // ✅ FIX: group by sample type instead of pushing a fresh
-      // barcode entry per test.
+      // ✅ FIX: group by sample type
       this.addTestToSampleGroup(test);
 
       addedCount++;
@@ -2999,12 +2936,13 @@ addPackage(pkg: any): void {
     this.packageSearch = '';
     this.showPackageSuggestions = false;
   }
-openPackagePreview(pkg: any): void {
+
+  openPackagePreview(pkg: any): void {
     this.activePackageForPreview = pkg;
     this.showPackageTestsModal = true;
   }
 
-removeRow(index: number): void {
+  removeRow(index: number): void {
 
     const individualTests = this.selectedTests.filter((t: any) => !t.packageName);
     const individualCount = individualTests.length;
@@ -3015,8 +2953,6 @@ removeRow(index: number): void {
 
       this.selectedTests = this.selectedTests.filter((t: any) => t !== test);
 
-      // ✅ FIX: remove this ONE test from its sample-type group
-      // instead of clearing the whole group by name.
       this.removeTestFromSampleGroup(test);
 
       this.toastService.warning('Test Removed', test.name + ' removed from bill.');
@@ -3032,9 +2968,6 @@ removeRow(index: number): void {
 
       const pkgTestNames: string[] = (pkg?.tests || []).map((t: any) => t.name);
 
-      // Capture the actual test objects (with id) before filtering
-      // them out of selectedTests, so we can update the barcode
-      // groups correctly for each removed test.
       const removedTests = this.selectedTests.filter(
         (t: any) => pkgTestNames.includes(t.name)
       );
@@ -3090,11 +3023,7 @@ removeRow(index: number): void {
 
             handler: () => {
 
-              // ✅ FIX: AlertController buttons run OUTSIDE Angular's
-              // zone. Without ngZone.run(), splicing the array actually
-              // changes the data, but Angular never re-renders the
-              // view — so the row stays visible even though it's
-              // logically deleted. Wrapping forces change detection.
+              // AlertController buttons run OUTSIDE Angular's zone.
               this.ngZone.run(() => {
 
                 this.selectedTests.splice(
@@ -3102,8 +3031,6 @@ removeRow(index: number): void {
                   1
                 );
 
-                // ✅ FIX: remove this ONE test from its sample-type
-                // group instead of clearing the whole group by name.
                 this.removeTestFromSampleGroup(test);
 
                 this.toastService.warning(
@@ -3121,7 +3048,8 @@ removeRow(index: number): void {
 
     await alert.present();
   }
-getSubTotal() {
+
+  getSubTotal() {
 
     const individualTotal = this.selectedTests
       .filter((t: any) => !t.packageName)
@@ -3376,6 +3304,8 @@ getSubTotal() {
 
   resetForm() {
 
+    this.step = 1;
+
     this.patient = {
 
       title: 'mr',
@@ -3417,8 +3347,6 @@ getSubTotal() {
       homeCollection: false
     };
 
-    // ✅ Field-level red-border errors reset karाycha, nahitar
-    // reset form नंतर पण जुने errors dikhat rahtil.
     this.resetFieldErrors();
 
     this.selectedTests =
@@ -3507,6 +3435,8 @@ getSubTotal() {
 
   resetFormKeepingDoctorAndFranchise() {
 
+    this.step = 1;
+
     this.patient.name =
       '';
 
@@ -3543,8 +3473,6 @@ getSubTotal() {
     this.patient.homeCollection =
       false;
 
-    // ✅ Field-level red-border errors reset karाycha next booking
-    // suरू करताना.
     this.resetFieldErrors();
 
     this.selectedTests =
@@ -3586,36 +3514,16 @@ getSubTotal() {
   }
 
   // ============================================================
-  // ✅ VALIDATION (industry-style form validation)
+  // ✅ VALIDATION
   //
-  // RULES:
-  //  - REQUIRED (must be filled, always checked):
-  //      • Patient Full Name
-  //      • Age
-  //      • Ref. Doctor (selected or typed)
-  //      • Mobile Number
-  //      • At least 1 Test selected
+  //  - REQUIRED: Name, Age, Ref Doctor, At least 1 Test
+  //  - OPTIONAL (format checked only if filled): Mobile, Aadhaar,
+  //    UHID, Address, History, Other Charges, Custom Franchise
   //
-  //  - OPTIONAL (fine to leave blank — but if the user DOES fill
-  //    it in, the value must match the correct format/length for
-  //    that field type):
-  //      • Aadhaar Number -> exactly 12 digits, numeric only
-  //      • UHID           -> 2-30 chars (letters/numbers/-//)
-  //      • Address        -> max 200 chars
-  //      • Clinical History -> max 500 chars
-  //      • Other Charges  -> valid non-negative number
-  //      • Custom Franchise (Admin) -> max 60 chars
-  //
-  // Every failing field also flips its `fieldErrors.xxx` flag to
-  // `true` so the matching input gets a red border in the HTML.
-  // All flags are reset at the very start of every validation run.
-  //
-  // Returns the first validation error message found, or null if
-  // the form is valid.
+  // Returns the first validation error message, or null if valid.
   // ============================================================
-private validatePatientForm(): string | null {
+  private validatePatientForm(): string | null {
 
-    // ✅ Sagle field-level errors reset karा suरुवातीला
     this.resetFieldErrors();
 
     // ---------- Patient Name (REQUIRED) ----------
@@ -3644,9 +3552,6 @@ private validatePatientForm(): string | null {
       return 'Age must contain numbers only.';
     }
 
-    // ✅ Company backend प्रमाणे — ageType (years/months/days) नुसार
-    // range-restriction काढला. कुठलाही नंबर + कुठलाही ageType चालेल,
-    // फक्त नंबर 0 पेक्षा जास्त असावा इतकंच बघतो.
     const ageNum = Number(ageRaw);
 
     if (ageNum < 1) {
@@ -3664,19 +3569,20 @@ private validatePatientForm(): string | null {
       return 'Please select or enter Ref. Doctor name.';
     }
 
-     if (!/^[A-Za-z][A-Za-z\s.()]{1,59}$/.test(doctorTyped)) {
+    if (!/^[A-Za-z][A-Za-z\s.()]{1,59}$/.test(doctorTyped)) {
       this.fieldErrors.doctor = true;
       return 'Doctor name should contain only letters, spaces, dots or brackets, and be 2-60 characters long.';
     }
 
-// ---------- Mobile Number (OPTIONAL, format checked only if filled) ----------
-const mobile = String(this.patient?.phone || '').trim();
+    // ---------- Mobile Number (OPTIONAL, format checked only if filled) ----------
+    const mobile = String(this.patient?.phone || '').trim();
 
-if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
-  this.fieldErrors.mobile = true;
-  return 'Mobile number must be exactly 10 digits and start with 6-9.';
-}
-    // ---------- Aadhaar Number (OPTIONAL, format checked if filled) ----------
+    if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
+      this.fieldErrors.mobile = true;
+      return 'Mobile number must be exactly 10 digits and start with 6-9.';
+    }
+
+    // ---------- Aadhaar Number (OPTIONAL) ----------
     const aadhaar = String(this.patient?.aadhaar || '').trim();
 
     if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
@@ -3684,7 +3590,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       return 'Aadhaar number must be exactly 12 digits.';
     }
 
-    // ---------- UHID (OPTIONAL, format checked if filled) ----------
+    // ---------- UHID (OPTIONAL) ----------
     const uhid = String(this.patient?.uhid || '').trim();
 
     if (uhid && !/^[A-Za-z0-9\-\/]{2,30}$/.test(uhid)) {
@@ -3692,7 +3598,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       return 'UHID should be 2-30 characters (letters, numbers, - or / only).';
     }
 
-    // ---------- Address (OPTIONAL, length checked if filled) ----------
+    // ---------- Address (OPTIONAL) ----------
     const address = String(this.patient?.address || '').trim();
 
     if (address && address.length > 200) {
@@ -3700,7 +3606,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       return 'Address should not exceed 200 characters.';
     }
 
-    // ---------- Clinical History (OPTIONAL, length checked if filled) ----------
+    // ---------- Clinical History (OPTIONAL) ----------
     const history = String(this.patient?.history || '').trim();
 
     if (history && history.length > 500) {
@@ -3708,7 +3614,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       return 'Clinical history should not exceed 500 characters.';
     }
 
-    // ---------- Other Charges (OPTIONAL, valid number if filled) ----------
+    // ---------- Other Charges (OPTIONAL) ----------
     const otherChargesRaw = this.patient?.otherCharges;
 
     if (
@@ -3756,17 +3662,29 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
   savePatient(): void {
 
-    // ============================================================
-    // ✅ CENTRALIZED VALIDATION (industry-style)
-    // Required fields are always checked. Optional fields are only
-    // checked for correct format/length WHEN the user has filled
-    // them in — leaving them blank is fine. Whichever field fails
-    // first also gets `fieldErrors.xxx = true`, which the HTML
-    // uses to show a red border on that input.
-    // ============================================================
+      if (this.isSavingBooking) return;
+
+    if (!this.isStep1Valid) {
+      this.step = 1;
+      this.toastService.error(
+        'Validation Error',
+        'Please fill Patient Name, Age and Ref. Doctor.'
+      );
+      return;
+    }
+
+
+
     const validationError = this.validatePatientForm();
 
     if (validationError) {
+
+      // ✅ Step 1 chya fields madhe error asel tar user la step 1 la
+      // parat ne. Tests / document chi error asel tar step 2 var thamba.
+      if (!this.fieldErrors.tests) {
+        this.step = 1;
+      }
+
       this.toastService.error('Validation Error', validationError);
       return;
     }
@@ -3818,6 +3736,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
     if (!hasExistingDoctor && !hasCustomDoctor) {
       this.fieldErrors.doctor = true;
+      this.step = 1;
       this.toastService.error(
         'Validation Error',
         'Please select or enter doctor.'
@@ -3827,6 +3746,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
     if (!finalDoctorId || finalDoctorId <= 0) {
       this.fieldErrors.doctor = true;
+      this.step = 1;
       this.toastService.error(
         'Doctor Error',
         'Doctor is required please reload or select doctor.'
@@ -3842,9 +3762,8 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
     const franchiseId = selectedFranchiseId;
 
-    // ✅ FIX: Admin cha "Custom Franchise" input, ani staff/franchise-staff
-    // cha LAB/HOS typed/selected lab — donhi sathi backend cha same
-    // customFranchiseLab / customFranchiseLabId fields vaparto.
+    // Admin cha "Custom Franchise" input, ani staff/franchise-staff
+    // cha LAB/HOS typed/selected lab — donhi sathi same backend fields.
     const customFranchiseLab = this.isAdminRole
       ? String(this.customFranchiseName || '').trim()
       : String(this.patient?.lab || '').trim();
@@ -3872,9 +3791,8 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         0
       );
 
-      // ✅ FIX: selectedSampleTests entries are now sample-type
-      // GROUPS holding a `testIds` array (not a single `testId`),
-      // so we look up the group that contains this test's id.
+      // selectedSampleTests entries are sample-type GROUPS holding a
+      // `testIds` array, so we look up the group that contains this test.
       const sample = this.selectedSampleTests.find(
         (s: any) => Array.isArray(s?.testIds) && s.testIds.includes(testId)
       );
@@ -3896,11 +3814,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         0
       );
 
-      // ✅ FIX: t.b2b (API cha price2 field, actual selling price)
-      // sagalya pahile check karaycha — nahitar fallback chain
-      // seedha t?.mrp (raw MRP 400) var yeun padte, karan
-      // t?.price / t?.test_price he fields loadTests() madhe
-      // set hotach nahiyet.
+      // t.b2b (API cha price2 field, actual selling price) pahile check.
       const testPrice = Number(
         t?.b2b ??
         t?.price ??
@@ -3952,9 +3866,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         discount: Number(t?.discount || 0),
         tat: String(t?.tat ?? 'N/A'),
         testPrice,
-        // ✅ FIX: Company payload madhe he flags nehmi `false` astat
-        // (null nahi). Backend kadhi kadhi strict boolean check
-        // karto, tyamule null pathvne ऐवजी false pathvto ahot.
+        // Company payload madhe he flags nehmi `false` astat (null nahi).
         dob: false,
         height: false,
         weight: false,
@@ -3962,8 +3874,6 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         history: false,
         fluid: false,
         document: false,
-        // drawnOnTime he company payload madhe pan null astach —
-        // te tasach thevla ahe.
         drawnOnTime: null
       };
     });
@@ -4134,7 +4044,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
 
     payload.request = JSON.stringify(payload);
 
-
+this.isSavingBooking = true;
     this.proceedBookingSave(payload);
   }
 
@@ -4142,8 +4052,6 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
   private proceedBookingSave(
     payload: any
   ): void {
-
-
 
     this.labApi.createBooking(
       payload
@@ -4154,8 +4062,6 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       // ==========================================================
 
       next: (res: any) => {
-
-
 
         this.bookingRefresh
           .triggerRefresh();
@@ -4183,13 +4089,9 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
           '—';
 
         // ============================================================
-        // ✅ FIX: Actual auto-generated Patient Id (e.g. 3505001062)
-        // create-booking cha response madhe nasto — company web app
-        // booking save zalyavar vegळa GET
-        // /api/v1/lab/booking/patient/{labId}/{bookingId} call marun
-        // to id anta. Tyamule apla app pan tach call karun, response
-        // milalyavarach invoice banवayचा — nahitar Patient Id
-        // "—" / empty distel.
+        // ✅ Actual auto-generated Patient Id create-booking cha
+        // response madhe nasto — GET /booking/patient/{labId}/{bookingId}
+        // call marun to anayacha.
         // ============================================================
 
         const labId = this.labApi.getCurrentLabId();
@@ -4197,8 +4099,6 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         this.labApi.getPatientByBooking(labId, bookingId).subscribe({
 
           next: (patientRes: any) => {
-
-
 
             this.buildInvoiceAndShow(
               res,
@@ -4214,9 +4114,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
               err
             );
 
-            // Patient details call fail zali tari booking successful
-            // ahech — invoice patientId shivay dakhva, booking flow
-            // adkun raha nahi.
+            // Patient details call fail zali tari booking successful ahech.
             this.buildInvoiceAndShow(
               res,
               bookingId,
@@ -4233,6 +4131,8 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
       // ==========================================================
 
       error: (err: any) => {
+
+          this.isSavingBooking = false;
 
         console.error(
           'CREATE BOOKING ERROR:',
@@ -4264,10 +4164,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
         const normalizedMessage =
           message.toLowerCase();
 
-        // ========================================================
         // BARCODE ALREADY USED
-        // ========================================================
-
         const isBarcodeAlreadyUsed =
           normalizedMessage.includes('barcode') &&
           (
@@ -4291,10 +4188,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
           return;
         }
 
-        // ========================================================
         // BARCODE DUPLICATE / UNIQUE CONSTRAINT
-        // ========================================================
-
         const isDuplicateBarcode =
           normalizedMessage.includes('duplicate') &&
           normalizedMessage.includes('barcode');
@@ -4311,10 +4205,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
           return;
         }
 
-        // ========================================================
         // DEFAULT BOOKING ERROR
-        // ========================================================
-
         this.toastService.error(
           'Booking Error',
           message ||
@@ -4326,7 +4217,7 @@ if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
     });
   }
 
-private buildInvoiceAndShow(
+  private buildInvoiceAndShow(
     res: any,
     bookingId: any,
     patientRes: any
@@ -4348,20 +4239,13 @@ private buildInvoiceAndShow(
       '—'
     ).trim();
 
-
-
     const patientId = String(
       patientRes?.patientId ??
       res?.patientId ??
       '—'
     ).trim() || '—';
 
-    // ============================================================
-    // ✅ FIX: Bill Id patientRes cha nested "bill.billingId" madhe
-    // asto (bill: { billingId: 104797, bookingId: 2557, ... }),
-    // create-booking cha response madhe nahi.
-    // ============================================================
-
+    // Bill Id patientRes cha nested "bill.billingId" madhe asto.
     const billId =
       patientRes?.bill?.billingId ??
       res?.billId ??
@@ -4369,15 +4253,7 @@ private buildInvoiceAndShow(
       res?.data?.billId ??
       bookingId;
 
-    // ============================================================
-    // ✅ FIX: Invoice cha TEST NAME table pahilyanda package chi
-    // sagli tests explode karून dakhavत होता (12 separate rows).
-    // Company web / bill-table sarkha, package ata EK collapsed
-    // row banते (name + eye icon), tichyat bundled tests
-    // openPackagePreview() cha same modal madhe distat —
-    // individual (non-package) tests aधीच्यासारखेच वेगळे rows रहतात.
-    // ============================================================
-
+    // Package = EK collapsed row, individual tests vegle rows.
     const invoiceTests = [
 
       ...this.selectedTests
@@ -4411,11 +4287,6 @@ private buildInvoiceAndShow(
       })
     ];
 
-    // ✅ FIX: selectedSampleTests entries are now sample-type GROUPS
-    // (barcode + testNames[] for every test that shares that sample
-    // type) instead of one entry per test — the invoice's sample
-    // table already renders `s.testNames`, so we pass that array
-    // straight through instead of a single `testId`.
     const invoiceSampleTests = this.selectedSampleTests.map((s: any) => ({
       sampleType: s?.sampleType || 'OTHER',
       barcode: s?.barcode || '',
@@ -4487,26 +4358,10 @@ private buildInvoiceAndShow(
       dueAmount: this.billing?.dueAmount || 0
     };
 
-    if (this.isAdminRole) {
+    this.bookingSaved = true;
+    this.isSavingBooking = false; 
 
-      this.showInvoice = true;
 
-    } else {
-
-      this.toastService.success(
-        'Done!',
-        'You can create the next booking now.'
-      );
-
-      this.resetFormKeepingDoctorAndFranchise();
-
-      setTimeout(() => {
-        this.ngZone.run(() => {
-          this.loadLastPatient();
-        });
-      }, 300);
-
-    }
   }
 
   // ============================================================
@@ -4526,97 +4381,13 @@ private buildInvoiceAndShow(
 
   // ============================================================
   // PRINT INVOICE
-  // ============================================================
-
-  // ============================================================
-  // PRINT INVOICE
   //
-  // ✅ FIX: window.print() cha jaga khara "bill-pdf" API vaparat
-  // ahot — booking-status.page.ts madhe printBill() function
-  // confirm karto ki PDF URL response.downloadUrl field madhe
-  // yeto, tyach pattern ithe vaparla ahe.
+  // "bill-pdf" API vaparto — PDF URL response.downloadUrl madhe yeto.
   // ============================================================
 
   isPrintingInvoice = false;
-
   printInvoice(): void {
-
-    const bookingId = Number(
-      this.savedPatient?.id ||
-      0
-    );
-
-    if (!bookingId) {
-
-      this.toastService.error(
-        'Print Error',
-        'Booking not found for printing.'
-      );
-
-      return;
-    }
-
-    if (this.isPrintingInvoice) {
-      return;
-    }
-
-    this.isPrintingInvoice = true;
-
-    const payload = this.labApi.buildBillPayload(
-      bookingId
-    );
-
-    this.labApi.printBill(payload).subscribe({
-
-      next: (res: any) => {
-
-        this.isPrintingInvoice = false;
-
-
-
-        if (res?.downloadUrl) {
-
-          window.open(
-            res.downloadUrl,
-            '_blank',
-            'noopener,noreferrer'
-          );
-
-          this.toastService.success(
-            'Bill Ready',
-            'Bill PDF opened successfully.'
-          );
-
-        } else {
-
-          console.warn(
-            'PRINT BILL: No downloadUrl in response:',
-            res
-          );
-
-          this.toastService.error(
-            'Print Error',
-            res?.message ||
-            'Could not generate bill PDF.'
-          );
-        }
-      },
-
-      error: (err: any) => {
-
-        this.isPrintingInvoice = false;
-
-        console.error(
-          'PRINT BILL ERROR:',
-          err
-        );
-
-        this.toastService.error(
-          'Print Error',
-          'Failed to print bill. Please try again.'
-        );
-      }
-    });
+    this.openPrintBillModal();
   }
 
   receiveSample(
@@ -4635,32 +4406,92 @@ private buildInvoiceAndShow(
     }
   }
 
+  openPrintBillModal(): void {
+
+    if (!this.savedPatient?.id) {
+      this.toastService.error('Print Error', 'Booking not found for printing.');
+      return;
+    }
+
+    this.selectedBillPriceType = 'myprice';
+    this.customBillAmount = null;
+    this.printBillFranchiseHasLetterHead = false;
+    this.isPrintBillModalOpen = true;
+
+    // F letterHead buttons दाखवायचे का ते franchise वरून ठरतं
+    const franchiseId = Number(this.savedPatient?.franchiseId || 0);
+
+    if (franchiseId > 0) {
+      this.labApi.getFranchises().subscribe({
+        next: (res: any) => {
+          const list: any[] = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+          const f = list.find((x: any) => Number(x?.franchiseId) === franchiseId);
+
+          this.ngZone.run(() => {
+            this.printBillFranchiseHasLetterHead = !!f?.ifLetterHead;
+          });
+        },
+        error: () => { }
+      });
+    }
+  }
+
+  closePrintBillModal(): void {
+    this.isPrintBillModalOpen = false;
+  }
+
+  async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
+
+    const bookingId = Number(this.savedPatient?.id || 0);
+
+    if (!bookingId || this.generatingBill) {
+      return;
+    }
+
+    this.generatingBill = true;
+    this.isPrintBillModalOpen = false;
+
+    const payload = this.labApi.buildBillPayload(
+      bookingId,
+      this.selectedBillPriceType,
+      this.customBillAmount || null,
+      letterHead,
+      fLetterHead
+    );
+
+    try {
+      const res: any = await firstValueFrom(this.labApi.printBill(payload));
+
+      if (res?.downloadUrl) {
+        await this.pdfDownload.download(
+          res.downloadUrl,
+          res.fileName || `bill-${bookingId}.pdf`
+        );
+        this.toastService.success('Bill Ready', 'Bill downloaded successfully.');
+      } else {
+        this.toastService.error('Print Error', res?.message || 'Unable to generate the bill PDF.');
+      }
+    } catch (err: any) {
+      this.toastService.error(
+        'Print Error',
+        'Failed to generate the bill: ' + (err?.error?.message || err?.message || 'Unknown error')
+      );
+    } finally {
+      this.ngZone.run(() => {
+        this.generatingBill = false;
+      });
+    }
+  }
+
   // ============================================================
   // CLOSE INVOICE
+  //
+  // ✅ Invoice band kelyavar parat Success popup dakhav
+  // (form already reset nahi — user New Booking / Status var jaail).
   // ============================================================
 
   closeInvoice() {
-
-    this.showInvoice =
-      false;
-
-    this.resetForm();
-
-    this.toastService.success(
-      'Done!',
-      'Redirecting to booking...'
-    );
-
-    setTimeout(
-      () =>
-        this.ngZone.run(
-          () =>
-            this.router.navigate([
-              '/add-patient'
-            ])
-        ),
-      800
-    );
+    this.showInvoice = false;
   }
 
   // ============================================================
@@ -4725,137 +4556,127 @@ private buildInvoiceAndShow(
 
   // ============================================================
   // BARCODE SCAN (camera)
-  //
-  // ✅ FIX: previously this just showed a static warning toast and
-  // never actually opened the camera. Now it uses
-  // @capacitor-mlkit/barcode-scanning (already installed in the
-  // project) to check/request camera permission, open the scanner,
-  // and write the scanned value straight into this sample group's
-  // barcode + confirmBarcode fields — both of which already flow
-  // into savePatient()/updateSampleBarcode() with zero extra wiring.
   // ============================================================
 
-async scanBarcode(
-  sample: any
-) {
+  async scanBarcode(
+    sample: any
+  ) {
 
-  try {
+    try {
 
-    const { camera } = await BarcodeScanner.checkPermissions();
+      const { camera } = await BarcodeScanner.checkPermissions();
 
-    if (camera !== 'granted' && camera !== 'limited') {
+      if (camera !== 'granted' && camera !== 'limited') {
 
-      const { camera: newStatus } = await BarcodeScanner.requestPermissions();
+        const { camera: newStatus } = await BarcodeScanner.requestPermissions();
 
-      if (newStatus !== 'granted' && newStatus !== 'limited') {
+        if (newStatus !== 'granted' && newStatus !== 'limited') {
 
-        this.toastService.error(
-          'Permission Denied',
-          'Camera permission is required to scan barcode.'
-        );
+          this.toastService.error(
+            'Permission Denied',
+            'Camera permission is required to scan barcode.'
+          );
 
-        return;
-      }
-    }
-
-    const { barcodes } = await BarcodeScanner.scan();
-
-    if (barcodes && barcodes.length > 0) {
-
-      const scannedValue = String(
-        barcodes[0].rawValue ||
-        barcodes[0].displayValue ||
-        ''
-      ).trim();
-
-      if (!scannedValue) {
-
-        this.toastService.warning(
-          'Empty Barcode',
-          'Scanned barcode was empty. Please try again.'
-        );
-
-        return;
+          return;
+        }
       }
 
-      // ✅ FIX: dusaऱ्या sample-type group madhe haच barcode aधीच
-      // vaparla asel tar save karण्याआधीच block karaycha — user la
-      // parat jaun manually badalava lagू nay.
-      if (this.isBarcodeDuplicate(scannedValue, sample)) {
+      const { barcodes } = await BarcodeScanner.scan();
 
-        this.toastService.error(
-          'Duplicate Barcode',
-          'This barcode is already used for another sample. Please scan a different one.'
+      if (barcodes && barcodes.length > 0) {
+
+        const scannedValue = String(
+          barcodes[0].rawValue ||
+          barcodes[0].displayValue ||
+          ''
+        ).trim();
+
+        if (!scannedValue) {
+
+          this.toastService.warning(
+            'Empty Barcode',
+            'Scanned barcode was empty. Please try again.'
+          );
+
+          return;
+        }
+
+        // ✅ दुसऱ्या sample-type group madhe hach barcode aadhi vaparla
+        // asel tar save karnyaadhich block.
+        if (this.isBarcodeDuplicate(scannedValue, sample)) {
+
+          this.toastService.error(
+            'Duplicate Barcode',
+            'This barcode is already used for another sample. Please scan a different one.'
+          );
+
+          return;
+        }
+
+        this.ngZone.run(() => {
+
+          sample.barcode = scannedValue;
+
+          sample.confirmBarcode = scannedValue;
+
+          sample.barcodeError = false;
+        });
+
+        this.toastService.success(
+          'Barcode Scanned',
+          'Barcode set to ' + scannedValue + '.'
         );
-
-        return;
       }
 
-      this.ngZone.run(() => {
+    } catch (err) {
 
-        sample.barcode = scannedValue;
+      console.error(
+        'SCAN BARCODE ERROR:',
+        err
+      );
 
-        sample.confirmBarcode = scannedValue;
-
-        sample.barcodeError = false;
-      });
-
-      this.toastService.success(
-        'Barcode Scanned',
-        'Barcode set to ' + scannedValue + '.'
+      this.toastService.error(
+        'Scan Failed',
+        'Could not scan barcode. Please try again.'
       );
     }
-
-  } catch (err) {
-
-    console.error(
-      'SCAN BARCODE ERROR:',
-      err
-    );
-
-    this.toastService.error(
-      'Scan Failed',
-      'Could not scan barcode. Please try again.'
-    );
   }
-}
 
   private isBarcodeDuplicate(value: string, currentSample: any): boolean {
 
-  const v = String(value || '').trim();
+    const v = String(value || '').trim();
 
-  if (!v) {
-    return false;
-  }
+    if (!v) {
+      return false;
+    }
 
-  return this.selectedSampleTests.some(
-    (s: any) => s !== currentSample && String(s?.barcode || '').trim() === v
-  );
-}
-
-onBarcodeManualInput(sample: any): void {
-
-  const value = String(sample?.barcode || '').trim();
-
-  sample.barcodeError = false;
-
-  if (!value) {
-    return;
-  }
-
-  if (this.isBarcodeDuplicate(value, sample)) {
-
-    sample.barcodeError = true;
-
-    this.toastService.error(
-      'Duplicate Barcode',
-      'This barcode is already used for another sample. Please enter a different one.'
+    return this.selectedSampleTests.some(
+      (s: any) => s !== currentSample && String(s?.barcode || '').trim() === v
     );
-
-    // Lगेच clear — duplicate value tithech theवत nahi, user la
-    // save karayla जाईपर्यंत wait करावं लागत नाही.
-    sample.barcode = '';
-    sample.confirmBarcode = '';
   }
-}
+
+  onBarcodeManualInput(sample: any): void {
+
+    const value = String(sample?.barcode || '').trim();
+
+    sample.barcodeError = false;
+
+    if (!value) {
+      return;
+    }
+
+    if (this.isBarcodeDuplicate(value, sample)) {
+
+      sample.barcodeError = true;
+
+      this.toastService.error(
+        'Duplicate Barcode',
+        'This barcode is already used for another sample. Please enter a different one.'
+      );
+
+      // Duplicate value tithech theवत nahi — lagech clear.
+      sample.barcode = '';
+      sample.confirmBarcode = '';
+    }
+  }
 }

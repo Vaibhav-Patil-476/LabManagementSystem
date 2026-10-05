@@ -13,10 +13,19 @@
 
     <!-- ===================== TOP SUMMARY BAR ===================== -->
     <div class="summary-bar">
-      <div class="total-badge">
-        <ion-icon name="calendar-clear-outline"></ion-icon>
-        <span>Total Bookings: {{ totalBookingsCount }}</span>
+
+      <div class="summary-top-row">
+        <div class="total-badge">
+          <ion-icon name="calendar-clear-outline"></ion-icon>
+          <span>Total Bookings: {{ totalBookingsCount }}</span>
+        </div>
+
+        <ion-button class="new-booking-btn" size="small" fill="solid" (click)="goToNewBooking()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          New Booking
+        </ion-button>
       </div>
+
       <div class="default-note" *ngIf="isDefaultTodayRange && !isSearchMode">
         <ion-icon name="information-circle-outline"></ion-icon>
         Showing last 7 days data by default
@@ -130,7 +139,6 @@
 
       <div class="booking-card" *ngFor="let item of filteredBookings; trackBy: trackByBookingId">
 
-        <!-- ✅ Card header: no click / no expand anymore -->
         <div class="bcard-header">
           <div class="bcard-header-left">
             <div class="bcard-id-row">
@@ -143,7 +151,6 @@
             </div>
           </div>
 
-          <!-- ✅ Right side: only counts now, no eye button, no chevron -->
           <div class="bcard-header-right">
             <div class="bcard-count-box">
               <span class="count-line" [ngClass]="getTestCountStatusClass(item)">Test Count: {{ getReportProgress(item)
@@ -163,7 +170,6 @@
                   'self' }}</span>
               </div>
 
-              <!-- ✅ Tests eye icon moved here, uses the empty space next to Client/Doctor -->
               <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
                 <span class="bcard-tests-label">Tests :-</span>
                 <ion-icon name="eye-outline" class="test-eye-icon"></ion-icon>
@@ -172,7 +178,7 @@
           </div>
         </div>
 
-        <!-- ✅ Barcode (left, fills the empty space) + Action buttons (right) share one row -->
+        <!-- Barcode (left) + Action buttons (right) -->
         <div class="bcard-actions">
 
           <div class="bcard-barcode-compact bcard-barcode-inline-actions"
@@ -199,8 +205,10 @@
             </ion-button>
 
             <ion-button class="action-icon-btn" size="small" fill="clear" *ngIf="canEditPatientForItem(item)"
-              (click)="editPatient(item); $event.stopPropagation()" title="Edit Patient">
+              (click)="editPatient(item); $event.stopPropagation()"
+              [attr.title]="isPatientLocked(item) ? 'View Patient' : 'Edit Patient'">
               <ion-icon slot="icon-only" name="person-outline"></ion-icon>
+           
             </ion-button>
 
             <ion-button class="action-icon-btn dots" size="small" fill="clear" (click)="toggleActionMenu(item, $event)"
@@ -244,10 +252,12 @@
       <span>Edit Tests</span>
     </div>
     <div class="action-item" *ngIf="canEditPatientForItem(menuItem)" (click)="editPatient(menuItem)">
-      <span class="action-icon-wrap"><ion-icon name="person-outline"></ion-icon></span>
-      <span>Edit Patient</span>
+      <span class="action-icon-wrap">
+        <ion-icon [name]="isPatientLocked(menuItem) ? 'lock-closed-outline' : 'person-outline'"></ion-icon>
+      </span>
+      <span>{{ isPatientLocked(menuItem) ? 'View Patient' : 'Edit Patient' }}</span>
     </div>
-    <!-- ✅ NEW: Share Report via WhatsApp -->
+    <!-- Share Report via WhatsApp -->
     <div class="action-item" [class.item-loading]="sharingWhatsappId === menuItem.bookingId"
       (click)="sharingWhatsappId === menuItem.bookingId ? null : shareViaWhatsApp(menuItem)">
       <span class="action-icon-wrap">
@@ -484,7 +494,7 @@
     </ng-template>
   </ion-modal>
 
-  <!-- ===================== EDIT PATIENT MODAL ===================== -->
+  <!-- ===================== EDIT / VIEW PATIENT MODAL ===================== -->
   <ion-modal class="test-modal sheet-modal" [isOpen]="isPatientModalOpen" (didDismiss)="closePatientModal()"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
     <ng-template>
@@ -494,7 +504,7 @@
           <div class="sheet-top-row">
             <div class="sheet-top-title">
               <div class="sheet-title-eyebrow">Booking #{{ editPatientData?.bookingId }}</div>
-              <div class="sheet-title-main">Edit Patient</div>
+              <div class="sheet-title-main">{{ isPatientReadOnly ? 'View Patient' : 'Edit Patient' }}</div>
             </div>
             <button class="close-modal-btn" (click)="closePatientModal()">
               <ion-icon name="close-outline"></ion-icon>
@@ -512,7 +522,78 @@
 
           <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
 
-            <div class="form-section">
+
+               <!-- LOCKED: TABLE VIEW (web sarkha) -->
+            <div class="ro-card" *ngIf="isPatientReadOnly">
+
+              <div class="ro-head">
+                <div class="ro-avatar"><ion-icon name="person-outline"></ion-icon></div>
+                <div class="ro-name">{{ editPatientData.name }}</div>
+                <div class="ro-badge">
+                  <ion-icon name="lock-closed-outline"></ion-icon>
+                  Sample Received (Read Only)
+                </div>
+              </div>
+
+              <div class="ro-table">
+                <div class="ro-row">
+                  <div class="ro-label">Booking ID</div>
+                  <div class="ro-value mono">{{ editPatientData.bookingId }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Patient ID</div>
+                  <div class="ro-value mono">{{ editPatientData.patientId || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Patient Name</div>
+                  <div class="ro-value strong">{{ editPatientData.title | titlecase }} {{ editPatientData.name }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Age / Gender</div>
+                  <div class="ro-value">{{ editPatientData.age }} {{ editPatientData.ageType }} / {{ editPatientData.gender }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Mobile Number</div>
+                  <div class="ro-value">{{ editPatientData.mobileNumber || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">UHID</div>
+                  <div class="ro-value">{{ editPatientData.uhidNumber || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Ref. Doctor</div>
+                  <div class="ro-value">{{ editPatientData.customDoctorName || editPatientData.doctor || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Collection Center</div>
+                  <div class="ro-value">{{ editPatientData.customFranchiseLab || editPatientData.lab || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Created On</div>
+                  <div class="ro-value">{{ (editPatientData.createdOn | date:'dd-MMM-y h:mm a') || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Drawn On</div>
+                  <div class="ro-value">{{ (editPatientData.drawnOnTime | date:'dd-MMM-y h:mm a') || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Aadhaar Number</div>
+                  <div class="ro-value mono">{{ editPatientData.aadhaarNumber || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Address</div>
+                  <div class="ro-value">{{ editPatientData.address || '-' }}</div>
+                </div>
+                <div class="ro-row">
+                  <div class="ro-label">Clinical History</div>
+                  <div class="ro-value">{{ editPatientData.history || '-' }}</div>
+                </div>
+              </div>
+            </div>
+
+            
+            <!-- ===== EDITABLE SECTIONS (hidden when locked) ===== -->
+            <div class="form-section" *ngIf="!isPatientReadOnly">
               <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
               <div class="patient-form-grid">
                 <div class="field-row">
@@ -557,7 +638,7 @@
               </div>
             </div>
 
-            <div class="form-section">
+            <div class="form-section" *ngIf="!isPatientReadOnly">
               <div class="form-section-title">
                 <ion-icon name="medkit-outline"></ion-icon>
                 Doctor &amp; Lab
@@ -599,7 +680,7 @@
               </div>
             </div>
 
-            <div class="form-section">
+            <div class="form-section" *ngIf="!isPatientReadOnly">
               <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
               </div>
               <div class="patient-form-grid">
@@ -624,13 +705,15 @@
               </div>
             </div>
 
+            <!-- ===== HISTORY & ATTACHMENT (always visible; attachment allowed even when locked) ===== -->
             <div class="form-section">
               <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
                 Attachment</div>
               <div class="patient-form-grid">
                 <div class="summary-field span-3">
                   <label>Clinical History</label>
-                  <textarea [(ngModel)]="editPatientData.history" placeholder="History / Notes" rows="2"></textarea>
+                  <textarea [(ngModel)]="editPatientData.history" [disabled]="isPatientReadOnly"
+                    placeholder="History / Notes" rows="2"></textarea>
                 </div>
 
                 <div class="summary-field span-3">
@@ -660,10 +743,12 @@
         </div>
 
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" [disabled]="isSavingPatient"
+          <ion-button expand="block" fill="solid" class="save-changes-btn"
+            [disabled]="isSavingPatient || (isPatientReadOnly && !editPatientData?.attachmentsChanged)"
             (click)="updatePatient()">
             <span class="btn-spinner" *ngIf="isSavingPatient"></span>
-            <span>{{ isSavingPatient ? 'Saving...' : 'Save Changes' }}</span>
+            <span>{{ isSavingPatient ? 'Saving...' : (isPatientReadOnly ? 'Update Attachments' : 'Save Changes')
+              }}</span>
           </ion-button>
         </div>
       </div>
@@ -986,7 +1071,6 @@
 
 
   <!-- ===================== PRINT BILL MODAL ===================== -->
-  <!-- ✅ CHANGE 1: cssClass madhe print-bill-modal joda -->
   <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="printbill-modal print-bill-modal" [keepContentsMounted]="false"
     [canDismiss]="true" (didDismiss)="closePrintBillModal()">
     <ng-template>
@@ -998,7 +1082,6 @@
           </button>
         </div>
 
-        <!-- ✅ CHANGE 2: print-bill-grid class joda -->
         <div class="printbill-modal-body print-bill-grid">
 
           <div style="display:flex; gap:12px; margin-bottom:16px;">
@@ -1052,8 +1135,7 @@
   </ion-modal>
 
 
-  <!-- ===================== DOWANLOAD REPORT MODAL ===================== -->
-
+  <!-- ===================== DOWNLOAD REPORT MODAL ===================== -->
   <ion-modal [isOpen]="isDownloadReportModalOpen" cssClass="printbill-modal download-report-modal"
     [keepContentsMounted]="false" [canDismiss]="true" (didDismiss)="closeDownloadReportModal()">
     <ng-template>
@@ -1065,7 +1147,6 @@
           </button>
         </div>
 
-        <!-- ✅ NEW: download-btn-row class (left + right buttons) -->
         <div class="printbill-modal-body download-btn-row">
           <ion-button expand="block" fill="solid" class="printbill-btn-slim"
             [disabled]="generatingReportId === downloadReportItem?.bookingId" (click)="confirmDownloadReport(true)">
@@ -1076,7 +1157,6 @@
             With letterHead
           </ion-button>
 
-          <!-- ✅ inline style="margin-top:10px" kadhla -->
           <ion-button expand="block" fill="solid" class="printbill-btn-slim"
             [disabled]="generatingReportId === downloadReportItem?.bookingId" (click)="confirmDownloadReport(false)">
             <ion-icon slot="start" name="download-outline"
@@ -1157,6 +1237,8 @@
       </div>
     </ng-template>
   </ion-modal>
+
+  <!-- ===================== ATTACHMENT PREVIEW MODAL ===================== -->
   <ion-modal [isOpen]="isAttachmentPreviewOpen" cssClass="test-preview-popup" (didDismiss)="closeAttachmentPreview()">
     <ng-template>
       <div class="modal-page">
@@ -1174,4 +1256,4 @@
       </div>
     </ng-template>
   </ion-modal>
-</ion-content>
+</ion-content>  

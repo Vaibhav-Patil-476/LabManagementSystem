@@ -105,8 +105,8 @@
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  gap: var(--sp-3);
-  padding: 0 var(--sp-3) var(--sp-5);
+  gap: 6px;
+  padding: 0 var(--sp-3) 10px;
 }
 
 .filter-field {
@@ -115,12 +115,12 @@
   max-width: 100%;
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
+  gap: 0px;
+  height: 46px;
+  padding: 0 8px 0 2px;
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-sm);
   background: var(--section-bg);
-  padding: 0 var(--sp-4);
-  height: 56px;
   box-sizing: border-box;
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease, transform 0.1s ease;
 
@@ -157,56 +157,35 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   background: var(--primary-light);
   flex-shrink: 0;
 
   ion-icon {
     color: var(--primary);
-    font-size: 18px;
+    font-size: 16px;
     margin: 0;
   }
 }
 
-.search-field input::placeholder {
-  color: #9aabae;
-  font-weight: 500;
-}
+.refresh-btn {
+  --border-radius: var(--r-sm);
+  --color: #fff;
+  margin: 0;
+  height: 46px;
+  width: 46px;
+  flex-shrink: 0;
+  --box-shadow: var(--shadow-glow);
 
-.select-field {
-  overflow: hidden;
-
-  ion-select {
-    flex: 1 1 auto;
-    width: 100%;
-    height: 100%;
-    min-width: 0;
-    --padding-start: 0;
-    --padding-end: 4px;
-    --padding-top: 0;
-    --padding-bottom: 0;
-    --placeholder-color: #9aabae;
-    --placeholder-opacity: 1;
-    font-size: 15px;
-    font-weight: 600;
-    color: var(--text-dark);
-    display: flex;
-    align-items: center;
-    box-sizing: border-box;
+  &::part(native) {
+    background: var(--brand-gradient);
+    color: #fff;
   }
 
-  ion-select::part(text),
-  ion-select::part(placeholder) {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-  }
-
-  ion-select::part(icon) {
-    color: var(--gray-accent);
+  &:active::part(native) {
+    transform: scale(0.94);
   }
 }
 
@@ -4137,4 +4116,240 @@ ion-button.refresh-btn ion-icon { font-size: 18px; }
 ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim ion-icon {
   margin: 0 5px 0 0 !important;
   font-size: 16px;
+}
+
+.summary-bar {
+  .summary-top-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .new-booking-btn {
+    margin: 0 0 0 auto;   // <- right la push karto
+    height: 36px;
+    font-weight: 700;
+    font-size: 13px;
+    --border-radius: 12px;
+    --background: linear-gradient(135deg, #60a5fa, #2563eb);
+    --box-shadow: 0 6px 14px rgba(37, 99, 235, 0.3);
+    --padding-start: 12px;
+    --padding-end: 14px;
+  }
+}
+
+// ---------- LOCKED (read-only) PATIENT VIEW ----------
+.lock-banner {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #fff6e6 0%, #ffeccc 100%);
+  border: 1px solid #f6d9a8;
+  box-shadow: 0 6px 16px rgba(224, 160, 64, 0.18);
+
+  .lock-badge {
+    width: 40px;
+    height: 40px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: linear-gradient(135deg, #f5b85c, #e0a040);
+    box-shadow: 0 6px 14px rgba(224, 160, 64, 0.35);
+
+    ion-icon { font-size: 20px; color: #fff; }
+  }
+
+  .lock-text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+
+    strong { font-size: 14px; font-weight: 800; color: #8a5a12; }
+    span   { font-size: 12px; color: #a7782f; line-height: 1.35; }
+  }
+}
+
+.ro-card {
+  margin-bottom: 14px;
+  padding: 16px;
+  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 22px rgba(var(--app-primary-dark-rgb), 0.08);
+
+  .ro-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 14px;
+    border-bottom: 1px dashed var(--card-border);
+  }
+
+  .ro-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 15px;
+    display: grid;
+    place-items: center;
+    background: var(--app-gradient);
+    box-shadow: 0 8px 18px rgba(var(--app-primary-rgb), 0.3);
+
+    ion-icon { font-size: 22px; color: #fff; }
+  }
+
+  .ro-name {
+    font-size: 16px;
+    font-weight: 800;
+    color: var(--text-primary);
+  }
+
+  .ro-sub {
+    margin-top: 2px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+  }
+
+  .ro-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+
+  .ro-item {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: var(--section-bg);
+    border: 1px solid var(--card-border);
+
+    span {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      text-transform: uppercase;
+      color: var(--text-faint);
+    }
+
+    b {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text-primary);
+      word-break: break-word;
+    }
+
+    &.ro-full { grid-column: 1 / -1; }
+  }
+}
+
+// ---------- LOCKED PATIENT: TABLE VIEW ----------
+.ro-card {
+  margin-bottom: 14px;
+  padding: 14px;
+  border-radius: 20px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: 0 8px 22px rgba(var(--app-primary-dark-rgb), 0.08);
+  overflow: hidden;                 // horizontal scroll yeu naye
+
+  .ro-head {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;                // chhotya screen var badge khali jail
+    gap: 10px;
+    padding-bottom: 12px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  .ro-avatar {
+    width: 38px;
+    height: 38px;
+    flex-shrink: 0;
+    border-radius: 13px;
+    display: grid;
+    place-items: center;
+    background: var(--app-gradient);
+    box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.28);
+
+    ion-icon { font-size: 20px; color: #fff; }
+  }
+
+  .ro-name {
+    flex: 1;
+    min-width: 0;
+    font-family: var(--font-display);
+    font-size: 17px;
+    font-weight: 800;
+    color: var(--text-primary);
+    word-break: break-word;
+  }
+
+  .ro-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 700;
+    color: color-mix(in srgb, var(--app-warning) 65%, #000);
+    background: var(--app-warning-bg);
+    border: 1px solid var(--app-warning);
+
+    ion-icon { font-size: 15px; }
+  }
+
+  // ----- TABLE -----
+  .ro-table {
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    overflow: hidden;
+  }
+
+  .ro-row {
+    display: grid;
+    grid-template-columns: 40% 60%;   // label | value
+    border-bottom: 1px solid var(--card-border);
+
+    &:last-child { border-bottom: none; }
+  }
+
+  .ro-label,
+  .ro-value {
+    padding: 11px 12px;
+    font-size: 13px;
+    line-height: 1.4;
+    min-width: 0;                    // grid madhe overflow thambvto
+    word-break: break-word;          // lamb text wrap hoto, scroll nahi
+  }
+
+  .ro-label {
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--section-bg);
+    border-right: 1px solid var(--card-border);
+  }
+
+  .ro-value {
+    font-weight: 500;
+    color: var(--text-primary);
+
+    &.strong { font-weight: 800; }
+
+    &.mono {
+      font-family: var(--font-mono);
+      font-size: 12.5px;
+      letter-spacing: 0.2px;
+    }
+  }
 }

@@ -15,16 +15,24 @@
   <div class="report-container">
 
     <!-- ===================== TOP BAR ===================== -->
+  
     <div class="top-bar">
 
-      <span class="total-pill">
-        <ion-icon name="calendar-clear-outline"></ion-icon>
-        Total Bookings: {{ totalBookings }}
-      </span>
+      <div class="top-row">
+        <span class="total-pill">
+          <ion-icon name="calendar-clear-outline"></ion-icon>
+          Total Bookings: {{ totalBookings }}
+        </span>
+
+        <ion-button class="new-booking-btn" size="small" fill="solid" (click)="goToNewBooking()">
+          <ion-icon slot="start" name="add-outline"></ion-icon>
+          New Booking
+        </ion-button>
+      </div>
 
       <span class="refresh-hint">
         <ion-icon name="information-circle-outline"></ion-icon>
-       <span class="refresh-hint-text">Showing last 7 days data by default</span>
+        <span class="refresh-hint-text">Showing last 7 days data by default</span>
       </span>
 
     </div>

@@ -6,16 +6,20 @@ import {
   IonContent, IonButton, IonIcon, IonSpinner,
   IonModal
 } from '@ionic/angular/standalone';
+
+import { Router } from '@angular/router';
 import { MatDatepickerModule } from '@angular/material/datepicker';
 import { MatFormFieldModule } from '@angular/material/form-field';
 import { MatInputModule } from '@angular/material/input';
 import { addIcons } from 'ionicons';
 
+
+
 import {
   downloadOutline, documentTextOutline, checkmarkDoneOutline,
   refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
   businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline, qrCodeOutline,
-  closeOutline, eyeOutline
+  closeOutline, eyeOutline ,addOutline
 } from 'ionicons/icons';
 import { firstValueFrom } from 'rxjs';
 import { PdfDownloadService } from '../../core/services/pdf-download';
@@ -226,12 +230,13 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     private toast: ToastService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
+      private router: Router,
   ) {
     addIcons({
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
       refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
       businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline,
-      qrCodeOutline, closeOutline, eyeOutline
+      qrCodeOutline, closeOutline, eyeOutline ,addOutline
     });
   }
 
@@ -640,6 +645,10 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.activeTab = tab;
     this.autoTabSwitched = true;
     this.selectedIds.clear();
+  }
+
+    goToNewBooking(): void {
+    this.router.navigate(['/add-patient']);   // <- tujhya New Booking page cha route
   }
 
   get rowsForActiveTab(): ReportBookingRow[] {
