@@ -106,12 +106,14 @@
 }
 
 /* ---------- filter bar ---------- */
+/* ---------- filter bar ---------- */
 .filter-bar {
+  --field-h: 46px;                 /* ✅ hich ek value badla, sagla barobar badalto */
   display: flex;
   flex-wrap: wrap;
   align-items: stretch;
-  gap: var(--sp-3);
-  padding: 0 var(--sp-3) var(--sp-5);
+  gap: 6px;
+  padding: 0 var(--sp-3) 10px;
 }
 
 .filter-field {
@@ -119,17 +121,14 @@
   min-width: 160px;
   display: flex;
   align-items: center;
-  gap: var(--sp-3);
+  gap: 4px;
   border: 1.5px solid var(--border-color);
   border-radius: var(--r-sm);
   background: var(--section-bg);
-  padding: 0 var(--sp-4);
-  // App-wide global input CSS ne ha box khup uncha stretch kela hota,
-  // mhanun height/min/max ithe tinhi + !important nis force kelay,
-  // jenekarun kuthlahi global rule override karu shakat nahi.
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
+  padding: 0 8px 0 2px;
+  height: var(--field-h) !important;
+  min-height: var(--field-h) !important;
+  max-height: var(--field-h) !important;
   box-sizing: border-box;
   transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 
@@ -140,11 +139,9 @@
     width: 100%;
     min-width: 0;
     height: 100% !important;
+    min-height: 0 !important;
     margin: 0 !important;
-    // Global input reset kadhi kadhi 16px+ vertical padding degto —
-    // to override karnyasathi padding explicit 0 kelay, height ithlya
-    // flex-align (center) ne aleal sambhalto.
-    padding: 0 !important;
+    padding: 0 0 0 6px !important;
     font-size: 15px;
     font-weight: 600;
     line-height: normal;
@@ -163,15 +160,15 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 11px;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
   background: var(--primary-light);
   flex-shrink: 0;
 
   ion-icon {
     color: var(--primary);
-    font-size: 18px;
+    font-size: 16px;
     margin: 0;
   }
 }
@@ -185,18 +182,18 @@
   --border-radius: var(--r-sm);
   --color: #fff;
   margin: 0;
-  height: 56px !important;
-  min-height: 56px !important;
-  max-height: 56px !important;
-  width: 56px;
+  height: var(--field-h) !important;
+  min-height: var(--field-h) !important;
+  max-height: var(--field-h) !important;
+  width: var(--field-h);
   flex-shrink: 0;
   --box-shadow: var(--shadow-glow);
 
   &::part(native) {
     background: var(--brand-gradient);
     color: #fff;
-    height: 56px !important;
-    min-height: 56px !important;
+    height: var(--field-h) !important;
+    min-height: var(--field-h) !important;
   }
 
   &:active::part(native) {
@@ -437,6 +434,11 @@
   .filter-bar {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .filter-field {
+    flex: 0 0 auto;     /* ✅ column madhe 220px height basis band */
+    width: 100%;
   }
 
   .refresh-btn {

@@ -74,34 +74,7 @@
 // =========================
 // Top bar
 // =========================
-.top-bar {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 8px;
-  flex-wrap: wrap;
-  padding: 18px 12px 0;
-  background: #ffffff;
 
-  .top-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-  }
-
-  .new-booking-btn {
-    margin: 0 0 0 auto;
-    height: 36px;
-    font-weight: 700;
-    font-size: 13px;
-    --border-radius: 12px;
-    --background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%);
-    --box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.28);
-    --padding-start: 12px;
-    --padding-end: 14px;
-  }
-}
 
 .total-pill {
   display: inline-flex;
@@ -119,23 +92,49 @@
     font-size: 15px;
   }
 }
+// =========================
+// Top bar — Booking Status chya summary-bar sarkha spacing
+// =========================
+.top-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;                       // row ani hint madhla gap
+  padding: 18px 12px 20px;         // khali 20px = Booking Status sarkha
+  background: #ffffff;
 
+  .top-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+}
+
+// red hint pill — Booking Status cha .default-note sarkha
 .refresh-hint {
   display: inline-flex;
+  align-self: flex-start;          // content evhdhach width
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   color: var(--pink);
   background: var(--danger-bg);
+  font-size: 12px;
   font-weight: 600;
-  font-size: 0.8rem;
-  padding: 8px 12px;
+  padding: 8px 14px;
+  margin: 0;
   border-radius: var(--r-pill);
+  border: 1px solid rgba(193, 76, 95, 0.12);
 
   ion-icon {
     font-size: 14px;
   }
 }
 
+// filter bar la vartun extra padding nako (top-bar chi khali 20px aahe)
+.filter-bar {
+  padding-top: 0;
+}
 // ==========================================================
 // FILTER BAR — same size, font and color as Booking Status
 // ==========================================================
@@ -1772,5 +1771,50 @@
   &[disabled]::part(native) {
     background: #d5dede;
     color: #97a5a5;
+  }
+}
+.top-bar {
+  .top-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+  }
+
+  ion-button.new-booking-btn {
+    margin: 0 0 0 auto !important;
+    height: 40px !important;
+
+    --background: transparent !important;
+    --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
+    --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
+    --background-focused: rgba(var(--app-primary-rgb), 0.08) !important;
+    --color: var(--app-primary) !important;
+    --color-activated: var(--app-primary-dark) !important;
+    --border-color: var(--app-primary) !important;
+    --border-width: 2px !important;
+    --border-style: solid !important;
+    --border-radius: 14px !important;
+    --box-shadow: none !important;
+    --padding-start: 14px;
+    --padding-end: 16px;
+
+    box-shadow: none !important;
+    font-size: 13.5px;
+    font-weight: 700;
+    text-transform: none;
+    letter-spacing: 0.1px;
+
+    &::part(native) {
+      background: transparent !important;
+      color: var(--app-primary) !important;
+      border: 2px solid var(--app-primary) !important;
+      box-shadow: none !important;
+    }
+
+    ion-icon {
+      color: var(--app-primary) !important;
+      font-size: 18px;
+    }
   }
 }

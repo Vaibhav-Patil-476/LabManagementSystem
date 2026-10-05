@@ -1,0 +1,156 @@
+// =====================================================================
+// GLOBAL COMPACT FILTER BAR — sagle pages sathi (Booking Status sarkha)
+// ---------------------------------------------------------------------
+// Setup:  src/global.scss chya SHEVTI  ->  @import "./theme/filter-bar.global";
+// Class repeat (.x.x) = specificity jast, mhanun page scss override karu shakat nahi.
+// Page chya junya .filter-bar / .filter-field blocks delete kele tari chalel.
+// =====================================================================
+
+html body .filter-bar.filter-bar {
+  position: relative;
+  display: flex !important;
+  flex-wrap: wrap !important;
+  align-items: stretch !important;
+  gap: 6px !important;
+  padding: 0 var(--sp-3, 12px) 10px !important;
+  margin: 0 !important;
+
+  // ---------- every field: search / date / select / type / franchise ----------
+  .filter-field.filter-field {
+    flex: 1 1 220px;
+    min-width: 160px;
+    max-width: 100%;
+    display: flex !important;
+    align-items: center !important;
+    gap: 0 !important;
+    height: 38px !important;
+    min-height: 38px !important;
+    max-height: 38px !important;
+    padding: 0 8px 0 2px !important;
+    border: 1.5px solid var(--border-color) !important;
+    border-radius: var(--r-sm, 12px) !important;
+    background: var(--section-bg);
+    box-sizing: border-box !important;
+
+    input,
+    select {
+      border: none !important;
+      background: transparent !important;
+      outline: none !important;
+      box-shadow: none !important;
+      width: 100%;
+      min-width: 0;
+      height: 100% !important;
+      min-height: 0 !important;
+      margin: 0 !important;
+      padding: 0 0 0 6px !important;
+      font-size: 15px !important;
+      font-weight: 600;
+      line-height: normal !important;
+      color: var(--text-dark);
+    }
+
+    &:focus-within {
+      border-color: var(--primary) !important;
+      background: #ffffff;
+      box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.10);
+    }
+  }
+
+  // date field (From – To)
+  .filter-field.date-field {
+    flex: 1 1 260px;
+    cursor: pointer;
+    background: var(--card-bg, #fff);
+
+    .date-trigger-btn {
+      padding-left: 6px;
+      font-size: 15px;
+      font-weight: 600;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+  }
+
+  // custom dropdown trigger (Franchise "All Types")
+  .filter-field .type-trigger-btn {
+    padding-left: 6px !important;
+    font-size: 15px;
+    font-weight: 600;
+  }
+
+  // ---------- left icon badges ----------
+  .search-icon-badge.search-icon-badge,
+  .select-icon-badge.select-icon-badge,
+  .date-icon-badge.date-icon-badge {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 32px !important;
+    height: 32px !important;
+    min-width: 32px !important;
+    border-radius: 9px !important;
+    background: var(--primary-light);
+    flex-shrink: 0;
+
+    ion-icon {
+      color: var(--primary);
+      font-size: 16px !important;
+      margin: 0 !important;
+    }
+  }
+
+  .clear-franchise {
+    font-size: 18px;
+    margin-left: 6px;
+    flex-shrink: 0;
+  }
+
+  // ---------- refresh button ----------
+  ion-button.refresh-btn.refresh-btn {
+    --border-radius: 10px;
+    --color: #fff;
+    --box-shadow: var(--shadow-glow);
+    --padding-start: 0;
+    --padding-end: 0;
+    margin: 0 !important;
+    width: 44px;
+    height: 44px !important;
+    min-height: 44px !important;
+    max-height: 44px !important;
+    flex-shrink: 0;
+    align-self: auto !important;
+
+    &::part(native) {
+      background: var(--brand-gradient);
+      color: #fff;
+      height: 44px !important;
+      min-height: 44px !important;
+    }
+
+    ion-icon {
+      font-size: 18px !important;
+    }
+  }
+}
+
+// ---------- mobile: sagle full width ----------
+@media (max-width: 480px) {
+  html body .filter-bar.filter-bar {
+    flex-direction: column !important;
+    align-items: stretch !important;
+
+    .filter-field.filter-field {
+      width: 100%;
+      flex: 1 1 100%;
+    }
+
+    ion-button.refresh-btn.refresh-btn {
+      width: 100%;
+    }
+  }
+}
+
+// ---- DEBUG (test jhalyavar he 3 lines delete kara) ----
+// html body .filter-bar.filter-bar { outline: 3px solid red !important; }
