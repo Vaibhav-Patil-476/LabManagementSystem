@@ -371,6 +371,19 @@ export class AddPatientComponent {
     );
   }
 
+  get hasDoubleOrQuadrupleMarkerTest(): boolean {
+    return this.selectedTests.some((t: any) => {
+      const name = String(t?.name || '');
+      return /double\s*-?\s*marker/i.test(name) ||
+        /quad(?:ruple|raple|ple)?\s*-?\s*marker/i.test(name);
+    });
+  }
+
+  // Document compulsory: Histopathology + Double Marker + Quadruple Marker
+  get isDocumentRequired(): boolean {
+    return this.hasHistopathologyTest || this.hasDoubleOrQuadrupleMarkerTest;
+  }
+
   get isFranchiseRole(): boolean {
     return (
       this.role === this.ROLE_FRANCHISE ||
@@ -3648,12 +3661,11 @@ export class AddPatientComponent {
       return 'Please select at least one test.';
     }
 
-    // ---------- Document (REQUIRED only for Histopathology tests) ----------
-    if (this.hasHistopathologyTest && !String(this.selectedFileBase64 || '').trim()) {
+    // ---------- Document (REQUIRED for Histopathology / Double Marker / Quadruple Marker) ----------
+    if (this.isDocumentRequired && !String(this.selectedFileBase64 || '').trim()) {
       this.fieldErrors.tests = true;
-      return 'Please upload a document — required for Histopathology test.';
+      return 'Please upload a document. It is required for the selected test.';
     }
-
     return null;
   }
   // ============================================================
@@ -3662,7 +3674,7 @@ export class AddPatientComponent {
 
   savePatient(): void {
 
-      if (this.isSavingBooking) return;
+    if (this.isSavingBooking) return;
 
     if (!this.isStep1Valid) {
       this.step = 1;
@@ -4044,7 +4056,7 @@ export class AddPatientComponent {
 
     payload.request = JSON.stringify(payload);
 
-this.isSavingBooking = true;
+    this.isSavingBooking = true;
     this.proceedBookingSave(payload);
   }
 
@@ -4132,7 +4144,7 @@ this.isSavingBooking = true;
 
       error: (err: any) => {
 
-          this.isSavingBooking = false;
+        this.isSavingBooking = false;
 
         console.error(
           'CREATE BOOKING ERROR:',
@@ -4359,7 +4371,7 @@ this.isSavingBooking = true;
     };
 
     this.bookingSaved = true;
-    this.isSavingBooking = false; 
+    this.isSavingBooking = false;
 
 
   }

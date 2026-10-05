@@ -2,7 +2,7 @@ import { Component, OnInit, OnDestroy, CUSTOM_ELEMENTS_SCHEMA, NgZone, ChangeDet
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import {
   IonHeader, IonToolbar, IonTitle, IonButtons, IonBackButton,
   IonContent, IonButton, IonIcon, IonModal, IonSearchbar,
@@ -111,7 +111,8 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   /** Full-history dataset used only while the quick search is active. */
   searchDataset: BookingListItem[] = [];
   hasSearchLoaded = false;
-
+  searchResults: BookingListItem[] = [];
+  private searchSub?: Subscription;
   isLoadingList = false;
   isLoadingMore = false;
   hasMore = false;
@@ -122,6 +123,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   fromDate = '';
   toDate = '';
   filterFranchises: any[] = [];
+  franchiseReportLock: Record<number, boolean> = {};
   private readonly SEARCH_START_DATE = '2015-01-01';
   private searchDebounceTimer: any = null;
   private readonly SEARCH_DEBOUNCE_MS = 400;
@@ -206,33 +208,13 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   // ============================================================
   // SEARCH / FILTER (same rules as the Download Reports page)
   // ============================================================
-
-  /** Search mode uses the full-history dataset, otherwise the date-range data. */
   private get baseList(): BookingListItem[] {
-    return this.isSearchMode ? this.searchDataset : this.bookings;
+    return this.isSearchMode ? this.searchResults : this.bookings;
   }
 
-  /** Rows after applying the quick-search rules. */
+  /** Search server kartoy, so ithe local filter nahi. */
   private get queryFiltered(): BookingListItem[] {
-    const list = [...this.baseList];
-    const q = this.quickSearch?.trim().toLowerCase();
-    if (!q) return list;
-
-    const numeric = /^\d+$/.test(q);
-
-    return list.filter(b => {
-      if (numeric) {
-        return String(b.bookingId) === q || String(b.patientId ?? '') === q;
-      }
-      return (
-        (b.customerName || '').toLowerCase().includes(q) ||
-        String(b.bookingId).includes(q) ||
-        String(b.patientId ?? '').toLowerCase().includes(q) ||
-        (b.doctor?.doctor_name || '').toLowerCase().includes(q) ||
-        (b.tests || []).some(t => (t.testName || '').toLowerCase().includes(q)) ||
-        (b.samples || []).some(s => (s.barcode || '').toLowerCase().includes(q))
-      );
-    });
+    return [...this.baseList];
   }
 
   get statusBucketCount(): Record<string, number> {
@@ -482,6 +464,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
     }
+    this.searchSub?.unsubscribe();
   }
 
   // ---------- ATTACHMENT (edit patient) ----------
@@ -698,22 +681,14 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   onQuickSearchChange(): void {
-    if (this.searchDebounceTimer) {
-      clearTimeout(this.searchDebounceTimer);
-    }
+    if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
 
     this.searchDebounceTimer = setTimeout(() => {
       if (this.isSearchMode) {
-        // Full history is fetched only once; further typing filters locally.
-        if (!this.hasSearchLoaded) {
-          this.loadBookings();
-        } else {
-          this.cdr.detectChanges();
-        }
+        this.runSearch();
       } else {
-        // Search cleared: go back to the normal date-range data.
-        this.searchDataset = [];
-        this.hasSearchLoaded = false;
+        this.searchSub?.unsubscribe();
+        this.searchResults = [];
         this.loadBookings();
       }
     }, this.SEARCH_DEBOUNCE_MS);
@@ -823,7 +798,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         doctor_name: raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self'
       },
       franchise: {
-        franchiseId: raw.franchiseId,
+        franchiseId: raw.franchiseId ?? raw.franchise?.franchiseId,
         franchiseName: raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF'
       },
       overallReportStatus,
@@ -833,15 +808,16 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
   // ---------- data loading ----------
   loadBookings(): void {
+    // Edit/delete/save nantar jo loadBookings() call hoto to search mode madhe pan barobar chalel
+    if (this.isSearchMode) {
+      this.runSearch();
+      return;
+    }
+
     this.isLoadingList = true;
 
     const labId = this.labApi.getCurrentLabId();
-    const searchActive = !!this.isSearchMode;
-
-    const startDate = searchActive ? this.SEARCH_START_DATE : this.fromDate;
-    const endDateExclusive = searchActive
-      ? this.addOneDay(this.formatDateForInput(new Date()))
-      : this.addOneDay(this.toDate);
+    const endDateExclusive = this.addOneDay(this.toDate);
 
     const franchiseId =
       this.selectedFranchiseId !== null &&
@@ -851,25 +827,49 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         ? Number(this.selectedFranchiseId)
         : undefined;
 
-    this.fetchAllPagesForRange(labId, startDate, endDateExclusive, franchiseId).then((allResults) => {
+    this.fetchAllPagesForRange(labId, this.fromDate, endDateExclusive, franchiseId).then((allResults) => {
       this.ngZone.run(() => {
-        const mapped = allResults.map((booking: any) => this.mapBookingItem(booking));
-
-        if (searchActive) {
-          this.searchDataset = mapped;
-          this.hasSearchLoaded = true;
-        } else {
-          this.bookings = mapped;
-          this.totalBookingsFromServer = mapped.length;
-          this.searchDataset = [];
-          this.hasSearchLoaded = false;
-        }
-
+        this.bookings = allResults.map((b: any) => this.mapBookingItem(b));
+        this.totalBookingsFromServer = this.bookings.length;
         this.hasMore = false;
         this.isLoadingList = false;
         this.isLoadingMore = false;
         this.cdr.detectChanges();
       });
+    });
+  }
+
+  private runSearch(): void {
+    const q = this.quickSearch.trim();
+    if (!q) return;
+
+    this.searchSub?.unsubscribe();
+    this.isLoadingList = true;
+
+    const labId = this.labApi.getCurrentLabId();
+    const size = this.isStaffRole ? 200 : 50;
+
+    const franchiseId =
+      this.selectedFranchiseId !== null &&
+        this.selectedFranchiseId !== undefined &&
+        Number(this.selectedFranchiseId) > 0
+        ? Number(this.selectedFranchiseId)
+        : undefined;
+
+    this.searchSub = this.labApi.searchBookingStatus(labId, q, size, franchiseId).subscribe({
+      next: (res: any) => this.ngZone.run(() => {
+        const list: any[] = res?.content || (Array.isArray(res) ? res : []);
+        this.searchResults = list.map(b => this.mapBookingItem(b));
+        this.hasMore = false;
+        this.isLoadingList = false;
+        this.cdr.detectChanges();
+      }),
+      error: () => this.ngZone.run(() => {
+        this.searchResults = [];
+        this.isLoadingList = false;
+        this.showToast('Search failed. Please try again.', 'error');
+        this.cdr.detectChanges();
+      })
     });
   }
 
@@ -931,6 +931,12 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         this.ngZone.run(() => {
           this.filterFranchises = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
 
+          this.franchiseReportLock = {};
+          this.filterFranchises.forEach((f: any) => {
+            const fId = Number(f?.franchiseId);
+            if (fId) this.franchiseReportLock[fId] = !!f?.reportLock;
+          });
+
           if (isFranchiseUser) {
             const matchedFranchise = this.filterFranchises.find((f: any) =>
               Number(f?.franchiseId) === Number(currentFranchiseId)
@@ -964,6 +970,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       error: () => {
         this.ngZone.run(() => {
           this.filterFranchises = [];
+          this.franchiseReportLock = {};
 
           if (
             isFranchiseUser &&
@@ -1205,6 +1212,12 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     }
   }
 
+  isReportLocked(item: BookingListItem): boolean {
+    const fId = Number(item?.franchise?.franchiseId);
+    if (!fId) return false;
+    return !!this.franchiseReportLock[fId];
+  }
+
   get printBillFranchiseHasLetterHead(): boolean {
     const franchiseId = this.printBillItem?.franchise?.franchiseId;
     if (!franchiseId) return false;
@@ -1271,6 +1284,11 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     if (!isReportReady) {
       this.reportNotReadyBookingId = item.bookingId;
       this.isReportNotReadyModalOpen = true;
+      return;
+    }
+
+    if (this.isReportLocked(item)) {
+      this.toast.error('Download Report Locked', 'Report download is locked. Please contact the admin.');
       return;
     }
 
@@ -1786,6 +1804,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         };
 
         this.bookings = patch(this.bookings);
+        this.searchResults = patch(this.searchResults);
         this.searchDataset = patch(this.searchDataset);
 
         this.closePatientModal();

@@ -163,7 +163,7 @@
 
     getFranchises(): Observable<any> {
       return this.http.get(
-        `${this.BASE_URL}/api/v1/lab/franchise/${this.getLabId()}?wallet=true&page=0&size=20`
+        `${this.BASE_URL}/api/v1/lab/franchise/${this.getLabId()}?wallet=true&page=0&size=1000`
       );
     }
 
@@ -262,6 +262,29 @@
 
       return this.http.get(
         `${this.BASE_URL}/api/v1/lab/booking/patient/booking-status/new/${labId}`,
+        { params }
+      );
+    }
+
+        // Server-side search (company web sarkha): 1 call, matching records matra
+    searchBookingStatus(
+      labId: number,
+      search: string,
+      size: number = 50,
+      franchiseId?: any
+    ): Observable<any> {
+      let params = new HttpParams()
+        .set('_t', Date.now().toString())
+        .set('optimize', 'false')
+        .set('size', size.toString())
+        .set('search', search);
+
+      if (franchiseId !== undefined && franchiseId !== null) {
+        params = params.set('franchiseId', franchiseId.toString());
+      }
+
+      return this.http.get(
+        `${this.BASE_URL}/api/v1/lab/booking/patient/booking-status/optimized/${labId}`,
         { params }
       );
     }

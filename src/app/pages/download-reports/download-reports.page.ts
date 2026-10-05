@@ -19,9 +19,9 @@ import {
   downloadOutline, documentTextOutline, checkmarkDoneOutline,
   refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
   businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline, qrCodeOutline,
-  closeOutline, eyeOutline ,addOutline
+  closeOutline, eyeOutline, addOutline
 } from 'ionicons/icons';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, Subscription } from 'rxjs';
 import { PdfDownloadService } from '../../core/services/pdf-download';
 import { LabApiService } from '../../core/services/lab-api';
 import { AuthService } from '../../core/services/auth';
@@ -206,6 +206,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   private bookings: ReportBookingRow[] = [];
   private searchDataset: ReportBookingRow[] = [];
   private filteredDataset: ReportBookingRow[] = [];
+  private searchSub?: Subscription;
   private hasSearchLoaded = false;
   private autoTabSwitched = false;
   private currentPage = 0;
@@ -230,13 +231,13 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     private toast: ToastService,
     private ngZone: NgZone,
     private cdr: ChangeDetectorRef,
-      private router: Router,
+    private router: Router,
   ) {
     addIcons({
       downloadOutline, documentTextOutline, checkmarkDoneOutline,
       refreshOutline, timeOutline, alertCircleOutline, flaskOutline, searchOutline,
       businessOutline, calendarOutline, calendarClearOutline, informationCircleOutline,
-      qrCodeOutline, closeOutline, eyeOutline ,addOutline
+      qrCodeOutline, closeOutline, eyeOutline, addOutline
     });
   }
 
@@ -245,14 +246,8 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.loadFilterFranchises();
   }
 
-  // Ionic caches pages, so re-fetch fresh data every time the page becomes active.
   ionViewWillEnter(): void {
-    if (this.isSearchMode) {
-      this.hasSearchLoaded = false;
-      this.runSearch();
-    } else {
-      this.loadData();
-    }
+    this.loadData();   // loadData khali search mode handle karto
   }
 
   ngOnDestroy(): void {
@@ -260,6 +255,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
     }
+    this.searchSub?.unsubscribe();
   }
 
   // ---------- date helpers ----------
@@ -413,17 +409,15 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.loadData();
   }
 
-  // ---------- quick search ----------
   onQuickSearchChange(): void {
     if (this.searchDebounceTimer) clearTimeout(this.searchDebounceTimer);
     this.searchDebounceTimer = setTimeout(() => {
       if (this.isSearchMode) {
         this.runSearch();
       } else {
+        this.searchSub?.unsubscribe();
         this.quickSearch = '';
         this.filteredDataset = [];
-        this.searchDataset = [];
-        this.hasSearchLoaded = false;
         this.autoTabSwitched = false;
         this.selectedIds.clear();
         this.loadData();
@@ -431,35 +425,41 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     }, this.SEARCH_DEBOUNCE_MS);
   }
 
+  // filteredDataset = ata server cha search result
   private runSearch(): void {
+    const q = this.quickSearch.trim();
+    if (!q) return;
+
+    this.searchSub?.unsubscribe();          // junhi request cancel (race condition nahi)
     this.autoTabSwitched = false;
+    this.isLoading = true;
 
-    if (!this.hasSearchLoaded) {
-      this.isLoading = true;
-      const labId = this.authService.labId;
-      const searchEndDate = this.addOneDay(this.todayIso());
+    const labId = this.authService.labId;
+    const size = this.roleService.isStaff ? 200 : 50;
+    const franchiseId = this.franchiseId ? Number(this.franchiseId) : undefined;
 
-      this.labApi.getBookingStatusNew(
-        labId, 0, this.SEARCH_PAGE_SIZE, this.SEARCH_START_DATE, searchEndDate, this.franchiseId || undefined
-      ).subscribe({
-        next: (res: any) => this.ngZone.run(() => {
-          let rows: ReportBookingRow[] = (res?.content ?? res ?? []).map((r: any) => this.mapToRow(r));
+    this.searchSub = this.labApi.searchBookingStatus(labId, q, size, franchiseId).subscribe({
+      next: (res: any) => this.ngZone.run(() => {
+        const list: any[] = res?.content || (Array.isArray(res) ? res : []);
+        let rows: ReportBookingRow[] = list.map(r => this.mapToRow(r));
 
-          if (this.roleService.isStaff) {
-            rows = rows.filter(r => r.createdBy === this.authService.userId);
-          }
+        if (this.roleService.isStaff) {
+          rows = rows.filter(r => r.createdBy === this.authService.userId);
+        }
 
-          this.searchDataset = this.dedupeByBookingId(rows);
-          this.hasSearchLoaded = true;
-          this.applySearchFilter();
-          this.isLoading = false;
-        }),
-        error: () => { this.isLoading = false; }
-      });
-      return;
-    }
-
-    this.applySearchFilter();
+        this.filteredDataset = this.dedupeByBookingId(rows);
+        this.selectedIds.clear();
+        this.autoSwitchTab();
+        this.isLoading = false;
+        this.cdr.detectChanges();
+      }),
+      error: () => this.ngZone.run(() => {
+        this.filteredDataset = [];
+        this.isLoading = false;
+        this.toast.error('Error', 'Search failed. Please try again.');
+        this.cdr.detectChanges();
+      })
+    });
   }
 
   private applySearchFilter(): void {
@@ -494,7 +494,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   private autoSwitchTab(): void {
     if (this.autoTabSwitched) return;
 
-    const order: ReportTabKey[] = ['ALL', 'COMPLETE', 'CLINICAL', 'PENDING', 'SNR', 'CANCEL'];
+    const order: ReportTabKey[] = ['ALL', 'COMPLETE', 'CLINICAL', 'PARTIALLY_COMPLETE', 'PENDING', 'SNR', 'CANCEL'];
     const counts = this.bucketCount;
 
     if (counts[this.activeTab] === 0) {
@@ -507,8 +507,10 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
   // ---------- data loading ----------
   loadData(): void {
-    this.hasSearchLoaded = false;
-    this.searchDataset = [];
+    if (this.isSearchMode) {      // refresh button / franchise load / page re-enter sathi
+      this.runSearch();
+      return;
+    }
     this.filteredDataset = [];
     this.autoTabSwitched = false;
     this.selectedIds.clear();
@@ -576,56 +578,70 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- mapping ----------
-  private mapToRow(raw: any): ReportBookingRow {
-    const rawTestMappings = (raw.bookingWithTestMappings || []).filter((t: any) => !!t.testName);
+private mapToRow(raw: any): ReportBookingRow {
+  const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
+    .filter((t: any) => !!t.testName);
 
-    const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
-      const matchedSample = (raw.sampleAccessions || []).find(
-        (s: any) => Number(s.testId) === Number(t.testId)
-      );
-      const sampleStatus = (matchedSample?.status || '').toUpperCase();
-      const isSampleReceived = sampleStatus === 'RECEIVED';
-      const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
+  const rawSamples: any[] = raw.sampleAccessions || raw.samples || [];
+  const reportsRaw: any[] = raw.reports || [];
 
-      return {
-        name: (t.testName || '').trim(),
-        status: (t.cancelDate || t.deleted) ? 'cancel' :
-          (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : defaultStatus),
-        testCode: t.testCode
-      };
-    });
+  const statusByTestId = new Map<number, string>();
+  reportsRaw.forEach((r: any) => {
+    if (r.testId != null) {
+      statusByTestId.set(r.testId, r.reportStatus || 'PENDING');
+    }
+  });
 
-    const seenBarcodes = new Set<string>();
-    const barcodes: string[] = [];
-    (raw.sampleAccessions || []).forEach((s: any) => {
-      const barcode = s.barCode || s.barcode;
-      if (!barcode || seenBarcodes.has(barcode)) return;
-      seenBarcodes.add(barcode);
-      barcodes.push(barcode);
-    });
-
-    const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
-    const franchiseName = raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
+  const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
+    const matchedSample = rawSamples.find(
+      (s: any) => Number(s.testId) === Number(t.testId)
+    );
+    const sampleStatus = (matchedSample?.status || '').toUpperCase();
+    const isSampleReceived = sampleStatus === 'RECEIVED';
+    const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
 
     return {
-      bookingId: raw.bookingId,
-      patientId: raw.patientId,
-      title: raw.title,
-      name: raw.customerName || '-',
-      genderAge: raw.gender && raw.age ? `${raw.gender}/${raw.age}` : undefined,
-      barcodes,
-      doctorName: `(${franchiseName}) / Dr. ${doctorName}`,
-      sampleCount: barcodes.length || tests.length,
-      tests,
-      bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined,
-      createdBy: raw.createdBy,
-      reportId: rawTestMappings.find((t: any) => !!t.reportId)?.reportId,
-      remark: raw.remark,
-      file: raw.reportUrl || raw.pdfUrl || raw.file || raw.fileUrl,
-      franchiseId: Number(raw.franchiseId ?? raw.franchise?.franchiseId ?? 0) || undefined,
-      bucket: this.deriveBucket(tests)
+      name: (t.testName || '').trim(),
+      status: (t.cancelDate || t.deleted) ? 'cancel' :
+        (statusByTestId.get(t.testId) ||
+          (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||
+          defaultStatus),
+      testCode: t.testCode
     };
-  }
+  });
+
+  const seenBarcodes = new Set<string>();
+  const barcodes: string[] = [];
+  rawSamples.forEach((s: any) => {
+    const barcode = s.barCode || s.barcode;
+    if (!barcode || seenBarcodes.has(barcode)) return;
+    seenBarcodes.add(barcode);
+    barcodes.push(barcode);
+  });
+
+  const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
+  const franchiseName = raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
+
+  return {
+    bookingId: raw.bookingId,
+    patientId: raw.patientId,
+    title: raw.title,
+    name: raw.customerName || '-',
+    genderAge: raw.gender && raw.age ? `${raw.gender}/${raw.age}` : undefined,
+    barcodes,
+    doctorName: `(${franchiseName}) / Dr. ${doctorName}`,
+    sampleCount: barcodes.length || tests.length,
+    tests,
+    bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined,
+    createdBy: raw.createdBy,
+    reportId: rawTestMappings.find((t: any) => !!t.reportId)?.reportId
+      ?? reportsRaw.find((r: any) => !!r.reportId)?.reportId,
+    remark: raw.remark,
+    file: raw.reportUrl || raw.pdfUrl || raw.file || raw.fileUrl,
+    franchiseId: Number(raw.franchiseId ?? raw.franchise?.franchiseId ?? 0) || undefined,
+    bucket: this.deriveBucket(tests)
+  };
+}
 
   private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
     if (tests.length === 0) return 'PENDING';
@@ -647,7 +663,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
     this.selectedIds.clear();
   }
 
-    goToNewBooking(): void {
+  goToNewBooking(): void {
     this.router.navigate(['/add-patient']);   // <- tujhya New Booking page cha route
   }
 

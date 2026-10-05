@@ -556,8 +556,8 @@
           </div>
         </div>
 
-        <!-- Histopathology document upload -->
-        <div class="form-card" style="margin-top: 12px;" *ngIf="hasHistopathologyTest && !patient.file">
+        <!-- Document upload (Histopathology / Double Marker / Quadruple Marker) -->
+        <div class="form-card" style="margin-top: 12px;" *ngIf="isDocumentRequired">
           <div class="form-card-title">Document <span class="required">*</span></div>
 
           <input type="file" id="fileInput" style="display: none" accept="image/*,application/pdf"
@@ -565,7 +565,7 @@
 
           <div class="add-file-box" (click)="triggerFileInput()">
             <ion-icon name="attach-outline"></ion-icon>
-            <span>{{ selectedFileName || 'Add File (required for Histopathology)' }}</span>
+            <span>{{ selectedFileName || 'Add File (required for selected test)' }}</span>
           </div>
 
           <div class="file-preview" *ngIf="selectedFileName">

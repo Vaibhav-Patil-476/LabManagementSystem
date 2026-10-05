@@ -6,6 +6,7 @@ import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
 import { PdfDownloadService } from "../../core/services/pdf-download";
 
+
 import {
   IonContent, IonIcon, IonMenu, IonMenuButton,
   IonModal, IonSpinner, IonSelect, IonSelectOption,
@@ -453,6 +454,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
   ionViewWillEnter(): void {
     this.initDashboard();
+    this.loadFranchiseReportLocks();
     this.startPolling();
     this.loadNotificationCounts();        // ✅ NEW — initial fetch
     this.startNotificationPolling();      // ✅ NEW — keep badges fresh
@@ -491,6 +493,29 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.notifPollSub = interval(DASHBOARD_POLL_INTERVAL_MS).subscribe(() => {
       this.loadNotificationCounts();
     });
+  }
+
+  franchiseReportLock: Record<number, boolean> = {};
+
+  private loadFranchiseReportLocks(): void {
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        const list = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+        this.franchiseCache = list;            // print bill sathi pan vaparto
+        this.franchiseReportLock = {};
+        list.forEach((f: any) => {
+          const fId = Number(f?.franchiseId);
+          if (fId) this.franchiseReportLock[fId] = !!f?.reportLock;
+        });
+      },
+      error: () => { this.franchiseReportLock = {}; }
+    });
+  }
+
+  isReportLocked(item: any): boolean {
+    const fId = Number(item?.franchiseId ?? item?.franchise?.franchiseId);
+    if (!fId) return false;
+    return !!this.franchiseReportLock[fId];
   }
 
   // ============================================================
@@ -685,71 +710,18 @@ export class DashboardPage implements OnInit, OnDestroy {
     });
   }
 
-  /**
-   * Field-priority search: booking ID > patient ID > name/doctor > barcode.
-   * Checking fields in priority order (returning as soon as a tier finds
-   * matches) instead of OR-ing every field prevents a numeric ID query from
-   * incidentally matching a substring inside an unrelated booking's barcode.
-   */
-  private filterBookingsByQuery(list: any[], query: string): any[] {
-    const q = query.trim();
-    if (!q) return [];
-
-    const ql = q.toLowerCase();
-    const isNumericQuery = /^\d+$/.test(q);
-    const hasLetters = /[a-zA-Z]/.test(q);
-
-    if (isNumericQuery) {
-      const idExact = list.filter((b: any) => String(b.bookingId) === q);
-      if (idExact.length) return idExact;
-
-      const idPrefix = list.filter((b: any) => String(b.bookingId).startsWith(q));
-      if (idPrefix.length) return idPrefix;
-    }
-
-    const patientIdMatches = list.filter((b: any) => {
-      const pid = (b.patientId || '').toLowerCase();
-      return pid === ql || pid.startsWith(ql);
-    });
-    if (patientIdMatches.length) return patientIdMatches;
-
-    if (hasLetters) {
-      const nameMatches = list.filter((b: any) =>
-        (b.customerName || '').toLowerCase().includes(ql) ||
-        (b.doctorName || '').toLowerCase().includes(ql)
-      );
-      if (nameMatches.length) return nameMatches;
-    }
-
-    return list.filter((b: any) => this.matchesBarcode(b, ql));
-  }
-
-  private matchesBarcode(booking: any, query: string): boolean {
-    const sampleList: any[] = booking?.sampleAccessions || booking?.samples || [];
-
-    return sampleList.some((s: any) => {
-      const code = String(s?.barCode || s?.barcode || '').toLowerCase();
-      return code.includes(query);
-    });
-  }
-
-  private fetchAllBookingStatusForSearch(): Observable<any> {
-    const currentUser = this.authService.currentUserValue;
-    const labId = currentUser?.raw?.labId;
-    const start = '2015-01-01';
-    const end = this.nextDay(this.formatDateParam(new Date()));
-    return this.labApi.getBookingStatusNew(labId, 0, 500, start, end, this.currentFranchiseId);
-  }
-
   private performGlobalSearch(q: string): void {
     this.isSearching = true;
     this.isSearchModalOpen = true;
 
-    this.fetchAllBookingStatusForSearch().subscribe({
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const size = this.isStaffRole ? 200 : 50;
+
+    this.labApi.searchBookingStatus(labId, q, size, this.currentFranchiseId).subscribe({
       next: (res: any) => {
-        const list = res?.content || res || [];
+        const list = res?.content || (Array.isArray(res) ? res : []);
         const roleFiltered = this.applyStaffOwnershipFilter(list);
-        this.searchResults = this.filterBookingsByQuery(roleFiltered, q).map((b: any) => this.mapSearchItem(b));
+        this.searchResults = roleFiltered.map((b: any) => this.mapSearchItem(b));
         this.isSearching = false;
       },
       error: () => {
@@ -763,13 +735,16 @@ export class DashboardPage implements OnInit, OnDestroy {
     const q = this.globalSearchTerm.trim();
     if (!q) return;
 
-    this.fetchAllBookingStatusForSearch().subscribe({
+    const labId = this.authService.currentUserValue?.raw?.labId;
+    const size = this.isStaffRole ? 200 : 50;
+
+    this.labApi.searchBookingStatus(labId, q, size, this.currentFranchiseId).subscribe({
       next: (res: any) => {
-        const list = res?.content || res || [];
+        const list = res?.content || (Array.isArray(res) ? res : []);
         const roleFiltered = this.applyStaffOwnershipFilter(list);
-        this.searchResults = this.filterBookingsByQuery(roleFiltered, q).map((b: any) => this.mapSearchItem(b));
+        this.searchResults = roleFiltered.map((b: any) => this.mapSearchItem(b));
       },
-      error: () => { /* silent refresh — ignore failures */ }
+      error: () => { /* silent */ }
     });
   }
 
@@ -859,6 +834,11 @@ export class DashboardPage implements OnInit, OnDestroy {
       return;
     }
 
+    if (this.isReportLocked(item)) {
+      this.toastService.error('Download Report Locked', 'Report download is locked. Please contact the admin.');
+      return;
+    }
+
     this.globalDownloadItem = item;
     this.isGlobalDownloadModalOpen = true;
   }
@@ -889,6 +869,13 @@ export class DashboardPage implements OnInit, OnDestroy {
       this.closeGlobalDownloadModal();   // ✅ fixed
       return;
     }
+
+    if (this.isReportLocked(item)) {
+      this.toastService.error('Download Report Locked', 'Report download is locked. Please contact the admin.');
+      this.closeGlobalDownloadModal();
+      return;
+    }
+    
     if (this.downloadingReportId === item.bookingId) return;
 
     this.downloadingReportId = item.bookingId;
