@@ -17,7 +17,8 @@ import {
 } from '@ionic/angular/standalone';
 
 import { addIcons } from 'ionicons';
-
+import { Clipboard } from '@capacitor/clipboard';
+import { copyOutline } from 'ionicons/icons';
 import {
   searchOutline,
   listOutline,
@@ -247,7 +248,11 @@ export class ProfileListPage
         documentTextOutline,
 
       'download-outline':
-        downloadOutline
+        downloadOutline,
+
+      'copy-outline': copyOutline,
+
+
 
     });
 
@@ -342,73 +347,73 @@ export class ProfileListPage
 
     })
 
-    .subscribe({
+      .subscribe({
 
-      next: ({
-        tests,
-        profiles
-      }) => {
+        next: ({
+          tests,
+          profiles
+        }) => {
 
-        const testsList =
+          const testsList =
 
-          Array.isArray(tests)
+            Array.isArray(tests)
 
-            ? tests
+              ? tests
 
-            : (
+              : (
                 (tests as any)?.content || []
               );
 
 
-        const testsById =
-          this.buildTestsLookup(
-            testsList
-          );
+          const testsById =
+            this.buildTestsLookup(
+              testsList
+            );
 
 
-        const profileList =
+          const profileList =
 
-          Array.isArray(profiles)
+            Array.isArray(profiles)
 
-            ? profiles
+              ? profiles
 
-            : (
+              : (
                 (profiles as any)?.content || []
               );
 
 
-        this.allProfiles =
-          profileList.map(
-            (p: any) =>
-              this.mapProfile(
-                p,
-                testsById
-              )
+          this.allProfiles =
+            profileList.map(
+              (p: any) =>
+                this.mapProfile(
+                  p,
+                  testsById
+                )
+            );
+
+
+          this.applySearch();
+
+          this.isLoading = false;
+
+        },
+
+        error: (err) => {
+
+          console.error(
+            'TEST PROFILE LIST LOAD ERROR:',
+            err
           );
 
+          this.allProfiles = [];
 
-        this.applySearch();
+          this.applySearch();
 
-        this.isLoading = false;
+          this.isLoading = false;
 
-      },
+        }
 
-      error: (err) => {
-
-        console.error(
-          'TEST PROFILE LIST LOAD ERROR:',
-          err
-        );
-
-        this.allProfiles = [];
-
-        this.applySearch();
-
-        this.isLoading = false;
-
-      }
-
-    });
+      });
 
   }
 
@@ -474,8 +479,8 @@ export class ProfileListPage
             ) ??
             ''
           )
-          .trim()
-          .toUpperCase();
+            .trim()
+            .toUpperCase();
 
 
         map.set(
@@ -589,8 +594,8 @@ export class ProfileListPage
               ''
 
             )
-            .trim()
-            .toUpperCase();
+              .trim()
+              .toUpperCase();
 
 
           if (fallbackName) {
@@ -719,20 +724,20 @@ export class ProfileListPage
         ? [...this.allProfiles]
 
         : this.allProfiles.filter(
-            p =>
-              p.profileName
-                .toLowerCase()
-                .includes(q)
+          p =>
+            p.profileName
+              .toLowerCase()
+              .includes(q)
 
-              ||
+            ||
 
-              p.testNames.some(
-                n =>
-                  n
-                    .toLowerCase()
-                    .includes(q)
-              )
-          );
+            p.testNames.some(
+              n =>
+                n
+                  .toLowerCase()
+                  .includes(q)
+            )
+        );
 
 
     this.visibleCount =
@@ -829,6 +834,23 @@ export class ProfileListPage
 
   }
 
+  async copyProfile(item: ProfileListItem): Promise<void> {
+    try {
+      const text = item.profileName;
+
+      if (Capacitor.isNativePlatform()) {
+        await Clipboard.write({ string: text });
+      } else {
+        await navigator.clipboard.writeText(text);
+      }
+
+      this.toastService.success('Copied', `"${item.profileName}" copied.`);
+    } catch (e) {
+      console.error('COPY PROFILE ERROR:', e);
+      this.toastService.error('Copy Failed', 'Unable to copy profile name.');
+    }
+  }
+
 
   // ============================================================
   // REFRESH
@@ -908,37 +930,37 @@ export class ProfileListPage
     const known:
       Record<string, string> = {
 
-        SERUM:
-          '#db0d0d',
+      SERUM:
+        '#db0d0d',
 
-        EDTA:
-          '#bb09d6',
+      EDTA:
+        '#bb09d6',
 
-        URINE:
-          '#a3c910',
+      URINE:
+        '#a3c910',
 
-        CSF:
-          '#7a0d1e',
+      CSF:
+        '#7a0d1e',
 
-        PUS:
-          '#9acd00',
+      PUS:
+        '#9acd00',
 
-        TISSUE:
-          '#e39fb0',
+      TISSUE:
+        '#e39fb0',
 
-        SLIDE:
-          '#f0b3c4',
+      SLIDE:
+        '#f0b3c4',
 
-        PLASMA:
-          '#0d7fdb',
+      PLASMA:
+        '#0d7fdb',
 
-        SWAB:
-          '#0dbf6d',
+      SWAB:
+        '#0dbf6d',
 
-        'SODIUM FLUORIDE-1':
-          '#8d6e63'
+      'SODIUM FLUORIDE-1':
+        '#8d6e63'
 
-      };
+    };
 
 
     const key =
@@ -1025,9 +1047,8 @@ export class ProfileListPage
 
       doc.text(
 
-        `Franchise: ${
-          this.authService.franchiseId ??
-          'undefined'
+        `Franchise: ${this.authService.franchiseId ??
+        'undefined'
         }`,
 
         pageWidth / 2,

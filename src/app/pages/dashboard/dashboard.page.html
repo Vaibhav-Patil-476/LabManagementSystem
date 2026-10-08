@@ -139,97 +139,105 @@
   </ion-modal>
 
   <!-- Download Report modal (Global search — With/Without letterhead) -->
-<ion-modal cssClass="test-preview-popup download-report-modal" [isOpen]="isGlobalDownloadModalOpen"
-  (didDismiss)="closeGlobalDownloadModal()">
-  <ng-template>
-    <div class="modal-page">
-      <div class="modal-header">
-        <h2>Download Report <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ globalDownloadItem?.bookingId }}</span></h2>
-        <ion-button fill="clear" (click)="closeGlobalDownloadModal()">
-          <ion-icon name="close-outline"></ion-icon>
-        </ion-button>
-      </div>
-
-      <div class="global-btn-row">
-        <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
-          (click)="confirmGlobalDownload(true)">
-          <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
-          <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
-          {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
-        </ion-button>
-
-        <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
-          (click)="confirmGlobalDownload(false)">
-          <ion-icon slot="start" name="download-outline" *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
-          <ion-spinner name="crescent" slot="start" *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
-          {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
-        </ion-button>
-      </div>
-    </div>
-  </ng-template>
-</ion-modal>
-
-  <!-- Print Bill modal (Global search — Price Type + With/Without letterhead) -->
-<ion-modal cssClass="test-preview-popup print-bill-modal" [isOpen]="isPrintBillModalOpen" (didDismiss)="closePrintBillModal()">
-  <ng-template>
-    <div class="modal-page">
-      <div class="modal-header">
-        <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId }}</span></h2>
-        <ion-button fill="clear" (click)="closePrintBillModal()">
-          <ion-icon name="close-outline"></ion-icon>
-        </ion-button>
-      </div>
-
-      <div class="global-print-grid">
-
-        <div class="global-print-top">
-          <div class="input-group">
-            <label>Price Type</label>
-            <div class="input-wrap">
-              <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType" class="premium-select">
-                <ion-select-option value="myprice">My Price</ion-select-option>
-                <ion-select-option value="mrp">MRP</ion-select-option>
-              </ion-select>
-            </div>
-          </div>
-
-          <div class="input-group">
-            <label>Custom Amount</label>
-            <div class="input-wrap" style="display:flex; align-items:center;">
-              <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
-                style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
-            </div>
-          </div>
+  <ion-modal cssClass="test-preview-popup download-report-modal" [isOpen]="isGlobalDownloadModalOpen"
+    (didDismiss)="closeGlobalDownloadModal()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>Download Report <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
+              globalDownloadItem?.bookingId }}</span></h2>
+          <ion-button fill="clear" (click)="closeGlobalDownloadModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
         </div>
 
-        <ion-button expand="block" fill="solid" class="printbill-btn-slim"
-          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, false)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With LetterHead' }}
-        </ion-button>
+        <div class="global-btn-row">
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
+            (click)="confirmGlobalDownload(true)">
+            <ion-icon slot="start" name="download-outline"
+              *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
+            <ion-spinner name="crescent" slot="start"
+              *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
+            {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'With letterHead' }}
+          </ion-button>
 
-        <ion-button expand="block" fill="solid" class="printbill-btn-slim"
-          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, false)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without LetterHead' }}
-        </ion-button>
-
-        <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
-          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F With LetterHead' }}
-        </ion-button>
-
-        <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
-          [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
-          <ion-icon slot="start" name="print-outline"></ion-icon>
-          {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F Without LetterHead' }}
-        </ion-button>
-
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" [disabled]="downloadingReportId !== null"
+            (click)="confirmGlobalDownload(false)">
+            <ion-icon slot="start" name="download-outline"
+              *ngIf="downloadingReportId !== globalDownloadItem?.bookingId"></ion-icon>
+            <ion-spinner name="crescent" slot="start"
+              *ngIf="downloadingReportId === globalDownloadItem?.bookingId"></ion-spinner>
+            {{ downloadingReportId === globalDownloadItem?.bookingId ? 'Generating...' : 'Without letterHead' }}
+          </ion-button>
+        </div>
       </div>
-    </div>
-  </ng-template>
-</ion-modal>
+    </ng-template>
+  </ion-modal>
+
+  <!-- Print Bill modal (Global search — Price Type + With/Without letterhead) -->
+  <ion-modal cssClass="test-preview-popup print-bill-modal" [isOpen]="isPrintBillModalOpen"
+    (didDismiss)="closePrintBillModal()">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>Print Bill <span style="font-weight:500;font-size:13px;opacity:.75;">#{{ printBillItem?.bookingId
+              }}</span></h2>
+          <ion-button fill="clear" (click)="closePrintBillModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
+
+        <div class="global-print-grid">
+
+          <div class="global-print-top">
+            <div class="input-group">
+              <label>Price Type</label>
+              <div class="input-wrap">
+                <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
+                  class="premium-select">
+                  <ion-select-option value="myprice">My Price</ion-select-option>
+                  <ion-select-option value="mrp">MRP</ion-select-option>
+                </ion-select>
+              </div>
+            </div>
+
+            <div class="input-group">
+              <label>Custom Amount</label>
+              <div class="input-wrap" style="display:flex; align-items:center;">
+                <input type="number" [(ngModel)]="customBillAmount" placeholder="Custom Amount"
+                  style="width:100%; height:48px; border:none; background:transparent; outline:none; padding:0 14px; font-size:14px; font-weight:600;">
+              </div>
+            </div>
+          </div>
+
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, false)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'With LetterHead' }}
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, false)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without LetterHead' }}
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F With LetterHead' }}
+          </ion-button>
+
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+            [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
+            <ion-icon slot="start" name="print-outline"></ion-icon>
+            {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F Without LetterHead' }}
+          </ion-button>
+
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
 
 
   <!-- Report Not Ready modal (Global search) -->
@@ -237,113 +245,111 @@
     (didDismiss)="closeGlobalReportNotReadyModal()">
     <ng-template>
       <div class="modal-page">
-<div class="modal-header global-report-not-ready-header">
-  <h2>Report Not Ready <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
-      globalReportNotReadyBookingId }}</span></h2>
-  <ion-button fill="clear" (click)="closeGlobalReportNotReadyModal()">
-    <ion-icon name="close-outline"></ion-icon>
-  </ion-button>
-</div>
+        <div class="modal-header global-report-not-ready-header">
+          <h2>Report Not Ready <span style="font-weight:500;font-size:13px;opacity:.75;">#{{
+              globalReportNotReadyBookingId }}</span></h2>
+          <ion-button fill="clear" (click)="closeGlobalReportNotReadyModal()">
+            <ion-icon name="close-outline"></ion-icon>
+          </ion-button>
+        </div>
 
-<div style="padding:24px 20px; text-align:center;">
-  <ion-icon name="alert-circle-outline" class="global-report-not-ready-icon"></ion-icon>
-  <p class="global-report-not-ready-text">
-    This report is not yet complete. Please try again once all tests for this booking have been completed.
-  </p>
-  <ion-button expand="block" fill="solid" class="global-danger-btn" (click)="closeGlobalReportNotReadyModal()">
-    GOT IT
-  </ion-button>
-</div>
+        <div style="padding:24px 20px; text-align:center;">
+          <ion-icon name="alert-circle-outline" class="global-report-not-ready-icon"></ion-icon>
+          <p class="global-report-not-ready-text">
+            This report is not yet complete. Please try again once all tests for this booking have been completed.
+          </p>
+          <ion-button expand="block" fill="solid" class="global-danger-btn" (click)="closeGlobalReportNotReadyModal()">
+            GOT IT
+          </ion-button>
+        </div>
       </div>
     </ng-template>
   </ion-modal>
 
-<!-- Combined Pending/Cancel Clinical Notification Popup -->
-<ion-modal cssClass="test-preview-popup" [isOpen]="showDashboardNotifModal"
-  (didDismiss)="showDashboardNotifModal = false">
-  <ng-template>
-    <div class="modal-page">
-      <div class="modal-header">
-        <h2>Notification</h2>
-        <ion-button fill="clear" (click)="showDashboardNotifModal = false">
-          <ion-icon name="close-outline"></ion-icon>
-        </ion-button>
-      </div>
-
-      <div class="notif-body">
-        <p class="notif-message">{{ dashboardNotifData?.message }}</p>
-
-        <div class="notif-scroll-area">
-          <div class="notif-section-label">Pending List</div>
-          <div class="notif-table-scroll">
-            <table class="notif-table">
-              <thead>
-                <tr>
-                  <th>Sr</th>
-                  <th>Booking ID</th>
-                  <th>Barcode</th>
-                  <th>Remark</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let p of dashboardNotifData?.pendingList; let i = index">
-                  <td>{{ i + 1 }}</td>
-                  <td>{{ p.bookingId }}</td>
-                  <td>{{ p.barcode }}</td>
-                  <td>{{ p.remark || '-' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="notif-empty" *ngIf="!dashboardNotifData?.pendingList?.length">No records found</div>
-
-          <div class="notif-section-label notif-section-label-danger">Cancel List</div>
-          <div class="notif-table-scroll">
-            <table class="notif-table">
-              <thead>
-                <tr>
-                  <th>Sr</th>
-                  <th>Booking ID</th>
-                  <th>Barcode</th>
-                  <th>Test Name</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr *ngFor="let c of dashboardNotifData?.cancelList; let i = index">
-                  <td>{{ i + 1 }}</td>
-                  <td>{{ c.bookingId }}</td>
-                  <td>{{ c.deletedBarcode || '-' }}</td>
-                  <td>{{ c.testName || '-' }}</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-          <div class="notif-empty" *ngIf="!dashboardNotifData?.cancelList?.length">No records found</div>
-        </div>
-
-        <div class="notif-actions">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="markDashboardNotifRead()">
-            Read
+  <!-- Combined Pending/Cancel Clinical Notification Popup -->
+  <ion-modal #notifModal cssClass="test-preview-popup" [isOpen]="showDashboardNotifModal"
+    (didDismiss)="showDashboardNotifModal = false">
+    <ng-template>
+      <div class="modal-page">
+        <div class="modal-header">
+          <h2>Notification</h2>
+          <ion-button fill="clear" (click)="notifModal.dismiss()">
+            <ion-icon name="close-outline"></ion-icon>
           </ion-button>
+        </div>
 
-          <div class="notif-goto-row"
-            *ngIf="dashboardNotifData?.pendingList?.length || dashboardNotifData?.cancelList?.length">
+        <div class="notif-body">
+          <p class="notif-message">{{ dashboardNotifData?.message }}</p>
 
-            <ion-button fill="solid" class="notif-goto-btn" *ngIf="dashboardNotifData?.pendingList?.length"
-              (click)="goToClinicalFromNotif()">
-              Go to Clinical
-            </ion-button>
+          <div class="notif-scroll-area">
+            <div class="notif-section-label">Pending List</div>
+            <div class="notif-table-scroll">
+              <table class="notif-table">
+                <thead>
+                  <tr>
+                    <th>Sr</th>
+                    <th>Booking ID</th>
+                    <th>Barcode</th>
+                    <th>Remark</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let p of dashboardNotifData?.pendingList; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ p.bookingId }}</td>
+                    <td>{{ p.barcode }}</td>
+                    <td>{{ p.remark || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="notif-empty" *ngIf="!dashboardNotifData?.pendingList?.length">No records found</div>
 
-            <ion-button fill="solid" class="notif-goto-btn" *ngIf="dashboardNotifData?.cancelList?.length"
-              (click)="goToCancelFromNotif()">
-              Go to Cancel
-            </ion-button>
+            <div class="notif-section-label notif-section-label-danger">Cancel List</div>
+            <div class="notif-table-scroll">
+              <table class="notif-table">
+                <thead>
+                  <tr>
+                    <th>Sr</th>
+                    <th>Booking ID</th>
+                    <th>Barcode</th>
+                    <th>Test Name</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let c of dashboardNotifData?.cancelList; let i = index">
+                    <td>{{ i + 1 }}</td>
+                    <td>{{ c.bookingId }}</td>
+                    <td>{{ c.deletedBarcode || '-' }}</td>
+                    <td>{{ c.testName || '-' }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="notif-empty" *ngIf="!dashboardNotifData?.cancelList?.length">No records found</div>
+          </div>
+
+          <div class="notif-actions">
+            <div class="notif-btn-row">
+              <ion-button fill="solid" class="save-changes-btn notif-read-btn" (click)="markDashboardNotifRead()">
+                Read
+              </ion-button>
+
+              <ion-button fill="solid" class="notif-goto-btn notif-goto-right"
+                *ngIf="dashboardNotifData?.pendingList?.length" (click)="goToClinicalFromNotif()">
+                Go to Clinical
+              </ion-button>
+
+              <ion-button fill="solid" class="notif-goto-btn notif-goto-right"
+                *ngIf="dashboardNotifData?.cancelList?.length" (click)="goToCancelFromNotif()">
+                Go to Cancel
+              </ion-button>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-  </ng-template>
-</ion-modal>
+      </div> <!-- ✅ modal-page closing (he missing hota) -->
+    </ng-template>
+  </ion-modal>
 
   <!-- Test preview modal (eye icon — global search) -->
   <ion-modal [isOpen]="isTestPreviewModalOpen" cssClass="test-preview-popup" (didDismiss)="closeTestPreview()">
@@ -536,32 +542,49 @@
   <ion-modal class="test-modal sheet-modal" [isOpen]="isEditPatientModalOpen" (didDismiss)="closePatientModal()"
     [breakpoints]="[0,1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
     <ng-template>
-      <div class="test-modal-wrapper">
+      <div class="test-modal-wrapper ep-modal">
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="sheet-top-row">
             <div class="sheet-top-title">
               <div class="sheet-title-eyebrow">Booking #{{ editPatientData?.bookingId }}</div>
               <div class="sheet-title-main">Edit Patient</div>
+              <div class="ep-subtitle">Update patient, doctor and contact details</div>
             </div>
             <button class="close-modal-btn" (click)="closePatientModal()"><ion-icon
                 name="close-outline"></ion-icon></button>
           </div>
         </div>
-        <div class="test-modal-body-pad test-modal-scroll">
+
+        <div class="test-modal-body-pad test-modal-scroll ep-scroll">
           <div class="skeleton-block" *ngIf="isPatientLoading">
             <div class="skeleton-line" style="width:50%"></div>
           </div>
-          <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
 
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
-              <div class="patient-form-grid">
-                <div class="field-row">
-                  <div class="summary-field narrow">
-                    <label>Title</label>
+          <div class="ep-body" *ngIf="editPatientData && !isPatientLoading">
+
+            <!-- SUMMARY STRIP -->
+            <div class="ep-summary">
+              <div class="ep-summary-avatar"><ion-icon name="person-outline"></ion-icon></div>
+              <div class="ep-summary-text">
+                <div class="ep-summary-name">{{ editPatientData.title | titlecase }} {{ editPatientData.name }}</div>
+                <div class="ep-summary-sub">Patient ID · {{ editPatientData.patientId || '-' }}</div>
+              </div>
+            </div>
+
+            <!-- SECTION 1: PATIENT DETAILS -->
+            <section class="ep-section">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="person-outline"></ion-icon></span>
+                <span class="ep-section-title">Patient Details</span>
+              </header>
+
+              <div class="ep-grid">
+                <div class="ep-row-title ep-full">
+                  <div class="ep-field">
+                    <label class="ep-label">Title</label>
                     <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
-                      class="premium-select" (ionChange)="onEditTitleChange()">
+                      class="ep-select" (ionChange)="onEditTitleChange()">
                       <ion-select-option value="mr">Mr</ion-select-option>
                       <ion-select-option value="mrs">Mrs</ion-select-option>
                       <ion-select-option value="ms">Ms</ion-select-option>
@@ -570,142 +593,151 @@
                       <ion-select-option value="baby">Baby</ion-select-option>
                     </ion-select>
                   </div>
-                  <div class="summary-field wide">
-                    <label>Patient Name</label>
-                    <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
+                  <div class="ep-field">
+                    <label class="ep-label">Patient Name</label>
+                    <input class="ep-input" type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
                   </div>
                 </div>
 
-                <div class="summary-field pair-field">
-                  <label>Age</label>
-                  <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Age Type</label>
-                  <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="premium-select">
-                    <ion-select-option value="years">Years</ion-select-option>
-                    <ion-select-option value="months">Months</ion-select-option>
-                    <ion-select-option value="days">Days</ion-select-option>
-                  </ion-select>
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Gender</label>
-                  <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="premium-select">
-                    <ion-select-option value="male">Male</ion-select-option>
-                    <ion-select-option value="female">Female</ion-select-option>
-                    <ion-select-option value="other">Other</ion-select-option>
-                  </ion-select>
-                </div>
-              </div>
-            </div>
-            <div class="form-section">
-              <div class="form-section-title">
-                <ion-icon name="medkit-outline"></ion-icon>
-                Doctor &amp; Lab
-              </div>
-
-              <div class="doctor-lab-stack">
-
-                <div class="summary-field doctor-search-field" style="position: relative;">
-                  <label>Ref. Doctor</label>
-
-                  <div class="doctor-input-wrapper">
-                    <input type="text" [ngModel]="doctorSearch" placeholder="Search doctor name" autocomplete="off"
-                      name="refDoctorSearch" readonly>
+                <div class="ep-row-3 ep-full">
+                  <div class="ep-field">
+                    <label class="ep-label">Age</label>
+                    <input class="ep-input" type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
+                  </div>
+                  <div class="ep-field">
+                    <label class="ep-label">Age Type</label>
+                    <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="ep-select">
+                      <ion-select-option value="years">Years</ion-select-option>
+                      <ion-select-option value="months">Months</ion-select-option>
+                      <ion-select-option value="days">Days</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="ep-field">
+                    <label class="ep-label">Gender</label>
+                    <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="ep-select">
+                      <ion-select-option value="male">Male</ion-select-option>
+                      <ion-select-option value="female">Female</ion-select-option>
+                      <ion-select-option value="other">Other</ion-select-option>
+                    </ion-select>
                   </div>
                 </div>
+              </div>
+            </section>
 
-                <div class="summary-field">
-                  <label>Custom Doctor Name</label>
-                  <input type="text" [(ngModel)]="editPatientData.customDoctorName"
+            <!-- SECTION 2: DOCTOR & LAB -->
+            <section class="ep-section">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="medkit-outline"></ion-icon></span>
+                <span class="ep-section-title">Doctor &amp; Lab</span>
+              </header>
+
+              <div class="ep-grid ep-grid-3">
+                <div class="ep-field">
+                  <label class="ep-label">Ref. Doctor</label>
+                  <input class="ep-input" type="text" [ngModel]="doctorSearch" placeholder="Search doctor name"
+                    autocomplete="off" name="refDoctorSearch" readonly>
+                </div>
+
+                <div class="ep-field">
+                  <label class="ep-label">Custom Doctor Name</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.customDoctorName"
                     placeholder="Enter custom doctor name">
                 </div>
 
-                <div class="summary-field lab-search-field" style="position: relative;">
-                  <label>Custom Lab Name</label>
-                  <input type="text" [(ngModel)]="customLabSearch" (ngModelChange)="searchCustomLabInput()"
-                    placeholder="Enter custom lab name" autocomplete="off">
-
-                  <div class="test-suggestions overlay-dropdown"
+                <div class="ep-field ep-field-rel">
+                  <label class="ep-label">Custom Lab Name</label>
+                  <input class="ep-input" type="text" [(ngModel)]="customLabSearch"
+                    (ngModelChange)="searchCustomLabInput()" placeholder="Enter custom lab name" autocomplete="off">
+                  <div class="test-suggestions overlay-dropdown ep-suggest"
                     *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
-                    <div class="suggestion-item" *ngFor="let lab of filteredCustomLabs"
+                    <div class="suggestion-item ep-suggest-item" *ngFor="let lab of filteredCustomLabs"
                       (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
                       <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
                           *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
                     </div>
                   </div>
                 </div>
-
               </div>
-            </div>
+            </section>
 
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
+            <!-- SECTION 3: CONTACT & IDENTIFICATION -->
+            <section class="ep-section">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="card-outline"></ion-icon></span>
+                <span class="ep-section-title">Contact &amp; Identification</span>
+              </header>
+
+              <div class="ep-grid">
+                <div class="ep-field">
+                  <label class="ep-label">Mobile</label>
+                  <input class="ep-input" type="tel" [(ngModel)]="editPatientData.mobileNumber"
+                    placeholder="10 digit mobile" maxlength="10">
+                </div>
+                <div class="ep-field">
+                  <label class="ep-label">Aadhaar</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.aadhaarNumber"
+                    placeholder="Aadhaar number" maxlength="12">
+                </div>
+                <div class="ep-field ep-full">
+                  <label class="ep-label">UHID</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
+                </div>
+                <div class="ep-field ep-full">
+                  <label class="ep-label">Address</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
+                </div>
               </div>
-              <div class="patient-form-grid">
-                <div class="summary-field pair-field">
-                  <label>Mobile</label>
-                  <input type="tel" [(ngModel)]="editPatientData.mobileNumber" placeholder="10 digit mobile"
-                    maxlength="10">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Aadhaar</label>
-                  <input type="text" [(ngModel)]="editPatientData.aadhaarNumber" placeholder="Aadhaar number"
-                    maxlength="12">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>UHID</label>
-                  <input type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
-                </div>
-                <div class="summary-field span-3">
-                  <label>Address</label>
-                  <input type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
+            </section>
+
+            <!-- SECTION 4: ATTACHMENTS -->
+            <section class="ep-section">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="document-text-outline"></ion-icon></span>
+                <span class="ep-section-title">Attachments</span>
+              </header>
+
+              <div class="ep-grid">
+                <div class="ep-field ep-full">
+                  <label class="ep-label">Add Attachments</label>
+                  <input #patientFile type="file" hidden multiple accept="image/*,application/pdf"
+                    (change)="onPatientFileSelected($event)">
+
+                  <button type="button" class="ep-attach" (click)="patientFile.click()">
+                    <ion-icon name="cloud-upload-outline"></ion-icon>
+                    <span>Choose files</span>
+                  </button>
+
+                  <div class="ep-att-list">
+                    <div class="ep-att-row" *ngFor="let att of editPatientData.attachments; let i = index">
+                      <span class="ep-att-index">{{ i + 1 }}</span>
+                      <ion-icon [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
+                        class="ep-att-type"></ion-icon>
+                      <span class="ep-att-name">{{ att.name }}</span>
+                      <span class="ep-att-actions">
+                        <ion-icon name="eye-outline" class="ep-att-eye"
+                          (click)="previewPatientAttachment(att)"></ion-icon>
+                        <ion-icon name="trash-outline" class="ep-att-del"
+                          (click)="removePatientAttachment(i)"></ion-icon>
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-
-<div class="form-section">
-  <div class="form-section-title">
-    <ion-icon name="document-text-outline"></ion-icon> Attachments
-  </div>
-  <div class="patient-form-grid">
-    <div class="summary-field span-3">
-      <label>Add Attachments</label>
-      <input #patientFile type="file" hidden multiple accept="image/*,application/pdf"
-        (change)="onPatientFileSelected($event)">
-
-      <button type="button" class="attach-btn" (click)="patientFile.click()">
-        <ion-icon name="attach-outline"></ion-icon> Choose
-      </button>
-
-      <div class="attachment-row" *ngFor="let att of editPatientData.attachments; let i = index">
-        <span class="att-index">{{ i + 1 }}.</span>
-        <ion-icon
-          [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
-          class="att-type-icon"></ion-icon>
-        <span class="att-name">{{ att.name }}</span>
-        <span class="att-actions">
-          <ion-icon name="eye-outline" class="att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
-          <ion-icon name="trash-outline" class="att-del" (click)="removePatientAttachment(i)"></ion-icon>
-        </span>
-      </div>
-    </div>
-  </div>
-</div>
+            </section>
 
           </div>
         </div>
+
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
-          <ion-button expand="block" fill="solid" class="save-changes-btn" (click)="savePatientChanges()">Save
+          <ion-button expand="block" fill="solid" class="save-changes-btn ep-save" (click)="savePatientChanges()">Save
             Changes</ion-button>
         </div>
       </div>
     </ng-template>
   </ion-modal>
 
-    <!-- Attachment preview modal -->
-  <ion-modal [isOpen]="isAttachmentPreviewOpen" cssClass="test-preview-popup"
-    (didDismiss)="closeAttachmentPreview()">
+  <!-- Attachment preview modal -->
+  <ion-modal [isOpen]="isAttachmentPreviewOpen" cssClass="test-preview-popup" (didDismiss)="closeAttachmentPreview()">
     <ng-template>
       <div class="modal-page">
         <div class="modal-header">
@@ -1057,6 +1089,146 @@
         </div>
       </section>
 
+      <!-- shared gradients for the service icons (always rendered, do not remove) -->
+      <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+        <defs>
+          <linearGradient id="gBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#F7F7F7" />
+            <stop offset="1" stop-color="#C4C6C8" />
+          </linearGradient>
+          <radialGradient id="gSkin" cx=".4" cy=".35" r=".8">
+            <stop offset="0" stop-color="#FFDCC8" />
+            <stop offset="1" stop-color="#F0A07A" />
+          </radialGradient>
+          <linearGradient id="gHair" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#84432E" />
+            <stop offset="1" stop-color="#3A1812" />
+          </linearGradient>
+          <radialGradient id="gGreen" cx=".4" cy=".3" r=".85">
+            <stop offset="0" stop-color="#9BE87A" />
+            <stop offset="1" stop-color="#2B9A28" />
+          </radialGradient>
+          <radialGradient id="gBlue" cx=".4" cy=".3" r=".85">
+            <stop offset="0" stop-color="#6DB9FF" />
+            <stop offset="1" stop-color="#1259B3" />
+          </radialGradient>
+          <linearGradient id="gPurple" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#9A85F5" />
+            <stop offset="1" stop-color="#4630AE" />
+          </linearGradient>
+          <linearGradient id="gOrange" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFCB63" />
+            <stop offset="1" stop-color="#E5850A" />
+          </linearGradient>
+          <linearGradient id="gPink" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#F57BA8" />
+            <stop offset="1" stop-color="#B02D62" />
+          </linearGradient>
+          <linearGradient id="gIndigo" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#7A8DE8" />
+            <stop offset="1" stop-color="#2B3A94" />
+          </linearGradient>
+          <radialGradient id="gRed" cx=".4" cy=".3" r=".85">
+            <stop offset="0" stop-color="#FF8F85" />
+            <stop offset="1" stop-color="#CC2B2B" />
+          </radialGradient>
+          <linearGradient id="gGlass" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#FFFFFF" />
+            <stop offset="1" stop-color="#B9D2EC" />
+          </linearGradient>
+          <linearGradient id="gCream" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFF3D2" />
+            <stop offset="1" stop-color="#F0C373" />
+          </linearGradient>
+          <linearGradient id="gTeal" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#2FBAA9" />
+            <stop offset="1" stop-color="#087469" />
+          </linearGradient>
+          <linearGradient id="gGrey" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#EEF0F2" />
+            <stop offset="1" stop-color="#97A0AA" />
+          </linearGradient>
+        </defs>
+      </svg>
+
+      <!-- ================= SERVICES (defined once, used in loading + loaded) ================= -->
+      <ng-template #servicesTpl>
+        <section class="content-section services-card">
+          <div class="section-heading">
+            <div>
+              <h2>Services</h2>
+            </div>
+          </div>
+
+          <div class="services-grid-v2">
+
+            <div class="service-item" (click)="goToPage('add-patient')">
+              <span class="service-circle sv-green">
+                <ion-icon name="person-add"></ion-icon>
+              </span>
+              <span class="service-label">New Booking</span>
+            </div>
+
+            <div class="service-item" (click)="goToPage('booking-status')">
+              <span class="service-circle sv-purple">
+                <ion-icon name="checkmark-done-circle"></ion-icon>
+              </span>
+              <span class="service-label">Booking Status</span>
+            </div>
+
+            <div class="service-item" (click)="goToPage('reports')">
+              <span class="service-circle sv-blue">
+                <ion-icon name="cloud-download"></ion-icon>
+              </span>
+              <span class="service-label">Download Reports</span>
+            </div>
+
+            <div class="service-item" (click)="goToPage('test-list')">
+              <span class="service-circle sv-orange">
+                <ion-icon name="flask"></ion-icon>
+              </span>
+              <span class="service-label">Test List</span>
+            </div>
+
+            <div class="service-item" (click)="goToPage('profile-list')">
+              <span class="service-circle sv-pink">
+                <ion-icon name="id-card"></ion-icon>
+              </span>
+              <span class="service-label">Profile List</span>
+            </div>
+
+            <div class="service-item" (click)="openClinicalHistory()">
+              <span class="service-circle sv-indigo">
+                <ion-icon name="pulse"></ion-icon>
+                <span class="notif-badge" *ngIf="clinicalUnseenCount > 0">
+                  {{ clinicalUnseenCount > 99 ? '99+' : clinicalUnseenCount }}
+                </span>
+              </span>
+              <span class="service-label">Clinical History</span>
+            </div>
+
+            <div class="service-item" (click)="openCancelTest()">
+              <span class="service-circle sv-red">
+                <ion-icon name="ban"></ion-icon>
+                <span class="notif-badge" *ngIf="cancelUnseenCount > 0">
+                  {{ cancelUnseenCount > 99 ? '99+' : cancelUnseenCount }}
+                </span>
+              </span>
+              <span class="service-label">Cancel Test</span>
+            </div>
+
+            <div class="service-item" (click)="goToPage('franchise-management')">
+              <span class="service-circle sv-teal">
+                <ion-icon name="storefront"></ion-icon>
+              </span>
+              <span class="service-label">Franchise</span>
+            </div>
+
+          </div>
+        </section>
+      </ng-template>
+      <!-- ===================================================================================== -->
+
       <ng-container *ngIf="loading; else loadedContent">
         <section class="stats-grid" aria-label="Loading dashboard statistics">
           <article class="metric-card dual-metric skeleton-card" *ngFor="let i of [1,2,3]">
@@ -1092,114 +1264,70 @@
           </div>
         </section>
 
-        <section class="content-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Shortcuts</p>
-              <h2>Services</h2>
-            </div>
-          </div>
-
-          <div class="services-grid-v2">
-            <div class="service-item" (click)="goToPage('add-patient')">
-              <span class="service-circle teal">
-                <ion-icon name="person-add-outline"></ion-icon>
-              </span>
-              <span class="service-label">New Booking</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('booking-status')">
-              <span class="service-circle violet">
-                <ion-icon name="clipboard-outline"></ion-icon>
-              </span>
-              <span class="service-label">Booking Status</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('reports')">
-              <span class="service-circle blue">
-                <ion-icon name="download-outline"></ion-icon>
-              </span>
-              <span class="service-label">Download Reports</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('test-list')">
-              <span class="service-circle amber">
-                <ion-icon name="list-outline"></ion-icon>
-              </span>
-              <span class="service-label">Test List</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('profile-list')">
-              <span class="service-circle rose">
-                <ion-icon name="person-circle-outline"></ion-icon>
-              </span>
-              <span class="service-label">Profile List</span>
-            </div>
-            <div class="service-item" (click)="goToPage('outsource')">
-              <span class="service-circle indigo">
-                <ion-icon name="time-outline"></ion-icon>
-              </span>
-              <span class="service-label">Client History</span>
-            </div>
-          </div>
-        </section>
-
-        <section class="content-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Recent Activity</p>
-              <h2>Daily Bookings</h2>
-            </div>
-            <p class="section-note">Last 5 Days</p>
-          </div>
-
-          <div class="daily-list">
-            <article class="booking-card skeleton-card" *ngFor="let i of [1,2,3]">
-              <span class="skeleton shimmer line-md"></span>
-              <div class="booking-skeleton-main">
-                <span class="skeleton shimmer line-lg"></span>
-              </div>
-              <div class="booking-skeleton-stats">
-                <span class="skeleton shimmer"></span>
-              </div>
-            </article>
-          </div>
-        </section>
+        <!-- Services (loading state) -->
+        <ng-container *ngTemplateOutlet="servicesTpl"></ng-container>
       </ng-container>
 
       <ng-template #loadedContent>
-        <section class="stats-grid" aria-label="Selected date statistics">
-          <article class="metric-card">
-            <span class="metric-icon patients"><ion-icon name="people-outline"></ion-icon></span>
+
+        <section class="ov-card" aria-label="Today's overview">
+          <ng-container *ngIf="selectedOverview as d">
+            <div class="ov-top">
+
+              <div class="ov-ring">
+                <svg viewBox="0 0 100 100" class="ov-ring-svg" shape-rendering="geometricPrecision">
+                  <circle class="ov-ring-track" cx="50" cy="50" r="38"></circle>
+                  <circle *ngFor="let s of ringSegments; trackBy: trackBySeg" class="ov-ring-seg" cx="50" cy="50" r="38"
+                    fill="none" stroke-width="11" [attr.stroke]="s.color" [attr.stroke-dasharray]="s.dash"
+                    [attr.stroke-dashoffset]="s.offset"></circle>
+                </svg>
+                <div class="ov-ring-center">
+                  <strong>{{ d.samples }}</strong>
+                  <span>samples</span>
+                </div>
+              </div>
+
+              <div class="ov-legend">
+                <div class="ov-leg-item received">
+                  <span>Received</span>
+                  <strong>{{ d.received }}/{{ d.samples }}</strong>
+                </div>
+                <div class="ov-leg-item pending">
+                  <span>Pending</span>
+                  <strong>{{ d.pending }}/{{ d.samples }}</strong>
+                </div>
+                <div class="ov-leg-item outsourced">
+                  <span>Outsourced</span>
+                  <strong>{{ d.outSourced }}/{{ d.samples }}</strong>
+                </div>
+                <div class="ov-leg-item rejected">
+                  <span>Rejected</span>
+                  <strong>{{ d.rejected }}/{{ d.samples }}</strong>
+                </div>
+              </div>
+
+            </div>
+          </ng-container>
+
+          <div class="ov-stats">
             <div>
               <strong>{{ totalPatients }}</strong>
               <span>Patients</span>
             </div>
-          </article>
-
-          <article class="metric-card">
-            <span class="metric-icon samples"><ion-icon name="beaker-outline"></ion-icon></span>
             <div>
               <strong>{{ totalSamples }}</strong>
               <span>Samples</span>
             </div>
-          </article>
-
-          <article class="metric-card">
-            <span class="metric-icon reports"><ion-icon name="document-text-outline"></ion-icon></span>
             <div>
               <strong>{{ totalReports }}</strong>
               <span>Reports</span>
             </div>
-          </article>
-
-          <article class="metric-card">
-            <span class="metric-icon bookings"><ion-icon name="calendar-outline"></ion-icon></span>
             <div>
               <strong>{{ totalBookings }}</strong>
               <span>Bookings</span>
             </div>
-          </article>
+          </div>
+
         </section>
 
         <div class="wallet-mini-card" *ngIf="canViewWallet && wallet">
@@ -1226,84 +1354,15 @@
           <span class="wallet-orb wm-orb-one"></span>
           <span class="wallet-orb wm-orb-two"></span>
         </div>
-        <section class="content-section">
-          <div class="section-heading">
-            <div>
-              <p class="eyebrow">Shortcuts</p>
-              <h2>Services</h2>
-            </div>
-            <p class="section-note">Get things done</p>
-          </div>
 
-          <div class="services-grid-v2">
-            <div class="service-item" (click)="goToPage('add-patient')">
-              <span class="service-circle teal">
-                <ion-icon name="person-add-outline"></ion-icon>
-              </span>
-              <span class="service-label">New Booking</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('booking-status')">
-              <span class="service-circle violet">
-                <ion-icon name="clipboard-outline"></ion-icon>
-              </span>
-              <span class="service-label">Booking Status</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('reports')">
-              <span class="service-circle blue">
-                <ion-icon name="download-outline"></ion-icon>
-              </span>
-              <span class="service-label">Download Reports</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('test-list')">
-              <span class="service-circle amber">
-                <ion-icon name="list-outline"></ion-icon>
-              </span>
-              <span class="service-label">Test List</span>
-            </div>
-            <div class="service-item" (click)="goToPage('profile-list')">
-              <span class="service-circle rose">
-                <ion-icon name="person-circle-outline"></ion-icon>
-              </span>
-              <span class="service-label">Profile List</span>
-            </div>
-            <div class="service-item" (click)="openClinicalHistory()">
-              <span class="service-circle indigo">
-                <ion-icon name="time-outline"></ion-icon>
-                <span class="notif-badge" *ngIf="clinicalUnseenCount > 0">
-                  {{ clinicalUnseenCount > 99 ? '99+' : clinicalUnseenCount }}
-                </span>
-              </span>
-              <span class="service-label">Clinical History</span>
-            </div>
-
-            <div class="service-item" (click)="openCancelTest()">
-              <span class="service-circle danger">
-                <ion-icon name="close-circle-outline"></ion-icon>
-                <span class="notif-badge" *ngIf="cancelUnseenCount > 0">
-                  {{ cancelUnseenCount > 99 ? '99+' : cancelUnseenCount }}
-                </span>
-              </span>
-              <span class="service-label">Cancel Test</span>
-            </div>
-
-            <div class="service-item" (click)="goToPage('franchise-management')">
-              <span class="service-circle amber">
-                <ion-icon name="business-outline"></ion-icon>
-              </span>
-              <span class="service-label">Franchise</span>
-            </div>
-          </div>
-
-        </section>
+        <!-- Services (loaded state) -->
+        <ng-container *ngTemplateOutlet="servicesTpl"></ng-container>
 
         <section class="content-section bookings-section">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Recent activity</p>
-              <h2>Daily bookings</h2>
+              <p class="eyebrow">Daily bookings</p>
+
             </div>
             <p class="section-note">Last 5 days</p>
           </div>
@@ -1371,6 +1430,8 @@
         </section>
       </ng-template>
     </main>
+
+
   </ion-content>
   <!-- ================= BOTTOM NAVIGATION BAR ================= -->
   <!-- <nav class="app-bottom-nav" role="navigation" aria-label="Primary">

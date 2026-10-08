@@ -2061,13 +2061,28 @@ ion-modal {
 }
 
 .saved-primary {
-  --background: linear-gradient(135deg, #60a5fa, #2563eb);
+  --background: transparent;
+  --background-hover: rgba(59, 130, 246, 0.08);
+  --background-activated: rgba(59, 130, 246, 0.14);
+  --background-focused: rgba(59, 130, 246, 0.08);
+  --color: #2563eb;
+  --color-activated: #2563eb;
+  --border-color: #3b82f6;
+  --border-width: 2px;
+  --border-style: solid;
   --border-radius: 16px;
-  --box-shadow: 0 10px 22px rgba(37, 99, 235, 0.35);
+  --box-shadow: none;
   height: 50px;
   font-weight: 700;
   font-size: 15px;
   margin: 0;
+
+  &::part(native) {
+    background: transparent;
+    border: 2px solid #3b82f6;
+    border-radius: 16px;
+    box-shadow: none;
+  }
 }
 
 .saved-secondary {
@@ -2103,4 +2118,366 @@ ion-modal {
 
 @keyframes btn-spin {
   to { transform: rotate(360deg); }
+}// ===================== BOOKING SAVED SHEET — PREMIUM =====================
+.saved-sheet {
+  position: relative;
+  padding: 10px 18px calc(20px + env(safe-area-inset-bottom));
+  border-radius: 28px 28px 0 0;
+  border-top: 1px solid rgba(25, 118, 210, .14);
+  background: linear-gradient(180deg, #f1f7fe 0%, #ffffff 40%);
+  box-shadow: 0 -20px 50px -12px rgba(16, 42, 80, .3);
+}
+
+.saved-grabber {
+  width: 40px;
+  height: 4px;
+  margin: 0 auto 16px;
+  border-radius: 4px;
+  background: #cbd5e1;
+}
+
+// ---------- Header ----------
+.saved-head {
+  gap: 14px;
+}
+
+.saved-badge {
+  position: relative;
+  width: 50px;
+  height: 50px;
+  border-radius: 16px;
+  background: radial-gradient(120% 120% at 25% 15%, #63e6b6 0%, #10b981 60%, #0a8f63 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 10px 18px -6px rgba(16, 185, 129, .6);
+
+  // soft outer ring
+  &::after {
+    content: '';
+    position: absolute;
+    inset: -5px;
+    border-radius: 21px;
+    border: 1px solid rgba(16, 185, 129, .28);
+  }
+
+  ion-icon {
+    font-size: 28px;
+    color: #fff;
+  }
+}
+
+.saved-sheet .saved-title {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  color: #0f2340;
+}
+
+.saved-sub {
+  margin-top: 2px;
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+// ---------- Booking / Patient ID chips ----------
+.saved-chips {
+  gap: 10px;
+  margin: 18px 0 16px;
+
+  .chip {
+    flex: 1 1 0;
+    min-width: 0;
+    padding: 10px 14px;
+    border-radius: 14px;
+    background: #fff;
+    border: 1px solid #e3eaf3;
+    font-size: 15px;
+    font-weight: 800;
+    letter-spacing: .2px;
+    color: #0f2340;
+    box-shadow: 0 1px 2px rgba(16, 42, 80, .05), inset 3px 0 0 #1976d2;
+    overflow-wrap: anywhere;
+
+    &:nth-child(2) {
+      box-shadow: 0 1px 2px rgba(16, 42, 80, .05), inset 3px 0 0 #10b981;
+    }
+
+    small {
+      margin-bottom: 2px;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .7px;
+      color: #8a98ad;
+    }
+  }
+}
+
+// ---------- Primary action (filled, premium) ----------
+.saved-primary {
+  --background: linear-gradient(135deg, #2a86e0, #1565c0);
+  --background-hover: linear-gradient(135deg, #2a86e0, #1565c0);
+  --background-activated: linear-gradient(135deg, #1f78d0, #0f55a8);
+  --background-focused: linear-gradient(135deg, #2a86e0, #1565c0);
+  --color: #fff;
+  --color-activated: #fff;
+  --border-width: 0;
+  --border-radius: 16px;
+  height: 52px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: .1px;
+  text-transform: none;
+
+  &::part(native) {
+    background: linear-gradient(135deg, #2a86e0 0%, #1565c0 100%);
+    border: 0;
+    border-radius: 16px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, .25), 0 12px 22px -8px rgba(21, 101, 192, .6);
+    transition: transform .12s ease, filter .15s ease;
+  }
+
+  &:active::part(native) {
+    transform: scale(.98);
+    filter: brightness(.96);
+  }
+
+  ion-icon {
+    font-size: 20px;
+  }
+}
+
+// ---------- Secondary actions (soft tiles) ----------
+.saved-secondary {
+  gap: 10px;
+  margin-top: 10px;
+
+  .saved-ghost {
+    flex: 1;
+    height: 46px;
+    font-size: 13px;
+    font-weight: 700;
+    text-transform: none;
+    --background: #f4f8fd;
+    --background-activated: #e8f1fc;
+    --border-color: rgba(25, 118, 210, .16);
+    --border-width: 1.5px;
+    --border-radius: 14px;
+    --color: #1565c0;
+
+    ion-icon {
+      font-size: 18px;
+    }
+  }
+}
+// ===================== NEW BOOKING HEADER — PREMIUM =====================
+
+// ---------- Toolbar ----------
+ion-header {
+  box-shadow: none;
+
+  &::after {
+    display: none;   // Ionic cha default khalcha shadow kadhto
+  }
+}
+
+.booking-header {
+  --background: var(--app-primary-mid);
+  --border-width: 0;
+  --min-height: 56px;
+
+  ion-title {
+    font-size: 17px;
+    font-weight: 800;
+    letter-spacing: -.2px;
+    color: #fff;
+  }
+
+  // back arrow / step-2 arrow: glass tile
+  ion-back-button,
+  ion-buttons ion-button {
+    --background: rgba(255, 255, 255, .18);
+    --background-hover: rgba(255, 255, 255, .26);
+    --background-activated: rgba(255, 255, 255, .3);
+    --border-radius: 12px;
+    --padding-start: 8px;
+    --padding-end: 8px;
+    --min-height: 36px;
+    --color: #fff;
+    margin-inline-start: 8px;
+  }
+}
+
+// ---------- Last patient bar ----------
+.last-patient-bar {
+  position: relative;
+  padding: 6px 16px 36px;
+  border-radius: 0 0 26px 26px;
+  background:
+    radial-gradient(circle at 92% -10%, rgba(255, 255, 255, .22), transparent 48%),
+    linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%);
+
+  .last-patient-info {
+    flex-direction: column;
+    align-items: flex-start;
+    flex-wrap: nowrap;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .last-label {
+    margin: 0;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    color: rgba(255, 255, 255, .75);
+  }
+
+  .last-name {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+    font-weight: 800;
+    letter-spacing: -.1px;
+    color: #fff;
+  }
+
+  // collection center select
+  .lab-search-wrap {
+    width: 176px;
+    min-height: 44px;
+    padding: 0 8px 0 14px;
+    border: 0;
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 10px 20px -8px rgba(8, 31, 69, .5);
+
+    ion-input {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #0f2340;
+      --placeholder-color: #8794a8;
+      --placeholder-opacity: 1;
+    }
+
+    ion-icon {
+      margin: 0;
+      padding: 5px;
+      font-size: 16px;
+      border-radius: 50%;
+      background: #eaf3fd;
+      color: #1565c0;
+      cursor: pointer;
+    }
+  }
+}
+
+// ---------- Step indicator (floating card) ----------
+.step-indicator {
+  position: relative;
+  z-index: 2;
+  margin: -18px 12px 0;
+  padding: 13px 16px;
+  border-radius: 18px;
+  background: #fff;
+  border: 1px solid #e6edf5;
+  box-shadow: 0 12px 24px -14px rgba(16, 42, 80, .35);
+
+  .step-item {
+    gap: 8px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #8794a8;
+
+    .step-circle {
+      width: 28px;
+      height: 28px;
+      background: #fff;
+      border: 2px solid #d5dee9;
+      color: #9aa8bc;
+      font-size: 12px;
+      box-sizing: border-box;
+    }
+
+    &.active {
+      color: #0d57a8;
+
+      .step-circle {
+        border: 0;
+        color: #fff;
+        background: linear-gradient(135deg, #2a86e0, #1565c0);
+        box-shadow: 0 0 0 4px rgba(25, 118, 210, .15), 0 6px 12px -4px rgba(21, 101, 192, .6);
+      }
+    }
+
+    &.done {
+      color: #1565c0;
+
+      .step-circle {
+        border: 0;
+        color: #fff;
+        background: #1976d2;
+      }
+    }
+  }
+
+  .step-line {
+    height: 3px;
+    margin: 0 10px;
+    background: #e3eaf3;
+
+    &.done {
+      background: linear-gradient(90deg, #2a86e0, #1565c0);
+    }
+  }
+}
+
+.package-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  .search-test-wrap {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.package-search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  margin-bottom: 12px;
+
+  .search-test-wrap {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-bottom: 0;
+  }
+
+  .paste-icon-btn {
+    flex: 0 0 36px;
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid rgba(59, 130, 246, 0.45);
+    border-radius: 11px;
+    padding: 0;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #3b82f6;
+    background: transparent;
+    box-shadow: none;
+    transition: transform 0.15s ease, background 0.15s ease;
+
+    ion-icon {
+      font-size: 18px;
+    }
+
+    &:active {
+      transform: scale(0.92);
+      background: rgba(59, 130, 246, 0.12);
+    }
+  }
 }

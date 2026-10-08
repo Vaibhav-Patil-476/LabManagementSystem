@@ -680,4 +680,31 @@
       word-break: break-word;
     }
   }
+}.tl-action-btn {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1.5px solid rgba(59, 130, 246, 0.45);
+  background: transparent;
+  color: #3b82f6;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin-left: 6px;
+  cursor: pointer;
+
+  ion-icon {
+    font-size: 17px;
+  }
+
+  &:active {
+    transform: scale(0.92);
+    background: rgba(59, 130, 246, 0.12);
+  }
+}
+
+.tl-row-top-right {
+  display: flex;
+  align-items: center;
 }

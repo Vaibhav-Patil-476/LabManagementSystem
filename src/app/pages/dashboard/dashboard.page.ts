@@ -33,7 +33,10 @@ import {
   printOutline, cashOutline, qrCodeOutline, attachOutline,
   checkmarkOutline, walletOutline, cardOutline,
   addCircleOutline, lockClosedOutline, eyeOutline, homeOutline, alertCircleOutline,
-  trashOutline, imageOutline, documentOutline, medkitOutline
+  trashOutline, imageOutline, documentOutline, medkitOutline,
+  // NEW — Services grid icons
+  personAdd, checkmarkDoneCircle, cloudDownload, flask,
+  idCard, pulse, ban, storefront
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -62,6 +65,7 @@ const ROLE = {
   FRANCHISE: 'ROLE_FRANCHISE',
   FRANCHISE_STAFF: 'ROLE_FRANCHISE_STAFF'
 } as const;
+
 
 const WALLET_POLL_INTERVAL_MS = 3000;
 const DASHBOARD_POLL_INTERVAL_MS = 15000;
@@ -99,6 +103,12 @@ export class DashboardPage implements OnInit, OnDestroy {
   totalBookings = 0;
   totalReports = 0;
   totalSamples = 0;
+  selectedOverview = {
+    samples: 0, received: 0, pending: 0, outSourced: 0, rejected: 0
+  };
+
+  ringProgress = 0;                 // 0 ते 1
+  private ringAnimId: any = null;
   private pdfDownload = inject(PdfDownloadService);
 
   rawBookings: any[] = [];
@@ -116,7 +126,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   totalCanceledAmount = 0;
   totalBusinessAmount = 0;
   loading = false;
-
+  private lastDayKey = this.toKey(new Date());
+  private dayWatchSub?: Subscription;
   fromDate = '';
   toDate = '';
 
@@ -128,6 +139,27 @@ export class DashboardPage implements OnInit, OnDestroy {
   filteredPackages: any[] = [];
   showPackageSuggestions = false;
   private packageSearchTimer: any = null;
+
+
+  private startDayChangeWatcher(): void {
+    this.dayWatchSub?.unsubscribe();
+    this.dayWatchSub = interval(30000).subscribe(() => {
+      const nowKey = this.toKey(new Date());
+
+      if (nowKey !== this.lastDayKey) {
+        const oldKey = this.lastDayKey;
+        this.lastDayKey = nowKey;
+
+        // user "आज" (जुना आज) पाहत होता तरच नवीन आज वर हलवा
+        if (this.fromDate === oldKey && this.toDate === oldKey) {
+          this.fromDate = nowKey;
+          this.toDate = nowKey;
+        }
+
+        this.ngZone.run(() => this.loadDashboard(true));
+      }
+    });
+  }
 
   // ============================================================
   // GLOBAL SEARCH
@@ -240,6 +272,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   dashboardNotifData: any = null;
 
   private dashboardNotifPollSub?: Subscription;
+  @ViewChild('notifModal') notifModal?: IonModal;
+
+  private isPageActive = false;
+  private notifFetchTimer: any = null;
+  private notifFetchSub?: Subscription;
   private readonly DASHBOARD_NOTIF_POLL_INTERVAL_MS = 15000;
 
   private readonly NOTIF_LOOKBACK_DAYS = 30; // how far back we scan for "new" items
@@ -321,6 +358,16 @@ export class DashboardPage implements OnInit, OnDestroy {
       'trash-outline': trashOutline,
       'image-outline': imageOutline,
       'document-outline': documentOutline,
+
+      // NEW — Services grid icons
+      'person-add': personAdd,
+      'checkmark-done-circle': checkmarkDoneCircle,
+      'cloud-download': cloudDownload,
+      'flask': flask,
+      'id-card': idCard,
+      'pulse': pulse,
+      'ban': ban,
+      'storefront': storefront,
     });
   }
 
@@ -408,6 +455,82 @@ export class DashboardPage implements OnInit, OnDestroy {
     return this.dailyBookings.find(d => d.dateKey === this.todayKey)?.bookings ?? 0;
   }
 
+  get todayOverview(): any {
+    const found = this.dailyBookings.find(d => d.dateKey === this.todayKey);
+    return found ?? {
+      dateKey: this.todayKey,
+      samples: 0, received: 0, pending: 0, outSourced: 0, rejected: 0
+    };
+  }
+
+  readonly ringRadius = 38;
+  readonly ringCircumference = 2 * Math.PI * 38;
+
+get ringSegments(): { color: string; dash: string; offset: string }[] {
+  const d = this.selectedOverview;
+  const total = d.samples || 0;
+  const c = this.ringCircumference;
+  const maxLen = c * this.ringProgress;
+  const overlap = 0.6;
+
+  const parts = [
+    { color: '#16a34a', value: d.received },
+    { color: '#f59e0b', value: d.pending },
+    { color: '#2563eb', value: d.outSourced },
+    { color: '#ef4444', value: d.rejected }
+  ];
+
+  let used = 0;
+  return parts.map(p => {
+    const fullLen = total ? (p.value / total) * c : 0;
+    let visible = Math.max(0, Math.min(fullLen, maxLen - used));
+
+    // चाप रिकामा नसेल तरच थोडा overlap द्या
+    if (visible > 0) {
+      visible = Math.min(visible + overlap, c);
+    }
+
+    const seg = {
+      color: p.color,
+      dash: `${visible} ${c}`,
+      offset: `${-used}`
+    };
+    used += fullLen;
+    return seg;
+  });
+}
+  private animateRing(): void {
+    if (this.ringAnimId) {
+      cancelAnimationFrame(this.ringAnimId);
+    }
+
+    const duration = 1100;               // ms
+    const start = performance.now();
+    this.ringProgress = 0;
+
+    const easeOut = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now: number) => {
+      const t = Math.min(1, (now - start) / duration);
+      this.ngZone.run(() => {
+        this.ringProgress = easeOut(t);
+        this.cdr.detectChanges();
+      });
+
+      if (t < 1) {
+        this.ringAnimId = requestAnimationFrame(step);
+      } else {
+        this.ringAnimId = null;
+      }
+    };
+
+    this.ringAnimId = requestAnimationFrame(step);
+  }
+
+  trackBySeg(index: number): number {
+    return index;
+  }
+
   get todayAmount(): number {
     return this.dailyBookings.find(d => d.dateKey === this.todayKey)?.amount ?? 0;
   }
@@ -448,28 +571,69 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.refreshSub?.unsubscribe();
     this.pollSub?.unsubscribe();
     this.walletPollSub?.unsubscribe();
-    this.notifPollSub?.unsubscribe();     // ✅ NEW
+    this.notifPollSub?.unsubscribe();
+    this.dashboardNotifPollSub?.unsubscribe();
+    this.cancelPendingNotifFetch();
     this.verifyLoading?.dismiss();
+    this.dayWatchSub?.unsubscribe();
   }
 
   ionViewWillEnter(): void {
+    this.isPageActive = true;
     this.initDashboard();
     this.loadFranchiseReportLocks();
     this.startPolling();
-    this.loadNotificationCounts();        // ✅ NEW — initial fetch
-    this.startNotificationPolling();      // ✅ NEW — keep badges fresh
+    this.loadNotificationCounts();
+    this.startNotificationPolling();
     this.startDashboardNotifPolling();
-
+    this.lastDayKey = this.toKey(new Date());
+    this.startDayChangeWatcher();
     if (this.canViewWallet) {
       this.startWalletPolling();
     }
   }
 
   ionViewWillLeave(): void {
+    this.isPageActive = false;
+
     this.pollSub?.unsubscribe();
     this.walletPollSub?.unsubscribe();
-    this.notifPollSub?.unsubscribe();     // ✅ NEW
+    this.notifPollSub?.unsubscribe();
     this.dashboardNotifPollSub?.unsubscribe();
+
+    this.cancelPendingNotifFetch();   // pending timer + API cancel
+    this.closeDashboardNotif();       // popup lagech band
+    this.dayWatchSub?.unsubscribe();
+
+  }
+
+
+  async closeDashboardNotif(): Promise<void> {
+    this.showDashboardNotifModal = false;
+    try {
+      await this.notifModal?.dismiss();
+    } catch { /* modal already closed */ }
+  }
+
+  async markDashboardNotifRead(): Promise<void> {
+    this.markCategorySeen('clinical');
+    this.markCategorySeen('cancel');
+    await this.closeDashboardNotif();
+    this.dashboardNotifData = null;
+  }
+
+  async goToClinicalFromNotif(): Promise<void> {
+    this.markCategorySeen('clinical');
+    await this.closeDashboardNotif();      // modal band hoyparyant thamba
+    this.dashboardNotifData = null;
+    this.ngZone.run(() => this.openClinicalHistory());
+  }
+
+  async goToCancelFromNotif(): Promise<void> {
+    this.markCategorySeen('cancel');
+    await this.closeDashboardNotif();
+    this.dashboardNotifData = null;
+    this.ngZone.run(() => this.openCancelTest());
   }
 
   private startPolling(): void {
@@ -875,7 +1039,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       this.closeGlobalDownloadModal();
       return;
     }
-    
+
     if (this.downloadingReportId === item.bookingId) return;
 
     this.downloadingReportId = item.bookingId;
@@ -1858,6 +2022,24 @@ export class DashboardPage implements OnInit, OnDestroy {
 
         this.totalSamples = totalReceived + totalPending + totalOutSourced + totalRejected + totalCancelled;
         this.samplesCanceled = totalCancelled;
+        this.totalSamples = totalReceived + totalPending + totalOutSourced + totalRejected + totalCancelled;
+        this.samplesCanceled = totalCancelled;
+
+        const next = {
+          samples: this.totalSamples,
+          received: totalReceived,
+          pending: totalPending,
+          outSourced: totalOutSourced,
+          rejected: totalRejected + totalCancelled
+        };
+
+        const changed = JSON.stringify(next) !== JSON.stringify(this.selectedOverview);
+        this.selectedOverview = next;
+        if (changed) {
+          this.animateRing();
+        }
+
+        this.animateRing();
 
         this.totalReports = selected.reports?.[0]?.completed || 0;
 
@@ -1999,6 +2181,21 @@ export class DashboardPage implements OnInit, OnDestroy {
     // sample exactly once (cancel folded into rejected above), so this
     // must NOT also add cancelledCount or the total would double-count.
     this.totalSamples = receivedCount + pendingCount + outSourcedCount + rejectedCount;
+    const next = {
+      samples: this.totalSamples,
+      received: receivedCount,
+      pending: pendingCount,
+      outSourced: outSourcedCount,
+      rejected: rejectedCount
+    };
+
+    const changed = JSON.stringify(next) !== JSON.stringify(this.selectedOverview);
+    this.selectedOverview = next;
+    if (changed) {
+      this.animateRing();
+    }
+
+    this.animateRing();
     this.reportsPending = reportsPendingCount;
     this.reportsCompleted = reportsCompletedCount;
     this.totalReports = reportsCompletedCount;
@@ -2174,6 +2371,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   goToNotifications(): void {
     this.router.navigate(['/notification']);
   }
+
+
 
   logout(): void {
     this.menuCtrl.close();
@@ -2825,10 +3024,25 @@ export class DashboardPage implements OnInit, OnDestroy {
       .subscribe(() => this.fetchDashboardNotifications());
   }
 
+  private cancelPendingNotifFetch(): void {
+    if (this.notifFetchTimer) {
+      clearTimeout(this.notifFetchTimer);
+      this.notifFetchTimer = null;
+    }
+    this.notifFetchSub?.unsubscribe();
+    this.notifFetchSub = undefined;
+  }
+
   private fetchDashboardNotifications(): void {
+    if (!this.isPageActive) return;
+
     this.loadNotificationCounts();
 
-    setTimeout(() => {
+    this.cancelPendingNotifFetch();
+    this.notifFetchTimer = setTimeout(() => {
+      this.notifFetchTimer = null;
+
+      if (!this.isPageActive) return;
       if (this.showDashboardNotifModal) return;
       if (this.clinicalUnseenCount === 0 && this.cancelUnseenCount === 0) return;
 
@@ -2838,15 +3052,17 @@ export class DashboardPage implements OnInit, OnDestroy {
       lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
       const startDate = this.formatDateParam(lookback);
 
-      forkJoin({
+      this.notifFetchSub = forkJoin({
         clinicalList: this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate),
         cancelList: this.labApi.getCancelTests(startDate, endDate, 500)
       }).subscribe({
         next: ({ clinicalList, cancelList }: any) => {
+          // response yetana user dusrya page var gela asel tar popup nako
+          if (!this.isPageActive) return;
+
           const rawPending = clinicalList?.content || clinicalList?.data || clinicalList || [];
           const rawCancel = cancelList?.content || cancelList?.data || cancelList || [];
 
-          // ✅ फक्त लास्ट-सीन नंतरचे (नवीन) records ठेवा — जुनं सगळं वगळा
           const clinicalLastSeen = this.getLastSeen('clinical');
           const cancelLastSeen = this.getLastSeen('cancel');
 
@@ -2889,34 +3105,6 @@ export class DashboardPage implements OnInit, OnDestroy {
     const lastSeen = this.getLastSeen(category);
     return list.some((r: any) => this.extractRecordTimestamp(r, category) > lastSeen);
   }
-
-  markDashboardNotifRead(): void {
-    this.markCategorySeen('clinical');
-    this.markCategorySeen('cancel');
-    this.showDashboardNotifModal = false;
-    this.dashboardNotifData = null;
-  }
-
-  goToClinicalFromNotif(): void {
-    this.markCategorySeen('clinical');
-    this.showDashboardNotifModal = false;
-    this.dashboardNotifData = null;
-
-    // Ionic modal ची closing animation पूर्ण होऊ द्या, नाहीतर
-    // navigation मुळे modal overlay मागे तसाच राहतो (visual glitch)
-    setTimeout(() => this.openClinicalHistory(), 300);
-  }
-
-  goToCancelFromNotif(): void {
-    this.markCategorySeen('cancel');
-    this.showDashboardNotifModal = false;
-    this.dashboardNotifData = null;
-
-    setTimeout(() => this.openCancelTest(), 300);
-  }
-
-
-
 
   private markCategorySeen(category: 'clinical' | 'cancel'): void {
     this.setLastSeen(category, Date.now());

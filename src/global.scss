@@ -1222,3 +1222,871 @@ ion-button[fill="outline"] ion-icon[slot="start"] {
 :root:root ion-modal.print-bill-modal {
   --width: min(360px, 94vw) !important;
 }
+
+/* =====================================================================
+   ALL BUTTONS — transparent + blue border + blue text (image style)
+   Paste at the VERY END of global.scss
+   Excluded: fill="clear" (X / icon buttons), toolbar buttons,
+             action-icon-btn, refresh-btn
+===================================================================== */
+:root:root:root ion-button:not([fill="clear"]):not(.action-icon-btn):not(.refresh-btn):not(ion-toolbar ion-button) {
+  --background: transparent !important;
+  --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
+  --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
+  --background-focused: rgba(var(--app-primary-rgb), 0.08) !important;
+  --color: var(--app-primary) !important;
+  --color-activated: var(--app-primary-dark) !important;
+  --color-hover: var(--app-primary) !important;
+  --border-color: var(--app-primary) !important;
+  --border-width: 2px !important;
+  --border-style: solid !important;
+  --border-radius: 16px !important;
+  --box-shadow: none !important;
+  box-shadow: none !important;
+  font-weight: 700;
+  text-transform: none;
+}
+
+:root:root:root ion-button:not([fill="clear"]):not(.action-icon-btn):not(.refresh-btn):not(ion-toolbar ion-button)::part(native) {
+  background: transparent !important;
+  color: var(--app-primary) !important;
+  border: 2px solid var(--app-primary) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+:root:root:root ion-button:not([fill="clear"]):not(.action-icon-btn):not(.refresh-btn):not(ion-toolbar ion-button):active::part(native) {
+  background: rgba(var(--app-primary-rgb), 0.14) !important;
+}
+
+/* Icon + spinner pan blue */
+:root:root:root ion-button:not([fill="clear"]):not(.action-icon-btn):not(.refresh-btn):not(ion-toolbar ion-button) ion-icon,
+:root:root:root ion-button:not([fill="clear"]):not(.action-icon-btn):not(.refresh-btn):not(ion-toolbar ion-button) ion-spinner {
+  color: var(--app-primary) !important;
+}
+
+/* Native <button> CTA (Add Doctor / Add Lab modal "Add") */
+:root:root:root .modal-add-btn {
+  background: transparent !important;
+  color: var(--app-primary) !important;
+  border: 2px solid var(--app-primary) !important;
+  border-radius: 16px !important;
+  box-shadow: none !important;
+}
+
+:root:root:root .modal-add-btn:active {
+  background: rgba(var(--app-primary-rgb), 0.14) !important;
+}
+
+:root:root:root .modal-add-btn ion-icon {
+  color: var(--app-primary) !important;
+}
+
+@import 'theme/status-tabs.scss';
+
+/* =====================================================================
+   GLOBAL PREMIUM HEADER — applies to every ion-header / ion-toolbar
+===================================================================== */
+
+/* ---- remove Ionic's default shadow line under the header ---- */
+ion-header {
+  box-shadow: none !important;
+}
+
+ion-header.header-md::after,
+ion-header.header-ios::after,
+ion-header::after {
+  display: none !important;
+  background-image: none !important;
+}
+
+/* ---- toolbar: one brand gradient, soft rounded bottom ---- */
+ion-header ion-toolbar {
+  --background: linear-gradient(135deg, var(--app-primary-mid) 0%, var(--app-primary-deep) 100%) !important;
+  --color: #fff !important;
+  --border-width: 0 !important;
+  --min-height: 56px;
+  --padding-start: 8px;
+  --padding-end: 12px;
+  --border-radius: 0 0 22px 22px;
+  --ion-safe-area-top: env(safe-area-inset-top);
+}
+
+/* ---- title ---- */
+ion-header ion-toolbar ion-title {
+  padding-inline: 6px;
+  font-size: 17px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  color: #fff;
+}
+
+/* ---- back button + menu button: compact glass tile (36 x 36) ---- */
+ion-header ion-buttons ion-back-button,
+ion-header ion-buttons ion-menu-button {
+  --color: #fff;
+  --background: transparent;
+  --padding-start: 0;
+  --padding-end: 0;
+  --min-height: 36px;
+  --icon-font-size: 20px;
+  margin-inline-start: 4px;
+}
+
+ion-header ion-back-button::part(native),
+ion-header ion-menu-button::part(native),
+ion-header ion-buttons ion-button:has(> ion-icon[slot="icon-only"])::part(native) {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  min-height: 36px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .18);
+  border: 1px solid rgba(255, 255, 255, .22);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .22);
+  color: #fff;
+}
+
+ion-header ion-back-button::part(icon),
+ion-header ion-menu-button::part(icon) {
+  margin: 0;
+  font-size: 20px;
+}
+
+ion-header ion-buttons ion-button:has(> ion-icon[slot="icon-only"]) {
+  --padding-start: 0;
+  --padding-end: 0;
+  --color: #fff;
+  margin-inline-start: 4px;
+}
+
+/* ---- pressed state ---- */
+ion-header ion-back-button:active::part(native),
+ion-header ion-menu-button:active::part(native),
+ion-header ion-buttons ion-button:has(> ion-icon[slot="icon-only"]):active::part(native) {
+  background: rgba(255, 255, 255, .3);
+  transform: scale(.94);
+}/* =====================================================================
+   GLOBAL PREMIUM HEADER v3
+   global.scss madhla junna "GLOBAL PREMIUM HEADER" block kadha ani
+   ha pooran file global.scss chya SHEVTI paste kara (v2 chi jagi).
+   Covers: ion-header pages, modal headers, ani profile sarkha custom header.
+===================================================================== */
+
+:root {
+  --hdr-gradient:
+    radial-gradient(circle at 92% -10%, rgba(255, 255, 255, .24), transparent 50%),
+    linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-dark) 100%);
+  --hdr-flat: var(--app-primary);                 /* flat toolbar cha rang */
+  --hdr-extend-bg:                                /* toolbar chya khali bar sathi (glow nahi = seam nahi) */
+    linear-gradient(180deg, var(--hdr-flat) 0%, var(--app-primary-dark) 100%);
+  --hdr-corner-bg: var(--ion-background-color, #fff);  /* rounded corner chya maage */
+  --hdr-radius: 28px;
+  --hdr-btn: 38px;
+}
+
+/* ---------- 1) Ionic shadow / line kadha ---------- */
+:root:root ion-header {
+  background: var(--hdr-corner-bg) !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
+
+:root:root ion-header::after,
+:root:root ion-header.header-md::after,
+:root:root ion-header.header-ios::after {
+  display: none !important;
+  background-image: none !important;
+}
+
+:root:root .booking-header,
+:root:root .ct-header,
+:root:root .ch-header,
+:root:root .tl-header,
+:root:root .fr-header,
+:root:root .report-header {
+  box-shadow: none !important;
+}
+
+/* ---------- 2) Toolbar: gradient + khali rounded corners ---------- */
+:root:root ion-header ion-toolbar {
+  --background: var(--hdr-gradient) !important;
+  --color: #fff !important;
+  --border-width: 0 !important;
+  --border-color: transparent;
+  --min-height: 56px;
+  --padding-start: 8px;
+  --padding-end: 12px;
+  --padding-top: 0;
+  --padding-bottom: 0;
+}
+
+/* radius toolbar var nahi, tyacha background part var lagto */
+:root:root ion-header ion-toolbar::part(background) {
+  border-radius: 0 0 var(--hdr-radius) var(--hdr-radius);
+}
+
+/* header madhe 2 toolbars (searchbar etc.) asel tar fakta shevtcha rounded */
+:root:root ion-header ion-toolbar:not(:last-of-type)::part(background) {
+  border-radius: 0;
+}
+
+/* ---------- 3) Flat toolbar: khali Last-Patient / step bar join hote ----------
+   Auto: jya ion-header madhe .last-patient-bar / .step-indicator / .hdr-extend ahe.
+   Manual: <ion-header class="header-flat"> */
+:root:root ion-header:has(.last-patient-bar, .step-indicator, .hdr-extend) ion-toolbar,
+:root:root ion-header:has(+ ion-content .last-patient-bar) ion-toolbar,
+:root:root ion-header:has(+ ion-content .step-indicator) ion-toolbar,
+:root:root ion-header.header-flat ion-toolbar {
+  --background: var(--hdr-flat) !important;
+}
+
+:root:root ion-header:has(.last-patient-bar, .step-indicator, .hdr-extend) ion-toolbar::part(background),
+:root:root ion-header:has(+ ion-content .last-patient-bar) ion-toolbar::part(background),
+:root:root ion-header:has(+ ion-content .step-indicator) ion-toolbar::part(background),
+:root:root ion-header.header-flat ion-toolbar::part(background) {
+  border-radius: 0;
+}
+
+/* New Booking cha Last-Patient bar: toolbar sarkhach rang, glow nahi = seam nahi */
+:root:root .last-patient-bar {
+  background: var(--hdr-extend-bg) !important;
+  border-radius: 0 0 var(--hdr-radius) var(--hdr-radius) !important;
+}
+
+.hdr-extend {
+  position: relative;
+  padding: 6px 16px 52px;
+  border-radius: 0 0 var(--hdr-radius) var(--hdr-radius);
+  background: var(--hdr-extend-bg);
+  color: #fff;
+}
+
+/* ---------- 4) Title ---------- */
+:root:root ion-header ion-toolbar ion-title {
+  padding-inline: 6px;
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 800;
+  letter-spacing: -.2px;
+  color: #fff;
+}
+
+/* ---------- 5) Back / menu / icon-only buttons: compact glass tile ---------- */
+:root:root ion-header ion-buttons ion-back-button,
+:root:root ion-header ion-buttons ion-menu-button {
+  --color: #fff;
+  --background: transparent;
+  --padding-start: 0;
+  --padding-end: 0;
+  --min-height: var(--hdr-btn);
+  --icon-font-size: 20px;
+  margin-inline-start: 4px;
+}
+
+:root:root ion-header ion-back-button::part(native),
+:root:root ion-header ion-menu-button::part(native),
+:root:root ion-header ion-buttons ion-button:has(> ion-icon[slot="icon-only"])::part(native) {
+  width: var(--hdr-btn);
+  height: var(--hdr-btn);
+  min-width: var(--hdr-btn);
+  min-height: var(--hdr-btn);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, .18);
+  border: 1px solid rgba(255, 255, 255, .25);
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .22);
+  color: #fff;
+}
+
+:root:root ion-header ion-back-button::part(icon),
+:root:root ion-header ion-menu-button::part(icon) {
+  margin: 0;
+  font-size: 20px;
+}
+
+:root:root ion-header ion-buttons ion-button:has(> ion-icon[slot="icon-only"]) {
+  --padding-start: 0;
+  --padding-end: 0;
+  --color: #fff;
+  margin-inline-start: 4px;
+}
+
+:root:root ion-header ion-buttons ion-button:not(:has(> ion-icon[slot="icon-only"])) {
+  --color: #fff;
+}
+
+:root:root ion-header ion-back-button:active::part(native),
+:root:root ion-header ion-menu-button:active::part(native),
+:root:root ion-header ion-buttons ion-button:has(> ion-icon[slot="icon-only"]):active::part(native) {
+  background: rgba(255, 255, 255, .3);
+  transform: scale(.94);
+}
+
+/* ---------- 6) Custom header div (Profile page: <div class="profile-header">) ----------
+   Navin page madhe ion-header vapra; junya sathi he rules. Navin custom header
+   sathi .premium-page-header class vapra. */
+:root:root .profile-header,
+:root:root .premium-page-header {
+  background: var(--hdr-gradient) !important;
+  border-radius: 0 0 var(--hdr-radius) var(--hdr-radius) !important;
+  box-shadow: none !important;
+  color: #fff;
+}
+
+:root:root .profile-header h1,
+:root:root .premium-page-header h1 {
+  font-family: var(--font-display);
+  font-size: 18px !important;
+  font-weight: 800 !important;
+  letter-spacing: -.2px !important;
+  color: #fff !important;
+}
+
+:root:root .profile-header .back-btn,
+:root:root .premium-page-header .back-btn {
+  width: var(--hdr-btn) !important;
+  height: var(--hdr-btn) !important;
+  border-radius: 12px !important;
+  background: rgba(255, 255, 255, .18) !important;
+  border: 1px solid rgba(255, 255, 255, .25) !important;
+  box-shadow: 0 4px 10px -4px rgba(0, 0, 0, .22);
+}
+
+/* ---------- 7) Modal / popup headers: same gradient ---------- */
+:root:root .sheet-top,
+:root:root .modal-header,
+:root:root .compact-popup-header,
+:root:root .printbill-modal-header,
+:root:root .ep-modal .sheet-top {
+  background: var(--hdr-gradient) !important;
+}
+
+/* =====================================================================
+   OPTIONAL KIT — mockup madhle floating card + fields
+===================================================================== */
+.pm-float-card {
+  position: relative;
+  z-index: 2;
+  margin: -38px 12px 0;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  border-radius: 22px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-lg);
+}
+
+.pm-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 0 8px 0 6px;
+  border-radius: 14px;
+  background: var(--input-bg);
+  border: 1px solid var(--input-border);
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+
+  .pm-field-icon {
+    flex: none;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 11px;
+    background: var(--icon-bg);
+    color: var(--icon-color);
+    font-size: 18px;
+  }
+
+  input,
+  ion-input {
+    flex: 1;
+    min-width: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    --padding-start: 0;
+  }
+}
+
+.pm-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 12px;
+  background: var(--app-warning-bg);
+  color: #7a4a00;
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.pm-stat {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+
+  .pm-stat-label {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    text-transform: uppercase;
+    color: var(--text-muted);
+  }
+
+  .pm-stat-value {
+    font-family: var(--font-display);
+    font-size: 22px;
+    font-weight: 800;
+    line-height: 1.1;
+    color: var(--app-primary-dark);
+  }
+}
+
+/* =====================================================================
+   REFRESH BUTTON — GLOBAL (saglya pages, HTML na badalta)
+   Check Status style: full-width + dashed-ring ✓ icon + "Refresh" text
+   Opt-out: jya button la chhota hava tyala class="refresh-sm" dya
+===================================================================== */
+$refresh-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9' stroke-dasharray='30 4 3 4 3 4 3 4'/%3E%3Cpath d='M8.5 12.2l2.4 2.4 4.6-4.8'/%3E%3C/svg%3E");
+$refresh-spin-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 11a8 8 0 1 0-2.3 5.7'/%3E%3Cpath d='M20 4v7h-7'/%3E%3C/svg%3E");
+/* =====================================================================
+   REFRESH BUTTON — GLOBAL, SLIM (44px)
+   Opt-out: class="refresh-sm"
+===================================================================== */
+
+/* 1) Slim button */
+:root:root:root ion-button.refresh-btn:not(.refresh-sm) {
+  width: 100% !important;
+  min-width: 100% !important;
+  flex: none !important;
+  align-self: stretch !important;
+  margin: 2px 0 0 !important;
+  height: 40px !important;
+  min-height: 40px !important;
+  max-height: 44px !important;
+  opacity: 1 !important;
+  font-size: 0 !important;               /* button madhla koni pan text lapva */
+  --border-radius: 14px !important;
+  --box-shadow: 0 8px 18px rgba(var(--app-primary-rgb), 0.30),
+                inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+:root:root:root ion-button.refresh-btn:not(.refresh-sm)::part(native) {
+  height: 44px !important;
+  min-height: 44px !important;
+  max-height: 44px !important;
+  border-radius: 14px !important;
+  box-shadow: 0 8px 18px rgba(var(--app-primary-rgb), 0.30),
+              inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+/* 2) Junya refresh icon lapva */
+:root:root:root ion-button.refresh-btn:not(.refresh-sm) ion-icon {
+  display: none !important;
+}
+
+/* 3) Icon: dashed ring + check (22px) */
+:root:root:root ion-button.refresh-btn:not(.refresh-sm)::part(native)::before {
+  content: "";
+  position: absolute;
+  z-index: 2;
+  top: calc(50% - 11px);
+  left: calc(50% - 43px);
+  width: 22px;
+  height: 22px;
+  background-color: #ffffff;
+  -webkit-mask-image: $refresh-icon;
+  mask-image: $refresh-icon;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* 4) Text (15px) */
+:root:root:root ion-button.refresh-btn:not(.refresh-sm)::part(native)::after {
+  content: "Refresh";
+  position: absolute;
+  z-index: 2;
+  top: 50%;
+  left: calc(50% - 11px);
+  right: auto;
+  bottom: auto;
+  width: auto !important;
+  height: auto !important;
+  opacity: 1 !important;
+  background: transparent !important;
+  transform: translateY(-50%);
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* 5) Loading: refresh-arrow firto + "Refreshing…" */
+:root:root:root ion-button.refresh-btn:not(.refresh-sm).button-disabled::part(native)::before {
+  left: calc(50% - 60px);
+  -webkit-mask-image: $refresh-spin-icon;
+  mask-image: $refresh-spin-icon;
+  animation: refresh-ring-spin 0.9s linear infinite;
+}
+
+:root:root:root ion-button.refresh-btn:not(.refresh-sm).button-disabled::part(native)::after {
+  content: "Refreshing…";
+  left: calc(50% - 28px);
+}
+
+@keyframes refresh-ring-spin {
+  to { transform: rotate(360deg); }
+}/* =====================================================================
+   SEARCH BUTTON ON BLUE PANELS — white, premium
+   Applies to: ion-button.search-btn  (and any button with class "on-blue")
+===================================================================== */
+:root:root:root:root:root:root:root ion-button.search-btn,
+:root:root:root:root:root:root:root ion-button.on-blue {
+  --background: linear-gradient(180deg, #ffffff 0%, #eaf2ff 100%) !important;
+  --background-hover: linear-gradient(180deg, #ffffff 0%, #eaf2ff 100%) !important;
+  --background-focused: linear-gradient(180deg, #ffffff 0%, #eaf2ff 100%) !important;
+  --background-activated: #dbe8ff !important;
+  --color: var(--app-primary-dark) !important;
+  --color-activated: var(--app-primary-dark) !important;
+  --color-hover: var(--app-primary-dark) !important;
+  --border-width: 0 !important;
+  --border-radius: 16px !important;
+  --box-shadow: 0 10px 22px -6px rgba(8, 40, 120, 0.45) !important;
+  box-shadow: none !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: none !important;       /* SEARCH COMMISSION HISTORY -> normal case */
+}
+
+:root:root:root:root:root:root:root ion-button.search-btn::part(native),
+:root:root:root:root:root:root:root ion-button.on-blue::part(native) {
+  background: linear-gradient(180deg, #ffffff 0%, #eaf2ff 100%) !important;
+  color: var(--app-primary-dark) !important;
+  border: 0 !important;
+  border-radius: 16px !important;
+  box-shadow: 0 10px 22px -6px rgba(8, 40, 120, 0.45),
+              inset 0 -2px 0 rgba(37, 99, 235, 0.10) !important;
+}
+
+:root:root:root:root:root:root:root ion-button.search-btn:active::part(native),
+:root:root:root:root:root:root:root ion-button.on-blue:active::part(native) {
+  background: #dbe8ff !important;
+}
+
+:root:root:root:root:root:root:root ion-button.search-btn ion-icon,
+:root:root:root:root:root:root:root ion-button.search-btn ion-spinner,
+:root:root:root:root:root:root:root ion-button.on-blue ion-icon,
+:root:root:root:root:root:root:root ion-button.on-blue ion-spinner {
+  color: var(--app-primary-dark) !important;
+  font-size: 20px;
+}/* =====================================================================
+   ACCOUNT SECTION — CLEAN PREMIUM FILTER CARD (global)
+   Account Summary + Ledger        -> ion-content.ledger-content  (.search-card)
+   Commission History + Payment    -> ion-content.page-bg         (.filter-card)
+===================================================================== */
+
+/* 1) Page background + header corners blend */
+:root:root ion-content.ledger-content,
+:root:root ion-content.page-bg {
+  --background: var(--app-bg);
+}
+
+:root:root:root ion-header:has(+ ion-content.ledger-content),
+:root:root:root ion-header:has(+ ion-content.page-bg) {
+  background: var(--app-bg) !important;
+}
+
+:root:root {
+
+  /* 2) White floating card (dark blue panel jato) */
+  ion-content.ledger-content .search-card,
+  ion-content.page-bg .filter-card {
+    position: relative;
+    z-index: 2;
+    display: flex !important;
+    flex-direction: column;
+    gap: 12px;
+    margin: 14px 12px 16px !important;
+    padding: 16px !important;
+    background: var(--card-bg) !important;
+    background-image: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 22px !important;
+    box-shadow: 0 14px 30px -20px rgba(var(--app-primary-dark-rgb), 0.45) !important;
+    overflow: visible !important;
+  }
+
+  /* 3) Fields: soft, clean (glass jato) */
+  ion-content.ledger-content .franchise-item,
+  ion-content.ledger-content .filter-field,
+  ion-content.ledger-content .date-item,
+  ion-content.page-bg .filter-row {
+    box-sizing: border-box;
+    width: 100%;
+    flex: none !important;
+    min-height: 50px;
+    margin: 0 !important;
+    border: 1px solid var(--input-border) !important;
+    border-radius: 14px !important;
+    background: var(--input-bg) !important;
+    background-image: none !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    color: var(--text-primary) !important;
+    cursor: pointer;
+    transition: border-color 0.16s ease, box-shadow 0.16s ease, background 0.16s ease;
+  }
+
+  ion-content.ledger-content .filter-field:focus-within,
+  ion-content.ledger-content .date-item:active,
+  ion-content.page-bg .filter-row:active {
+    background: #ffffff !important;
+    border-color: var(--app-primary) !important;
+    box-shadow: 0 0 0 4px rgba(var(--app-primary-rgb), 0.12) !important;
+  }
+
+  /* div based fields */
+  ion-content.ledger-content .filter-field,
+  ion-content.ledger-content .date-item,
+  ion-content.page-bg .filter-row {
+    display: flex !important;
+    align-items: center;
+    gap: 10px;
+    height: 50px;
+    padding: 0 10px 0 7px !important;
+  }
+
+  /* ion-item based field (franchise) */
+  ion-content.ledger-content .franchise-item {
+    --background: transparent;
+    --color: var(--text-primary);
+    --min-height: 48px;
+    --padding-start: 7px;
+    --inner-padding-end: 10px;
+    --border-width: 0;
+    --highlight-height: 0;
+    --ripple-color: transparent;
+  }
+
+  /* 4) Icon tiles */
+  ion-content.ledger-content .date-item > ion-icon:first-child,
+  ion-content.page-bg .filter-row > ion-icon:first-child,
+  ion-content.ledger-content .franchise-item ion-icon[slot="start"] {
+    box-sizing: border-box;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    padding: 8px;
+    margin: 0 !important;
+    border-radius: 11px;
+    background: var(--icon-bg);
+    color: var(--icon-color) !important;
+    font-size: 20px;
+  }
+
+  ion-content.ledger-content .franchise-item ion-icon[slot="start"] {
+    margin-inline-end: 10px !important;
+  }
+
+  ion-content.ledger-content .date-icon-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex: none;
+    width: 36px;
+    height: 36px;
+    margin: 0 !important;
+    border-radius: 11px;
+    background: var(--icon-bg) !important;
+
+    ion-icon {
+      margin: 0;
+      color: var(--icon-color) !important;
+      font-size: 20px;
+    }
+  }
+
+  /* 5) Text */
+  ion-content.ledger-content .date-trigger-btn,
+  ion-content.page-bg .filter-text,
+  ion-content.ledger-content .date-item .filter-text,
+  ion-content.ledger-content .franchise-item ion-label {
+    flex: 1;
+    min-width: 0;
+    color: var(--text-primary) !important;
+    font-size: 14.5px;
+    font-weight: 700;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  ion-content.ledger-content .franchise-item ion-input {
+    --color: var(--text-primary);
+    --placeholder-color: var(--text-faint);
+    --placeholder-opacity: 1;
+    font-size: 14.5px;
+    font-weight: 600;
+  }
+
+  /* Clear (x) / chevron: soft grey */
+  ion-content.page-bg .filter-row .clear-icon,
+  ion-content.ledger-content .franchise-item ion-icon[slot="end"] {
+    flex: none;
+    margin: 0 !important;
+    color: var(--text-faint) !important;
+    font-size: 22px;
+    background: transparent !important;
+  }
+
+  /* 6) Franchise dropdown: clean popup */
+  ion-content.ledger-content .franchise-dropdown {
+    background: var(--card-bg) !important;
+    border: 1px solid var(--card-border) !important;
+    border-radius: 16px !important;
+    box-shadow: var(--shadow-lg) !important;
+  }
+
+  ion-content.ledger-content .franchise-dropdown-item {
+    color: var(--text-primary);
+    font-weight: 600;
+    border-bottom: 1px solid var(--card-border);
+  }
+
+  ion-content.ledger-content .franchise-dropdown-item:active {
+    background: var(--app-primary-light);
+  }
+}
+
+/* 7) Search button: blue gradient, white text (card ata white ahe) */
+:root:root:root:root:root:root:root ion-content.ledger-content ion-button.search-btn,
+:root:root:root:root:root:root:root ion-content.page-bg ion-button.search-btn {
+  --background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  --background-hover: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  --background-focused: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  --background-activated: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-dark) 100%) !important;
+  --color: #ffffff !important;
+  --color-activated: #ffffff !important;
+  --color-hover: #ffffff !important;
+  --border-width: 0 !important;
+  --border-radius: 14px !important;
+  --box-shadow: 0 10px 20px -8px rgba(var(--app-primary-rgb), 0.65) !important;
+  box-shadow: none !important;
+  height: 48px !important;
+  min-height: 48px !important;
+  margin: 4px 0 0 !important;
+  font-size: 14.5px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  text-transform: none !important;
+}
+
+:root:root:root:root:root:root:root ion-content.ledger-content ion-button.search-btn::part(native),
+:root:root:root:root:root:root:root ion-content.page-bg ion-button.search-btn::part(native) {
+  background: linear-gradient(135deg, var(--app-primary-bright) 0%, var(--app-primary) 100%) !important;
+  color: #ffffff !important;
+  border: 0 !important;
+  border-radius: 14px !important;
+  box-shadow: 0 10px 20px -8px rgba(var(--app-primary-rgb), 0.65),
+              inset 0 1px 0 rgba(255, 255, 255, 0.35) !important;
+}
+
+:root:root:root:root:root:root:root ion-content.ledger-content ion-button.search-btn:active::part(native),
+:root:root:root:root:root:root:root ion-content.page-bg ion-button.search-btn:active::part(native) {
+  background: linear-gradient(135deg, var(--app-primary) 0%, var(--app-primary-dark) 100%) !important;
+}
+
+:root:root:root:root:root:root:root ion-content.ledger-content ion-button.search-btn ion-icon,
+:root:root:root:root:root:root:root ion-content.ledger-content ion-button.search-btn ion-spinner,
+:root:root:root:root:root:root:root ion-content.page-bg ion-button.search-btn ion-icon,
+:root:root:root:root:root:root:root ion-content.page-bg ion-button.search-btn ion-spinner {
+  color: #ffffff !important;
+  font-size: 20px;
+}/* =====================================================================
+   ACCOUNT SECTION — FIX: unwanted space + equal icon tiles
+===================================================================== */
+:root:root {
+
+  /* 1) <br> ani hidden date picker layout madhun kadha */
+  ion-content.ledger-content .search-card > br,
+  ion-content.page-bg .filter-card > br {
+    display: none !important;
+  }
+
+  ion-content.ledger-content .search-card .hidden-range-field,
+  ion-content.ledger-content .search-card mat-form-field,
+  ion-content.page-bg .filter-card .hidden-range-field {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    margin: -1px !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    border: 0 !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+  }
+
+  ion-content.ledger-content .franchise-field {
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* 2) Franchise icon = date icon sarkha 36px tile */
+  ion-content.ledger-content .franchise-item ion-icon[slot="start"],
+  ion-content.ledger-content .date-item > ion-icon:first-child,
+  ion-content.page-bg .filter-row > ion-icon:first-child {
+    box-sizing: border-box !important;
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
+    height: 36px !important;
+    min-height: 36px !important;
+    max-height: 36px !important;
+    padding: 8px !important;
+    font-size: 20px !important;
+    border-radius: 11px !important;
+  }
+
+  /* 3) Franchise row = date row sarkhi height */
+  ion-content.ledger-content .franchise-item {
+    height: 50px !important;
+    min-height: 50px !important;
+    --min-height: 48px;
+  }
+
+  ion-content.ledger-content .franchise-item ion-label {
+    margin: 0 !important;
+  }
+}

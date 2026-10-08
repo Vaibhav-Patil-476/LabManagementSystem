@@ -97,6 +97,7 @@
       <!-- REFRESH -->
       <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
         <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="isLoading"></ion-icon>
+   
       </ion-button>
 
     </div>
@@ -498,13 +499,14 @@
   <ion-modal class="test-modal sheet-modal" [isOpen]="isPatientModalOpen" (didDismiss)="closePatientModal()"
     [breakpoints]="[0, 1]" [initialBreakpoint]="1" [backdropBreakpoint]="0.15">
     <ng-template>
-      <div class="test-modal-wrapper">
+      <div class="test-modal-wrapper ep-modal">
         <div class="sheet-top">
           <div class="modal-handle"></div>
           <div class="sheet-top-row">
             <div class="sheet-top-title">
               <div class="sheet-title-eyebrow">Booking #{{ editPatientData?.bookingId }}</div>
               <div class="sheet-title-main">{{ isPatientReadOnly ? 'View Patient' : 'Edit Patient' }}</div>
+              <div class="ep-subtitle">{{ isPatientReadOnly ? 'Sample received · details are locked' : 'Update patient, doctor and contact details' }}</div>
             </div>
             <button class="close-modal-btn" (click)="closePatientModal()">
               <ion-icon name="close-outline"></ion-icon>
@@ -512,7 +514,7 @@
           </div>
         </div>
 
-        <div class="test-modal-body-pad test-modal-scroll">
+        <div class="test-modal-body-pad test-modal-scroll ep-scroll">
 
           <div class="skeleton-block" *ngIf="isPatientLoading">
             <div class="skeleton-line" style="width:50%"></div>
@@ -520,10 +522,9 @@
             <div class="skeleton-line" style="width:70%"></div>
           </div>
 
-          <div class="patient-edit-body" *ngIf="editPatientData && !isPatientLoading">
+          <div class="ep-body" *ngIf="editPatientData && !isPatientLoading">
 
-
-               <!-- LOCKED: TABLE VIEW (web sarkha) -->
+            <!-- ===== LOCKED: TABLE VIEW ===== -->
             <div class="ro-card" *ngIf="isPatientReadOnly">
 
               <div class="ro-head">
@@ -591,16 +592,28 @@
               </div>
             </div>
 
-            
-            <!-- ===== EDITABLE SECTIONS (hidden when locked) ===== -->
-            <div class="form-section" *ngIf="!isPatientReadOnly">
-              <div class="form-section-title"><ion-icon name="person-outline"></ion-icon> Patient Details</div>
-              <div class="patient-form-grid">
-                <div class="field-row">
-                  <div class="summary-field narrow">
-                    <label>Title</label>
+            <!-- ===== EDITABLE: SUMMARY STRIP ===== -->
+            <div class="ep-summary" *ngIf="!isPatientReadOnly">
+              <div class="ep-summary-avatar"><ion-icon name="person-outline"></ion-icon></div>
+              <div class="ep-summary-text">
+                <div class="ep-summary-name">{{ editPatientData.title | titlecase }} {{ editPatientData.name }}</div>
+                <div class="ep-summary-sub">Patient ID · {{ editPatientData.patientId || '-' }}</div>
+              </div>
+            </div>
+
+            <!-- ===== SECTION 1: PATIENT DETAILS ===== -->
+            <section class="ep-section" *ngIf="!isPatientReadOnly">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="person-outline"></ion-icon></span>
+                <span class="ep-section-title">Patient Details</span>
+              </header>
+
+              <div class="ep-grid">
+                <div class="ep-row-title ep-full">
+                  <div class="ep-field">
+                    <label class="ep-label">Title</label>
                     <ion-select [(ngModel)]="editPatientData.title" interface="popover" placeholder="Select"
-                      class="premium-select" (ionChange)="onEditTitleChange()">
+                      class="ep-select" (ionChange)="onEditTitleChange()">
                       <ion-select-option value="mr">Mr</ion-select-option>
                       <ion-select-option value="mrs">Mrs</ion-select-option>
                       <ion-select-option value="ms">Ms</ion-select-option>
@@ -609,141 +622,147 @@
                       <ion-select-option value="baby">Baby</ion-select-option>
                     </ion-select>
                   </div>
-                  <div class="summary-field wide">
-                    <label>Patient Name</label>
-                    <input type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
+                  <div class="ep-field">
+                    <label class="ep-label">Patient Name</label>
+                    <input class="ep-input" type="text" [(ngModel)]="editPatientData.name" placeholder="Enter name">
                   </div>
                 </div>
 
-                <div class="summary-field pair-field">
-                  <label>Age</label>
-                  <input type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Age Type</label>
-                  <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="premium-select">
-                    <ion-select-option value="years">Years</ion-select-option>
-                    <ion-select-option value="months">Months</ion-select-option>
-                    <ion-select-option value="days">Days</ion-select-option>
-                  </ion-select>
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Gender</label>
-                  <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="premium-select">
-                    <ion-select-option value="male">Male</ion-select-option>
-                    <ion-select-option value="female">Female</ion-select-option>
-                    <ion-select-option value="other">Other</ion-select-option>
-                  </ion-select>
+                <div class="ep-row-3 ep-full">
+                  <div class="ep-field">
+                    <label class="ep-label">Age</label>
+                    <input class="ep-input" type="number" [(ngModel)]="editPatientData.age" placeholder="Age">
+                  </div>
+                  <div class="ep-field">
+                    <label class="ep-label">Age Type</label>
+                    <ion-select [(ngModel)]="editPatientData.ageType" interface="popover" class="ep-select">
+                      <ion-select-option value="years">Years</ion-select-option>
+                      <ion-select-option value="months">Months</ion-select-option>
+                      <ion-select-option value="days">Days</ion-select-option>
+                    </ion-select>
+                  </div>
+                  <div class="ep-field">
+                    <label class="ep-label">Gender</label>
+                    <ion-select [(ngModel)]="editPatientData.gender" interface="popover" class="ep-select">
+                      <ion-select-option value="male">Male</ion-select-option>
+                      <ion-select-option value="female">Female</ion-select-option>
+                      <ion-select-option value="other">Other</ion-select-option>
+                    </ion-select>
+                  </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="form-section" *ngIf="!isPatientReadOnly">
-              <div class="form-section-title">
-                <ion-icon name="medkit-outline"></ion-icon>
-                Doctor &amp; Lab
-              </div>
+            <!-- ===== SECTION 2: DOCTOR & LAB ===== -->
+            <section class="ep-section ep-section-raised" *ngIf="!isPatientReadOnly">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="medkit-outline"></ion-icon></span>
+                <span class="ep-section-title">Doctor &amp; Lab</span>
+              </header>
 
-              <div class="patient-form-grid">
+              <div class="ep-grid ep-grid-3">
+                <div class="ep-field">
+                  <label class="ep-label">Ref. Doctor</label>
+                  <input class="ep-input" type="text" [ngModel]="doctorSearch" placeholder="Search doctor name"
+                    autocomplete="off" readonly>
+                </div>
 
-                <!-- REF DOCTOR -->
-                <div class="doctor-lab-row">
-                  <div class="summary-field doctor-search-field">
-                    <label>Ref. Doctor</label>
-                    <div class="doctor-input-wrapper">
-                      <input type="text" [ngModel]="doctorSearch" placeholder="Search doctor name" autocomplete="off"
-                        readonly>
-                    </div>
-                  </div>
-                  <!-- CUSTOM DOCTOR NAME -->
-                  <div class="summary-field">
-                    <label>Custom Doctor Name</label>
-                    <input type="text" [(ngModel)]="editPatientData.customDoctorName"
-                      placeholder="Enter custom doctor name">
-                  </div>
+                <div class="ep-field">
+                  <label class="ep-label">Custom Doctor Name</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.customDoctorName"
+                    placeholder="Enter custom doctor name">
+                </div>
 
-                  <!-- CUSTOM LAB NAME -->
-                  <div class="summary-field lab-search-field" style="position: relative;">
-                    <label>Custom Lab Name</label>
-                    <input type="text" [(ngModel)]="customLabSearch" (ngModelChange)="searchCustomLabInput()"
-                      placeholder="Enter custom lab name" autocomplete="off">
-                    <div class="test-suggestions overlay-dropdown"
-                      *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
-                      <div class="suggestion-item" *ngFor="let lab of filteredCustomLabs"
-                        (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
-                        <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
-                            *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
-                      </div>
+                <div class="ep-field ep-field-rel">
+                  <label class="ep-label">Custom Lab Name</label>
+                  <input class="ep-input" type="text" [(ngModel)]="customLabSearch"
+                    (ngModelChange)="searchCustomLabInput()" placeholder="Enter custom lab name" autocomplete="off">
+                  <div class="test-suggestions overlay-dropdown ep-suggest"
+                    *ngIf="showCustomLabDropdown && filteredCustomLabs.length > 0">
+                    <div class="suggestion-item ep-suggest-item" *ngFor="let lab of filteredCustomLabs"
+                      (mousedown)="$event.preventDefault()" (click)="selectCustomLabFromSearch(lab)">
+                      <span>{{ lab.labName || lab.franchiseName || lab.name }}<ng-container
+                          *ngIf="lab.additionalDetails"> - {{ lab.additionalDetails }}</ng-container></span>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
 
-            <div class="form-section" *ngIf="!isPatientReadOnly">
-              <div class="form-section-title"><ion-icon name="card-outline"></ion-icon> Contact &amp; Identification
+            <!-- ===== SECTION 3: CONTACT & IDENTIFICATION ===== -->
+            <section class="ep-section" *ngIf="!isPatientReadOnly">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="card-outline"></ion-icon></span>
+                <span class="ep-section-title">Contact &amp; Identification</span>
+              </header>
+
+              <div class="ep-grid">
+                <div class="ep-field">
+                  <label class="ep-label">Mobile</label>
+                  <input class="ep-input" type="tel" [(ngModel)]="editPatientData.mobileNumber"
+                    placeholder="10 digit mobile" maxlength="10">
+                </div>
+                <div class="ep-field">
+                  <label class="ep-label">Aadhaar</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.aadhaarNumber"
+                    placeholder="Aadhaar number" maxlength="12">
+                </div>
+                <div class="ep-field ep-full">
+                  <label class="ep-label">UHID</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
+                </div>
+                <div class="ep-field ep-full">
+                  <label class="ep-label">Address</label>
+                  <input class="ep-input" type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
+                </div>
               </div>
-              <div class="patient-form-grid">
-                <div class="summary-field pair-field">
-                  <label>Mobile</label>
-                  <input type="tel" [(ngModel)]="editPatientData.mobileNumber" placeholder="10 digit mobile"
-                    maxlength="10">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>Aadhaar</label>
-                  <input type="text" [(ngModel)]="editPatientData.aadhaarNumber" placeholder="Aadhaar number"
-                    maxlength="12">
-                </div>
-                <div class="summary-field pair-field">
-                  <label>UHID</label>
-                  <input type="text" [(ngModel)]="editPatientData.uhidNumber" placeholder="UHID">
-                </div>
-                <div class="summary-field span-3">
-                  <label>Address</label>
-                  <input type="text" [(ngModel)]="editPatientData.address" placeholder="Address">
-                </div>
-              </div>
-            </div>
+            </section>
 
-            <!-- ===== HISTORY & ATTACHMENT (always visible; attachment allowed even when locked) ===== -->
-            <div class="form-section">
-              <div class="form-section-title"><ion-icon name="document-text-outline"></ion-icon> History &amp;
-                Attachment</div>
-              <div class="patient-form-grid">
-                <div class="summary-field span-3">
-                  <label>Clinical History</label>
-                  <textarea [(ngModel)]="editPatientData.history" [disabled]="isPatientReadOnly"
-                    placeholder="History / Notes" rows="2"></textarea>
+            <!-- ===== SECTION 4: HISTORY & ATTACHMENT (always visible) ===== -->
+            <section class="ep-section">
+              <header class="ep-section-head">
+                <span class="ep-section-icon"><ion-icon name="document-text-outline"></ion-icon></span>
+                <span class="ep-section-title">History &amp; Attachment</span>
+              </header>
+
+              <div class="ep-grid">
+                <div class="ep-field ep-full">
+                  <label class="ep-label">Clinical History</label>
+                  <textarea class="ep-textarea" [(ngModel)]="editPatientData.history" [disabled]="isPatientReadOnly"
+                    placeholder="History / Notes" rows="3"></textarea>
                 </div>
 
-                <div class="summary-field span-3">
-                  <label>Add Attachments</label>
+                <div class="ep-field ep-full">
+                  <label class="ep-label">Add Attachments</label>
                   <input #patientFile type="file" hidden multiple accept="image/*,application/pdf"
                     (change)="onPatientFileSelected($event)">
 
-                  <button type="button" class="attach-btn" (click)="patientFile.click()">
-                    <ion-icon name="add-outline"></ion-icon> Choose
+                  <button type="button" class="ep-attach" (click)="patientFile.click()">
+                    <ion-icon name="cloud-upload-outline"></ion-icon>
+                    <span>Choose files</span>
                   </button>
 
-                  <div class="attachment-row" *ngFor="let att of editPatientData.attachments; let i = index">
-                    <span class="att-index">{{ i + 1 }}.</span>
-                    <ion-icon [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
-                      class="att-type-icon"></ion-icon>
-                    <span class="att-name">{{ att.name }}</span>
-                    <span class="att-actions">
-                      <ion-icon name="eye-outline" class="att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
-                      <ion-icon name="trash-outline" class="att-del" (click)="removePatientAttachment(i)"></ion-icon>
-                    </span>
+                  <div class="ep-att-list">
+                    <div class="ep-att-row" *ngFor="let att of editPatientData.attachments; let i = index">
+                      <span class="ep-att-index">{{ i + 1 }}</span>
+                      <ion-icon [name]="isImageSource(att.url, att.name) ? 'image-outline' : 'document-outline'"
+                        class="ep-att-type"></ion-icon>
+                      <span class="ep-att-name">{{ att.name }}</span>
+                      <span class="ep-att-actions">
+                        <ion-icon name="eye-outline" class="ep-att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
+                        <ion-icon name="trash-outline" class="ep-att-del" (click)="removePatientAttachment(i)"></ion-icon>
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+            </section>
 
           </div>
         </div>
 
         <div class="sheet-footer" *ngIf="editPatientData && !isPatientLoading">
-          <ion-button expand="block" fill="solid" class="save-changes-btn"
+          <ion-button expand="block" fill="solid" class="save-changes-btn ep-save"
             [disabled]="isSavingPatient || (isPatientReadOnly && !editPatientData?.attachmentsChanged)"
             (click)="updatePatient()">
             <span class="btn-spinner" *ngIf="isSavingPatient"></span>

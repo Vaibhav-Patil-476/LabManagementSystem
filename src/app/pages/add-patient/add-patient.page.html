@@ -355,10 +355,16 @@
           <div class="form-card-title">Search Test To Add into Bill <span class="required">*</span></div>
 
           <!-- PACKAGE / PROFILE SEARCH -->
-          <div class="input-wrap search-test-wrap">
-            <ion-icon name="search-outline"></ion-icon>
-            <ion-input type="text" placeholder="Search Package..." [(ngModel)]="packageSearch"
-              (ionInput)="searchPackage()"></ion-input>
+          <div class="package-search-row">
+            <div class="input-wrap search-test-wrap">
+              <ion-icon name="search-outline"></ion-icon>
+              <ion-input type="text" placeholder="Search Package..." [(ngModel)]="packageSearch"
+                (ionInput)="searchPackage()"></ion-input>
+            </div>
+
+            <button type="button" class="paste-icon-btn" (click)="pasteProfile()" aria-label="Paste profile name">
+              <ion-icon name="clipboard-outline"></ion-icon>
+            </button>
           </div>
 
           <div class="test-suggestions" *ngIf="showPackageSuggestions">
@@ -381,10 +387,17 @@
             </div>
           </div>
 
-          <div class="input-wrap search-test-wrap">
-            <ion-icon name="search-outline"></ion-icon>
-            <ion-input type="text" placeholder="Search Test..." [(ngModel)]="testSearch"
-              (ionInput)="searchTest()"></ion-input>
+          <!-- TEST SEARCH -->
+          <div class="package-search-row">
+            <div class="input-wrap search-test-wrap">
+              <ion-icon name="search-outline"></ion-icon>
+              <ion-input type="text" placeholder="Search Test..." [(ngModel)]="testSearch"
+                (ionInput)="searchTest()"></ion-input>
+            </div>
+
+            <button type="button" class="paste-icon-btn" (click)="pasteTest()" aria-label="Paste test name">
+              <ion-icon name="clipboard-outline"></ion-icon>
+            </button>
           </div>
 
           <div class="test-suggestions" *ngIf="showSuggestions">
@@ -786,7 +799,7 @@
         </span>
       </div>
 
-      <ion-button expand="block" class="saved-primary" (click)="newBookingFromSaved()">
+      <ion-button expand="block" fill="outline" class="saved-primary" (click)="newBookingFromSaved()">
         <ion-icon name="add-circle-outline" slot="start"></ion-icon>
         New Booking
       </ion-button>

@@ -4,8 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular/standalone';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
-
-
+import { Clipboard } from '@capacitor/clipboard';
 import { firstValueFrom } from 'rxjs';
 import { PdfDownloadService } from '../../core/services/pdf-download';
 import {
@@ -50,7 +49,8 @@ import {
   checkmarkCircle,
   listOutline,
   addCircleOutline,
-  receiptOutline
+  receiptOutline,
+  clipboardOutline
 } from 'ionicons/icons';
 
 import { RoleService } from '../../core/services/role';
@@ -59,6 +59,17 @@ import { BookingService } from '../../core/services/booking-status';
 import { LabApiService } from '../../core/services/lab-api';
 import { AuthService } from '../../core/services/auth';
 import { BookingRefreshService } from '../../core/services/booking-refresh';
+
+// ============================================================
+// VALIDATION ISSUE (step-scoped validators return this)
+// ============================================================
+interface ValidationIssue {
+  field:
+  | 'name' | 'age' | 'doctor' | 'mobile' | 'aadhaar' | 'uhid'
+  | 'address' | 'history' | 'otherCharges' | 'customFranchise'
+  | 'tests' | 'document';
+  message: string;
+}
 
 @Component({
   selector: 'app-add-patient',
@@ -92,7 +103,7 @@ export class AddPatientComponent {
 
   role: string = '';
 
-  // ✅ NEW: 2-step booking flow
+  // 2-step booking flow
   //   step 1 = Patient Info
   //   step 2 = Tests + Billing + Barcode
   step: 1 | 2 = 1;
@@ -148,22 +159,41 @@ export class AddPatientComponent {
   };
 
   // ============================================================
+  // VALIDATION CONSTANTS
+  // ============================================================
+
+  // letters (any language incl. Marathi), space, dot, apostrophe, hyphen
+  private readonly NAME_REGEX = /^[\p{L}][\p{L}\p{M}\s.'\-]{0,59}$/u;
+
+  // doctor name: letters, space, dot, comma, brackets, apostrophe, hyphen, digits
+  private readonly DOCTOR_REGEX = /^[\p{L}][\p{L}\p{M}\s.,()'\-0-9]{1,59}$/u;
+
+  private readonly MOBILE_REGEX = /^[6-9]\d{9}$/;
+  private readonly AADHAAR_REGEX = /^\d{12}$/;
+  private readonly UHID_REGEX = /^[A-Za-z0-9\-\/]{2,30}$/;
+
+  // ============================================================
   // FIELD-LEVEL VALIDATION ERRORS
   // ============================================================
 
-  fieldErrors: any = {
-    name: false,
-    age: false,
-    doctor: false,
-    mobile: false,
-    aadhaar: false,
-    uhid: false,
-    address: false,
-    history: false,
-    otherCharges: false,
-    customFranchise: false,
-    tests: false
-  };
+  fieldErrors: any = this.buildEmptyFieldErrors();
+
+  private buildEmptyFieldErrors(): any {
+    return {
+      name: false,
+      age: false,
+      doctor: false,
+      mobile: false,
+      aadhaar: false,
+      uhid: false,
+      address: false,
+      history: false,
+      otherCharges: false,
+      customFranchise: false,
+      tests: false,
+      document: false
+    };
+  }
 
   billing = {
     discountType: 'percent' as 'percent' | 'fixed',
@@ -362,7 +392,7 @@ export class AddPatientComponent {
   }
 
   get canViewAmountAdmin(): boolean {
-    return this.isAdminRole
+    return this.isAdminRole;
   }
 
   get hasHistopathologyTest(): boolean {
@@ -452,7 +482,7 @@ export class AddPatientComponent {
   }
 
   // ============================================================
-  // ✅ 2-STEP FLOW
+  // 2-STEP FLOW
   // ============================================================
 
   // Step 1 che 3 required fields bharlyashivay "Next" button disabled rahto.
@@ -467,23 +497,19 @@ export class AddPatientComponent {
 
   goNext(): void {
 
-    const err = this.validatePatientForm();
+    const issue = this.validateStep1();
 
-    // tests chi error step 1 la ignore kara — ti step 2 chich ahe.
-    // Baki konatihi field-error asel tar ithech thambaycha.
-    if (err && !this.fieldErrors.tests) {
-      this.toastService.error('Validation Error', err);
+    if (issue) {
+      this.reportIssue(issue);
       return;
     }
 
-    this.fieldErrors.tests = false;
+    this.resetFieldErrors();
 
     this.step = 2;
 
     this.scrollTop();
   }
-
-
 
   private scrollTop(): void {
     setTimeout(() => {
@@ -557,10 +583,11 @@ export class AddPatientComponent {
       'checkmark-circle': checkmarkCircle,
       'list-outline': listOutline,
       'add-circle-outline': addCircleOutline,
-      'receipt-outline': receiptOutline
+      'receipt-outline': receiptOutline,
+      'clipboard-outline': clipboardOutline
+
     });
   }
-
 
   @HostListener('document:click', ['$event'])
   onDocumentClick(event: MouseEvent): void {
@@ -584,7 +611,7 @@ export class AddPatientComponent {
   }
 
   // ============================================================
-  // ✅ FIELD ERROR HELPERS
+  // FIELD ERROR HELPERS
   // ============================================================
 
   clearFieldError(field: string): void {
@@ -594,22 +621,11 @@ export class AddPatientComponent {
   }
 
   private resetFieldErrors(): void {
-    this.fieldErrors = {
-      name: false,
-      age: false,
-      doctor: false,
-      mobile: false,
-      aadhaar: false,
-      uhid: false,
-      address: false,
-      history: false,
-      otherCharges: false,
-      customFranchise: false,
-      tests: false
-    };
+    this.fieldErrors = this.buildEmptyFieldErrors();
   }
 
   private doctorSearchTimer: any = null;
+
   private extractDoctorsResponse(res: any): any[] {
     if (Array.isArray(res)) {
       return res;
@@ -641,6 +657,7 @@ export class AddPatientComponent {
 
     return [];
   }
+
   // ============================================================
   // LIFECYCLE
   // ============================================================
@@ -667,11 +684,7 @@ export class AddPatientComponent {
 
       error: (err) => {
 
-        console.error(
-          'CURRENT USER ERROR:',
-          err
-        );
-
+        console.error('CURRENT USER ERROR:', err);
 
         this.toastService.error(
           'Error',
@@ -710,16 +723,8 @@ export class AddPatientComponent {
     }
 
     return (
-      Number(
-        o1?.id ??
-        o1?.franchiseId ??
-        0
-      ) ===
-      Number(
-        o2?.id ??
-        o2?.franchiseId ??
-        0
-      )
+      Number(o1?.id ?? o1?.franchiseId ?? 0) ===
+      Number(o2?.id ?? o2?.franchiseId ?? 0)
     );
   };
 
@@ -779,7 +784,6 @@ export class AddPatientComponent {
     };
   }
 
-
   // ============================================================
   // EXTRACT DOCTOR LIST
   // ============================================================
@@ -789,33 +793,20 @@ export class AddPatientComponent {
     let list: any[] = [];
 
     if (Array.isArray(res)) {
-
       list = res;
-
     } else if (Array.isArray(res?.content)) {
-
       list = res.content;
-
     } else if (Array.isArray(res?.data)) {
-
       list = res.data;
-
     } else if (Array.isArray(res?.data?.content)) {
-
       list = res.data.content;
-
     } else if (Array.isArray(res?.doctors)) {
-
       list = res.doctors;
     }
 
     return list
-      .map((d: any) =>
-        this.normalizeDoctor(d)
-      )
-      .filter((d: any) =>
-        !!d?.doctor_name
-      );
+      .map((d: any) => this.normalizeDoctor(d))
+      .filter((d: any) => !!d?.doctor_name);
   }
 
   // ============================================================
@@ -836,17 +827,11 @@ export class AddPatientComponent {
   private resetNewDoctorForm() {
 
     this.newDoctor = {
-
       type: 'Referral',
-
       name: '',
-
       mobile: '',
-
       degree: '',
-
       percentValue: '',
-
       percentType: 'commission'
     };
   }
@@ -860,13 +845,9 @@ export class AddPatientComponent {
   // 4. Newly created doctor is selected automatically.
   // ============================================================
   saveDoctor(): void {
-    const doctorName = String(
-      this.newDoctor?.name || ''
-    ).trim();
+    const doctorName = String(this.newDoctor?.name || '').trim();
 
-    const mobileNumber = String(
-      this.newDoctor?.mobile || ''
-    ).trim();
+    const mobileNumber = String(this.newDoctor?.mobile || '').trim();
 
     if (!doctorName) {
       this.toastService.error(
@@ -876,10 +857,10 @@ export class AddPatientComponent {
       return;
     }
 
-    if (!/^[A-Za-z][A-Za-z\s.()]{1,59}$/.test(doctorName)) {
+    if (!this.DOCTOR_REGEX.test(doctorName)) {
       this.toastService.error(
         'Validation Error',
-        'Doctor name should contain only letters, spaces, dots or brackets, and be 2-60 characters long.'
+        'Doctor name contains invalid characters or is longer than 60 characters.'
       );
       return;
     }
@@ -892,7 +873,7 @@ export class AddPatientComponent {
       return;
     }
 
-    if (this.isAdminRole && !/^[6-9]\d{9}$/.test(mobileNumber)) {
+    if (this.isAdminRole && !this.MOBILE_REGEX.test(mobileNumber)) {
       this.toastService.error(
         'Validation Error',
         'Mobile number must be exactly 10 digits and start with 6-9.'
@@ -913,17 +894,13 @@ export class AddPatientComponent {
     const payload: any = {
       type: true,
 
-      doctor_name:
-        doctorName,
+      doctor_name: doctorName,
 
-      mobileNumber:
-        mobileNumber,
+      mobileNumber: mobileNumber,
 
-      email:
-        '',
+      email: '',
 
-      departmentId:
-        1,
+      departmentId: 1,
 
       doctorid:
         this.hasExistingDoctor &&
@@ -936,31 +913,21 @@ export class AddPatientComponent {
           ? ''
           : doctorName,
 
-      address:
-        '',
+      address: '',
 
-      signature:
-        '',
+      signature: '',
 
-      username:
-        '',
+      username: '',
 
-      password:
-        '',
+      password: '',
 
-      level:
-        1,
+      level: 1,
 
-      degree:
-        String(
-          this.newDoctor?.degree || ''
-        ).trim(),
+      degree: String(this.newDoctor?.degree || '').trim(),
 
-      isReferral:
-        true,
+      isReferral: true,
 
-      labId:
-        labId
+      labId: labId
     };
 
     this.labApi.createDoctor(payload).subscribe({
@@ -990,47 +957,28 @@ export class AddPatientComponent {
 
             ...(res || {}),
 
-            id:
-              createdDoctorId > 0
-                ? createdDoctorId
-                : undefined,
+            id: createdDoctorId > 0 ? createdDoctorId : undefined,
 
-            doctorId:
-              createdDoctorId > 0
-                ? createdDoctorId
-                : undefined,
+            doctorId: createdDoctorId > 0 ? createdDoctorId : undefined,
 
-            doctorid:
-              createdDoctorId > 0
-                ? createdDoctorId
-                : undefined,
+            doctorid: createdDoctorId > 0 ? createdDoctorId : undefined,
 
-            doctor_name:
-              doctorName,
+            doctor_name: doctorName,
 
-            doctorName:
-              doctorName,
+            doctorName: doctorName,
 
-            name:
-              doctorName,
+            name: doctorName,
 
-            mobileNumber:
-              mobileNumber,
+            mobileNumber: mobileNumber,
 
-            degree:
-              this.newDoctor?.degree || '',
+            degree: this.newDoctor?.degree || '',
 
-            labId:
-              labId
-
+            labId: labId
           });
 
         if (immediateDoctor) {
 
-          const doctorNameLower =
-            doctorName
-              .trim()
-              .toLowerCase();
+          const doctorNameLower = doctorName.trim().toLowerCase();
 
           const existingIndex =
             this.doctors.findIndex(
@@ -1058,51 +1006,36 @@ export class AddPatientComponent {
                 return (
                   (
                     createdDoctorId > 0 &&
-                    existingDoctorId ===
-                    createdDoctorId
+                    existingDoctorId === createdDoctorId
                   ) ||
-                  existingDoctorName ===
-                  doctorNameLower
+                  existingDoctorName === doctorNameLower
                 );
               }
             );
 
           if (existingIndex >= 0) {
 
-            this.doctors[
-              existingIndex
-            ] = {
+            this.doctors[existingIndex] = {
 
-              ...this.doctors[
-              existingIndex
-              ],
+              ...this.doctors[existingIndex],
 
               ...immediateDoctor,
 
               doctorid:
                 createdDoctorId > 0
                   ? createdDoctorId
-                  : this.doctors[
-                    existingIndex
-                  ]?.doctorid
-
+                  : this.doctors[existingIndex]?.doctorid
             };
 
           } else {
 
             this.doctors = [
-
               immediateDoctor,
-
               ...this.doctors
-
             ];
-
           }
 
-          this.filteredDoctors = [
-            ...this.doctors
-          ];
+          this.filteredDoctors = [...this.doctors];
 
           const savedDoctor =
             this.doctors.find(
@@ -1127,20 +1060,15 @@ export class AddPatientComponent {
                     .toLowerCase();
 
                 return (
-                  (
-                    createdDoctorId > 0 &&
-                    id === createdDoctorId
-                  ) ||
-                  name ===
-                  doctorNameLower
+                  (createdDoctorId > 0 && id === createdDoctorId) ||
+                  name === doctorNameLower
                 );
               }
             );
 
           if (savedDoctor) {
 
-            this.selectedDoctor =
-              savedDoctor;
+            this.selectedDoctor = savedDoctor;
 
             this.selectedDoctorId =
               Number(
@@ -1150,23 +1078,18 @@ export class AddPatientComponent {
                 createdDoctorId
               );
 
-            this.patient.doctorId =
-              this.selectedDoctorId;
+            this.patient.doctorId = this.selectedDoctorId;
 
-            this.patient.doctor =
-              doctorName;
+            this.patient.doctor = doctorName;
 
-            this.doctorSearch =
-              doctorName;
+            this.doctorSearch = doctorName;
 
-            this.showDoctorSuggestions =
-              false;
+            this.showDoctorSuggestions = false;
           }
 
         } else {
 
-          this.selectedDoctor =
-            null;
+          this.selectedDoctor = null;
 
           this.selectedDoctorId =
             createdDoctorId > 0
@@ -1178,16 +1101,12 @@ export class AddPatientComponent {
               ? createdDoctorId
               : null;
 
-          this.patient.doctor =
-            doctorName;
+          this.patient.doctor = doctorName;
 
-          this.doctorSearch =
-            doctorName;
-
+          this.doctorSearch = doctorName;
         }
 
-        this.showAddDoctor =
-          false;
+        this.showAddDoctor = false;
 
         this.resetNewDoctorForm();
 
@@ -1204,10 +1123,7 @@ export class AddPatientComponent {
 
       error: (err: any) => {
 
-        console.error(
-          'CREATE DOCTOR API ERROR:',
-          err
-        );
+        console.error('CREATE DOCTOR API ERROR:', err);
 
         const errorMessage =
           err?.error?.message ||
@@ -1252,9 +1168,7 @@ export class AddPatientComponent {
 
         this.doctors = doctors;
 
-        this.filteredDoctors = [
-          ...doctors
-        ];
+        this.filteredDoctors = [...doctors];
 
         const matchedDoctor =
           doctors.find((doctor: any) => {
@@ -1283,24 +1197,14 @@ export class AddPatientComponent {
           });
 
         if (matchedDoctor) {
-          this.selectDoctor(
-            matchedDoctor
-          );
+          this.selectDoctor(matchedDoctor);
 
-          this.doctorSearch =
-            this.getDoctorName(
-              matchedDoctor
-            );
+          this.doctorSearch = this.getDoctorName(matchedDoctor);
         }
-
-
       },
 
       error: (err: any) => {
-        console.error(
-          'Background doctor refresh failed:',
-          err
-        );
+        console.error('Background doctor refresh failed:', err);
       }
     });
   }
@@ -1317,60 +1221,40 @@ export class AddPatientComponent {
 
         const loadedDoctors =
           this.extractDoctorsResponse(res)
-            .map((d: any) =>
-              this.normalizeDoctor(d)
-            )
-            .filter(
-              (d: any) => !!d
-            );
+            .map((d: any) => this.normalizeDoctor(d))
+            .filter((d: any) => !!d);
 
-        this.doctors =
-          loadedDoctors;
+        this.doctors = loadedDoctors;
 
         // ======================================================
         // DEFAULT SELF DOCTOR
         // ======================================================
 
-        if (
-          !this.selectedDoctor
-        ) {
+        if (!this.selectedDoctor) {
 
           const selfDoctor =
             this.doctors.find(
               (d: any) =>
-                this.getDoctorName(d)
-                  .toLowerCase() ===
-                'self'
+                this.getDoctorName(d).toLowerCase() === 'self'
             );
 
           if (selfDoctor) {
-
-            this.selectDoctor(
-              selfDoctor
-            );
-
+            this.selectDoctor(selfDoctor);
           }
-
         }
-
       },
 
       error: (err: any) => {
 
-        console.error(
-          'LOAD DOCTORS ERROR:',
-          err
-        );
+        console.error('LOAD DOCTORS ERROR:', err);
 
         this.toastService.error(
           'Error',
           'Failed to load doctors'
         );
-
       }
 
     });
-
   }
 
   // ============================================================
@@ -1379,43 +1263,27 @@ export class AddPatientComponent {
 
   selectDoctor(doc: any): void {
 
-    const normalizedDoctor =
-      this.normalizeDoctor(doc);
+    const normalizedDoctor = this.normalizeDoctor(doc);
 
-    if (
-      !normalizedDoctor
-    ) {
+    if (!normalizedDoctor) {
       return;
     }
 
-    this.selectedDoctor =
-      normalizedDoctor;
+    this.selectedDoctor = normalizedDoctor;
 
-    const doctorId =
-      this.getDoctorId(
-        normalizedDoctor
-      );
+    const doctorId = this.getDoctorId(normalizedDoctor);
 
-    const doctorName =
-      this.getDoctorName(
-        normalizedDoctor
-      );
+    const doctorName = this.getDoctorName(normalizedDoctor);
 
-    this.patient.doctor =
-      doctorName;
+    this.patient.doctor = doctorName;
 
-    this.patient.doctorId =
-      doctorId || null;
+    this.patient.doctorId = doctorId || null;
 
-    this.patient.doctorTitle =
-      'dr';
+    this.patient.doctorTitle = 'dr';
 
-    this.doctorSearch =
-      doctorName;
+    this.doctorSearch = doctorName;
 
-    this.showDoctorSuggestions =
-      false;
-
+    this.showDoctorSuggestions = false;
   }
 
   onTitleChange(): void {
@@ -1438,7 +1306,6 @@ export class AddPatientComponent {
     this.selectedDoctorId = 0;
     this.patient.doctor = '';
     this.patient.doctorId = null;
-    this.selectedDoctorId = 0;
 
     if (!searchTerm) {
       this.filteredDoctors = [];
@@ -1479,24 +1346,17 @@ export class AddPatientComponent {
               .trim()
               .toLowerCase();
 
-            return doctorName.includes(
-              searchTerm
-            );
+            return doctorName.includes(searchTerm);
           }
         );
 
         this.showDoctorSuggestions =
           this.filteredDoctors.length > 0;
-
-
       },
 
       error: (err: any) => {
 
-        console.error(
-          'GET LATEST DOCTORS ERROR:',
-          err
-        );
+        console.error('GET LATEST DOCTORS ERROR:', err);
 
         this.filteredDoctors = [];
         this.showDoctorSuggestions = false;
@@ -1504,14 +1364,11 @@ export class AddPatientComponent {
     });
   }
 
-
   // ============================================================
   // SELECT DOCTOR FROM SEARCH
   // ============================================================
 
-  selectDoctorFromSearch(
-    doctor: any
-  ): void {
+  selectDoctorFromSearch(doctor: any): void {
 
     if (!doctor) {
       return;
@@ -1544,25 +1401,20 @@ export class AddPatientComponent {
       return;
     }
 
-    this.selectedDoctor =
-      doctor;
+    this.selectedDoctor = doctor;
 
-    this.selectedDoctorId =
-      doctorId;
+    this.selectedDoctorId = doctorId;
 
-    this.patient.doctorId =
-      doctorId;
+    this.patient.doctorId = doctorId;
 
-    this.patient.doctor =
-      doctorName;
+    this.patient.doctor = doctorName;
 
-    this.doctorSearch =
-      doctorName;
+    this.doctorSearch = doctorName;
 
-    this.showDoctorSuggestions =
-      false;
+    this.showDoctorSuggestions = false;
 
-
+    // doctor निवडला की त्याची red border लगेच काढा
+    this.clearFieldError('doctor');
   }
 
   // ============================================================
@@ -1572,24 +1424,14 @@ export class AddPatientComponent {
   private resolveDoctorForBooking(): any {
 
     // CASE 1: Selected Doctor object
-    if (
-      this.selectedDoctor
-    ) {
+    if (this.selectedDoctor) {
 
-      const selectedId =
-        this.getDoctorId(
-          this.selectedDoctor
-        );
+      const selectedId = this.getDoctorId(this.selectedDoctor);
 
-      if (
-        selectedId > 0
-      ) {
+      if (selectedId > 0) {
 
         return {
-
-          doctorId:
-            selectedId,
-
+          doctorId: selectedId,
           doctorName:
             String(
               this.selectedDoctor?.doctor_name ||
@@ -1603,21 +1445,12 @@ export class AddPatientComponent {
     }
 
     // CASE 2: patient.doctorId already exists
-    const patientDoctorId =
-      Number(
-        this.patient?.doctorId ||
-        0
-      );
+    const patientDoctorId = Number(this.patient?.doctorId || 0);
 
-    if (
-      patientDoctorId > 0
-    ) {
+    if (patientDoctorId > 0) {
 
       return {
-
-        doctorId:
-          patientDoctorId,
-
+        doctorId: patientDoctorId,
         doctorName:
           String(
             this.patient?.doctor ||
@@ -1635,9 +1468,7 @@ export class AddPatientComponent {
         ''
       ).trim();
 
-    if (
-      typedDoctorName
-    ) {
+    if (typedDoctorName) {
 
       const matchingDoctor =
         this.doctors.find(
@@ -1653,32 +1484,19 @@ export class AddPatientComponent {
                 .trim()
                 .toLowerCase();
 
-            return (
-              name ===
-              typedDoctorName
-                .toLowerCase()
-            );
+            return name === typedDoctorName.toLowerCase();
           }
         );
 
-      if (
-        matchingDoctor
-      ) {
+      if (matchingDoctor) {
 
-        const matchingId =
-          this.getDoctorId(
-            matchingDoctor
-          );
+        const matchingId = this.getDoctorId(matchingDoctor);
 
-        if (
-          matchingId > 0
-        ) {
+        if (matchingId > 0) {
 
-          this.selectedDoctor =
-            matchingDoctor;
+          this.selectedDoctor = matchingDoctor;
 
-          this.patient.doctorId =
-            matchingId;
+          this.patient.doctorId = matchingId;
 
           this.patient.doctor =
             String(
@@ -1689,12 +1507,8 @@ export class AddPatientComponent {
             ).trim();
 
           return {
-
-            doctorId:
-              matchingId,
-
-            doctorName:
-              this.patient.doctor
+            doctorId: matchingId,
+            doctorName: this.patient.doctor
           };
         }
       }
@@ -1710,104 +1524,63 @@ export class AddPatientComponent {
 
   loadLabs() {
 
-    if (
-      this.role ===
-      this.ROLE_STAFF
-    ) {
+    if (this.role === this.ROLE_STAFF) {
 
       const raw: any =
-        (
-          this.authService
-            .currentUserValue as any
-        )?.raw || {};
+        (this.authService.currentUserValue as any)?.raw || {};
 
       const ownLab = {
-
-        id:
-          raw.labId,
-
-        franchiseId:
-          raw.labId,
-
-        franchiseName:
-          raw.labName ||
-          'Lab',
-
-        centerCode:
-          raw.labCode ||
-          ''
+        id: raw.labId,
+        franchiseId: raw.labId,
+        franchiseName: raw.labName || 'Lab',
+        centerCode: raw.labCode || ''
       };
 
-      this.labs = [
-        ownLab
-      ];
+      this.labs = [ownLab];
 
-      this.filteredLabs = [
-        ...this.labs
-      ];
+      this.filteredLabs = [...this.labs];
 
-      this.selectedLab =
-        ownLab;
+      this.selectedLab = ownLab;
 
-      this.patient.lab =
-        ownLab.franchiseName;
+      this.patient.lab = ownLab.franchiseName;
 
-      this.staffLabSearch =
-        ownLab.franchiseName;
+      this.staffLabSearch = ownLab.franchiseName;
 
-      this.labSearch =
-        ownLab.franchiseName;
+      this.labSearch = ownLab.franchiseName;
 
       return;
     }
 
-    if (
-      this.isFranchiseRole
-    ) {
+    if (this.isFranchiseRole) {
 
-      const currentUser =
-        this.authService
-          .currentUserValue;
+      const currentUser = this.authService.currentUserValue;
 
       const fId =
-        (currentUser as any)
-          ?.franchiseId ??
-        (currentUser as any)
-          ?.raw?.franchiseId;
+        (currentUser as any)?.franchiseId ??
+        (currentUser as any)?.raw?.franchiseId;
 
       const fName =
-        (currentUser as any)
-          ?.franchiseName ??
-        (currentUser as any)
-          ?.raw?.franchiseName;
+        (currentUser as any)?.franchiseName ??
+        (currentUser as any)?.raw?.franchiseName;
 
       const own =
         fId
           ? {
             id: fId,
             franchiseId: fId,
-            franchiseName:
-              fName ||
-              'SELF'
+            franchiseName: fName || 'SELF'
           }
           : this.DEFAULT_FRANCHISE;
 
-      this.labs = [
-        own
-      ];
+      this.labs = [own];
 
-      this.filteredLabs = [
-        ...this.labs
-      ];
+      this.filteredLabs = [...this.labs];
 
-      this.selectedLab =
-        own;
+      this.selectedLab = own;
 
-      this.patient.lab =
-        own.franchiseName;
+      this.patient.lab = own.franchiseName;
 
-      this.labSearch =
-        own.franchiseName;
+      this.labSearch = own.franchiseName;
 
       return;
     }
@@ -1818,55 +1591,36 @@ export class AddPatientComponent {
 
         next: (res: any) => {
 
-          this.labs =
-            res?.content ||
-            res ||
-            [];
+          this.labs = res?.content || res || [];
 
-          this.filteredLabs =
-            [
-              ...this.labs
-            ];
+          this.filteredLabs = [...this.labs];
 
-          // ✅ FIX: DEFAULT_FRANCHISE (franchiseId 2541) हा फक्त
-          // development DB मध्ये valid आहे. backend कडून आलेल्या list
-          // मधला 2541 सापडला तरच तो वापरायचा, नाहीतर त्याच list मधला
-          // पहिला खरा franchise निवडायचा.
+          // DEFAULT_FRANCHISE (franchiseId 2541) हा फक्त development DB मध्ये
+          // valid आहे. backend कडून आलेल्या list मधला 2541 सापडला तरच तो
+          // वापरायचा, नाहीतर त्याच list मधला पहिला खरा franchise निवडायचा.
           let defaultLab =
             this.labs.find(
               (x: any) =>
-                Number(
-                  x?.franchiseId ??
-                  x?.id ??
-                  0
-                ) ===
-                Number(
-                  this.DEFAULT_FRANCHISE
-                    .franchiseId
-                )
+                Number(x?.franchiseId ?? x?.id ?? 0) ===
+                Number(this.DEFAULT_FRANCHISE.franchiseId)
             );
 
           if (!defaultLab) {
             defaultLab = this.labs[0] || null;
           }
 
-          this.selectedLab =
-            defaultLab;
+          this.selectedLab = defaultLab;
 
-          this.labSearch =
-            defaultLab?.franchiseName || '';
+          this.labSearch = defaultLab?.franchiseName || '';
 
-          this.staffLabSearch =
-            defaultLab?.franchiseName || '';
+          this.staffLabSearch = defaultLab?.franchiseName || '';
 
-          this.patient.lab =
-            defaultLab?.franchiseName || '';
+          this.patient.lab = defaultLab?.franchiseName || '';
         },
 
         error: () => {
 
-          // ✅ FIX: API fail झाली तरी DEFAULT_FRANCHISE silently
-          // select करू नये.
+          // API fail झाली तरी DEFAULT_FRANCHISE silently select करू नये.
           this.labs = [];
 
           this.filteredLabs = [];
@@ -1904,8 +1658,6 @@ export class AddPatientComponent {
     this.patient.lab = labName;
 
     this.labSearch = labName;
-
-
   }
 
   selectStaffLab(lab: any): void {
@@ -1941,7 +1693,7 @@ export class AddPatientComponent {
     this.selectedLab = null;
     this.patient.lab = this.labSearch;
 
-    // ✅ FIX: Collection Center साठी actual FRANCHISES varun search
+    // Collection Center साठी actual FRANCHISES varun search
     // (getFranchises) — getFranchiseLabs() नाही.
     this.labApi.getFranchises().subscribe({
       next: (res: any) => {
@@ -1968,17 +1720,11 @@ export class AddPatientComponent {
           return labName.includes(q);
         });
 
-        this.showLabDropdown =
-          this.filteredLabs.length > 0;
-
-
+        this.showLabDropdown = this.filteredLabs.length > 0;
       },
 
       error: (err: any) => {
-        console.error(
-          'GET LATEST FRANCHISES ERROR:',
-          err
-        );
+        console.error('GET LATEST FRANCHISES ERROR:', err);
 
         this.filteredLabs = [];
         this.showLabDropdown = false;
@@ -1993,7 +1739,7 @@ export class AddPatientComponent {
 
     const q = String(this.staffLabSearch || '').trim().toLowerCase();
 
-    // ✅ FIX: फक्त staff-lab selection reset, Collection Center la touch नाही
+    // फक्त staff-lab selection reset, Collection Center la touch नाही
     this.selectedStaffLab = null;
     this.patient.lab = this.staffLabSearch;
 
@@ -2004,7 +1750,6 @@ export class AddPatientComponent {
     }
     this.labApi.getFranchiseLabs().subscribe({
       next: (res: any) => {
-
 
         const list = Array.isArray(res) ? res : (res?.content || []);
 
@@ -2029,48 +1774,34 @@ export class AddPatientComponent {
       },
     });
   }
+
   selectStaffLabFromPicker(lab: any) {
-    // ✅ FIX: selectLab() नाही, selectStaffLab() वापर
+    // selectLab() नाही, selectStaffLab() वापर
     this.selectStaffLab(lab);
     this.showStaffLabDropdown = false;
   }
 
-  onCustomFranchiseInput(
-    event?: any
-  ): void {
+  onCustomFranchiseInput(event?: any): void {
 
-    if (
-      event?.detail?.value !==
-      undefined
-    ) {
+    if (event?.detail?.value !== undefined) {
 
-      this.customFranchiseName =
-        String(
-          event.detail.value ||
-          ''
-        );
+      this.customFranchiseName = String(event.detail.value || '');
     }
   }
 
   openAddLabModal() {
 
-    if (
-      this.isStaffRole
-    ) {
+    if (this.isStaffRole) {
       return;
     }
 
     this.newLab = {
-
       name: '',
-
       contact: '',
-
       address: ''
     };
 
-    this.showAddLabModal =
-      true;
+    this.showAddLabModal = true;
   }
 
   isSavingLab = false;
@@ -2126,7 +1857,7 @@ export class AddPatientComponent {
           additionalDetails: res?.additionalDetails || this.newLab?.address || ''
         };
 
-        // ✅ Naveen lab फक्त staff-lab list madhe add — Collection
+        // Naveen lab फक्त staff-lab list madhe add — Collection
         // Center cha this.labs/filteredLabs/selectedLab/labSearch
         // touch नाही.
         this.filteredStaffLabs = [newFranchiseLab, ...this.filteredStaffLabs];
@@ -2162,38 +1893,29 @@ export class AddPatientComponent {
           name: l.labName,
           centerCode: ''
         }));
-        // ✅ FIX: फक्त filteredStaffLabs
+        // फक्त filteredStaffLabs
         this.filteredStaffLabs = mapped;
       },
       error: () => { }
     });
   }
+
   toggleLabDropdown() {
 
-    if (
-      this.isStaffRole
-    ) {
+    if (this.isStaffRole) {
       return;
     }
 
-    this.filteredLabs =
-      [
-        ...this.labs
-      ];
+    this.filteredLabs = [...this.labs];
 
-    this.showLabDropdown =
-      !this.showLabDropdown;
+    this.showLabDropdown = !this.showLabDropdown;
   }
 
   onLabSearchFocus() {
 
-    this.filteredLabs =
-      [
-        ...this.labs
-      ];
+    this.filteredLabs = [...this.labs];
 
-    this.showLabDropdown =
-      true;
+    this.showLabDropdown = true;
   }
 
   selectLabFromPicker(lab: any): void {
@@ -2221,7 +1943,7 @@ export class AddPatientComponent {
 
     this.loadTests();
 
-    // ✅ Collection center badalla ki current test/package search
+    // Collection center badalla ki current test/package search
     // franchise-specific price sobat refresh vhaycha.
     if (this.testSearch.trim()) this.searchTest();
     if (this.packageSearch.trim()) this.searchPackage();
@@ -2233,33 +1955,18 @@ export class AddPatientComponent {
 
   loadLastPatient() {
 
-    const labId =
-      this.labApi.getCurrentLabId();
+    const labId = this.labApi.getCurrentLabId();
 
     const currentUserId =
-      (
-        this.authService
-          .currentUserValue as any
-      )?.raw?.id;
+      (this.authService.currentUserValue as any)?.raw?.id;
 
-    const today =
-      new Date();
+    const today = new Date();
 
     const toDateExclusive =
-      this.formatDateParam(
-        this.addDays(
-          today,
-          1
-        )
-      );
+      this.formatDateParam(this.addDays(today, 1));
 
     const fromDate =
-      this.formatDateParam(
-        this.addDays(
-          today,
-          -60
-        )
-      );
+      this.formatDateParam(this.addDays(today, -60));
 
     this.labApi
       .getBookingStatusNew(
@@ -2273,48 +1980,28 @@ export class AddPatientComponent {
 
         next: (res: any) => {
 
-          let list =
-            res?.content ||
-            res ||
-            [];
+          let list = res?.content || res || [];
 
-          list =
-            Array.isArray(list)
-              ? list
-              : [];
+          list = Array.isArray(list) ? list : [];
 
           if (
-            this.role !==
-            this.ROLE_LAB_ADMIN &&
+            this.role !== this.ROLE_LAB_ADMIN &&
             currentUserId
           ) {
 
-            list =
-              list.filter(
-                (b: any) =>
-                  b.createdBy ===
-                  currentUserId
-              );
+            list = list.filter(
+              (b: any) => b.createdBy === currentUserId
+            );
           }
 
           list.sort(
             (a: any, b: any) =>
-              (
-                b.createdOn ||
-                0
-              ) -
-              (
-                a.createdOn ||
-                0
-              )
+              (b.createdOn || 0) - (a.createdOn || 0)
           );
 
-          const last =
-            list[0];
+          const last = list[0];
 
-          this.lastPatient =
-            last?.customerName ??
-            '—';
+          this.lastPatient = last?.customerName ?? '—';
 
           const uhid =
             last?.uhidNumber ??
@@ -2330,50 +2017,29 @@ export class AddPatientComponent {
 
         error: () => {
 
-          this.lastPatient =
-            '—';
+          this.lastPatient = '—';
 
-          this.patientRelation =
-            'self/ILS3505';
+          this.patientRelation = 'self/ILS3505';
         }
       });
   }
 
-  private formatDateParam(
-    d: Date
-  ): string {
+  private formatDateParam(d: Date): string {
 
     return (
       d.getFullYear() +
       '-' +
-      String(
-        d.getMonth() + 1
-      ).padStart(
-        2,
-        '0'
-      ) +
+      String(d.getMonth() + 1).padStart(2, '0') +
       '-' +
-      String(
-        d.getDate()
-      ).padStart(
-        2,
-        '0'
-      )
+      String(d.getDate()).padStart(2, '0')
     );
   }
 
-  private addDays(
-    d: Date,
-    days: number
-  ): Date {
+  private addDays(d: Date, days: number): Date {
 
-    const copy =
-      new Date(d);
+    const copy = new Date(d);
 
-    copy.setDate(
-      copy.getDate() +
-      days
-    );
+    copy.setDate(copy.getDate() + days);
 
     return copy;
   }
@@ -2384,7 +2050,7 @@ export class AddPatientComponent {
 
   loadTests() {
 
-    // ✅ FIX: franchiseId फक्त franchise/staff roles साठी पाठवायचा.
+    // franchiseId फक्त franchise/staff roles साठी पाठवायचा.
     // Admin साठी undefined — पूर्ण lab-wide master test list.
     const franchiseId = this.isAdminRole
       ? undefined
@@ -2432,7 +2098,7 @@ export class AddPatientComponent {
 
       const labId = this.labApi.getCurrentLabId();
 
-      // ✅ FIX: Admin साठी franchiseId undefined पाठवायचा
+      // Admin साठी franchiseId undefined पाठवायचा
       const franchiseId = this.isAdminRole
         ? undefined
         : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
@@ -2488,7 +2154,7 @@ export class AddPatientComponent {
   }
 
   // ============================================================
-  // ✅ SAMPLE-TYPE GROUPED BARCODES
+  // SAMPLE-TYPE GROUPED BARCODES
   //
   // ONE barcode per SAMPLE TYPE (e.g. one for all EDTA tests,
   // one for all SERUM tests). Every add/remove routes through
@@ -2519,7 +2185,6 @@ export class AddPatientComponent {
 
       this.selectedSampleTests.push(group);
     }
-
 
     const testId = Number(test?.id ?? test?.testId ?? 0);
 
@@ -2582,7 +2247,7 @@ export class AddPatientComponent {
       return;
     }
 
-    // ✅ याच booking मधल्या दुसऱ्या sample ला हाच barcode आधीच दिलेला नाहीये ना
+    // याच booking मधल्या दुसऱ्या sample ला हाच barcode आधीच दिलेला नाहीये ना
     const isDuplicateLocally = (this.savedPatient?.sampleTests || []).some(
       (s: any) => s !== sample && String(s?.barcode || '').trim() === newBarcode
     );
@@ -2609,7 +2274,7 @@ export class AddPatientComponent {
 
       next: () => {
 
-        // ✅ FIX: backend कधी कधी duplicate barcode वर पण HTTP 200
+        // backend कधी कधी duplicate barcode वर पण HTTP 200
         // देतो पण update करत नाही. म्हणून booking परत fetch करून verify.
         this.labApi.getSingleBooking(bookingId).subscribe({
 
@@ -2695,30 +2360,23 @@ export class AddPatientComponent {
     });
   }
 
-  addTest(
-    test: any
-  ) {
+  addTest(test: any) {
 
     const exists =
       this.selectedTests.find(
-        (t: any) =>
-          t.name ===
-          test.name
+        (t: any) => t.name === test.name
       );
 
     if (!exists) {
 
-      this.selectedTests.push(
-        test
-      );
+      this.selectedTests.push(test);
 
-      // ✅ FIX: group by sample type
+      // group by sample type
       this.addTestToSampleGroup(test);
 
       this.toastService.success(
         'Test Added',
-        test.name +
-        ' added to bill.'
+        test.name + ' added to bill.'
       );
 
       this.calculateBilling();
@@ -2727,16 +2385,13 @@ export class AddPatientComponent {
 
       this.toastService.warning(
         'Already Added',
-        test.name +
-        ' already exists.'
+        test.name + ' already exists.'
       );
     }
 
-    this.testSearch =
-      '';
+    this.testSearch = '';
 
-    this.showSuggestions =
-      false;
+    this.showSuggestions = false;
   }
 
   // ============================================================
@@ -2745,8 +2400,7 @@ export class AddPatientComponent {
 
   loadPackages(): void {
 
-    const labId =
-      this.labApi.getCurrentLabId();
+    const labId = this.labApi.getCurrentLabId();
 
     const franchiseId =
       this.selectedLab?.franchiseId ??
@@ -2766,20 +2420,12 @@ export class AddPatientComponent {
               []
             );
 
-        this.allPackages =
-          Array.isArray(list)
-            ? list
-            : [];
-
-
+        this.allPackages = Array.isArray(list) ? list : [];
       },
 
       error: (err: any) => {
 
-        console.error(
-          'LOAD PACKAGES ERROR:',
-          err
-        );
+        console.error('LOAD PACKAGES ERROR:', err);
 
         this.toastService.error(
           'Error',
@@ -2789,10 +2435,55 @@ export class AddPatientComponent {
     });
   }
 
+  async pasteProfile(): Promise<void> {
+    try {
+      const { value } = await Clipboard.read();
+      const text = String(value || '').trim();
+      if (!text) return;
+
+      this.packageSearch = text;
+      this.searchPackage();
+
+      // exact नाव match झालं तर आपोआप add करा
+      const exact = this.filteredPackages.find((p: any) =>
+        String(p?.profileName || p?.profile_name || p?.name || '')
+          .trim().toLowerCase() === text.toLowerCase()
+      );
+      if (exact) {
+        this.addPackage(exact);
+      }
+    } catch (e) {
+      console.error('PASTE PROFILE ERROR:', e);
+      this.toastService.error('Paste Failed', 'Unable to read clipboard.');
+    }
+  }
+
+  // ============================================================
+// PASTE TEST (clipboard -> test search)
+// ============================================================
+
+async pasteTest(): Promise<void> {
+  try {
+    const { value } = await Clipboard.read();
+    const text = String(value || '').trim();
+
+    if (!text) {
+      return;
+    }
+
+    this.testSearch = text;
+    this.searchTest();
+
+  } catch (e) {
+    console.error('PASTE TEST ERROR:', e);
+    this.toastService.error('Paste Failed', 'Unable to read clipboard.');
+  }
+}
+
   private packageSearchTimer: any = null;
 
   // ============================================================
-  // ✅ PACKAGE SEARCH (production code)
+  // PACKAGE SEARCH
   // ============================================================
 
   searchPackage(): void {
@@ -2870,7 +2561,7 @@ export class AddPatientComponent {
 
       if (!test) {
 
-        // ✅ FIX: testId `allTests` madhe sapadla nahi (inactive/deleted
+        // testId `allTests` madhe sapadla nahi (inactive/deleted
         // test) tar raw package item (`pt`) madhun synthetic test banvaycha.
         const fallbackName = String(
           pt?.testName ?? pt?.test_name ?? ''
@@ -2919,7 +2610,7 @@ export class AddPatientComponent {
 
       this.selectedTests.push({ ...test, packageName });
 
-      // ✅ FIX: group by sample type
+      // group by sample type
       this.addTestToSampleGroup(test);
 
       addedCount++;
@@ -2999,26 +2690,18 @@ export class AddPatientComponent {
     this.calculateBilling();
   }
 
-  async removeTest(
-    index: number
-  ) {
+  async removeTest(index: number) {
 
-    const test =
-      this.selectedTests[
-      index
-      ];
+    const test = this.selectedTests[index];
 
     const alert =
       await this.alertController.create({
 
-        cssClass:
-          'premium-alert',
+        cssClass: 'premium-alert',
 
-        header:
-          'Remove Test',
+        header: 'Remove Test',
 
-        message:
-          `Are you sure you want to remove "${test.name}"?`,
+        message: `Are you sure you want to remove "${test.name}"?`,
 
         buttons: [
 
@@ -3039,17 +2722,13 @@ export class AddPatientComponent {
               // AlertController buttons run OUTSIDE Angular's zone.
               this.ngZone.run(() => {
 
-                this.selectedTests.splice(
-                  index,
-                  1
-                );
+                this.selectedTests.splice(index, 1);
 
                 this.removeTestFromSampleGroup(test);
 
                 this.toastService.warning(
                   'Test Removed',
-                  test.name +
-                  ' removed from bill.'
+                  test.name + ' removed from bill.'
                 );
 
                 this.calculateBilling();
@@ -3087,50 +2766,32 @@ export class AddPatientComponent {
 
   calculateBilling() {
 
-    const subTotal =
-      this.getSubTotal();
+    const subTotal = this.getSubTotal();
 
     this.billing.discountAmount =
-      this.billing.discountType ===
-        'percent'
+      this.billing.discountType === 'percent'
 
         ? Math.round(
-          (
-            subTotal *
-            (
-              this.billing
-                .discountValue ||
-              0
-            )
-          ) /
-          100
+          (subTotal * (this.billing.discountValue || 0)) / 100
         )
 
-        : (
-          this.billing
-            .discountValue ||
-          0
-        );
+        : (this.billing.discountValue || 0);
 
     this.billing.grandTotal =
       Math.max(
         0,
-        subTotal -
-        this.billing
-          .discountAmount
+        subTotal - this.billing.discountAmount
       );
 
     if (this.billing.paymentMode === 'cash') {
 
-      this.billing.cashAmount =
-        this.billing.grandTotal;
+      this.billing.cashAmount = this.billing.grandTotal;
 
       this.billing.upiAmount = 0;
 
     } else {
 
-      this.billing.upiAmount =
-        this.billing.grandTotal;
+      this.billing.upiAmount = this.billing.grandTotal;
 
       this.billing.cashAmount = 0;
     }
@@ -3141,26 +2802,14 @@ export class AddPatientComponent {
   private updatePaidAndDue(): void {
 
     this.billing.paidAmount =
-      this.billing.paymentMode ===
-        'cash'
-        ? (
-          this.billing.cashAmount ||
-          0
-        )
-        : (
-          this.billing.upiAmount ||
-          0
-        );
+      this.billing.paymentMode === 'cash'
+        ? (this.billing.cashAmount || 0)
+        : (this.billing.upiAmount || 0);
 
     this.billing.dueAmount =
       Math.max(
         0,
-        this.billing.grandTotal -
-        (
-          this.billing
-            .paidAmount ||
-          0
-        )
+        this.billing.grandTotal - (this.billing.paidAmount || 0)
       );
   }
 
@@ -3189,40 +2838,30 @@ export class AddPatientComponent {
 
     this.billing = {
 
-      discountType:
-        'percent',
+      discountType: 'percent',
 
-      discountValue:
-        0,
+      discountValue: 0,
 
-      discountAmount:
-        0,
+      discountAmount: 0,
 
-      grandTotal:
-        0,
+      grandTotal: 0,
 
-      paymentMode:
-        'cash',
+      paymentMode: 'cash',
 
-      cashAmount:
-        0,
+      cashAmount: 0,
 
-      upiAmount:
-        0,
+      upiAmount: 0,
 
-      paidAmount:
-        0,
+      paidAmount: 0,
 
-      dueAmount:
-        0,
+      dueAmount: 0,
 
-      transactionId:
-        '',
+      transactionId: '',
 
-      discountFromDoctor:
-        null
+      discountFromDoctor: null
     };
   }
+
   // ============================================================
   // FILE
   // ============================================================
@@ -3230,29 +2869,19 @@ export class AddPatientComponent {
   triggerFileInput() {
 
     (
-      document.getElementById(
-        'fileInput'
-      ) as HTMLInputElement
+      document.getElementById('fileInput') as HTMLInputElement
     )?.click();
   }
 
-  onFileSelected(
-    event: any
-  ) {
+  onFileSelected(event: any) {
 
-    const file =
-      event.target.files[0];
+    const file = event.target.files[0];
 
     if (!file) {
       return;
     }
 
-    if (
-      file.size >
-      5 *
-      1024 *
-      1024
-    ) {
+    if (file.size > 5 * 1024 * 1024) {
 
       this.toastService.error(
         'File Too Large',
@@ -3262,47 +2891,37 @@ export class AddPatientComponent {
       return;
     }
 
-    this.selectedFileName =
-      file.name;
+    this.selectedFileName = file.name;
 
-    const reader =
-      new FileReader();
+    const reader = new FileReader();
 
-    reader.onload =
-      (e: any) => {
+    reader.onload = (e: any) => {
 
-        this.selectedFileBase64 =
-          e.target.result;
+      this.selectedFileBase64 = e.target.result;
 
-        this.toastService.success(
-          'File Added',
-          file.name +
-          ' added successfully.'
-        );
-      };
+      // file आल्यावर document ची red border काढा
+      this.clearFieldError('document');
 
-    reader.readAsDataURL(
-      file
-    );
+      this.toastService.success(
+        'File Added',
+        file.name + ' added successfully.'
+      );
+    };
+
+    reader.readAsDataURL(file);
   }
 
   removeFile() {
 
-    this.selectedFileName =
-      '';
+    this.selectedFileName = '';
 
-    this.selectedFileBase64 =
-      '';
+    this.selectedFileBase64 = '';
 
     const fileInput =
-      document.getElementById(
-        'fileInput'
-      ) as HTMLInputElement;
+      document.getElementById('fileInput') as HTMLInputElement;
 
     if (fileInput) {
-
-      fileInput.value =
-        '';
+      fileInput.value = '';
     }
 
     this.toastService.warning(
@@ -3362,74 +2981,51 @@ export class AddPatientComponent {
 
     this.resetFieldErrors();
 
-    this.selectedTests =
-      [];
+    this.selectedTests = [];
 
-    this.selectedSampleTests =
-      [];
+    this.selectedSampleTests = [];
 
-    this.selectedPackages =
-      [];
+    this.selectedPackages = [];
 
-    this.testSearch =
-      '';
+    this.testSearch = '';
 
-    this.filteredTests =
-      [];
+    this.filteredTests = [];
 
-    this.packageSearch =
-      '';
+    this.packageSearch = '';
 
-    this.filteredPackages =
-      [];
+    this.filteredPackages = [];
 
-    this.showPackageSuggestions =
-      false;
+    this.showPackageSuggestions = false;
 
-    this.selectedFileName =
-      '';
+    this.selectedFileName = '';
 
-    this.selectedFileBase64 =
-      '';
+    this.selectedFileBase64 = '';
 
-    this.showSuggestions =
-      false;
+    this.showSuggestions = false;
 
-    this.selectedDoctor =
-      null;
+    this.selectedDoctor = null;
 
-    this.doctorSearch =
-      '';
+    this.doctorSearch = '';
 
-    this.filteredDoctors =
-      [];
+    this.filteredDoctors = [];
 
-    this.showDoctorSuggestions =
-      false;
+    this.showDoctorSuggestions = false;
 
-    this.selectedLab =
-      null;
+    this.selectedLab = null;
 
-    this.customFranchiseName =
-      '';
+    this.customFranchiseName = '';
 
-    this.labSearch =
-      '';
+    this.labSearch = '';
 
-    this.showLabDropdown =
-      false;
+    this.showLabDropdown = false;
 
-    this.showAddLabModal =
-      false;
+    this.showAddLabModal = false;
 
-    this.staffLabSearch =
-      '';
+    this.staffLabSearch = '';
 
-    this.filteredStaffLabs =
-      [];
+    this.filteredStaffLabs = [];
 
-    this.showStaffLabDropdown =
-      false;
+    this.showStaffLabDropdown = false;
 
     this.resetBilling();
 
@@ -3450,73 +3046,51 @@ export class AddPatientComponent {
 
     this.step = 1;
 
-    this.patient.name =
-      '';
+    this.patient.name = '';
 
-    this.patient.age =
-      '';
+    this.patient.age = '';
 
-    this.patient.phone =
-      '';
+    this.patient.phone = '';
 
-    this.patient.aadhaar =
-      '';
+    this.patient.aadhaar = '';
 
-    this.patient.address =
-      '';
+    this.patient.address = '';
 
-    this.patient.uhid =
-      '';
+    this.patient.uhid = '';
 
-    this.patient.history =
-      '';
+    this.patient.history = '';
 
-    this.patient.otherCharges =
-      0;
+    this.patient.otherCharges = 0;
 
-    this.patient.eReport =
-      false;
+    this.patient.eReport = false;
 
-    this.patient.clinical =
-      false;
+    this.patient.clinical = false;
 
-    this.patient.file =
-      false;
+    this.patient.file = false;
 
-    this.patient.homeCollection =
-      false;
+    this.patient.homeCollection = false;
 
     this.resetFieldErrors();
 
-    this.selectedTests =
-      [];
+    this.selectedTests = [];
 
-    this.selectedSampleTests =
-      [];
+    this.selectedSampleTests = [];
 
-    this.selectedPackages =
-      [];
+    this.selectedPackages = [];
 
-    this.testSearch =
-      '';
+    this.testSearch = '';
 
-    this.filteredTests =
-      [];
+    this.filteredTests = [];
 
-    this.packageSearch =
-      '';
+    this.packageSearch = '';
 
-    this.filteredPackages =
-      [];
+    this.filteredPackages = [];
 
-    this.showPackageSuggestions =
-      false;
+    this.showPackageSuggestions = false;
 
-    this.selectedFileName =
-      '';
+    this.selectedFileName = '';
 
-    this.selectedFileBase64 =
-      '';
+    this.selectedFileBase64 = '';
 
     this.resetBilling();
 
@@ -3527,49 +3101,66 @@ export class AddPatientComponent {
   }
 
   // ============================================================
-  // ✅ VALIDATION
+  // VALIDATION (step-scoped)
   //
-  //  - REQUIRED: Name, Age, Ref Doctor, At least 1 Test
-  //  - OPTIONAL (format checked only if filled): Mobile, Aadhaar,
-  //    UHID, Address, History, Other Charges, Custom Franchise
+  //  Step 1 -> Patient Info:
+  //      REQUIRED : Name, Age, Ref Doctor
+  //      OPTIONAL : Mobile, Aadhaar, UHID, Address, History,
+  //                 Other Charges, Custom Franchise
+  //                 (format तपासतो फक्त भरलं असेल तरच)
   //
-  // Returns the first validation error message, or null if valid.
+  //  Step 2 -> Tests:
+  //      REQUIRED : at least 1 test
+  //      REQUIRED : Document (Histopathology / Double / Quadruple Marker)
+  //
+  //  प्रत्येक validator पहिली चूक { field, message } म्हणून परत करतो,
+  //  सगळं ठीक असेल तर null.
   // ============================================================
-  private validatePatientForm(): string | null {
 
+  private reportIssue(issue: ValidationIssue): void {
     this.resetFieldErrors();
+    this.fieldErrors[issue.field] = true;
+    this.toastService.error('Validation Error', issue.message);
+  }
+
+  private hasSelectedDoctor(): boolean {
+    return Number(
+      this.selectedDoctor?.doctorid ??
+      this.selectedDoctor?.doctorId ??
+      this.selectedDoctor?.id ??
+      this.patient?.doctorId ??
+      0
+    ) > 0;
+  }
+
+  private validateStep1(): ValidationIssue | null {
 
     // ---------- Patient Name (REQUIRED) ----------
-    const name = String(this.patient?.name || '').trim();
+    const name = String(this.patient?.name ?? '').trim();
 
     if (!name) {
-      this.fieldErrors.name = true;
-      return 'Please enter patient full name.';
+      return { field: 'name', message: 'Please enter patient full name.' };
     }
 
-    if (!/^[A-Za-z][A-Za-z\s.]{1,59}$/.test(name)) {
-      this.fieldErrors.name = true;
-      return 'Patient name should contain only letters and be 2-60 characters long.';
+    if (!this.NAME_REGEX.test(name)) {
+      return { field: 'name', message: 'Patient name contains invalid characters.' };
     }
 
     // ---------- Age (REQUIRED) ----------
     const ageRaw = String(this.patient?.age ?? '').trim();
 
     if (!ageRaw) {
-      this.fieldErrors.age = true;
-      return 'Please enter patient age.';
+      return { field: 'age', message: 'Please enter patient age.' };
     }
 
-    if (!/^\d+$/.test(ageRaw)) {
-      this.fieldErrors.age = true;
-      return 'Age must contain numbers only.';
+    if (!/^\d+(\.\d+)?$/.test(ageRaw)) {
+      return { field: 'age', message: 'Age must be a valid number.' };
     }
 
     const ageNum = Number(ageRaw);
 
-    if (ageNum < 1) {
-      this.fieldErrors.age = true;
-      return 'Age must be greater than 0.';
+    if (ageNum <= 0 || ageNum > 120) {
+      return { field: 'age', message: 'Age must be between 1 and 120.' };
     }
 
     // ---------- Ref. Doctor (REQUIRED) ----------
@@ -3578,53 +3169,47 @@ export class AddPatientComponent {
     ).trim();
 
     if (!doctorTyped) {
-      this.fieldErrors.doctor = true;
-      return 'Please select or enter Ref. Doctor name.';
+      return { field: 'doctor', message: 'Please select or enter Ref. Doctor name.' };
     }
 
-    if (!/^[A-Za-z][A-Za-z\s.()]{1,59}$/.test(doctorTyped)) {
-      this.fieldErrors.doctor = true;
-      return 'Doctor name should contain only letters, spaces, dots or brackets, and be 2-60 characters long.';
+    // DB मधून निवडलेल्या doctor ला regex नाही; फक्त नवीन typed नावाला.
+    if (!this.hasSelectedDoctor() && !this.DOCTOR_REGEX.test(doctorTyped)) {
+      return { field: 'doctor', message: 'Doctor name contains invalid characters.' };
     }
 
-    // ---------- Mobile Number (OPTIONAL, format checked only if filled) ----------
-    const mobile = String(this.patient?.phone || '').trim();
+    // ---------- Mobile Number (OPTIONAL) ----------
+    const mobile = String(this.patient?.phone ?? '').trim();
 
-    if (mobile && !/^[6-9]\d{9}$/.test(mobile)) {
-      this.fieldErrors.mobile = true;
-      return 'Mobile number must be exactly 10 digits and start with 6-9.';
+    if (mobile && !this.MOBILE_REGEX.test(mobile)) {
+      return { field: 'mobile', message: 'Mobile number must be exactly 10 digits and start with 6-9.' };
     }
 
     // ---------- Aadhaar Number (OPTIONAL) ----------
-    const aadhaar = String(this.patient?.aadhaar || '').trim();
+    const aadhaar = String(this.patient?.aadhaar ?? '').trim();
 
-    if (aadhaar && !/^\d{12}$/.test(aadhaar)) {
-      this.fieldErrors.aadhaar = true;
-      return 'Aadhaar number must be exactly 12 digits.';
+    if (aadhaar && !this.AADHAAR_REGEX.test(aadhaar)) {
+      return { field: 'aadhaar', message: 'Aadhaar number must be exactly 12 digits.' };
     }
 
     // ---------- UHID (OPTIONAL) ----------
-    const uhid = String(this.patient?.uhid || '').trim();
+    const uhid = String(this.patient?.uhid ?? '').trim();
 
-    if (uhid && !/^[A-Za-z0-9\-\/]{2,30}$/.test(uhid)) {
-      this.fieldErrors.uhid = true;
-      return 'UHID should be 2-30 characters (letters, numbers, - or / only).';
+    if (uhid && !this.UHID_REGEX.test(uhid)) {
+      return { field: 'uhid', message: 'UHID should be 2-30 characters (letters, numbers, - or / only).' };
     }
 
     // ---------- Address (OPTIONAL) ----------
-    const address = String(this.patient?.address || '').trim();
+    const address = String(this.patient?.address ?? '').trim();
 
-    if (address && address.length > 200) {
-      this.fieldErrors.address = true;
-      return 'Address should not exceed 200 characters.';
+    if (address.length > 200) {
+      return { field: 'address', message: 'Address should not exceed 200 characters.' };
     }
 
     // ---------- Clinical History (OPTIONAL) ----------
-    const history = String(this.patient?.history || '').trim();
+    const history = String(this.patient?.history ?? '').trim();
 
-    if (history && history.length > 500) {
-      this.fieldErrors.history = true;
-      return 'Clinical history should not exceed 500 characters.';
+    if (history.length > 500) {
+      return { field: 'history', message: 'Clinical history should not exceed 500 characters.' };
     }
 
     // ---------- Other Charges (OPTIONAL) ----------
@@ -3634,40 +3219,40 @@ export class AddPatientComponent {
       otherChargesRaw !== null &&
       otherChargesRaw !== undefined &&
       String(otherChargesRaw).trim() !== '' &&
-      Number(otherChargesRaw) !== 0
+      Number(otherChargesRaw) !== 0 &&
+      (isNaN(Number(otherChargesRaw)) || Number(otherChargesRaw) < 0)
     ) {
-      if (isNaN(Number(otherChargesRaw)) || Number(otherChargesRaw) < 0) {
-        this.fieldErrors.otherCharges = true;
-        return 'Other charges must be a valid positive number.';
-      }
+      return { field: 'otherCharges', message: 'Other charges must be a valid positive number.' };
     }
 
     // ---------- Custom Franchise (Admin only, OPTIONAL) ----------
     if (this.isAdminRole) {
 
-      const customFranchise = String(
-        this.customFranchiseName || ''
-      ).trim();
+      const customFranchise = String(this.customFranchiseName ?? '').trim();
 
-      if (customFranchise && customFranchise.length > 60) {
-        this.fieldErrors.customFranchise = true;
-        return 'Custom franchise name should not exceed 60 characters.';
+      if (customFranchise.length > 60) {
+        return { field: 'customFranchise', message: 'Custom franchise name should not exceed 60 characters.' };
       }
     }
 
-    // ---------- Tests (REQUIRED — at least 1) ----------
-    if (!this.selectedTests || this.selectedTests.length === 0) {
-      this.fieldErrors.tests = true;
-      return 'Please select at least one test.';
-    }
-
-    // ---------- Document (REQUIRED for Histopathology / Double Marker / Quadruple Marker) ----------
-    if (this.isDocumentRequired && !String(this.selectedFileBase64 || '').trim()) {
-      this.fieldErrors.tests = true;
-      return 'Please upload a document. It is required for the selected test.';
-    }
     return null;
   }
+
+  private validateStep2(): ValidationIssue | null {
+
+    // ---------- Tests (REQUIRED — at least 1) ----------
+    if (!this.selectedTests || this.selectedTests.length === 0) {
+      return { field: 'tests', message: 'Please select at least one test.' };
+    }
+
+    // ---------- Document (Histopathology / Double Marker / Quadruple Marker) ----------
+    if (this.isDocumentRequired && !String(this.selectedFileBase64 ?? '').trim()) {
+      return { field: 'document', message: 'Please upload a document. It is required for the selected test.' };
+    }
+
+    return null;
+  }
+
   // ============================================================
   // SAVE PATIENT / BOOKING
   // ============================================================
@@ -3676,28 +3261,21 @@ export class AddPatientComponent {
 
     if (this.isSavingBooking) return;
 
-    if (!this.isStep1Valid) {
+    // ---------- Step 1 validation ----------
+    const step1Issue = this.validateStep1();
+
+    if (step1Issue) {
       this.step = 1;
-      this.toastService.error(
-        'Validation Error',
-        'Please fill Patient Name, Age and Ref. Doctor.'
-      );
+      this.reportIssue(step1Issue);
       return;
     }
 
+    // ---------- Step 2 validation ----------
+    const step2Issue = this.validateStep2();
 
-
-    const validationError = this.validatePatientForm();
-
-    if (validationError) {
-
-      // ✅ Step 1 chya fields madhe error asel tar user la step 1 la
-      // parat ne. Tests / document chi error asel tar step 2 var thamba.
-      if (!this.fieldErrors.tests) {
-        this.step = 1;
-      }
-
-      this.toastService.error('Validation Error', validationError);
+    if (step2Issue) {
+      this.step = 2;
+      this.reportIssue(step2Issue);
       return;
     }
 
@@ -3890,80 +3468,48 @@ export class AddPatientComponent {
       };
     });
 
-    const subTotalAmount = Number(
-      this.getSubTotal() || 0
-    );
+    const subTotalAmount = Number(this.getSubTotal() || 0);
 
-    const totalAmount = Number(
-      this.billing?.grandTotal || 0
-    );
+    const totalAmount = Number(this.billing?.grandTotal || 0);
 
-    const discountAmount = Number(
-      this.billing?.discountAmount || 0
-    );
+    const discountAmount = Number(this.billing?.discountAmount || 0);
 
-    const paidAmount = Number(
-      this.billing?.paidAmount || 0
-    );
+    const paidAmount = Number(this.billing?.paidAmount || 0);
 
-    const dueAmount = Number(
-      this.billing?.dueAmount || 0
-    );
+    const dueAmount = Number(this.billing?.dueAmount || 0);
 
-    const isCashPayment =
-      this.billing?.paymentMode === 'cash';
+    const isCashPayment = this.billing?.paymentMode === 'cash';
 
-    const isUpiPayment =
-      this.billing?.paymentMode === 'upi';
+    const isUpiPayment = this.billing?.paymentMode === 'upi';
 
     const payload: any = {
-      title: String(
-        this.patient?.title || 'mr'
-      ).trim(),
+      title: String(this.patient?.title || 'mr').trim(),
 
       customerName: patientName,
 
-      age: String(
-        this.patient?.age ?? ''
-      ).trim(),
+      age: String(this.patient?.age ?? '').trim(),
 
-      ageType: String(
-        this.patient?.ageType || 'years'
-      ).trim(),
+      ageType: String(this.patient?.ageType || 'years').trim(),
 
-      gender: String(
-        this.patient?.gender || 'male'
-      ).trim(),
+      gender: String(this.patient?.gender || 'male').trim(),
 
-      mobileNumber: String(
-        this.patient?.phone || ''
-      ).trim(),
+      mobileNumber: String(this.patient?.phone || '').trim(),
 
-      aadhaarNumber: String(
-        this.patient?.aadhaar || ''
-      ).trim(),
+      aadhaarNumber: String(this.patient?.aadhaar || '').trim(),
 
-      address: String(
-        this.patient?.address || ''
-      ).trim(),
+      address: String(this.patient?.address || '').trim(),
 
-      history: String(
-        this.patient?.history || ''
-      ).trim(),
+      history: String(this.patient?.history || '').trim(),
 
-      uploadDoc: String(
-        this.selectedFileBase64 || ''
-      ).trim(),
+      uploadDoc: String(this.selectedFileBase64 || '').trim(),
 
       height: '',
       weight: '',
       urgent: false,
 
-      onlineReport:
-        !!this.patient?.eReport,
+      onlineReport: !!this.patient?.eReport,
 
-      homeCollection:
-        !!this.patient?.homeCollection,
+      homeCollection: !!this.patient?.homeCollection,
 
       membershipNo: '',
 
@@ -3973,34 +3519,23 @@ export class AddPatientComponent {
 
       discountAmount,
 
-      paymentCash:
-        isCashPayment,
+      paymentCash: isCashPayment,
 
-      cashAmount:
-        isCashPayment
-          ? paidAmount
-          : 0,
+      cashAmount: isCashPayment ? paidAmount : 0,
 
-      paymentUPI:
-        isUpiPayment,
+      paymentUPI: isUpiPayment,
 
-      upiAmount:
-        isUpiPayment
-          ? paidAmount
-          : 0,
+      upiAmount: isUpiPayment ? paidAmount : 0,
 
-      paymentOnline:
-        false,
+      paymentOnline: false,
 
-      onlineAmount:
-        '0',
+      onlineAmount: '0',
 
       paidAmount,
 
       dueAmount,
 
-      discountedAmount:
-        discountAmount,
+      discountedAmount: discountAmount,
 
       discountFrom:
         this.billing?.discountFromDoctor?.doctor_name ||
@@ -4009,50 +3544,32 @@ export class AddPatientComponent {
 
       remark: '',
 
-      doctorid:
-        finalDoctorId,
+      doctorid: finalDoctorId,
 
-      customDoctorName:
-        customDoctorName,
+      customDoctorName: customDoctorName,
 
-      customFranchiseLab:
-        customFranchiseLab,
+      customFranchiseLab: customFranchiseLab,
 
-      customFranchiseLabId:
-        customFranchiseLabId,
-      franchiseId:
-        franchiseId,
+      customFranchiseLabId: customFranchiseLabId,
 
-      paymentTransactionId:
-        String(
-          this.billing?.transactionId || ''
-        ).trim(),
+      franchiseId: franchiseId,
 
-      uhidNumber:
-        String(
-          this.patient?.uhid || ''
-        ).trim(),
+      paymentTransactionId: String(this.billing?.transactionId || '').trim(),
 
-      rateListDiscount:
-        0,
+      uhidNumber: String(this.patient?.uhid || '').trim(),
 
-      drawnOnTime:
-        '',
+      rateListDiscount: 0,
 
-      commissionToDoctor:
-        false,
+      drawnOnTime: '',
 
-      otherCharges:
-        Number(
-          this.patient?.otherCharges || 0
-        ),
+      commissionToDoctor: false,
 
-      createdOn:
-        new Date().toISOString(),
+      otherCharges: Number(this.patient?.otherCharges || 0),
+
+      createdOn: new Date().toISOString(),
 
       tests
     };
-
 
     payload.request = JSON.stringify(payload);
 
@@ -4060,14 +3577,9 @@ export class AddPatientComponent {
     this.proceedBookingSave(payload);
   }
 
+  private proceedBookingSave(payload: any): void {
 
-  private proceedBookingSave(
-    payload: any
-  ): void {
-
-    this.labApi.createBooking(
-      payload
-    ).subscribe({
+    this.labApi.createBooking(payload).subscribe({
 
       // ==========================================================
       // SUCCESS
@@ -4075,8 +3587,7 @@ export class AddPatientComponent {
 
       next: (res: any) => {
 
-        this.bookingRefresh
-          .triggerRefresh();
+        this.bookingRefresh.triggerRefresh();
 
         setTimeout(() => {
 
@@ -4101,7 +3612,7 @@ export class AddPatientComponent {
           '—';
 
         // ============================================================
-        // ✅ Actual auto-generated Patient Id create-booking cha
+        // Actual auto-generated Patient Id create-booking cha
         // response madhe nasto — GET /booking/patient/{labId}/{bookingId}
         // call marun to anayacha.
         // ============================================================
@@ -4121,10 +3632,7 @@ export class AddPatientComponent {
 
           error: (err: any) => {
 
-            console.error(
-              'GET PATIENT DETAILS ERROR:',
-              err
-            );
+            console.error('GET PATIENT DETAILS ERROR:', err);
 
             // Patient details call fail zali tari booking successful ahech.
             this.buildInvoiceAndShow(
@@ -4137,7 +3645,6 @@ export class AddPatientComponent {
 
       },
 
-
       // ==========================================================
       // ERROR
       // ==========================================================
@@ -4146,25 +3653,13 @@ export class AddPatientComponent {
 
         this.isSavingBooking = false;
 
-        console.error(
-          'CREATE BOOKING ERROR:',
-          err
-        );
+        console.error('CREATE BOOKING ERROR:', err);
 
-        console.error(
-          'STATUS:',
-          err?.status
-        );
+        console.error('STATUS:', err?.status);
 
-        console.error(
-          'STATUS TEXT:',
-          err?.statusText
-        );
+        console.error('STATUS TEXT:', err?.statusText);
 
-        console.error(
-          'ERROR BODY:',
-          err?.error
-        );
+        console.error('ERROR BODY:', err?.error);
 
         const message = String(
           err?.error?.message ||
@@ -4173,8 +3668,7 @@ export class AddPatientComponent {
           ''
         ).trim();
 
-        const normalizedMessage =
-          message.toLowerCase();
+        const normalizedMessage = message.toLowerCase();
 
         // BARCODE ALREADY USED
         const isBarcodeAlreadyUsed =
@@ -4188,9 +3682,7 @@ export class AddPatientComponent {
             normalizedMessage.includes('taken')
           );
 
-        if (
-          isBarcodeAlreadyUsed
-        ) {
+        if (isBarcodeAlreadyUsed) {
 
           this.toastService.error(
             'Barcode Already Used',
@@ -4205,9 +3697,7 @@ export class AddPatientComponent {
           normalizedMessage.includes('duplicate') &&
           normalizedMessage.includes('barcode');
 
-        if (
-          isDuplicateBarcode
-        ) {
+        if (isDuplicateBarcode) {
 
           this.toastService.error(
             'Invalid Barcode',
@@ -4220,10 +3710,8 @@ export class AddPatientComponent {
         // DEFAULT BOOKING ERROR
         this.toastService.error(
           'Booking Error',
-          message ||
-          'Failed to save booking.'
+          message || 'Failed to save booking.'
         );
-
       }
 
     });
@@ -4372,22 +3860,16 @@ export class AddPatientComponent {
 
     this.bookingSaved = true;
     this.isSavingBooking = false;
-
-
   }
 
   // ============================================================
   // CAPITALIZE
   // ============================================================
 
-  private capitalize(
-    str: string
-  ): string {
+  private capitalize(str: string): string {
 
     return str
-      ? str.charAt(0)
-        .toUpperCase() +
-      str.slice(1)
+      ? str.charAt(0).toUpperCase() + str.slice(1)
       : '';
   }
 
@@ -4398,6 +3880,7 @@ export class AddPatientComponent {
   // ============================================================
 
   isPrintingInvoice = false;
+
   printInvoice(): void {
     this.openPrintBillModal();
   }
@@ -4409,8 +3892,7 @@ export class AddPatientComponent {
 
     this.toastService.success(
       'Sample Received',
-      (sample?.sampleType || 'Sample') +
-      ' marked as received.'
+      (sample?.sampleType || 'Sample') + ' marked as received.'
     );
 
     if (alsoPrint) {
@@ -4498,7 +3980,7 @@ export class AddPatientComponent {
   // ============================================================
   // CLOSE INVOICE
   //
-  // ✅ Invoice band kelyavar parat Success popup dakhav
+  // Invoice band kelyavar parat Success popup dakhav
   // (form already reset nahi — user New Booking / Status var jaail).
   // ============================================================
 
@@ -4515,35 +3997,27 @@ export class AddPatientComponent {
     const alert =
       await this.alertController.create({
 
-        cssClass:
-          'premium-alert',
+        cssClass: 'premium-alert',
 
-        header:
-          'Cancel Booking',
+        header: 'Cancel Booking',
 
-        message:
-          'Are you sure you want to cancel?',
+        message: 'Are you sure you want to cancel?',
 
         buttons: [
 
           {
-            text:
-              'No',
+            text: 'No',
 
-            role:
-              'cancel',
+            role: 'cancel',
 
-            cssClass:
-              'alert-button-cancel'
+            cssClass: 'alert-button-cancel'
           },
 
           {
 
-            text:
-              'Yes',
+            text: 'Yes',
 
-            cssClass:
-              'alert-button-danger',
+            cssClass: 'alert-button-danger',
 
             handler: () => {
 
@@ -4553,10 +4027,7 @@ export class AddPatientComponent {
               );
 
               this.ngZone.run(
-                () =>
-                  this.router.navigate([
-                    '/dashboard'
-                  ])
+                () => this.router.navigate(['/dashboard'])
               );
             }
           }
@@ -4570,9 +4041,7 @@ export class AddPatientComponent {
   // BARCODE SCAN (camera)
   // ============================================================
 
-  async scanBarcode(
-    sample: any
-  ) {
+  async scanBarcode(sample: any) {
 
     try {
 
@@ -4613,7 +4082,7 @@ export class AddPatientComponent {
           return;
         }
 
-        // ✅ दुसऱ्या sample-type group madhe hach barcode aadhi vaparla
+        // दुसऱ्या sample-type group madhe hach barcode aadhi vaparla
         // asel tar save karnyaadhich block.
         if (this.isBarcodeDuplicate(scannedValue, sample)) {
 
@@ -4642,10 +4111,7 @@ export class AddPatientComponent {
 
     } catch (err) {
 
-      console.error(
-        'SCAN BARCODE ERROR:',
-        err
-      );
+      console.error('SCAN BARCODE ERROR:', err);
 
       this.toastService.error(
         'Scan Failed',

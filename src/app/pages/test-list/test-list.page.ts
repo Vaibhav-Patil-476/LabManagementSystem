@@ -8,10 +8,12 @@ import {
 import { addIcons } from 'ionicons';
 import {
   searchOutline, listOutline, refreshOutline, eyeOutline, closeOutline,
-  alertCircleOutline, documentTextOutline, openOutline, downloadOutline
+  alertCircleOutline, documentTextOutline, openOutline, downloadOutline,
+  copyOutline
 } from 'ionicons/icons';
 import { registerPlugin, Capacitor } from '@capacitor/core';
-
+import { Clipboard } from '@capacitor/clipboard';
+import { ToastService } from '../../core/services/toast';
 import { LabApiService } from '../../core/services/lab-api';
 import { AuthService } from '../../core/services/auth';
 import { RoleService } from '../../core/services/role';
@@ -88,7 +90,8 @@ export class TestListPage implements OnInit {
   constructor(
     private labApi: LabApiService,
     private authService: AuthService,
-    private roleService: RoleService
+    private roleService: RoleService,
+    private toastService: ToastService
   ) {
     addIcons({
       'search-outline': searchOutline,
@@ -99,7 +102,8 @@ export class TestListPage implements OnInit {
       'alert-circle-outline': alertCircleOutline,
       'document-text-outline': documentTextOutline,
       'open-outline': openOutline,
-      'download-outline': downloadOutline
+      'download-outline': downloadOutline,
+      'copy-outline': copyOutline
     });
   }
 
@@ -338,7 +342,7 @@ export class TestListPage implements OnInit {
       // ===== GENERATE PDF (client-side) =====
       console.log('DOC DEFINITION READY');
       console.log('DOC DEFINITION READY');
-console.log('VFS CHECK:', pdfMake.vfs ? Object.keys(pdfMake.vfs).length + ' fonts loaded' : 'VFS EMPTY');
+      console.log('VFS CHECK:', pdfMake.vfs ? Object.keys(pdfMake.vfs).length + ' fonts loaded' : 'VFS EMPTY');
 
       const fileName = `Test-Portfolio-${Date.now()}.pdf`;
       console.log('PLATFORM:', Capacitor.getPlatform());
@@ -358,17 +362,38 @@ console.log('VFS CHECK:', pdfMake.vfs ? Object.keys(pdfMake.vfs).length + ' font
         });
         const result = await PdfDownload.savePdf({ fileName, data: base64Data });
         console.log('NATIVE SAVE RESULT:', result);
-     } else {
-  console.log('CALLING createPdf().open()');
-  pdfMake.createPdf(docDefinition).open();
-  console.log('open() CALLED');
-}
+      } else {
+        console.log('CALLING createPdf().open()');
+        pdfMake.createPdf(docDefinition).open();
+        console.log('open() CALLED');
+      }
     } catch (err) {
       console.error('PDF EXPORT ERROR:', err);
     } finally {
       this.isExportingPdf = false;
     }
   }
+
+  // ============================================================
+// COPY TEST NAME
+// ============================================================
+async copyTest(item: TestListItem): Promise<void> {
+  try {
+    const text = String(item.testName || '').trim();
+
+    if (Capacitor.isNativePlatform()) {
+      await Clipboard.write({ string: text });
+    } else {
+      await navigator.clipboard.writeText(text);
+    }
+
+    this.toastService.success('Copied', `"${text}" copied.`);
+  } catch (e) {
+    console.error('COPY TEST ERROR:', e);
+    this.toastService.error('Copy Failed', 'Unable to copy test name.');
+  }
+}
+
 
   // ============================================================
   // REFRESH

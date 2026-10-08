@@ -61,8 +61,14 @@
               <span class="tl-name">{{ item.profileName }}</span>
             </div>
           </div>
+
           <div class="tl-row-top-right">
             <span class="pill tl-tat-pill">{{ item.testCount }} Tests</span>
+
+            <button class="tl-action-btn" (click)="copyProfile(item)" aria-label="Copy profile name">
+              <ion-icon name="copy-outline"></ion-icon>
+            </button>
+
             <button class="tl-action-btn" (click)="openDetail(item)" aria-label="View tests included">
               <ion-icon name="eye-outline"></ion-icon>
             </button>
@@ -144,5 +150,5 @@
       </div>
     </ng-template>
   </ion-modal>
- 
+
 </ion-content>
