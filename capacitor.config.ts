@@ -4,6 +4,14 @@ const config: CapacitorConfig = {
   appId: 'com.hypatholab.app',
   appName: 'HyPatho Lab',
   webDir: 'www',
+
+  // फक्त testing साठी: phone वरून http/ws relay (LAN IP) ला जोडण्यासाठी.
+  // Release build आधी हा block काढा आणि https/wss relay वापरा.
+  server: {
+    androidScheme: 'http',
+    cleartext: true
+  },
+
   plugins: {
     StatusBar: {
       overlaysWebView: false,

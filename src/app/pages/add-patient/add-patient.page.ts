@@ -5,8 +5,14 @@ import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular/standalone';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { Clipboard } from '@capacitor/clipboard';
-import { firstValueFrom } from 'rxjs';
+import { isDevMode } from '@angular/core';
+
 import { PdfDownloadService } from '../../core/services/pdf-download';
+import { GeminiLiveService } from '../../core/services/gemini-live';
+import { secrets } from '../../../environments/secrets'
+import { micOutline, stopCircleOutline } from 'ionicons/icons';
+
+import { firstValueFrom, Observable, timeout } from 'rxjs';
 import {
   IonHeader,
   IonToolbar,
@@ -109,6 +115,11 @@ export class AddPatientComponent {
   step: 1 | 2 = 1;
   isSavingBooking = false;
   private pdfDownload = inject(PdfDownloadService);
+  private voice = inject(GeminiLiveService);
+  voiceState$ = this.voice.state$;
+  voiceTranscript$ = this.voice.transcript$;
+  private voiceConsentGiven = false;
+  private voiceTestCache = new Map<number, any>();
 
   // booking save झाल्यावर true -> bottom bar (New Booking / Status / Print)
   bookingSaved = false;
@@ -119,7 +130,7 @@ export class AddPatientComponent {
   customBillAmount: any = null;
   printBillFranchiseHasLetterHead = false;
   generatingBill = false;
-
+  private voiceDoctorsReady = false;
   lastPatient = '—';
   customDoctorName: string = '';
   patientRelation = 'self/ILS3505';
@@ -532,6 +543,7 @@ export class AddPatientComponent {
     this.step = 1;
     this.loadLastPatient();
     this.scrollTop();
+
   }
 
   goToBookingStatus(): void {
@@ -584,7 +596,9 @@ export class AddPatientComponent {
       'list-outline': listOutline,
       'add-circle-outline': addCircleOutline,
       'receipt-outline': receiptOutline,
-      'clipboard-outline': clipboardOutline
+      'clipboard-outline': clipboardOutline,
+      'mic-outline': micOutline,
+      'stop-circle-outline': stopCircleOutline,
 
     });
   }
@@ -1364,6 +1378,30 @@ export class AddPatientComponent {
     });
   }
 
+
+
+  useCustomDoctor(name?: string): void {
+    const n = String(name ?? this.doctorSearch ?? '').replace(/^dr\.?\s*/i, '').trim();
+    if (!n) {
+      return;
+    }
+    this.customDoctorName = n;
+    this.selectedDoctor = null;
+    this.selectedDoctorId = 0;
+    this.patient.doctorId = 0;
+    this.patient.doctor = n;
+    this.doctorSearch = n;
+    this.showDoctorSuggestions = false;
+    this.clearFieldError('doctor');
+  }
+
+  showCustomDoctorOption(): boolean {
+    const q = String(this.doctorSearch || '').trim().toLowerCase();
+    return !!q && !this.filteredDoctors.some(
+      (d: any) => String(d?.doctor_name || '').trim().toLowerCase() === q
+    );
+  }
+
   // ============================================================
   // SELECT DOCTOR FROM SEARCH
   // ============================================================
@@ -1400,6 +1438,7 @@ export class AddPatientComponent {
 
       return;
     }
+    this.customDoctorName = '';
 
     this.selectedDoctor = doctor;
 
@@ -2459,26 +2498,26 @@ export class AddPatientComponent {
   }
 
   // ============================================================
-// PASTE TEST (clipboard -> test search)
-// ============================================================
+  // PASTE TEST (clipboard -> test search)
+  // ============================================================
 
-async pasteTest(): Promise<void> {
-  try {
-    const { value } = await Clipboard.read();
-    const text = String(value || '').trim();
+  async pasteTest(): Promise<void> {
+    try {
+      const { value } = await Clipboard.read();
+      const text = String(value || '').trim();
 
-    if (!text) {
-      return;
+      if (!text) {
+        return;
+      }
+
+      this.testSearch = text;
+      this.searchTest();
+
+    } catch (e) {
+      console.error('PASTE TEST ERROR:', e);
+      this.toastService.error('Paste Failed', 'Unable to read clipboard.');
     }
-
-    this.testSearch = text;
-    this.searchTest();
-
-  } catch (e) {
-    console.error('PASTE TEST ERROR:', e);
-    this.toastService.error('Paste Failed', 'Unable to read clipboard.');
   }
-}
 
   private packageSearchTimer: any = null;
 
@@ -3123,7 +3162,21 @@ async pasteTest(): Promise<void> {
     this.toastService.error('Validation Error', issue.message);
   }
 
+  // private hasSelectedDoctor(): boolean {
+  //   return Number(
+  //     this.selectedDoctor?.doctorid ??
+  //     this.selectedDoctor?.doctorId ??
+  //     this.selectedDoctor?.id ??
+  //     this.patient?.doctorId ??
+  //     0
+  //   ) > 0;
+  // }
+
   private hasSelectedDoctor(): boolean {
+    const custom = this.customDoctorName.trim();
+    if (custom && String(this.doctorSearch || '').trim() === custom) {
+      return true;
+    }
     return Number(
       this.selectedDoctor?.doctorid ??
       this.selectedDoctor?.doctorId ??
@@ -4157,4 +4210,681 @@ async pasteTest(): Promise<void> {
       sample.confirmBarcode = '';
     }
   }
+
+
+
+
+
+  // ============================================================
+  // VOICE ASSISTANT
+  // ============================================================
+
+
+  private pendingTests: string[] = [];
+  private pendingPkgs: string[] = [];
+
+  // Observable -> Promise with timeout (atakleli API baki tools thambvat nahi)
+  private api<T>(obs: Observable<T>, ms = 7000): Promise<T> {
+    return firstValueFrom(obs.pipe(timeout({ each: ms })));
+  }
+
+  private asArr(v: any): string[] {
+    return Array.isArray(v) ? v : (v ? [v] : []);
+  }
+
+  private uniq(list: string[]): string[] {
+    return Array.from(new Set(list.map(s => String(s).trim()).filter(Boolean)));
+  }
+
+  private clearPending(): void {
+    this.pendingTests = [];
+    this.pendingPkgs = [];
+  }
+
+  async toggleVoice(): Promise<void> {
+    // 1. Chalu asel tar band kara
+    if (this.voice.state$.value !== 'idle') {
+      this.voice.stop();
+      return;
+    }
+
+    // 2. Consent
+    if (!this.voiceConsentGiven) {
+      const ok = await this.askVoiceConsent();
+      if (!ok) return;
+      this.voiceConsentGiven = true;
+    }
+
+    // 3. Doctor list aadhich load kara
+    if (!this.doctors.length) {
+      try {
+        const res: any = await this.api(this.labApi.getDoctors());
+        this.doctors = this.extractDoctorsResponse(res)
+          .map((d: any) => this.normalizeDoctor(d))
+          .filter((d: any) => !!d);
+      } catch (e) {
+        console.warn('Doctor preload failed', e);
+      }
+    }
+
+    this.clearPending();
+
+    // 4. Relay URL set kara + voice suru kara
+    try {
+      await this.voice.start((name, args) =>
+        this.ngZone.run(() => this.runVoiceTool(name, args))
+      );
+    } catch (e: any) {
+      const msgs: Record<string, string> = {
+        NotAllowedError: 'Mic permission block ahe. Phone settings madhe Allow kara.',
+        NotFoundError: 'Mic sapadla nahi.',
+        NotReadableError: 'Mic dusrya app madhe chalu ahe.',
+      };
+      this.toastService.error('Voice Error', msgs[e?.name] ?? 'Voice connection problem.');
+    }
+  }
+
+  private askVoiceConsent(): Promise<boolean> {
+    return new Promise(async (resolve) => {
+      const alert = await this.alertController.create({
+        cssClass: 'premium-alert',
+        header: 'Voice Assistant',
+        message: 'Tumcha awaz AI processing sathi Google la pathvla jail. Chalel ka?',
+        buttons: [
+          { text: 'No', role: 'cancel', handler: () => resolve(false) },
+          { text: 'Yes', handler: () => resolve(true) }
+        ],
+        backdropDismiss: false
+      });
+      await alert.present();
+    });
+  }
+
+  // Best match nivdto. User thambat nahi, mhanun ambiguous asel tari vicharat nahi.
+  // Score barabar asel tar chhota naav jinkto ("CBC" -> "CBC" ani "CBC with ESR" madhe pahila).
+  private pickBest<T>(items: T[], q: string, nameOf: (x: T) => string): T | null {
+    const query = q.toLowerCase().trim();
+    if (!query) return null;
+
+    const scored = items
+      .map(x => {
+        const n = nameOf(x).toLowerCase();
+        let s = 0;
+        if (n === query) s = 100;
+        else if (n.startsWith(query)) s = 80;
+        else if (n.includes(query)) s = 40;
+        return { x, s, len: n.length };
+      })
+      .filter(r => r.s > 0)
+      .sort((a, b) => b.s - a.s || a.len - b.len);
+
+    return scored.length ? scored[0].x : null;
+  }
+
+  private async runVoiceToolInner(name: string, a: any): Promise<any> {
+    switch (name) {
+
+      // ==========================================================
+      case 'fill_booking': {
+
+
+        // Pahili booking save zali asel tar nava patient suru kara
+        if (this.bookingSaved) {
+          this.bookingSaved = false;
+          this.resetFormKeepingDoctorAndFranchise();
+          this.step = 1;
+          this.clearPending();
+        }
+
+        const problems: string[] = [];
+        const done: string[] = [];
+        const labId = this.labApi.getCurrentLabId();
+
+        // pending + navin items ekatra
+        let reqTests = this.uniq([...this.pendingTests, ...this.asArr(a.tests)]);
+        let reqPkgs = this.uniq([...this.pendingPkgs, ...this.asArr(a.packages)]);
+        this.clearPending();
+
+        // Bill madhe aadhich asleli test/package skip kara (search nako, toast nako)
+        const inBillTest = (term: string) => {
+          const q = term.toLowerCase().trim();
+          return this.selectedTests.some((t: any) => {
+            const n = String(t.name).toLowerCase();
+            return n === q || n.includes(q);
+          });
+        };
+        const inBillPkg = (term: string) => {
+          const q = term.toLowerCase().trim();
+          return this.selectedPackages.some((p: any) => String(p.profileName).toLowerCase().includes(q));
+        };
+        reqTests = reqTests.filter(t => !inBillTest(t));
+        reqPkgs = reqPkgs.filter(p => !inBillPkg(p));
+        const wantsItems = reqTests.length + reqPkgs.length > 0;
+        const franchiseId = this.isAdminRole
+          ? undefined
+          : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
+        const pkgFranchiseId = this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined;
+
+        // background madhe suru, ithe await nahi
+        const searchP = wantsItems
+          ? Promise.all([
+            Promise.all(reqTests.map(async tn => ({ tn, m: await this.findTests(labId, franchiseId, tn) }))),
+            Promise.all(reqPkgs.map(async pn => ({ pn, m: await this.findPackages(labId, pkgFranchiseId, pn) })))
+          ])
+          : null;
+
+        // ---------- 1. Patient basics ----------
+        if (a.title) {
+          const t = String(a.title).toLowerCase().replace('.', '').trim();
+          if (['mr', 'mrs', 'ms', 'dr'].includes(t)) {
+            this.patient.title = t;
+            this.onTitleChange();
+          }
+        }
+
+        if (a.name) {
+          const n = String(a.name).trim();
+          if (this.NAME_REGEX.test(n)) {
+            this.patient.name = n;
+            this.clearFieldError('name');
+            done.push('name: ' + n);
+          } else {
+            problems.push('name is not valid, ask again');
+          }
+        }
+
+        if (a.age !== undefined && a.age !== null && String(a.age) !== '') {
+          const n = Number(a.age);
+          if (n > 0 && n <= 120) {
+            this.patient.age = String(n);
+            this.clearFieldError('age');
+            done.push('age: ' + n);
+          } else {
+            problems.push('age must be between 1 and 120');
+          }
+        }
+
+        if (a.ageType && ['years', 'months', 'days'].includes(String(a.ageType).toLowerCase())) {
+          this.patient.ageType = String(a.ageType).toLowerCase();
+        }
+
+        if (a.gender && ['male', 'female', 'other'].includes(String(a.gender).toLowerCase())) {
+          this.patient.gender = String(a.gender).toLowerCase();
+        }
+
+        if (a.phone) {
+          const p = String(a.phone).replace(/\D/g, '');
+          if (p.length === 10 && this.MOBILE_REGEX.test(p)) {
+            this.patient.phone = p;
+            this.clearFieldError('mobile');
+            done.push('phone: ' + p);
+          } else {
+            problems.push('mobile number must be 10 digits starting with 6-9, ask again');
+          }
+        }
+
+        if (a.aadhaar) {
+          const d = String(a.aadhaar).replace(/\D/g, '');
+          if (this.AADHAAR_REGEX.test(d)) {
+            this.patient.aadhaar = d;
+            this.clearFieldError('aadhaar');
+            done.push('aadhaar');
+          } else {
+            problems.push('aadhaar must be 12 digits, ask again');
+          }
+        }
+
+        if (a.uhid) {
+          const u = String(a.uhid).replace(/\s/g, '');
+          if (this.UHID_REGEX.test(u)) {
+            this.patient.uhid = u;
+            this.clearFieldError('uhid');
+            done.push('uhid');
+          } else {
+            problems.push('uhid is not valid, ask again');
+          }
+        }
+
+        if (a.address) {
+          this.patient.address = String(a.address).trim().slice(0, 200);
+          this.clearFieldError('address');
+          done.push('address');
+        }
+
+        if (a.history) {
+          this.patient.history = String(a.history).trim().slice(0, 500);
+          this.clearFieldError('history');
+          done.push('history');
+        }
+
+        if (a.otherCharges !== undefined && a.otherCharges !== null && String(a.otherCharges) !== '') {
+          const oc = Number(a.otherCharges);
+          if (!isNaN(oc) && oc >= 0) {
+            this.patient.otherCharges = oc;
+            this.clearFieldError('otherCharges');
+            done.push('other charges: ' + oc);
+          } else {
+            problems.push('other charges must be a positive number');
+          }
+        }
+
+        // checkboxes
+        if (typeof a.eReport === 'boolean') this.patient.eReport = a.eReport;
+        if (typeof a.homeCollection === 'boolean') this.patient.homeCollection = a.homeCollection;
+        if (typeof a.clinical === 'boolean') this.patient.clinical = a.clinical;
+        if (typeof a.file === 'boolean') this.patient.file = a.file;
+
+        // ---------- 2. Doctor ----------
+        // if (a.doctor) {
+        //   if (!this.doctors.length) {
+        //     try {
+        //       const res: any = await this.api(this.labApi.getDoctors());
+        //       this.doctors = this.extractDoctorsResponse(res)
+        //         .map((d: any) => this.normalizeDoctor(d))
+        //         .filter((d: any) => !!d);
+        //     } catch {
+        //       problems.push('Doctor list is slow. Say the doctor again.');
+        //     }
+        //   }
+
+        //   if (this.doctors.length) {
+        //     const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim();
+        //     const pick = this.pickBest(
+        //       this.doctors,
+        //       clean(String(a.doctor)),
+        //       (d: any) => clean(this.getDoctorName(d))
+        //     );
+
+        //     if (pick) {
+        //       this.selectDoctorFromSearch(pick);
+        //       done.push('doctor: ' + this.getDoctorName(pick));
+        //     } else {
+        //       problems.push('Doctor "' + a.doctor + '" not found. Say the name again.');
+        //     }
+        //   }
+        // }
+
+        if (a.doctor) {
+          if (!this.doctors.length) {
+            try {
+              const res: any = await this.api(this.labApi.getDoctors());
+              this.doctors = this.extractDoctorsResponse(res)
+                .map((d: any) => this.normalizeDoctor(d))
+                .filter((d: any) => !!d);
+            } catch {
+              problems.push('Doctor list is slow. Say the doctor again.');
+            }
+          }
+
+          if (this.doctors.length) {
+            const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim();
+            const pick = this.pickBest(
+              this.doctors,
+              clean(String(a.doctor)),
+              (d: any) => clean(this.getDoctorName(d))
+            );
+
+            if (pick) {
+              this.selectDoctorFromSearch(pick);
+              done.push('doctor: ' + this.getDoctorName(pick));
+            } else {
+              this.useCustomDoctor(String(a.doctor));
+              done.push('doctor (custom): ' + this.customDoctorName);
+            }
+          }
+        }
+        // ---------- 3. Step 1 -> Step 2 ----------
+
+
+        if (this.step === 1 && wantsItems) {
+          if (this.step1Missing().length === 0) {
+            this.goNext();
+          } else {
+            // drop karu nako: step 1 purn zalyavar add hotil
+            this.pendingTests = reqTests;
+            this.pendingPkgs = reqPkgs;
+            done.push('tests queued');
+          }
+        }
+
+        // ---------- 4. Tests + Packages (Step 2) ----------
+        if (this.step === 2 && wantsItems && searchP) {
+
+          const pkgName = (p: any) =>
+            String(p?.profileName || p?.profile_name || p?.name || '').trim();
+
+          const [testResults, pkgResults] = await searchP;
+
+          // ----- add tests -----
+          for (const { tn, m } of testResults) {
+            if (this.failedSearches.delete(tn)) {
+              problems.push(`Search for "${tn}" is slow. Say it again.`);
+              continue;
+            }
+            const pick = this.pickBest(m, tn, (t: any) => t.name);
+
+            if (!pick) {
+              const alt = m.slice(0, 3).map((t: any) => t.name).join(', ');
+              problems.push(alt ? `"${tn}" not found. Try: ${alt}` : `"${tn}" not found`);
+              continue;
+            }
+            if (this.selectedTests.some((t: any) => t.name === pick.name)) continue;
+
+            this.addTest(pick);
+            done.push('test: ' + pick.name);
+          }
+
+          // ----- add packages -----
+          for (const { pn, m } of pkgResults) {
+            const pick = this.pickBest(m, pn, (p: any) => pkgName(p));
+
+            if (!pick) {
+              problems.push('package "' + pn + '" not found');
+              continue;
+            }
+            if (this.selectedPackages.some((p: any) => p.profileName === pkgName(pick))) continue;
+
+            const full = this.allPackages.find((p: any) => pkgName(p) === pkgName(pick)) || pick;
+
+            const realPrice = Number(pick?.profileAssignedPrice || 0) > 0
+              ? Number(pick.profileAssignedPrice)
+              : Number(pick?.total_amount || full?.total_amount || 0);
+
+            this.addPackage({
+              ...full,
+              profileAssignedPrice: realPrice,
+              b2b: realPrice,
+              assignedPrice: realPrice
+            });
+            done.push('package: ' + pkgName(pick));
+          }
+        }
+
+        // ---------- 5. Remove items from bill ----------
+        for (const term of this.asArr(a.removeItems)) {
+          const q = String(term).toLowerCase().trim();
+          if (!q) continue;
+
+          const individual = this.selectedTests.filter((t: any) => !t.packageName);
+          const ti = individual.findIndex((t: any) => String(t.name).toLowerCase().includes(q));
+
+          if (ti >= 0) {
+            const nm = individual[ti].name;
+            this.removeRow(ti);
+            done.push('removed: ' + nm);
+            continue;
+          }
+
+          const pi = this.selectedPackages.findIndex(
+            (p: any) => String(p.profileName).toLowerCase().includes(q)
+          );
+
+          if (pi >= 0) {
+            const nm = this.selectedPackages[pi].profileName;
+            this.removeRow(individual.length + pi);
+            done.push('removed: ' + nm);
+          } else {
+            problems.push('"' + term + '" is not in the bill');
+          }
+        }
+
+        // ---------- 6. Payment + discount ----------
+        if (a.paymentMode) {
+          const pm = String(a.paymentMode).toLowerCase();
+          if (!this.canEditPayment) {
+            problems.push('payment mode cannot be changed by this user');
+          } else if (pm === 'cash' || pm === 'upi') {
+            this.billing.paymentMode = pm;
+            this.onPaymentModeChange();
+            done.push('payment: ' + pm);
+          }
+        }
+
+        if (a.discountPercent !== undefined && a.discountPercent !== null && String(a.discountPercent) !== '') {
+          const d = Number(a.discountPercent);
+          if (!isNaN(d) && d >= 0 && d <= 100) {
+            this.billing.discountType = 'percent';
+            this.billing.discountValue = d;
+            this.calculateBilling();
+            done.push('discount: ' + d + '%');
+          } else {
+            problems.push('discount must be between 0 and 100 percent');
+          }
+        }
+
+        return { ok: true, filled: done, problems };
+      }
+
+      // ==========================================================
+      case 'go_to_step': {
+        const target = Number(a.step);
+
+        if (target === 2) {
+          this.goNext();
+
+          if (this.step !== 2) {
+            return {
+              ok: false,
+              error: 'Step 1 is incomplete. Name, age and ref doctor are required.'
+            };
+          }
+        } else if (target === 1) {
+          if (this.step !== 1) {
+            this.goBackStep();
+          }
+        } else {
+          return {
+            ok: false,
+            error: 'Step must be 1 or 2.'
+          };
+        }
+
+        return { ok: true, step: this.step };
+      }
+
+      // ==========================================================
+      case 'get_summary': {
+        return {
+          ok: true,
+          patient: `${String(this.patient.title).toUpperCase()}. ${this.patient.name}`,
+          age: `${this.patient.age} ${this.patient.ageType}`,
+          gender: this.patient.gender,
+          doctor: this.doctorSearch,
+          mobile: this.patient.phone || 'not given',
+          tests: this.selectedTests.filter((t: any) => !t.packageName).map((t: any) => t.name),
+          packages: this.selectedPackages.map((p: any) => p.profileName)
+        };
+      }
+
+      // ==========================================================
+      case 'new_booking': {
+        this.bookingSaved = false;
+        this.resetFormKeepingDoctorAndFranchise();
+        this.clearPending();
+        this.loadLastPatient();
+        return { ok: true };
+      }
+
+      // ==========================================================
+      case 'submit_booking': {
+        if (this.step !== 2) {
+          const miss = this.step1Missing();
+          if (miss.length) {
+            return { ok: false, error: 'Step 1 incomplete: ' + miss.join(', ') };
+          }
+          this.goNext();
+        }
+        if (!this.hasSelectedDoctor()) {
+          return { ok: false, error: 'Doctor not selected. Say the doctor name.' };
+        }
+        if (this.selectedTests.length === 0) {
+          return { ok: false, error: 'No test selected.' };
+        }
+        if (this.isDocumentRequired && !this.selectedFileBase64) {
+          return { ok: false, error: 'Document is required. Add the file on screen.' };
+        }
+        if (!this.staffBarcodesFilled) {
+          return { ok: false, error: 'Barcode is empty. Enter or scan it, then save.' };
+        }
+
+        this.savePatient();
+
+        for (let i = 0; i < 120; i++) {          // max ~12 sec
+          await new Promise(r => setTimeout(r, 100));
+          if (this.bookingSaved) return { ok: true, bookingId: this.savedPatient?.id };
+          if (!this.isSavingBooking) break;
+        }
+        return { ok: false, error: 'Booking was not saved. Check the error on screen.' };
+      }
+
+      default:
+        return { ok: false, error: 'Unknown tool' };
+    }
+  }
+
+  // private async runVoiceTool(name: string, a: any): Promise<any> {
+  //   const t0 = performance.now();
+  //   const res = await this.runVoiceToolInner(name, a);
+  //   console.log('VOICE TOOL', name, Math.round(performance.now() - t0), 'ms');
+
+  //   if (!res || typeof res !== 'object') return res;
+
+  //   res.step = this.step;
+
+  //   // AI fakt problem astana kinva shevti bolto. Baki veli SILENT.
+  //   if (name === 'fill_booking') {
+  //     res.next = res.problems?.length
+  //       ? 'Tell the problems in max 8 words, then stop.'
+  //       : 'SILENT. Output nothing. Do not speak.';
+  //   } else if (name === 'submit_booking') {
+  //     res.next = res.ok ? 'Say only: Saved.' : 'Tell the error in max 8 words.';
+  //   } else if (name === 'go_to_step') {
+  //     res.next = res.ok ? 'SILENT. Output nothing.' : 'Tell the error in max 8 words.';
+  //   } else if (name === 'new_booking') {
+  //     res.next = 'SILENT. Output nothing.';
+  //   }
+
+  //   return res;
+  // }
+
+
+
+  private async runVoiceTool(name: string, a: any): Promise<any> {
+    const start = performance.now();
+
+    try {
+      const result = await this.runVoiceToolInner(name, a);
+
+      if (!result || typeof result !== 'object') {
+        return result;
+      }
+
+      const res: any = {
+        ...result,
+        step: this.step
+      };
+
+      if (name === 'fill_booking') {
+        res.next = res.problems?.length
+          ? 'Tell the problems in max 8 words, then stop.'
+          : 'SILENT. Output nothing. Do not speak.';
+      } else if (name === 'submit_booking') {
+        res.next = res.ok
+          ? 'Say only: Saved. Then forget this patient. Next details are a NEW patient.'
+          : 'Tell the error in max 8 words.';
+      } else if (name === 'go_to_step') {
+        res.next = res.ok
+          ? 'SILENT. Output nothing.'
+          : 'Tell the error in max 8 words.';
+      } else if (name === 'new_booking') {
+        res.next = 'SILENT. Output nothing.';
+      } else if (name === 'get_summary') {
+        res.next = 'Answer the user from the summary in max 8 words.';
+      }
+
+      if (res.ok === false && !res.error) {
+        res.error = 'Voice action failed.';
+      }
+
+      if (this.voiceDebugEnabled()) {
+        console.debug('[VOICE TOOL]', name, {
+          elapsedMs: Math.round(performance.now() - start),
+
+          result: JSON.stringify(res)
+        });
+      }
+
+      return res;
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : String(error);
+
+      console.error('[VOICE TOOL ERROR]', name, message);
+
+      return {
+        ok: false,
+        step: this.step,
+        error: message,
+        next: 'Tell the error in max 8 words.'
+      };
+    }
+  }
+  private voiceDebugEnabled(): boolean {
+    return isDevMode();
+  }
+
+  ionViewWillLeave() {
+    this.voice.stop();
+    this.clearPending();
+  }
+
+  ngOnDestroy() { this.voice.stop(); }
+
+  private step1Missing(): string[] {
+    const m: string[] = [];
+    if (!String(this.patient?.name || '').trim()) m.push('patient name');
+    const age = Number(this.patient?.age);
+    if (!age || age <= 0) m.push('age');
+    if (!this.hasSelectedDoctor()) m.push('referring doctor');
+    return m;
+  }
+
+
+  private failedSearches = new Set<string>();
+
+  private findTests = async (labId: any, franchiseId: any, term: string): Promise<any[]> => {
+    this.failedSearches.delete(term);
+    const t0 = performance.now();
+    try {
+      const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, term, 0, 10), 8000);
+      console.log('[SEARCH] test', term, Math.round(performance.now() - t0), 'ms',
+        Array.isArray(res?.content) ? res.content.length : 0, 'results');
+      return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
+        id: t.testId,
+        sampleId: t.sample_type,
+        name: String(t.test_name || 'Unnamed Test').trim(),
+        b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
+        tat: t.tat || 'N/A',
+        mrp: t.test_price ?? 0,
+        dis: 0,
+        fluid: t.sampleTypeName || 'N/A',
+        sampleType: t.sampleTypeName || 'OTHER',
+        color: t.sampleColor || '#a855f7'
+      }));
+    } catch (e) {
+      console.warn('[SEARCH] test FAILED', term, Math.round(performance.now() - t0), 'ms', (e as any)?.name);
+      this.failedSearches.add(term);
+      return [];
+    }
+  };
+
+  private findPackages = async (labId: any, franchiseId: any, term: string): Promise<any[]> => {
+    try {
+      const res: any = await this.api(this.labApi.searchProfiles(labId, franchiseId, term, 0, 10), 4000);
+      return Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+    } catch { return []; }
+  };
+
 }

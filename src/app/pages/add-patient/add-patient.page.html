@@ -9,10 +9,23 @@
         </ion-button>
       </ion-buttons>
       <ion-title>New Booking</ion-title>
+      <ion-buttons slot="end">
+        <ion-button (click)="toggleVoice()" [color]="(voiceState$ | async) === 'idle' ? 'light' : 'danger'"
+          aria-label="Voice assistant">
+          <ion-icon slot="icon-only" [name]="(voiceState$ | async) === 'idle' ? 'mic-outline' : 'stop-circle-outline'">
+          </ion-icon>
+        </ion-button>
+      </ion-buttons>
     </ion-toolbar>
   </ion-header>
 
   <ion-content class="booking-content">
+
+    <div *ngIf="(voiceState$ | async) !== 'idle'"
+      style="padding:8px 14px; background:#eef2ff; font-size:13px; color:#3730a3;">
+      <b>{{ voiceState$ | async }}</b>
+      <span *ngIf="voiceTranscript$ | async as t"> — {{ t }}</span>
+    </div>
 
     <div class="last-patient-bar">
       <div class="last-patient-info">
@@ -166,6 +179,10 @@
 
               <div class="suggestion-item" *ngFor="let doc of filteredDoctors" (click)="selectDoctorFromSearch(doc)">
                 {{ doc.doctor_name }}
+              </div>
+
+              <div class="suggestion-item" *ngIf="showCustomDoctorOption()" (click)="useCustomDoctor()">
+                Use "{{ doctorSearch }}" as custom doctor
               </div>
 
             </div>
