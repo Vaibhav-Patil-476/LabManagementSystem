@@ -1077,6 +1077,62 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
     this.editTestFromSearch(item);
   }
 
+    // ============================================================
+  // PACKAGE LOCK (Edit Test madhe package che tests delete honar nahit)
+  // ============================================================
+  packageTestSets: { name: string; testIds: number[] }[] = [];
+
+  /** Package chi list ghet ani Edit Test madhe lock lavto. */
+  private loadPackageSets(franchiseId?: number): void {
+    const labId = this.labApi.getCurrentLabId();
+
+    this.labApi.searchProfiles(labId, franchiseId, '').subscribe({
+      next: (res: any) => {
+        const list: any[] = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+
+        this.packageTestSets = list
+          .map((p: any) => {
+            const inner: any[] = p?.withTest || p?.tests || p?.testList || p?.profileTests || [];
+            return {
+              name: String(p?.profileName || p?.profile_name || p?.name || 'Package').trim(),
+              testIds: inner
+                .map((x: any) => Number(x?.testId ?? x?.test_id ?? x?.id ?? 0))
+                .filter((id: number) => id > 0)
+            };
+          })
+          .filter(s => s.testIds.length > 1);
+
+        this.ngZone.run(() => {
+          this.applyPackageLock();
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => { /* silent: lock nahi lagnar, baki sagla chalnar */ }
+    });
+  }
+
+  /** Booking madhe ek package che sagle tests asle tar te lock kar. */
+  private applyPackageLock(): void {
+    if (!this.packageTestSets.length || !this.selectedTests.length) return;
+
+    const savedIds = new Set(
+      this.selectedTests.filter((t: any) => !t.isNewlyAdded).map((t: any) => Number(t.testId))
+    );
+
+    const locked = new Map<number, string>();
+    for (const s of this.packageTestSets) {
+      if (s.testIds.every(id => savedIds.has(id))) {
+        s.testIds.forEach(id => locked.set(id, s.name));
+      }
+    }
+
+    this.selectedTests = this.selectedTests.map((t: any) =>
+      !t.isNewlyAdded && locked.has(Number(t.testId))
+        ? { ...t, isPackageTest: true, profileName: locked.get(Number(t.testId)) }
+        : t
+    );
+  }
+
   editTestFromSearch(item: any): void {
     this.selectedBooking = item;
     this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
@@ -1093,6 +1149,9 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
 
     if (this.availableTests.length === 0) this.loadAvailableTests();
 
+    // package chi list load kar (lock sathi)
+    this.loadPackageSets(Number(item.franchiseId || 0) || undefined);
+
     this.labApi.getSingleBooking(item.bookingId).subscribe({
       next: (res: any) => {
         const fresh = this.mapBooking(res);
@@ -1101,19 +1160,19 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
         this.discount = fresh.discountAmount || 0;
         this.basePaidAmount = fresh.paidAmount || 0;
         this.paidAmount = this.basePaidAmount;
+        this.applyPackageLock();
         this.isTestLoading = false;
       },
       error: () => { this.isTestLoading = false; }
     });
   }
-
   closeTestModal(): void {
     this.isEditTestModalOpen = false;
     this.selectedBooking = null;
     this.selectedTests = [];
+    this.packageTestSets = [];
     if (this.globalSearchTerm.trim()) this.isSearchModalOpen = true;
   }
-
   searchTestsInline(val: string): void {
     this.testSearchTerm = val ?? '';
     const q = this.testSearchTerm.trim();
@@ -1243,6 +1302,12 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
   }
 
   async removeTestInline(test: any): Promise<void> {
+     if (!this.canRemoveTest(test)) {
+    if (test.isPackageTest) {
+      this.toastService.warning('Not Allowed', 'This test belongs to a package and cannot be removed.');
+    }
+    return;
+  }
     const alert = await this.alertController.create({
       cssClass: 'premium-alert',
       header: 'Delete Test',
@@ -1357,7 +1422,7 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
       doctorid: this.selectedBooking.doctorId,
       franchiseId: this.selectedBooking.franchiseId,
       createdOn: this.selectedBooking.createdOn,
-      tests: existingTests.map(t => ({ testId: t.testId, profileId: 0 })),
+     tests: existingTests.map(t => ({ testId: t.testId, profileId: t.profileId || 0 })),
       subTotalAmount: this.subTotal,
       discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
       totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
@@ -2251,6 +2316,28 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
       .slice(0, 5);
   }
 
+  /** Package / profile madhun add zalela test ahe ka te olakhto. */
+  private getPackageInfo(t: any, _raw?: any): { profileId: number; profileName: string; isPackageTest: boolean } {
+    const profileId = Number(
+      t.profileId ?? t.profile_id ?? t.packageId ?? t.package_id ?? t.profile?.profileId ?? 0
+    ) || 0;
+
+    const profileName = String(
+      t.profileName ?? t.profile_name ?? t.packageName ?? t.profile?.profileName ?? ''
+    ).trim();
+
+    return {
+      profileId,
+      profileName,
+      isPackageTest: profileId > 0 || t.isPackage === true || !!profileName
+    };
+  }
+
+canRemoveTest(test: any): boolean {
+  if (test.isPackageTest) return false;
+  return !!test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr';
+}
+
   // ============================================================
   // BOOKING MAPPING / STATUS LABELS
   // ============================================================
@@ -2269,6 +2356,8 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
       const isSampleReceived = (matchedSample?.status || '').toUpperCase() === 'RECEIVED';
       const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
 
+      const pkg = this.getPackageInfo(t);
+
       return {
         testId: t.testId,
         testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
@@ -2282,6 +2371,11 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
           ? (t.price2 ?? t.testPrice ?? t.test_price ?? 0)
           : (t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0),
         testMrp: t.testMrp ?? t.test_mrp ?? 0,
+
+        // package info — Edit Test madhe delete lock karnyasathi
+        profileId: pkg.profileId,
+        profileName: pkg.profileName,
+        isPackageTest: pkg.isPackageTest,
 
         status: (t.cancelDate || t.deleted) ? 'cancel' :
           (statusByTestId.get(t.testId) ||

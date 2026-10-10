@@ -97,7 +97,7 @@
       <!-- REFRESH -->
       <ion-button class="refresh-btn" fill="solid" (click)="loadData()" [disabled]="isLoading">
         <ion-icon slot="icon-only" name="refresh-outline" [class.spin-icon]="isLoading"></ion-icon>
-   
+
       </ion-button>
 
     </div>
@@ -209,7 +209,7 @@
               (click)="editPatient(item); $event.stopPropagation()"
               [attr.title]="isPatientLocked(item) ? 'View Patient' : 'Edit Patient'">
               <ion-icon slot="icon-only" name="person-outline"></ion-icon>
-           
+
             </ion-button>
 
             <ion-button class="action-icon-btn dots" size="small" fill="clear" (click)="toggleActionMenu(item, $event)"
@@ -383,11 +383,19 @@
                       <td class="test-name-cell">
                         {{ test.testName }}
                         <span class="franchise-tag" *ngIf="test.method">Method: {{ test.method }}</span>
+                        <span class="franchise-tag" *ngIf="test.isPackageTest">
+                          Package{{ test.profileName ? ': ' + test.profileName : '' }}
+                        </span>
                         <span class="new-tag" *ngIf="test.isNewlyAdded">Not saved yet</span>
                       </td>
                       <td *ngIf="canViewAmount">₹{{ test.testPrice }}</td>
                       <td>
-                        <ion-icon name="trash-outline" class="delete-icon" (click)="removeTest(test)"></ion-icon>
+                        <ion-icon *ngIf="!test.isPackageTest; else pkgLocked" name="trash-outline"
+                          class="delete-icon" (click)="removeTest(test)"></ion-icon>
+                        <ng-template #pkgLocked>
+                          <ion-icon name="lock-closed-outline" class="delete-icon disabled-icon"
+                            title="Package test cannot be removed"></ion-icon>
+                        </ng-template>
                       </td>
                     </tr>
                     <tr *ngIf="selectedTests.length === 0">
@@ -506,7 +514,8 @@
             <div class="sheet-top-title">
               <div class="sheet-title-eyebrow">Booking #{{ editPatientData?.bookingId }}</div>
               <div class="sheet-title-main">{{ isPatientReadOnly ? 'View Patient' : 'Edit Patient' }}</div>
-              <div class="ep-subtitle">{{ isPatientReadOnly ? 'Sample received · details are locked' : 'Update patient, doctor and contact details' }}</div>
+              <div class="ep-subtitle">{{ isPatientReadOnly ? 'Sample received · details are locked' : 'Update patient,
+                doctor and contact details' }}</div>
             </div>
             <button class="close-modal-btn" (click)="closePatientModal()">
               <ion-icon name="close-outline"></ion-icon>
@@ -551,7 +560,8 @@
                 </div>
                 <div class="ro-row">
                   <div class="ro-label">Age / Gender</div>
-                  <div class="ro-value">{{ editPatientData.age }} {{ editPatientData.ageType }} / {{ editPatientData.gender }}</div>
+                  <div class="ro-value">{{ editPatientData.age }} {{ editPatientData.ageType }} / {{
+                    editPatientData.gender }}</div>
                 </div>
                 <div class="ro-row">
                   <div class="ro-label">Mobile Number</div>
@@ -749,8 +759,10 @@
                         class="ep-att-type"></ion-icon>
                       <span class="ep-att-name">{{ att.name }}</span>
                       <span class="ep-att-actions">
-                        <ion-icon name="eye-outline" class="ep-att-eye" (click)="previewPatientAttachment(att)"></ion-icon>
-                        <ion-icon name="trash-outline" class="ep-att-del" (click)="removePatientAttachment(i)"></ion-icon>
+                        <ion-icon name="eye-outline" class="ep-att-eye"
+                          (click)="previewPatientAttachment(att)"></ion-icon>
+                        <ion-icon name="trash-outline" class="ep-att-del"
+                          (click)="removePatientAttachment(i)"></ion-icon>
                       </span>
                     </div>
                   </div>
@@ -1275,4 +1287,4 @@
       </div>
     </ng-template>
   </ion-modal>
-</ion-content>  
+</ion-content>

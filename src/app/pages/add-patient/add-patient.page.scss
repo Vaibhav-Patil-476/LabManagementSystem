@@ -2480,4 +2480,63 @@ ion-header {
       background: rgba(59, 130, 246, 0.12);
     }
   }
+}.voice-strip {
+  --vs-bg: #ecfdf5;      // listening
+  --vs-fg: #047857;
+  --vs-dot: #10b981;
+
+  display: grid;
+  grid-template-rows: 0fr;          // closed
+  opacity: 0;
+  background: var(--vs-bg);
+  color: var(--vs-fg);
+  transition: grid-template-rows .35s ease, opacity .25s ease,
+              background-color .3s ease, color .3s ease;
+
+  &.open { grid-template-rows: 1fr; opacity: 1; }   // slides open smoothly
+
+  &[data-state='connecting'] { --vs-bg: #fffbeb; --vs-fg: #b45309; --vs-dot: #f59e0b; }
+  &[data-state='speaking']   { --vs-bg: #f5f3ff; --vs-fg: #6d28d9; --vs-dot: #8b5cf6; }
+
+  .voice-strip-inner {
+    min-height: 0;
+    overflow: hidden;               // needed for the 0fr collapse
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 14px;
+    font-size: 13px;
+    line-height: 1.3;
+    white-space: nowrap;
+  }
+
+  // vertical padding only when open, so it collapses to 0 height
+  &.open .voice-strip-inner { padding-top: 8px; padding-bottom: 8px; }
+
+  .vs-dot {
+    flex: 0 0 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--vs-dot);
+    animation: vs-pulse 1.4s ease-in-out infinite;
+  }
+
+  .vs-state { font-weight: 600; flex: 0 0 auto; }
+
+  .vs-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    opacity: .85;
+    animation: vs-fade .25s ease;
+    &::before { content: '—'; margin-right: 8px; }
+  }
+}
+
+@keyframes vs-pulse { 0%, 100% { transform: scale(1); opacity: 1; } 50% { transform: scale(1.5); opacity: .5; } }
+@keyframes vs-fade  { from { opacity: 0; transform: translateY(2px); } to { opacity: .85; transform: none; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .voice-strip, .vs-dot, .vs-text { transition: none; animation: none; }
 }

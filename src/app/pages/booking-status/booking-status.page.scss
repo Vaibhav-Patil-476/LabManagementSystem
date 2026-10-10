@@ -5008,4 +5008,8 @@
   :root:root:root:root:root:root ion-content.booking-content .summary-bar ion-button.new-booking-btn ion-icon {
     color: #fff !important;
     font-size: 18px;
-  }
+  }.delete-icon.disabled-icon {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+}

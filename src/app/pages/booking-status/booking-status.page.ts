@@ -50,6 +50,9 @@ export interface BookingTest {
   refRangeHigh?: number;
   referenceNote?: string;
   isNewlyAdded?: boolean;
+  profileId?: number;
+  profileName?: string;
+  isPackageTest?: boolean;
 }
 
 export interface BookingListItem {
@@ -1369,7 +1372,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   // ---------- edit test ----------
-  editTest(item: BookingListItem): void {
+   editTest(item: BookingListItem): void {
     this.closeActionMenu();
     this.selectedBooking = item;
     this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
@@ -1383,6 +1386,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.isTestLoading = true;
     this.isTestModalOpen = true;
 
+    // package chi list load kar (lock sathi)
+    this.loadPackageSets(item.franchise?.franchiseId);
+
     this.fetchSingleBooking(item.bookingId, (fresh) => {
       if (fresh.tests && fresh.tests.length > 0) {
         this.selectedBooking = fresh;
@@ -1392,6 +1398,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         this.payNowAmount = 0;
         this.paidAmount = this.basePaidAmount;
       }
+      this.applyPackageLock();
       this.isTestLoading = false;
     }, () => { this.isTestLoading = false; });
   }
@@ -2219,5 +2226,58 @@ export class BookingStatusPage implements OnInit, OnDestroy {
         document.body.removeChild(tempInput);
       }
     }
+  }
+
+
+    // ---------- package lock ----------
+  packageTestSets: { name: string; testIds: number[] }[] = [];
+
+  private loadPackageSets(franchiseId?: number): void {
+    const labId = this.labApi.getCurrentLabId();
+
+    this.labApi.searchProfiles(labId, franchiseId, '').subscribe({
+      next: (res: any) => {
+        const list: any[] = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+
+        this.packageTestSets = list
+          .map((p: any) => {
+            const inner: any[] = p?.withTest || p?.tests || p?.testList || p?.profileTests || [];
+            return {
+              name: String(p?.profileName || p?.profile_name || p?.name || 'Package').trim(),
+              testIds: inner
+                .map((x: any) => Number(x?.testId ?? x?.test_id ?? x?.id ?? 0))
+                .filter((id: number) => id > 0)
+            };
+          })
+          .filter(s => s.testIds.length > 1);
+
+        this.ngZone.run(() => {
+          this.applyPackageLock();
+          this.cdr.detectChanges();
+        });
+      },
+      error: () => { /* silent: lock nahi lagnar, baki sagla chalnar */ }
+    });
+  }
+  /** Booking madhe ek package che sagle tests asle tar te lock kar. */
+  private applyPackageLock(): void {
+    if (!this.packageTestSets.length || !this.selectedTests.length) return;
+
+    const savedIds = new Set(
+      this.selectedTests.filter(t => !t.isNewlyAdded).map(t => Number(t.testId))
+    );
+
+    const locked = new Map<number, string>();
+    for (const s of this.packageTestSets) {
+      if (s.testIds.every(id => savedIds.has(id))) {
+        s.testIds.forEach(id => locked.set(id, s.name));
+      }
+    }
+
+    this.selectedTests = this.selectedTests.map(t =>
+      !t.isNewlyAdded && locked.has(Number(t.testId))
+        ? { ...t, isPackageTest: true, profileName: locked.get(Number(t.testId)) }
+        : t
+    );
   }
 }
