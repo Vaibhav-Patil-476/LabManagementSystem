@@ -2540,3 +2540,118 @@ ion-header {
 @media (prefers-reduced-motion: reduce) {
   .voice-strip, .vs-dot, .vs-text { transition: none; animation: none; }
 }
+
+// <------------Ai Voice Animation --------------->
+
+// ===== Premium Voice Bot Button (header glass style) =====
+:host { --bot-size: 46px; }
+
+.bot-btn {
+  position: relative;
+  width: var(--bot-size);
+  height: var(--bot-size);
+  padding: 0;
+  display: grid;
+  place-items: center;
+  border-radius: 15px;
+  cursor: pointer;
+  color: #fff;
+
+  // glass look (same family as the back / mic buttons)
+  background: linear-gradient(145deg, rgba(255, 255, 255, .32), rgba(255, 255, 255, .12));
+  border: 1px solid rgba(255, 255, 255, .38);
+  box-shadow:
+    0 6px 18px rgba(20, 50, 140, .28),
+    inset 0 1px 0 rgba(255, 255, 255, .45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  -webkit-tap-highlight-color: transparent;
+  transition: transform .2s cubic-bezier(.2, .8, .2, 1), box-shadow .25s ease;
+
+  &:hover { transform: translateY(-1px) scale(1.05); }
+  &:active { transform: scale(.94); }
+  &:focus-visible { outline: 2px solid #fff; outline-offset: 3px; }
+
+  // glow ring used while listening
+  &::before {
+    content: '';
+    position: absolute;
+    inset: -1px;
+    border-radius: inherit;
+    border: 2px solid rgba(255, 255, 255, .85);
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .bot {
+    width: 78%;
+    height: 78%;
+    overflow: visible;
+    animation: floaty 3.2s ease-in-out infinite;
+    filter: drop-shadow(0 2px 3px rgba(10, 20, 70, .35));
+  }
+
+  .eye { fill: #6fe0ff; transform-box: fill-box; transform-origin: center; animation: blink 4.5s infinite; filter: drop-shadow(0 0 2px #6fe0ff); }
+  .tip { fill: #6fe0ff; animation: glow 1.8s ease-in-out infinite; }
+  .antenna { transform-box: fill-box; transform-origin: 50% 100%; animation: sway 3s ease-in-out infinite; }
+
+  .face-listen { opacity: 0; transition: opacity .2s; }
+  .face-idle   { transition: opacity .2s; }
+  .bar { fill: #6fe0ff; transform-box: fill-box; transform-origin: center; filter: drop-shadow(0 0 2px #6fe0ff); }
+
+  // online status dot
+  .status-dot {
+    position: absolute;
+    right: -3px;
+    bottom: -3px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #34d399;
+    border: 2px solid #3b82f6; // header blue — change if header colour differs
+    box-shadow: 0 0 0 0 rgba(52, 211, 153, .6);
+    animation: dotPulse 2.4s ease-out infinite;
+  }
+
+  // ---------- active states ----------
+  &[data-state="listening"],
+  &[data-state="speaking"],
+  &[data-state="processing"] {
+    background: linear-gradient(145deg, rgba(255, 255, 255, .42), rgba(255, 255, 255, .2));
+    box-shadow:
+      0 0 0 4px rgba(255, 255, 255, .18),
+      0 8px 24px rgba(255, 255, 255, .25),
+      inset 0 1px 0 rgba(255, 255, 255, .55);
+
+    &::before { animation: ripple 1.7s ease-out infinite; }
+    .face-idle { opacity: 0; }
+    .face-listen { opacity: 1; }
+    .bar { animation: eq .9s ease-in-out infinite; }
+    .b1 { animation-delay: 0s; }
+    .b2 { animation-delay: .12s; }
+    .b3 { animation-delay: .24s; }
+    .b4 { animation-delay: .36s; }
+    .b5 { animation-delay: .48s; }
+    .tip { fill: #ff6b81; }
+    .status-dot { background: #ff5a6e; animation: none; }
+  }
+  &[data-state="processing"] .bar { animation-duration: 1.6s; }
+}
+
+@keyframes floaty  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-1.5px); } }
+@keyframes blink   { 0%, 92%, 100% { transform: scaleY(1); } 95% { transform: scaleY(.1); } }
+@keyframes glow    { 0%, 100% { opacity: 1; } 50% { opacity: .3; } }
+@keyframes sway    { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(6deg); } }
+@keyframes eq      { 0%, 100% { transform: scaleY(.35); } 50% { transform: scaleY(1.25); } }
+@keyframes ripple  { 0% { transform: scale(1); opacity: .8; } 100% { transform: scale(1.5); opacity: 0; } }
+@keyframes dotPulse {
+  0%   { box-shadow: 0 0 0 0 rgba(52, 211, 153, .6); }
+  70%  { box-shadow: 0 0 0 7px rgba(52, 211, 153, 0); }
+  100% { box-shadow: 0 0 0 0 rgba(52, 211, 153, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bot-btn, .bot-btn * , .bot-btn::before { animation: none !important; }
+}
+
+ion-buttons .bot-btn { margin-right: 8px; }

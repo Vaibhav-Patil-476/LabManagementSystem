@@ -2572,6 +2572,19 @@ export class AddPatientComponent {
       'Package'
     );
 
+    // 🔍 TEMPORARY: package object cha id field cha naav confirm karayla
+    console.log('PKG OBJECT:', pkg);
+
+    // ✅ NEW: web sarkhe profile fields
+    const profileId = Number(
+      pkg?.profileId ??
+      pkg?.profile_id ??
+      pkg?.id ??
+      0
+    );
+    const profileAssignedPrice = Number(pkg?.profileAssignedPrice ?? 0);
+    const profileMrp = Number(pkg?.mrp ?? pkg?.total_amount ?? 0);
+
     const packageTests: any[] =
       pkg?.withTest ||
       pkg?.tests ||
@@ -2647,7 +2660,15 @@ export class AddPatientComponent {
         return;
       }
 
-      this.selectedTests.push({ ...test, packageName });
+      // ✅ NEW: profile fields test sobat save hotat
+      this.selectedTests.push({
+        ...test,
+        packageName,
+        profileId,
+        profileName: packageName,
+        profileAssignedPrice,
+        profileMrp
+      });
 
       // group by sample type
       this.addTestToSampleGroup(test);
@@ -2661,6 +2682,7 @@ export class AddPatientComponent {
 
     if (!existingPkg) {
       this.selectedPackages.push({
+        profileId,                       // ✅ NEW
         profileName: packageName,
         b2b: pkg?.profileAssignedPrice ?? 0,
         mrp: pkg?.mrp ?? pkg?.total_amount ?? 0,
@@ -3509,6 +3531,17 @@ export class AddPatientComponent {
         discount: Number(t?.discount || 0),
         tat: String(t?.tat ?? 'N/A'),
         testPrice,
+
+        // ✅ NEW: Package tests la web sarkhe profile fields
+        profileId: Number(t?.profileId ?? 0),
+        ...(t?.profileId
+          ? {
+            profileName: t.profileName,
+            profileAssignedPrice: Number(t.profileAssignedPrice ?? 0),
+            mrp: Number(t.profileMrp ?? 0)
+          }
+          : {}),
+
         // Company payload madhe he flags nehmi `false` astat (null nahi).
         dob: false,
         height: false,
@@ -3623,6 +3656,9 @@ export class AddPatientComponent {
 
       tests
     };
+
+    // 🔍 TEMPORARY: verify karun jhalyavar he line kadha
+    console.log('FIRST TEST PAYLOAD:', JSON.stringify(tests[0]));
 
     payload.request = JSON.stringify(payload);
 

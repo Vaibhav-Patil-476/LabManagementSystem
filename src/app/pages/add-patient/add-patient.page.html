@@ -10,18 +10,61 @@
       </ion-buttons>
       <ion-title>New Booking</ion-title>
       <ion-buttons slot="end">
-        <ion-button (click)="toggleVoice()" [color]="(voiceState$ | async) === 'idle' ? 'light' : 'danger'"
-          aria-label="Voice assistant">
-          <ion-icon slot="icon-only" [name]="(voiceState$ | async) === 'idle' ? 'mic-outline' : 'stop-circle-outline'">
-          </ion-icon>
-        </ion-button>
+        <ng-container *ngIf="voiceState$ | async as vs">
+          <button type="button" class="bot-btn" [attr.data-state]="vs" (click)="toggleVoice()"
+            [attr.aria-pressed]="vs !== 'idle'" aria-label="Voice assistant">
+
+            <svg class="bot" viewBox="0 0 48 48" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+              <defs>
+                <linearGradient id="vbBody" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#ffffff" />
+                  <stop offset="1" stop-color="#d6defa" />
+                </linearGradient>
+                <linearGradient id="vbScreen" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0" stop-color="#1c2547" />
+                  <stop offset="1" stop-color="#070a18" />
+                </linearGradient>
+              </defs>
+
+              <g class="antenna">
+                <line x1="24" y1="4.5" x2="24" y2="9" stroke="#e9eeff" stroke-width="1.6" stroke-linecap="round" />
+                <circle class="tip" cx="24" cy="3.6" r="2" />
+              </g>
+
+              <rect x="4.5" y="18" width="3.5" height="9" rx="1.75" fill="#2b3150" />
+              <rect x="40" y="18" width="3.5" height="9" rx="1.75" fill="#2b3150" />
+
+              <ellipse cx="24" cy="43" rx="11" ry="7.5" fill="url(#vbBody)" />
+
+              <rect x="8.5" y="8.5" width="31" height="25" rx="12.5" fill="url(#vbBody)" />
+              <rect x="12" y="12.5" width="24" height="17" rx="8.5" fill="url(#vbScreen)" />
+
+              <g class="face-idle">
+                <rect class="eye" x="17.5" y="16.5" width="3" height="7.5" rx="1.5" />
+                <rect class="eye" x="27.5" y="16.5" width="3" height="7.5" rx="1.5" />
+                <path d="M21 26.2 Q24 28.6 27 26.2" fill="none" stroke="#6fe0ff" stroke-width="1.5"
+                  stroke-linecap="round" />
+              </g>
+
+              <g class="face-listen">
+                <rect class="bar b1" x="15.8" y="17" width="2.4" height="8" rx="1.2" />
+                <rect class="bar b2" x="19.9" y="17" width="2.4" height="8" rx="1.2" />
+                <rect class="bar b3" x="24" y="17" width="2.4" height="8" rx="1.2" />
+                <rect class="bar b4" x="28.1" y="17" width="2.4" height="8" rx="1.2" />
+                <rect class="bar b5" x="32.2" y="17" width="2.4" height="8" rx="1.2" />
+              </g>
+            </svg>
+
+            <span class="status-dot"></span>
+          </button>
+        </ng-container>
       </ion-buttons>
     </ion-toolbar>
   </ion-header>
 
   <ion-content class="booking-content">
 
-<ng-container *ngIf="voiceState$ | async as vs">
+    <ng-container *ngIf="voiceState$ | async as vs">
   <div class="voice-strip" [class.open]="vs !== 'idle'" [attr.data-state]="vs"
     role="status" aria-live="polite">
     <div class="voice-strip-inner">
@@ -31,6 +74,8 @@
     </div>
   </div>
 </ng-container>
+
+
 
     <div class="last-patient-bar">
       <div class="last-patient-info">
