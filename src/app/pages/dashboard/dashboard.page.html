@@ -56,7 +56,12 @@
             <div class="sc-header" (click)="toggleSearchExpand(item)">
               <div class="sc-header-left">
                 <div class="sc-id-row">
-                  <span class="sc-id" (click)="openGlobalDownloadModal(item, $event)">#{{ item.bookingId }}</span>
+                  <span class="sc-id" (click)="openGlobalDownloadModal(item, $event)">
+  <ng-container *ngIf="canShowDownloadReport; else plainHash">
+    <span class="sc-id-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
+  </ng-container>
+  <ng-template #plainHash>#{{ item.bookingId }}</ng-template>
+</span>
                   <span class="sc-date">{{ item.bookingDate }}</span>
                 </div>
                 <div class="sc-name">{{ item.title | titlecase }} {{ item.customerName }}</div>
@@ -1015,6 +1020,9 @@
 
   <ion-content class="dashboard-content" [fullscreen]="true">
 
+    <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+      <ion-refresher-content></ion-refresher-content>
+    </ion-refresher>
     <!-- ================= PREMIUM GRADIENT HEADER (profile-page style) ================= -->
     <header class="app-header-premium">
       <span class="ahp-orb ahp-orb-one" aria-hidden="true"></span>
@@ -1092,6 +1100,11 @@
           </button>
         </div>
       </section>
+
+      <div class="refresh-indicator" [class.visible]="isRefreshing" aria-live="polite">
+        <ion-spinner name="crescent"></ion-spinner>
+        <span>Refreshing...</span>
+      </div>
 
       <!-- shared gradients for the service icons (always rendered, do not remove) -->
       <svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
@@ -1350,7 +1363,7 @@
               <span class="wm-asof">As of {{ today | date:'dd-MMM-yyyy' }}</span>
             </div>
 
-            <button type="button" class="wm-add-btn" *ngIf="!isAdminRole" (click)="openWalletModal()">
+            <button type="button" class="wm-add-btn" (click)="isAdminRole ? openAddFundsModal() : openWalletModal()">
               Add Funds
             </button>
           </div>

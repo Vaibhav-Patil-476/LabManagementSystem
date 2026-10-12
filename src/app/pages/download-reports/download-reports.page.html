@@ -163,7 +163,9 @@
               </label>
 
               <!-- Booking ID -->
-              <a class="id-link" (click)="openDownloadReportModal(item, $event)">#{{ item.bookingId }}</a>
+<a class="id-link" (click)="openDownloadReportModal(item, $event)">
+  <span class="id-link-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
+</a>
 
               <!-- Booking Date -->
               <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>

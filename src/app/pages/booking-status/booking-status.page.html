@@ -143,7 +143,9 @@
         <div class="bcard-header">
           <div class="bcard-header-left">
             <div class="bcard-id-row">
-              <a class="id-link" (click)="openDownloadReportModal(item, $event)">#{{ item.bookingId }}</a>
+             <a class="id-link" (click)="openDownloadReportModal(item, $event)">
+  <span class="id-link-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
+</a>
               <span class="bcard-date">{{ item.bookingDate }}</span>
             </div>
             <div class="bcard-name-row">

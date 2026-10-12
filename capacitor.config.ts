@@ -5,8 +5,7 @@ const config: CapacitorConfig = {
   appName: 'HyPatho Lab',
   webDir: 'www',
 
-  // फक्त testing साठी: phone वरून http/ws relay (LAN IP) ला जोडण्यासाठी.
-  // Release build आधी हा block काढा आणि https/wss relay वापरा.
+  // फक्त testing साठी. Release build आधी हा block काढा आणि https/wss वापरा.
   server: {
     androidScheme: 'http',
     cleartext: true
@@ -24,16 +23,8 @@ const config: CapacitorConfig = {
     },
     SplashScreen: {
       launchShowDuration: 0,
-
-      // ✅ FIX: false केलं — आता Angular ready होईपर्यंत native splash
-      // आपोआप निघणार नाही, आपण code मधून control करू (app.component.ts).
-      // यामुळे "native splash गायब -> blank stuck frame -> JS splash"
-      // हा gap निघून जाईल.
-      launchAutoHide: false,
-
-      backgroundColor: '#087b76',
-      androidSplashResourceName: 'splash',
-      androidScaleType: 'CENTER_CROP',
+      launchAutoHide: true,
+      backgroundColor: '#ffffff',
       showSpinner: false
     }
   }

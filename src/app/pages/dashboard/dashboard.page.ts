@@ -11,7 +11,7 @@ import {
   IonContent, IonIcon, IonMenu, IonMenuButton,
   IonModal, IonSpinner, IonSelect, IonSelectOption,
   IonDatetime, IonButton, IonSearchbar, MenuController, AlertController,
-  LoadingController
+  LoadingController, IonRefresher, IonRefresherContent
 } from "@ionic/angular/standalone";
 
 import { MatDatepickerModule } from "@angular/material/datepicker";
@@ -36,7 +36,7 @@ import {
   trashOutline, imageOutline, documentOutline, medkitOutline,
   // NEW — Services grid icons
   personAdd, checkmarkDoneCircle, cloudDownload, flask,
-  idCard, pulse, ban, storefront
+  idCard, pulse, ban, storefront  
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -89,7 +89,9 @@ const CLINICAL_NOTIF_DAILY_UPDATE_ID = 6;
     IonModal, IonSpinner, IonSelect, IonSelectOption,
     IonDatetime, IonButton, IonSearchbar,
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
-    StackedBarComponent,
+    StackedBarComponent, IonDatetime, IonButton, IonSearchbar,
+    IonRefresher, IonRefresherContent,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule,
   ]
 })
 export class DashboardPage implements OnInit, OnDestroy {
@@ -110,7 +112,8 @@ export class DashboardPage implements OnInit, OnDestroy {
   ringProgress = 0;                 // 0 ते 1
   private ringAnimId: any = null;
   private pdfDownload = inject(PdfDownloadService);
-
+  loading = false;
+  isRefreshing = false;
   rawBookings: any[] = [];
   dailyBookings: any[] = [];
   doctors: any[] = [];
@@ -125,7 +128,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   reportsCompleted = 0;
   totalCanceledAmount = 0;
   totalBusinessAmount = 0;
-  loading = false;
+
   private lastDayKey = this.toKey(new Date());
   private dayWatchSub?: Subscription;
   fromDate = '';
@@ -358,6 +361,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       'trash-outline': trashOutline,
       'image-outline': imageOutline,
       'document-outline': documentOutline,
+      
 
       // NEW — Services grid icons
       'person-add': personAdd,
@@ -466,39 +470,39 @@ export class DashboardPage implements OnInit, OnDestroy {
   readonly ringRadius = 38;
   readonly ringCircumference = 2 * Math.PI * 38;
 
-get ringSegments(): { color: string; dash: string; offset: string }[] {
-  const d = this.selectedOverview;
-  const total = d.samples || 0;
-  const c = this.ringCircumference;
-  const maxLen = c * this.ringProgress;
-  const overlap = 0.6;
+  get ringSegments(): { color: string; dash: string; offset: string }[] {
+    const d = this.selectedOverview;
+    const total = d.samples || 0;
+    const c = this.ringCircumference;
+    const maxLen = c * this.ringProgress;
+    const overlap = 0.6;
 
-  const parts = [
-    { color: '#16a34a', value: d.received },
-    { color: '#f59e0b', value: d.pending },
-    { color: '#2563eb', value: d.outSourced },
-    { color: '#ef4444', value: d.rejected }
-  ];
+    const parts = [
+      { color: '#16a34a', value: d.received },
+      { color: '#f59e0b', value: d.pending },
+      { color: '#2563eb', value: d.outSourced },
+      { color: '#ef4444', value: d.rejected }
+    ];
 
-  let used = 0;
-  return parts.map(p => {
-    const fullLen = total ? (p.value / total) * c : 0;
-    let visible = Math.max(0, Math.min(fullLen, maxLen - used));
+    let used = 0;
+    return parts.map(p => {
+      const fullLen = total ? (p.value / total) * c : 0;
+      let visible = Math.max(0, Math.min(fullLen, maxLen - used));
 
-    // चाप रिकामा नसेल तरच थोडा overlap द्या
-    if (visible > 0) {
-      visible = Math.min(visible + overlap, c);
-    }
+      // चाप रिकामा नसेल तरच थोडा overlap द्या
+      if (visible > 0) {
+        visible = Math.min(visible + overlap, c);
+      }
 
-    const seg = {
-      color: p.color,
-      dash: `${visible} ${c}`,
-      offset: `${-used}`
-    };
-    used += fullLen;
-    return seg;
-  });
-}
+      const seg = {
+        color: p.color,
+        dash: `${visible} ${c}`,
+        offset: `${-used}`
+      };
+      used += fullLen;
+      return seg;
+    });
+  }
   private animateRing(): void {
     if (this.ringAnimId) {
       cancelAnimationFrame(this.ringAnimId);
@@ -682,6 +686,42 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
     return !!this.franchiseReportLock[fId];
   }
 
+  // ============================================================
+  // PULL TO REFRESH
+  // ============================================================
+  handleRefresh(event: any): void {
+    const refresher = event?.target as HTMLIonRefresherElement | undefined;
+    const startedAt = Date.now();
+    const MIN_VISIBLE_MS = 700;   // data khup lavkar aala tari spinner blink hou naye
+    let finished = false;
+
+    this.isRefreshing = true;
+
+    const finish = () => {
+      if (finished) return;
+      finished = true;
+      this.ngZone.run(() => {
+        this.isRefreshing = false;
+        refresher?.complete();
+        this.cdr.detectChanges();
+      });
+    };
+
+    // network atkla tari spinner kayam rahu naye
+    const safetyTimer = setTimeout(finish, 10000);
+
+    this.loadDashboard(true, () => {
+      clearTimeout(safetyTimer);
+      const wait = Math.max(0, MIN_VISIBLE_MS - (Date.now() - startedAt));
+      setTimeout(finish, wait);
+    });
+
+    this.loadNotificationCounts();
+    this.loadFranchiseReportLocks();
+    if (this.canViewWallet) {
+      this.refreshWalletSilently();
+    }
+  }
   // ============================================================
   // DASHBOARD INIT
   // ============================================================
@@ -1077,7 +1117,7 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
     this.editTestFromSearch(item);
   }
 
-    // ============================================================
+  // ============================================================
   // PACKAGE LOCK (Edit Test madhe package che tests delete honar nahit)
   // ============================================================
   packageTestSets: { name: string; testIds: number[] }[] = [];
@@ -1302,12 +1342,12 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
   }
 
   async removeTestInline(test: any): Promise<void> {
-     if (!this.canRemoveTest(test)) {
-    if (test.isPackageTest) {
-      this.toastService.warning('Not Allowed', 'This test belongs to a package and cannot be removed.');
+    if (!this.canRemoveTest(test)) {
+      if (test.isPackageTest) {
+        this.toastService.warning('Not Allowed', 'This test belongs to a package and cannot be removed.');
+      }
+      return;
     }
-    return;
-  }
     const alert = await this.alertController.create({
       cssClass: 'premium-alert',
       header: 'Delete Test',
@@ -1422,7 +1462,7 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
       doctorid: this.selectedBooking.doctorId,
       franchiseId: this.selectedBooking.franchiseId,
       createdOn: this.selectedBooking.createdOn,
-     tests: existingTests.map(t => ({ testId: t.testId, profileId: t.profileId || 0 })),
+      tests: existingTests.map(t => ({ testId: t.testId, profileId: t.profileId || 0 })),
       subTotalAmount: this.subTotal,
       discountAmount: this.canEditBilling ? this.discount : (this.selectedBooking.discountAmount || 0),
       totalAmount: this.canEditBilling ? this.totalAmount : (this.selectedBooking.totalAmount || 0),
@@ -2042,19 +2082,19 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
     );
   }
 
-  loadDashboard(silent: boolean = false): void {
+  loadDashboard(silent: boolean = false, onDone?: () => void): void {
     const currentUser = this.authService.currentUserValue;
     const labId = currentUser?.raw?.labId;
     const today = new Date();
 
     if (this.roleService.isFullAccess) {
-      this.loadFullAccessDashboard(labId, today, silent);
+      this.loadFullAccessDashboard(labId, today, silent, onDone);
     } else {
-      this.loadStaffDashboard(currentUser, labId, silent);
+      this.loadStaffDashboard(currentUser, labId, silent, onDone);
     }
   }
 
-  private loadFullAccessDashboard(labId: any, today: Date, silent: boolean): void {
+  private loadFullAccessDashboard(labId: any, today: Date, silent: boolean, onDone?: () => void): void {
     const selectedStart = this.fromDate;
     const selectedEnd = this.nextDay(this.toDate);
 
@@ -2129,10 +2169,12 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
         });
 
         this.rawBookings = [];
+        onDone?.();
       },
       error: (err) => {
         this.loading = false;
         this.loadInProgress = false;
+        onDone?.();
         if (!silent) {
           console.error('DASHBOARD SUMMARY ERROR:', err);
           this.toastService.error('Error', 'Failed to load dashboard data');
@@ -2141,7 +2183,7 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
     });
   }
 
-  private loadStaffDashboard(currentUser: any, labId: any, silent: boolean): void {
+  private loadStaffDashboard(currentUser: any, labId: any, silent: boolean, onDone?: () => void): void {
     const selectedStart = this.fromDate;
     const selectedEnd = this.nextDay(this.toDate);
 
@@ -2167,10 +2209,13 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
         const mappedRollingWindow = (rollingWindowBookings || []).map((raw: any) => this.mapBooking(raw));
         this.rawBookings = this.applyStaffOwnershipFilter(mappedRollingWindow);
         this.prepareDailyBookings();
+        onDone?.();
+
       },
       error: (err) => {
         this.loading = false;
         this.loadInProgress = false;
+        onDone?.();
         if (!silent) {
           console.error('DASHBOARD STAFF ERROR:', err);
           this.toastService.error('Error', 'Failed to load dashboard data');
@@ -2333,10 +2378,10 @@ get ringSegments(): { color: string; dash: string; offset: string }[] {
     };
   }
 
-canRemoveTest(test: any): boolean {
-  if (test.isPackageTest) return false;
-  return !!test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr';
-}
+  canRemoveTest(test: any): boolean {
+    if (test.isPackageTest) return false;
+    return !!test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr';
+  }
 
   // ============================================================
   // BOOKING MAPPING / STATUS LABELS
