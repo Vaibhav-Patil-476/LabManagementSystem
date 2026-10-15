@@ -1,4 +1,4 @@
-import { Injectable, OnDestroy, isDevMode } from '@angular/core';
+import { Injectable, NgZone, OnDestroy, inject, isDevMode } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { secrets } from '../../../environments/secrets';
 
@@ -72,7 +72,7 @@ const WS_BASE =
 
 /** Direct browser -> Google with an API key. Dev only. Keep false in production. */
 const ALLOW_DIRECT_KEY_IN_PROD = true;
-
+const SILENCE_NOISE = /^\s*[\[(<*]*\s*(silent|silence|no speech|no response|nothing|speech)\s*[\])>*.]*\s*$/i;
 /**
  * Declare mutation tools NON_BLOCKING so the model keeps listening and the
  * SILENT/INTERRUPT scheduling is honoured. If your Live model rejects the
@@ -80,11 +80,15 @@ const ALLOW_DIRECT_KEY_IN_PROD = true;
  */
 const NON_BLOCKING_TOOLS = true;
 
+/**
+ * START_SENSITIVITY_LOW: speaker echo / small noises are not treated as the
+ * start of speech, so the AI voice is not cut in the middle.
+ */
 const VAD = {
-  startOfSpeechSensitivity: 'START_SENSITIVITY_HIGH',
+  startOfSpeechSensitivity: 'START_SENSITIVITY_LOW',
   endOfSpeechSensitivity: 'END_SENSITIVITY_HIGH',
-  prefixPaddingMs: 60,
-  silenceDurationMs: 350
+  prefixPaddingMs: 100,
+  silenceDurationMs: 500
 };
 
 const IDLE_MS = 3 * 60 * 1000;
@@ -95,18 +99,34 @@ const MAX_PENDING_AUDIO_CHUNKS = 25; // ~1 s at 40 ms per chunk
 const MAX_QUEUED_PLAYBACK_S = 15;
 const MAX_CACHED_TOOL_RESULTS = 200;
 
+/** Playback jitter buffer when the queue runs empty (network jitter absorb). */
+const PLAYBACK_JITTER_S = 0.4;
+/** After AI audio ends, keep the mic muted a bit (half duplex) to skip the echo tail. */
+const ECHO_TAIL_MS = 300;
+/** Booking tool result nantar model cha faltu "no speech" awaz/text itke sec block. */
+const AI_MUTE_MS = 6000;
+
+/** Greeting watchdog: resend greeting once, then give up with an error. */
+const GREET_RETRY_MS = 6000;
+const GREET_GIVEUP_MS = 14000;
+/** true = user ne remove/kadha/hata/nako mhatlyashivay remove call chalnar nahi. */
+const REQUIRE_REMOVE_INTENT = true;
+const REMOVE_INTENT =
+  /\b(remove|delete|clear|kadha|kadh|kaadh|hata|hatao|nako)\b|काढ|हटा|नको|रिमूव|डिलीट/i;
+const REMOVE_INTENT_WINDOW_MS = 15000;
+
 /* ------------------------------------------------------------------ */
 /* Prompt                                                              */
 /* ------------------------------------------------------------------ */
-const SYSTEM_PROMPT = `You are a SILENT, ultra-fast voice data-entry assistant for the "New Booking" screen of a diagnostic lab app used by franchise staff.
+const SYSTEM_PROMPT = `You are a voice data-entry assistant for the "New Booking" screen of a diagnostic lab app used by franchise staff.
 The user talks continuously and mixes English, Hindi and Marathi. Understand all three. Ignore background noise, filler words and side conversations.
 
 1. SESSION START
-- At the start say ONLY: "Give me all patient info." Say it once, then stay silent. Never say it again, even after a reconnect.
+- When the session starts you MUST say out loud, once: "Give me all patient info." After that, speak only as section 4 allows. Never say it again, even after a reconnect.
 
 2. TIMING (most important)
 - The user will NOT wait for you. The moment you hear ANY booking detail, even a partial one, call fill_booking with just that detail. Never wait for the user to finish.
-- Never call fill_booking with empty arguments. If there is nothing new, do nothing and stay silent.
+- Never call fill_booking with empty arguments. If there is nothing new, just keep listening.
 
 3. WHAT TO SEND
 - Send a field ONLY when the user has just said it. NEVER resend a field you already sent.
@@ -116,25 +136,39 @@ The user talks continuously and mixes English, Hindi and Marathi. Understand all
 - When a booking is saved or a new patient starts, FORGET the previous patient completely. Nothing sent earlier counts as "already sent" for the new patient.
 
 4. WHEN TO SPEAK
-- NEVER speak while the user is talking. NEVER repeat or summarise what the user said.
-- After a tool result with no problems, output NOTHING at all.
-- Speak ONLY when: (a) a tool result has a non-empty "problems" list: say the first problem exactly as written, once, then stop and do not retry; (b) the user asks you a question: answer in max 8 words; (c) submit_booking returns ok: say only "Saved."; (d) the user asks for a summary: call get_summary and read it briefly.
+- Never speak while the user is talking. Never repeat or summarise what the user said.
+- You never narrate what you are doing or not doing. After a tool result with an empty "problems" list, end your turn without producing any speech.
+- You speak ONLY in these cases: (0) session start: "Give me all patient info."; (a) a tool result has a non-empty "problems" list: say the first problem, once; (b) the user asks you a question: answer in max 8 words; (c) submit_booking returns ok: say only "Saved."; (d) the user asks for a summary: call get_summary and read it briefly.
+- After a "not found" problem, do not retry on your own and do not remove anything. But the moment the user says the item again (a corrected or different name), ALWAYS call fill_booking with it, even if it sounds similar to the failed one. A failed item is NOT in the cart, so it is not "already sent".
+- When you read a problem, say ONLY the first 6 words. Never read suggestion lists.
 - Replies: max 8 words, in the language the user last used. Never ask questions, never ask for confirmation.
+
+4b. HOW TO SPEAK
+- When you do speak, speak SLOWLY, clearly and calmly at a relaxed pace. Pronounce every word fully. Never rush and never skip or swallow words.
 
 5. DOCTOR
 - Set "doctor" ONLY when the user says doctor / Dr / ref / referred by. The patient name is never the doctor.
 
 6. TESTS AND PACKAGES
-- Send each test name EXACTLY as the user said it. Never shorten a full name and never expand an abbreviation: "complete blood count" stays "Complete Blood Count", "CBC" stays "CBC".
-- One array item per test. Use "packages" ONLY when the user says profile or package.
-- After a test is added, NEVER send it again in other words, even if the added name looks slightly different.
+- Send each test name EXACTLY as the user said it. Never shorten a full name and never expand an abbreviation. Client handles abbreviations like CBC.
+- One array item per test. Use "packages" ONLY when the user says profile or package. If the user says only a name without saying test or package, put it in "tests"; the client also checks packages.
+- If the user says several numbers after one name ("wellness 1.3 and 1.2", "wellness 1.3, 1.2"), send EACH as its own array item with the FULL name: ["Wellness 1.3", "Wellness 1.2"]. Never put a comma or "and" inside one item. Never send a bare number like "1.2" alone.
+- Names can contain dash or dot, e.g. "Wellness-1.6". The user will NOT say "dash". Send the name as spoken: "Wellness 1.6". Never add or ask for a dash. "point" between digits = ".", e.g. "one point six" = 1.6. The client matches ignoring dashes, dots and spaces.
+- Never send an item that is already in cart.tests or cart.packages of the last tool result. An item that is NOT in the cart MUST be sent whenever the user says it.
 
 7. REMOVE
-- Use removeItems ONLY when the user clearly says remove / kadha / hata / nako. NEVER remove anything on your own, even after a problem.
+- Remove ONLY when the user clearly says remove / kadha / hata / nako. NEVER remove anything on your own, even after a problem.
+- The last tool result has a "cart" with the exact names of tests and packages in the bill. Copy the name from the cart.
+- User says "remove test X" -> removeTests: [exact name from cart.tests]. User says "remove package X" -> removePackages: [exact name from cart.packages].
+- Send ONLY the item(s) the user named in that sentence. NEVER list other items.
+- Use clearAll: true ONLY when the user says remove all / sagla kadha. Never otherwise.
+- If the user says remove without naming an item, do not call anything.
+- Send remove calls alone, do not put tests or packages in the same call.
+- If the item is not in the cart, do not call remove.
 
 8. SAVE AND NEW BOOKING
 - Call submit_booking ONLY when the user clearly says save / submit / book kar / save kar / ho jau de / kar de. Never ask "Save?" and never save on your own.
-- After a save, "new booking" / "nava booking" / "next patient" / "pudhil patient": call new_booking, then stay silent. If the user directly starts new patient details instead, just call fill_booking.
+- After a save, "new booking" / "nava booking" / "next patient" / "pudhil patient": call new_booking and end your turn. If the user directly starts new patient details instead, just call fill_booking.
 - You cannot scan barcodes, upload files or enter payment amounts.
 
 9. UNDERSTANDING
@@ -159,7 +193,7 @@ const TOOL_NAMES = [
 
 type ToolName = (typeof TOOL_NAMES)[number];
 
-interface ToolPolicy {
+export interface ToolPolicy {
   mutates: boolean;
   nonBlocking: boolean;
   timeoutMs: number;
@@ -187,7 +221,7 @@ const BASE_DECLARATIONS: Array<{
     {
       name: 'fill_booking',
       description:
-        'Fill booking fields the moment the user says them, even partial or mid-sentence. Include ONLY the new or changed fields. Call as often as needed. Never resend a test or doctor already sent.',
+        'Fill booking fields the moment the user says them, even partial or mid-sentence. Include ONLY the new or changed fields. Call as often as needed. Never resend a test, package or doctor that is in the cart of the last tool result. Items that failed are not in the cart: send them again when the user repeats or corrects them. Never call with no new information.',
       parameters: {
         type: 'OBJECT',
         properties: {
@@ -209,7 +243,18 @@ const BASE_DECLARATIONS: Array<{
           file: sBool('File / document checkbox'),
           tests: sArr('Test name EXACTLY as the user said it. Never shorten or expand it.'),
           packages: sArr('Profile / package names'),
-          removeItems: sArr('Tests or packages to remove from the bill'),
+          removeTests: sArr(
+            'Individual test(s) the user just asked to remove. Copy the exact name from cart.tests in the last tool result. Never include other items.'
+          ),
+          removePackages: sArr(
+            'Package(s) the user just asked to remove. Copy the exact name from cart.packages in the last tool result. Never include other items.'
+          ),
+          removeItems: sArr(
+            'Legacy. Do not use. Use removeTests or removePackages.'
+          ),
+          clearAll: sBool(
+            'true ONLY when the user explicitly says to remove everything / all tests and packages. Never otherwise.'
+          ),
           paymentMode: sStr('cash or upi'),
           discountPercent: sNum()
         }
@@ -255,9 +300,9 @@ const TOOLS = [
 
 /* Argument sanitizers: return undefined when the value is unusable. */
 
-type Sanitizer = (v: unknown) => unknown;
+export type Sanitizer = (v: unknown) => unknown;
 
-const asStr = (v: unknown, max = 300): string | undefined => {
+export const asStr = (v: unknown, max = 300): string | undefined => {
   if (typeof v !== 'string' && typeof v !== 'number') {
     return undefined;
   }
@@ -278,18 +323,54 @@ const asEnum = (...allowed: string[]): Sanitizer => v => {
   return s && allowed.includes(s) ? s : undefined;
 };
 
+const SPLIT_RE = /\s*(?:,|&|\band\b|\bani\b|\baur\b)\s*/i;
+const BARE_NUM = /^\d+(?:\.\d+)?$/;
+const prefixOf = (s: string): string => s.replace(/[\s\-–_.\d]+$/, '').trim();
+
+/** "Wellness 1.3, 1.2" -> ["Wellness 1.3", "Wellness 1.2"]. Normal naave (Vitamin B12, Serum) tashi rahtat. */
+const expandShorthand = (s: string): string[] => {
+  const parts = s.split(SPLIT_RE).map(p => p.trim()).filter(Boolean);
+  if (parts.length < 2) return [s];
+  const rest = parts.slice(1);
+  if (!rest.every(p => BARE_NUM.test(p))) return [s];
+  const prefix = prefixOf(parts[0]);
+  if (!prefix) return [s];
+  return [parts[0], ...rest.map(n => `${prefix} ${n}`)];
+};
+
 const asList: Sanitizer = v => {
   const input = Array.isArray(v) ? v : [v];
   const seen = new Set<string>();
   const out: string[] = [];
+  let lastPrefix = '';
+
   for (const item of input) {
-    const s = asStr(item, 120);
-    if (s && !seen.has(s.toLowerCase())) {
-      seen.add(s.toLowerCase());
-      out.push(s);
+    let s = asStr(item, 120);
+    if (!s) continue;
+
+    // model ne fakta "1.2" pathavla tar adhicha prefix ghe
+    if (BARE_NUM.test(s) && lastPrefix) s = `${lastPrefix} ${s}`;
+
+    for (const part of expandShorthand(s)) {
+      const clean = part.replace(/[\s,;:!?]+$/, '');
+      if (!clean || seen.has(clean.toLowerCase())) continue;
+      seen.add(clean.toLowerCase());
+      out.push(clean);
+      const p = prefixOf(clean);
+      if (p) lastPrefix = p;
     }
   }
   return out.length ? out.slice(0, 20) : undefined;
+};
+
+/**
+ * remove lists: ek vela fakt thode items. Model ne bill madhle sagle items pathvle
+ * tar reject hotat.
+ */
+const MAX_REMOVE_ITEMS = 3;
+const asRemoveList: Sanitizer = v => {
+  const list = asList(v) as string[] | undefined;
+  return list && list.length <= MAX_REMOVE_ITEMS ? list : undefined;
 };
 
 const asPhone: Sanitizer = v => {
@@ -329,7 +410,10 @@ const FILL_SCHEMA: Record<string, Sanitizer> = {
   file: asBool,
   tests: asList,
   packages: asList,
-  removeItems: asList,
+  removeTests: asRemoveList,
+  removePackages: asRemoveList,
+  removeItems: asRemoveList,
+  clearAll: asBool,
   paymentMode: asEnum('cash', 'upi'),
   discountPercent: asNum(0, 100)
 };
@@ -356,16 +440,47 @@ const FIELD_LABEL: Record<string, string> = {
   step: 'Step'
 };
 
-function isToolName(name: string): name is ToolName {
-  return (TOOL_NAMES as readonly string[]).includes(name);
+/**
+ * A "profile" = everything that makes one voice assistant different from another:
+ * prompt, greeting, tool declarations, per-tool policy and argument sanitizers.
+ * The service itself (socket, audio, reconnect, tool plumbing) is shared.
+ */
+export interface VoiceProfile {
+  systemPrompt: string;
+  /**
+   * Sent once as the first user turn, e.g. "Start. Say only: Hello."
+   * Empty string = NO spoken greeting: a short local chime plays and the user can speak at once.
+   */
+  greeting: string;
+  /** Gemini `tools` array (functionDeclarations). */
+  tools: unknown[];
+  policy: Record<string, ToolPolicy>;
+  sanitizers: Record<string, Record<string, Sanitizer>>;
+  /** Spoken names for rejected fields: { phone: 'Phone' } */
+  labels?: Record<string, string>;
 }
 
+/** The existing New Booking assistant. Default profile, behaviour unchanged. */
+export const BOOKING_PROFILE: VoiceProfile = {
+  systemPrompt: SYSTEM_PROMPT,
+  greeting: 'Start. Say slowly and clearly, only: Give me all patient info.',
+  tools: TOOLS,
+  policy: TOOL_POLICY,
+  sanitizers: {
+    fill_booking: FILL_SCHEMA,
+    go_to_step: STEP_SCHEMA,
+    get_summary: {},
+    new_booking: {},
+    submit_booking: {}
+  },
+  labels: FIELD_LABEL
+};
+
 function sanitizeArgs(
-  name: ToolName,
+  schema: Record<string, Sanitizer>,
+  name: string,
   raw: Record<string, unknown>
 ): { args: Record<string, unknown>; rejected: string[] } {
-  const schema =
-    name === 'fill_booking' ? FILL_SCHEMA : name === 'go_to_step' ? STEP_SCHEMA : {};
   const args: Record<string, unknown> = {};
   const rejected: string[] = [];
 
@@ -408,6 +523,7 @@ function shortProblem(text: string, strict: boolean): string {
   }
   return first.slice(0, 120);
 }
+
 function normalizeResult(raw: unknown): VoiceToolResult {
   const result: VoiceToolResult =
     raw && typeof raw === 'object' && !Array.isArray(raw)
@@ -499,10 +615,41 @@ export class GeminiLiveService implements OnDestroy {
   readonly transcript$ = new BehaviorSubject<string>('');
   /** Short, user-presentable errors (mic denied, fatal connection failure...). */
   readonly error$ = new Subject<string>();
+  /** Live transcript chunks (user speech / assistant speech) for a chat UI. */
+  readonly message$ = new Subject<{ role: 'user' | 'ai'; text: string }>();
 
-  private DEBUG_VOICE = true;
+  /**
+   * Socket + mic + playback run OUTSIDE Angular's zone: otherwise every WebSocket message
+   * (audio chunk, ~25/s) and every mic chunk triggers a full change detection, which starves
+   * the main thread on phones and makes the AI voice stutter. Public streams (state$, error$,
+   * message$) and tool handlers are brought back into the zone explicitly.
+   */
+  private readonly zone = inject(NgZone);
+
+  private emitState(s: VoiceState): void {
+    this.zone.run(() => this.state$.next(s));
+  }
+
+  private emitError(msg: string): void {
+    this.zone.run(() => this.error$.next(msg));
+  }
+
+  private emitMessage(m: { role: 'user' | 'ai'; text: string }): void {
+    this.zone.run(() => this.message$.next(m));
+  }
+
+  private DEBUG_VOICE = isDevMode(); // release build madhe console.debug band
   private transcriptRoman = true;
-  private halfDuplex = false;
+  /**
+   * Half duplex = AI bolat astana mic band (echo mule AI cha swatacha awaz ekla jat nahi).
+   * Default TRUE. Barge-in (AI chya madhe bolne) nako asel tar setHalfDuplex(false).
+   */
+  private halfDuplex = true;
+  /** performance.now() timestamp until which mic stays muted (echo tail). */
+  private mutedUntil = 0;
+    /** true = AI cha awaz ani chat text drop hoto (tool result nantar faltu bolne). */
+  private aiMuted = false;
+  private aiMuteTimer?: ReturnType<typeof setTimeout>;
 
   private cfg: VoiceConnectionConfig = {
     getWsUrl: async () => {
@@ -517,6 +664,7 @@ export class GeminiLiveService implements OnDestroy {
   private sessionGen = 0;
   private voiceSessionId = '';
   private onTool?: ToolHandler;
+  private profile: VoiceProfile = BOOKING_PROFILE;
 
   /* socket */
   private ws?: WebSocket;
@@ -527,6 +675,8 @@ export class GeminiLiveService implements OnDestroy {
   private epoch = 0;
   private failures = 0;
   private greeted = false;
+  private heardAnything = false;          // pahila AI audio chunk aala ka
+  private greetTimers: Array<ReturnType<typeof setTimeout>> = [];
   private reconnectTimer?: ReturnType<typeof setTimeout>;
   private connectTimer?: ReturnType<typeof setTimeout>;
   private idleTimer?: ReturnType<typeof setTimeout>;
@@ -547,8 +697,8 @@ export class GeminiLiveService implements OnDestroy {
   private sources = new Set<AudioBufferSourceNode>();
   private speaking = false;
   private pendingAudio: string[] = [];
-  // class fields madhe
   private lastHeardAt = 0;
+
   /* tools */
   private mutationQueue: Promise<void> = Promise.resolve();
   private submitInFlight = false;
@@ -558,9 +708,12 @@ export class GeminiLiveService implements OnDestroy {
   private cancelledTools = new Set<string>();
   private freshSession = false;
   private recycleAfterTurn = false;
+
   /* transcript */
   private lastRole: '' | 'in' | 'out' = '';
   private tBuf = '';
+  private recentUser = '';
+  private recentUserAt = 0;
 
   /* ---------------------------- public API ---------------------------- */
 
@@ -570,6 +723,9 @@ export class GeminiLiveService implements OnDestroy {
 
   setHalfDuplex(value: boolean): void {
     this.halfDuplex = value;
+    if (!value) {
+      this.mutedUntil = 0;
+    }
   }
 
   setTranscriptRoman(value: boolean): void {
@@ -580,16 +736,22 @@ export class GeminiLiveService implements OnDestroy {
     this.DEBUG_VOICE = value;
   }
 
-  async start(onTool: ToolHandler): Promise<void> {
+  async start(onTool: ToolHandler, profile: VoiceProfile = BOOKING_PROFILE): Promise<void> {
     if (this.state$.value !== 'idle') {
       return;
     }
 
     const gen = ++this.sessionGen;
+    if (isDevMode()) {
+      console.debug('[SESSION] start() gen', gen);
+    }
     this.onTool = onTool;
+    this.profile = profile;
     this.voiceSessionId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     this.failures = 0;
     this.greeted = false;
+    this.heardAnything = false;
+    this.clearGreetTimers();
     this.resumeHandle = undefined;
     this.epoch = 0;
     this.pendingAudio = [];
@@ -602,19 +764,30 @@ export class GeminiLiveService implements OnDestroy {
     this.recycleAfterTurn = false;
     this.lastRole = '';
     this.tBuf = '';
+    this.recentUser = '';
+    this.recentUserAt = 0;
+    this.mutedUntil = 0;
+    this.unmuteAi();
 
-    this.state$.next('connecting');
+    this.emitState('connecting');
     this.transcript$.next('');
     this.attachLifecycleListeners();
-
 
     // Open Gemini immediately; the microphone initialises in parallel.
     void this.openSocket();
 
     try {
+      // IMPORTANT: AudioContexts MUST be created synchronously, before any `await`,
+      // while the user's tap (gesture) is still valid. Otherwise Android WebView /
+      // Chrome keeps the output context "suspended" and the greeting is never heard
+      // (mostly on first launch, when the mic-permission dialog breaks the gesture).
+      this.inCtx = new AudioContext();
+      // AI audio is 24 kHz. playPcm() converts to whatever rate the context really has.
+      this.outCtx = new AudioContext({ sampleRate: 24000, latencyHint: 'playback' });
+      this.log('AUDIO', 'Output ctx', { rate: this.outCtx.sampleRate });
+      const resumeBoth = Promise.all([this.inCtx.resume(), this.outCtx.resume()]);
+
       const stream = await this.getMic();
-
-
 
       if (gen !== this.sessionGen) {
         stream.getTracks().forEach(t => t.stop());
@@ -624,9 +797,8 @@ export class GeminiLiveService implements OnDestroy {
       this.stream = stream;
       stream.getAudioTracks()[0]?.addEventListener('ended', this.onMicEnded);
 
-      this.inCtx = new AudioContext();
-      this.outCtx = new AudioContext({ sampleRate: 24000 });
-
+      await resumeBoth;
+      // Mic permission dialog nantar context parat suspend zala asel tar punha resume.
       await Promise.all([this.inCtx.resume(), this.outCtx.resume()]);
       if (gen !== this.sessionGen) {
         return;
@@ -636,7 +808,22 @@ export class GeminiLiveService implements OnDestroy {
         new Blob([WORKLET], { type: 'application/javascript' })
       );
       try {
-        await this.inCtx.audioWorklet.addModule(url);
+        // Kahi Android WebView var pahilyanda addModule fail hoto: ek retry.
+        for (let attempt = 0; attempt < 2; attempt++) {
+          try {
+            await this.inCtx.audioWorklet.addModule(url);
+            break;
+          } catch (e) {
+            if (attempt === 1) {
+              throw e;
+            }
+            this.log('AUDIO', 'addModule failed, retrying');
+            await new Promise(r => setTimeout(r, 300));
+            if (gen !== this.sessionGen || !this.inCtx) {
+              return;
+            }
+          }
+        }
       } finally {
         URL.revokeObjectURL(url);
       }
@@ -647,12 +834,17 @@ export class GeminiLiveService implements OnDestroy {
       this.audioReady = true;
       this.tryStartMic();
       this.touch();
+
+      // Socket aadhich ready zala asel tar ata greeting pathva.
+      if (this.ws && this.ready) {
+        this.maybeGreet(this.ws);
+      }
     } catch (error) {
       if (gen !== this.sessionGen) {
         return; // stopped intentionally while starting
       }
       const name = (error as { name?: string } | null)?.name;
-      this.error$.next(
+      this.emitError(
         name === 'NotAllowedError' || name === 'SecurityError'
           ? 'Microphone permission denied.'
           : name === 'NotFoundError'
@@ -666,9 +858,13 @@ export class GeminiLiveService implements OnDestroy {
   }
 
   stop(): void {
+    if (isDevMode()) {
+      console.debug('[SESSION] stop() from:', new Error().stack?.split('\n').slice(2, 5).join(' | '));
+    }
     this.sessionGen++;
     this.voiceSessionId = '';
     this.detachLifecycleListeners();
+    this.clearGreetTimers();
 
     for (const timer of [this.reconnectTimer, this.connectTimer, this.idleTimer]) {
       if (timer) {
@@ -727,8 +923,11 @@ export class GeminiLiveService implements OnDestroy {
     this.pendingAudio = [];
     this.lastRole = '';
     this.tBuf = '';
+    this.recentUser = '';
+    this.recentUserAt = 0;
     this.resumeHandle = undefined;
     this.greeted = false;
+    this.heardAnything = false;
     this.failures = 0;
     this.epoch = 0;
     this.toolResults.clear();
@@ -739,8 +938,9 @@ export class GeminiLiveService implements OnDestroy {
     this.freshSession = false;
     this.recycleAfterTurn = false;
     this.mutationQueue = Promise.resolve();
-
-    this.state$.next('idle');
+    this.mutedUntil = 0;
+this.unmuteAi();
+    this.emitState('idle');
   }
 
   ngOnDestroy(): void {
@@ -772,7 +972,7 @@ export class GeminiLiveService implements OnDestroy {
 
   private readonly onMicEnded = (): void => {
     if (this.isActive()) {
-      this.error$.next('Microphone disconnected.');
+      this.emitError('Microphone disconnected.');
       this.stop();
     }
   };
@@ -802,7 +1002,11 @@ export class GeminiLiveService implements OnDestroy {
     );
   }
 
-  private async openSocket(): Promise<void> {
+  private openSocket(): Promise<void> {
+    return this.zone.runOutsideAngular(() => this.openSocketCore());
+  }
+
+  private async openSocketCore(): Promise<void> {
     if (!this.isActive() || this.connecting || this.isSocketAlive()) {
       return;
     }
@@ -890,9 +1094,8 @@ export class GeminiLiveService implements OnDestroy {
       const wasReady = this.ready;
       this.ws = undefined;
       this.ready = false;
-      
+
       this.log('NETWORK', 'WebSocket closed', { code: event.code, reason: event.reason, wasReady });
-      this.log('NETWORK', 'WebSocket closed', { code: event.code, wasReady });
 
       if (!this.isActive()) {
         return;
@@ -912,6 +1115,41 @@ export class GeminiLiveService implements OnDestroy {
     };
   }
 
+    private muteAi(): void {
+    this.aiMuted = true;
+    if (this.aiMuteTimer) clearTimeout(this.aiMuteTimer);
+    this.aiMuteTimer = setTimeout(() => {
+      this.aiMuted = false;
+      this.aiMuteTimer = undefined;
+    }, AI_MUTE_MS);
+    if (this.sources.size > 0) {
+      this.stopPlayback();   // chalu asleli faltu awaz lagech thambva
+    }
+  }
+
+  private unmuteAi(): void {
+    this.aiMuted = false;
+    if (this.aiMuteTimer) {
+      clearTimeout(this.aiMuteTimer);
+      this.aiMuteTimer = undefined;
+    }
+  }
+
+  /** Booking tools: problem/summary/save nasel tar AI ne bolu naye. */
+  private applyQuietPolicy(response: ToolResponse): void {
+    if (!this.profile.policy[response.name]?.nonBlocking) {
+      return;   // dashboard sarkhe tools: AI ne nehmi bolaycha
+    }
+    const r = response.response;
+    const hasProblems = Array.isArray(r['problems']) && (r['problems'] as unknown[]).length > 0;
+    const mustSpeak = r['ok'] === false || hasProblems;
+    if (mustSpeak) {
+      this.unmuteAi();
+    } else {
+      this.muteAi();
+    }
+  }
+
   resetFillCache(): void {
     this.lastFill.clear();
   }
@@ -921,14 +1159,18 @@ export class GeminiLiveService implements OnDestroy {
       setup: {
         model: secrets.geminiLiveModel,
         generationConfig: {
-          responseModalities: ['AUDIO'],
-          thinkingConfig: { thinkingBudget: 0 }
+          responseModalities: ['AUDIO']
         },
-        realtimeInputConfig: { automaticActivityDetection: VAD },
+        // NO_INTERRUPTION: server VAD (noise/echo) must not cut the AI voice in the middle.
+        // If setup is rejected (close code 1007), remove the activityHandling line.
+        realtimeInputConfig: {
+          automaticActivityDetection: VAD,
+          activityHandling: 'NO_INTERRUPTION'
+        },
         contextWindowCompression: { slidingWindow: {} },
         sessionResumption: this.resumeHandle ? { handle: this.resumeHandle } : {},
-        systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-        tools: TOOLS,
+        systemInstruction: { parts: [{ text: this.profile.systemPrompt }] },
+        tools: this.profile.tools,
         inputAudioTranscription: {},
         outputAudioTranscription: {}
       }
@@ -974,7 +1216,7 @@ export class GeminiLiveService implements OnDestroy {
     this.log('NETWORK', 'Reconnect scheduled', { reason, attempt: this.failures, delayMs: Math.round(delay) });
 
     if (this.state$.value !== 'connecting') {
-      this.state$.next('connecting');
+      this.emitState('connecting');
     }
 
     this.reconnectTimer = setTimeout(() => {
@@ -993,15 +1235,104 @@ export class GeminiLiveService implements OnDestroy {
     }
     this.log('NETWORK', 'Reconnect now', { reason });
     if (this.state$.value !== 'connecting') {
-      this.state$.next('connecting');
+      this.emitState('connecting');
     }
     void this.openSocket();
   }
 
   private fatal(message: string): void {
     this.log('ERROR', 'Fatal voice failure', { message });
-    this.error$.next(message);
+    this.emitError(message);
     this.stop();
+  }
+
+  /* ------------------------ greeting + watchdog ----------------------- */
+
+  private clearGreetTimers(): void {
+    for (const t of this.greetTimers) {
+      clearTimeout(t);
+    }
+    this.greetTimers = [];
+  }
+
+  private sendGreeting(socket: WebSocket): boolean {
+    return this.sendJson(socket, {
+      clientContent: {
+        turns: [{ role: 'user', parts: [{ text: this.profile.greeting }] }],
+        turnComplete: true
+      }
+    });
+  }
+
+  /**
+   * Greeting fakt tevha pathvto jevha socket setup zalay ANI speaker (outCtx) ready ahe.
+   * `greeted` fakt send success zalyavar true hoto, mhanje fail zali tar parat try hote.
+   */
+  private maybeGreet(socket: WebSocket): void {
+    if (this.greeted || !this.ready || !this.audioReady || this.ws !== socket) {
+      return;
+    }
+    if (!this.profile.greeting) {
+      // Greeting nako: Gemini chi vaat na pahta lagech listening + chhota local chime.
+      this.greeted = true;
+      this.heardAnything = true;
+      this.playChime();
+      return;
+    }
+    if (!this.sendGreeting(socket)) {
+      return; // socket tayar navhta, pudhchya vela parat prayatn
+    }
+    this.greeted = true;
+    this.startGreetWatchdog(socket);
+  }
+
+  /** ~0.2 s soft beep, generated locally (no network), so "ready" feedback is instant. */
+  private playChime(): void {
+    const ctx = this.outCtx;
+    if (!ctx) {
+      return;
+    }
+    try {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      const t = ctx.currentTime;
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.0001, t);
+      gain.gain.exponentialRampToValueAtTime(0.15, t + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(t);
+      osc.stop(t + 0.2);
+    } catch {
+      /* ignore */
+    }
+  }
+
+  private startGreetWatchdog(socket: WebSocket): void {
+    const gen = this.sessionGen;
+    this.clearGreetTimers();
+
+    // 1) 6 sec madhe awaz aali nahi -> greeting parat pathva
+    this.greetTimers.push(setTimeout(() => {
+      if (gen !== this.sessionGen || this.heardAnything || this.ws !== socket) {
+        return;
+      }
+      this.log('VOICE', 'Greeting watchdog: resending');
+      this.outCtx?.resume().catch(() => undefined);
+      this.sendGreeting(socket);
+    }, GREET_RETRY_MS));
+
+    // 2) 14 sec nantarhi nahi -> user la sanga
+    this.greetTimers.push(setTimeout(() => {
+      if (gen !== this.sessionGen || this.heardAnything) {
+        return;
+      }
+      this.log('VOICE', 'Greeting watchdog: giving up');
+      this.emitError('Voice start zala nahi.');
+      this.stop();
+    }, GREET_GIVEUP_MS));
   }
 
   /* ------------------------ server message handling ------------------- */
@@ -1028,7 +1359,17 @@ export class GeminiLiveService implements OnDestroy {
 
     const content = message.serverContent;
     if (content) {
+      if (isDevMode()) {
+        console.debug('[GEMINI]', {
+          inLen: content.inputTranscription?.text?.length ?? 0,
+          out: !!content.outputTranscription?.text,
+          turnComplete: !!content.turnComplete,
+          interrupted: !!content.interrupted
+        });
+      }
+
       if (content.interrupted) {
+        this.log('GEMINI', 'interrupted by server');
         this.stopPlayback();
       }
 
@@ -1044,7 +1385,7 @@ export class GeminiLiveService implements OnDestroy {
         this.pushTranscript('in', content.inputTranscription.text);
       }
 
-      if (content.outputTranscription?.text) {
+      if (content.outputTranscription?.text && !this.aiMuted) {
         this.pushTranscript('out', content.outputTranscription.text);
       }
 
@@ -1056,7 +1397,7 @@ export class GeminiLiveService implements OnDestroy {
         }
         this.lastRole = '';
         if (this.state$.value === 'speaking' && this.sources.size === 0) {
-          this.state$.next('listening');
+          this.emitState('listening');
         }
       }
     }
@@ -1084,20 +1425,13 @@ export class GeminiLiveService implements OnDestroy {
     }
 
     if (this.micStarted && this.state$.value === 'connecting') {
-      this.state$.next('listening');
+      this.emitState('listening');
     }
     this.tryStartMic();
 
     if (!this.greeted) {
-      this.greeted = true;
-      this.sendJson(socket, {
-        clientContent: {
-          turns: [
-            { role: 'user', parts: [{ text: 'Start. Say only: Give me all patient info.' }] }
-          ],
-          turnComplete: true
-        }
-      });
+      // audioReady nasel tar start() madhun nantar maybeGreet() call hoil.
+      this.maybeGreet(socket);
     } else if (!this.connectionResumed && !this.freshSession) {
       // Fresh server session after a drop: restore minimal context, no reply.
       this.sendJson(socket, {
@@ -1107,7 +1441,7 @@ export class GeminiLiveService implements OnDestroy {
               role: 'user',
               parts: [
                 {
-                  text: 'Connection restored. A booking is already in progress. Do not greet. Stay silent until the user speaks.'
+                  text: 'Connection restored. A booking is already in progress. Do not greet. Continue listening.'
                 }
               ]
             }
@@ -1135,6 +1469,7 @@ export class GeminiLiveService implements OnDestroy {
     this.toolSentOn.clear();
     this.cancelledTools.clear();
     this.lastFill.clear();
+    this.unmuteAi();
 
     const socket = this.ws;
     this.ws = undefined;
@@ -1177,7 +1512,10 @@ export class GeminiLiveService implements OnDestroy {
     let lastError: unknown;
     for (let i = 0; i < attempts.length; i++) {
       try {
-        return await navigator.mediaDevices.getUserMedia(attempts[i]);
+        const s = await navigator.mediaDevices.getUserMedia(attempts[i]);
+        // Echo cancellation kharach chalu ahe ka te tapasnyasathi (dev only).
+        this.log('AUDIO', 'Mic settings', { ...(s.getAudioTracks()[0]?.getSettings() ?? {}) });
+        return s;
       } catch (e) {
         lastError = e;
         const err = e as { name?: string; message?: string };
@@ -1213,8 +1551,6 @@ export class GeminiLiveService implements OnDestroy {
 
   private async handleToolCall(socket: WebSocket, call: GeminiToolCall): Promise<void> {
     const key = call.id ? `${this.epoch}:${call.id}` : undefined;
-
-
 
     if (key) {
       const cached = this.toolResults.get(key);
@@ -1272,6 +1608,7 @@ export class GeminiLiveService implements OnDestroy {
     if (key && this.toolSentOn.get(key) === socket) {
       return; // already answered on this socket (duplicate server message)
     }
+    this.applyQuietPolicy(response);
     const sent = this.sendJson(socket, {
       toolResponse: { functionResponses: [response] }
     });
@@ -1286,16 +1623,45 @@ export class GeminiLiveService implements OnDestroy {
     const id = call.id ?? `${call.name}-${Date.now()}`;
     const name = call.name;
 
-    if (!isToolName(name)) {
+    const policy = this.profile.policy[name];
+    if (!policy) {
       return this.makeResponse(id, name, { ok: false, problems: ['Unknown action.'] });
     }
 
-    const policy = TOOL_POLICY[name];
-
-    const { args, rejected } = sanitizeArgs(name, call.args ?? {});
-    const rejectedProblems = rejected.map(k => `${FIELD_LABEL[k] ?? k} invalid.`);
+    const schema = this.profile.sanitizers[name] ?? {};
+    const labels = this.profile.labels ?? {};
+    const { args, rejected } = sanitizeArgs(schema, name, call.args ?? {});
+    const rejectedProblems = rejected.map(k => `${labels[k] ?? k} invalid.`);
 
     this.log('TOOL', `CALL ${name}`, { fields: Object.keys(args), rejected });
+    if (
+      isDevMode() &&
+      (args['removeTests'] || args['removePackages'] || args['removeItems'] || args['clearAll'] ||
+        rejected.some(k => k.startsWith('remove') || k === 'clearAll'))
+    ) {
+      // Dev only: AI ne remove sathi kay pathvle te baghnyasathi (test/package cha naav, patient data nahi)
+      console.debug('[VOICE] remove from AI:', JSON.stringify({
+        tests: call.args?.['removeTests'],
+        packages: call.args?.['removePackages'],
+        items: call.args?.['removeItems'],
+        clearAll: call.args?.['clearAll']
+      }));
+    }
+
+    if (
+      REQUIRE_REMOVE_INTENT &&
+      name === 'fill_booking' &&
+      (args['removeTests'] || args['removePackages'] || args['removeItems'] || args['clearAll'])
+    ) {
+      const fresh = performance.now() - this.recentUserAt < REMOVE_INTENT_WINDOW_MS;
+      if (!(fresh && REMOVE_INTENT.test(this.recentUser))) {
+        delete args['removeTests'];
+        delete args['removePackages'];
+        delete args['removeItems'];
+        delete args['clearAll'];
+        this.log('TOOL', 'Remove blocked: user did not ask');
+      }
+    }
 
     if (name === 'fill_booking') {
       for (const k of this.DEDUPE_KEYS) {
@@ -1309,14 +1675,10 @@ export class GeminiLiveService implements OnDestroy {
       return this.makeResponse(id, name, { ok: false, problems: rejectedProblems }, policy);
     }
 
-    // if (name === 'fill_booking' && Object.keys(args).length === 0) {
-    //   return this.makeResponse(id, name, { ok: true, noop: true }, policy);
-    // }
-
     if (name === 'fill_booking' && Object.keys(args).length === 0) {
       return this.makeResponse(
         id, name,
-        { ok: true, noop: true, next: 'Already filled. Do NOT send it again. Stay silent until the user says something new.' },
+        { ok: true, noop: true, next: 'Already filled. Do not send it again.' },
         policy
       );
     }
@@ -1324,7 +1686,6 @@ export class GeminiLiveService implements OnDestroy {
     if (name === 'submit_booking' && this.submitInFlight) {
       return this.makeResponse(id, name, { ok: false, problems: ['Save in progress.'] }, policy);
     }
-
 
     const run = (): Promise<VoiceToolResult> => this.invoke(name, args, policy);
 
@@ -1361,13 +1722,14 @@ export class GeminiLiveService implements OnDestroy {
     const speak = result.ok === false || (result.problems?.length ?? 0) > 0;
     const response: Record<string, unknown> = { ...result };
     if (NON_BLOCKING_TOOLS && policy?.nonBlocking) {
+      // WHEN_IDLE = model problem bolel; SILENT = kahich bolnar nahi
       response['scheduling'] = speak ? 'INTERRUPT' : 'SILENT';
     }
     return { id, name, response };
   }
 
   private async invoke(
-    name: ToolName,
+    name: string,
     args: Record<string, unknown>,
     policy: ToolPolicy
   ): Promise<VoiceToolResult> {
@@ -1377,7 +1739,7 @@ export class GeminiLiveService implements OnDestroy {
     }
 
     const TIMED_OUT = Symbol('timeout');
-    const work = Promise.resolve().then(() => handler(name, args));
+    const work = Promise.resolve().then(() => this.zone.run(() => handler(name, args)));
 
     if (name === 'submit_booking') {
       // Stays true until the real save settles, even if we time out first.
@@ -1419,7 +1781,7 @@ export class GeminiLiveService implements OnDestroy {
       return;
     }
     this.micStarted = true;
-    this.startMic();
+    this.zone.runOutsideAngular(() => this.startMic());
   }
 
   private startMic(): void {
@@ -1433,7 +1795,8 @@ export class GeminiLiveService implements OnDestroy {
     this.inputMute.gain.value = 0;
 
     this.inputWorklet.port.onmessage = (event: MessageEvent) => {
-      if (this.halfDuplex && this.speaking) {
+      // Half duplex: AI bolat astana ani tyanantar thoda vel (echo tail) mic chunks pathvu naka.
+      if (this.halfDuplex && (this.speaking || performance.now() < this.mutedUntil)) {
         return;
       }
 
@@ -1456,7 +1819,8 @@ export class GeminiLiveService implements OnDestroy {
     this.inputWorklet.connect(this.inputMute);
     this.inputMute.connect(this.inCtx.destination);
 
-    this.state$.next('listening');
+    // tryStartMic() fakt `ready && audioReady` astana call hoto, mhanun ithe listening barobar ahe.
+    this.emitState('listening');
   }
 
   private sendAudio(socket: WebSocket, base64: string): void {
@@ -1472,6 +1836,9 @@ export class GeminiLiveService implements OnDestroy {
     if (!ctx || !this.isActive()) {
       return;
     }
+    if (this.aiMuted) {
+      return;   // faltu bolne drop
+    }
 
     try {
       const bin = atob(b64);
@@ -1480,19 +1847,52 @@ export class GeminiLiveService implements OnDestroy {
         return;
       }
 
-      const buffer = ctx.createBuffer(1, n, 24000);
-      const channel = buffer.getChannelData(0);
+      // Pahila AI audio chunk aala: watchdog shant.
+      if (!this.heardAnything) {
+        this.heardAnything = true;
+        this.clearGreetTimers();
+      }
+
+      // Context suspended asel tar audio vajnar nahi, mhanun ithe pan resume.
+      if (ctx.state === 'suspended') {
+        ctx.resume().catch(() => undefined);
+      }
+
+      const srcRate = 24000;
+      const outRate = ctx.sampleRate; // jo rate WebView ne pratyaksh dila toch vapra
+      const outLen = Math.max(1, Math.round((n * outRate) / srcRate));
+
+      // PCM16 (little endian) -> float
+      const pcm = new Float32Array(n);
       for (let i = 0; i < n; i++) {
         let s = (bin.charCodeAt(2 * i + 1) << 8) | bin.charCodeAt(2 * i);
         if (s >= 0x8000) {
           s -= 0x10000;
         }
-        channel[i] = s / 32768;
+        pcm[i] = s / 32768;
+      }
+
+      const buffer = ctx.createBuffer(1, outLen, outRate);
+      const channel = buffer.getChannelData(0);
+
+      if (outRate === srcRate) {
+        channel.set(pcm);
+      } else {
+        // linear interpolation: 24 kHz -> context rate
+        const step = srcRate / outRate;
+        for (let i = 0; i < outLen; i++) {
+          const pos = i * step;
+          const i0 = Math.min(Math.floor(pos), n - 1);
+          const i1 = Math.min(i0 + 1, n - 1);
+          const frac = pos - i0;
+          channel[i] = pcm[i0] * (1 - frac) + pcm[i1] * frac;
+        }
       }
 
       const now = ctx.currentTime;
       if (this.nextTime < now + 0.01) {
-        this.nextTime = now + 0.03; // underrun: restart with a tiny lead
+        // Queue rikama / underrun: network jitter absorb karnyasathi jast buffer (250 ms).
+        this.nextTime = now + PLAYBACK_JITTER_S;
       }
       if (this.nextTime - now > MAX_QUEUED_PLAYBACK_S) {
         return; // runaway queue protection
@@ -1507,7 +1907,7 @@ export class GeminiLiveService implements OnDestroy {
       this.sources.add(source);
       this.speaking = true;
       if (this.state$.value === 'listening') {
-        this.state$.next('speaking');
+        this.emitState('speaking');
       }
 
       source.onended = () => {
@@ -1519,8 +1919,9 @@ export class GeminiLiveService implements OnDestroy {
         }
         if (this.sources.size === 0) {
           this.speaking = false;
+          this.mutedUntil = performance.now() + ECHO_TAIL_MS; // shevatcha echo tail
           if (this.state$.value === 'speaking') {
-            this.state$.next('listening');
+            this.emitState('listening');
           }
         }
       };
@@ -1546,9 +1947,10 @@ export class GeminiLiveService implements OnDestroy {
     this.sources.clear();
     this.nextTime = 0;
     this.speaking = false;
+    this.mutedUntil = 0; // interrupt: user bolat ahe, mic lagech chalu
 
     if (this.state$.value === 'speaking') {
-      this.state$.next('listening');
+      this.emitState('listening');
     }
   }
 
@@ -1568,17 +1970,26 @@ export class GeminiLiveService implements OnDestroy {
     if (!raw) {
       return;
     }
+        if (role === 'out' && SILENCE_NOISE.test(raw)) {
+      return;
+    }
 
     if (role !== this.lastRole) {
       this.tBuf = '';
       this.lastRole = role;
+      if (role === 'in') {
+        this.recentUser = ''; // navin user utterance
+      }
+    }
+
+    if (role === 'in') {
+      this.recentUser = (this.recentUser + raw).slice(-300);
+      this.recentUserAt = performance.now();
     }
 
     // Keep the raw text (including leading spaces Gemini sends on chunks).
     this.tBuf = (this.tBuf + raw).slice(-600);
-
-
-
+    this.emitMessage({ role: role === 'in' ? 'user' : 'ai', text: raw });
   }
 
   /* ------------------------------- misc ------------------------------- */

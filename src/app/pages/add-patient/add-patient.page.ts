@@ -12,22 +12,12 @@ import { GeminiLiveService } from '../../core/services/gemini-live';
 import { secrets } from '../../../environments/secrets'
 import { micOutline, stopCircleOutline } from 'ionicons/icons';
 
-import { firstValueFrom, Observable, timeout } from 'rxjs';
+import { Subscription, firstValueFrom, Observable, timeout } from 'rxjs';
 import {
-  IonHeader,
-  IonToolbar,
-  IonTitle,
-  IonContent,
-  IonButtons,
-  IonBackButton,
-  IonButton,
-  IonIcon,
-  IonInput,
-  IonSelect,
-  IonSelectOption,
-  IonCheckbox,
-  IonModal,
-  IonFooter
+  IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
+  IonButton, IonIcon, IonInput, IonSelect, IonSelectOption, IonCheckbox,
+  IonModal, IonFooter,
+  IonRefresher, IonRefresherContent
 } from '@ionic/angular/standalone';
 import {
   HostListener
@@ -99,6 +89,8 @@ interface ValidationIssue {
     IonCheckbox,
     IonModal,
     IonFooter,
+    IonRefresher,
+    IonRefresherContent,
   ]
 })
 export class AddPatientComponent {
@@ -119,6 +111,7 @@ export class AddPatientComponent {
   voiceState$ = this.voice.state$;
   voiceTranscript$ = this.voice.transcript$;
   private voiceConsentGiven = false;
+  private voiceErrSub?: Subscription;
   private voiceTestCache = new Map<number, any>();
 
   // booking save झाल्यावर true -> bottom bar (New Booking / Status / Print)
@@ -599,8 +592,20 @@ export class AddPatientComponent {
       'clipboard-outline': clipboardOutline,
       'mic-outline': micOutline,
       'stop-circle-outline': stopCircleOutline,
-
     });
+
+    // Voice che errors (mic denied, connection failed, greeting zali nahi) -> toast
+    this.voiceErrSub = this.voice.error$.subscribe(msg =>
+      this.ngZone.run(() => {
+        const isPermission = /permission|microphone/i.test(msg);
+        this.toastService.error(
+          'Voice Error',
+          isPermission
+            ? msg + ' Phone settings madhe Allow kara.'
+            : msg + ' Please pull down to refresh.'
+        );
+      })
+    );
   }
 
   @HostListener('document:click', ['$event'])
@@ -2731,15 +2736,18 @@ export class AddPatientComponent {
         return;
       }
 
+      const pkgName = String(pkg?.profileName || '');
       const pkgTestNames: string[] = (pkg?.tests || []).map((t: any) => t.name);
 
-      const removedTests = this.selectedTests.filter(
-        (t: any) => pkgTestNames.includes(t.name)
+      // Fakt tya package che tests: packageName ne ओळखा, naav ne nahi.
+      // Fallback: jar packageName set nasel, tar fakt package-test (standalone nahi) naav ne kadha.
+      const removedTests = this.selectedTests.filter((t: any) =>
+        t.packageName
+          ? t.packageName === pkgName
+          : false
       );
 
-      this.selectedTests = this.selectedTests.filter(
-        (t: any) => !pkgTestNames.includes(t.name)
-      );
+      this.selectedTests = this.selectedTests.filter((t: any) => !removedTests.includes(t));
 
       removedTests.forEach((t: any) => this.removeTestFromSampleGroup(t));
 
@@ -4250,7 +4258,6 @@ export class AddPatientComponent {
 
 
 
-
   // ============================================================
   // VOICE ASSISTANT
   // ============================================================
@@ -4291,32 +4298,28 @@ export class AddPatientComponent {
       this.voiceConsentGiven = true;
     }
 
-    // 3. Doctor list aadhich load kara
-    if (!this.doctors.length) {
-      try {
-        const res: any = await this.api(this.labApi.getDoctors());
-        this.doctors = this.extractDoctorsResponse(res)
-          .map((d: any) => this.normalizeDoctor(d))
-          .filter((d: any) => !!d);
-      } catch (e) {
-        console.warn('Doctor preload failed', e);
-      }
-    }
-
     this.clearPending();
 
-    // 4. Relay URL set kara + voice suru kara
+    // 3. Doctor list background madhe. Await nako, nahitar tap gesture tutto
+    //    ani speaker suspended rahto.
+    if (!this.doctors.length) {
+      this.api(this.labApi.getDoctors())
+        .then((res: any) => {
+          this.doctors = this.extractDoctorsResponse(res)
+            .map((d: any) => this.normalizeDoctor(d))
+            .filter((d: any) => !!d);
+        })
+        .catch(e => console.warn('Doctor preload failed', e));
+    }
+
+    // 4. Voice suru kara
     try {
       await this.voice.start((name, args) =>
         this.ngZone.run(() => this.runVoiceTool(name, args))
       );
     } catch (e: any) {
-      const msgs: Record<string, string> = {
-        NotAllowedError: 'Mic permission block ahe. Phone settings madhe Allow kara.',
-        NotFoundError: 'Mic sapadla nahi.',
-        NotReadableError: 'Mic dusrya app madhe chalu ahe.',
-      };
-      this.toastService.error('Voice Error', msgs[e?.name] ?? 'Voice connection problem.');
+      // Toast service che error$ madhun already yeto, double toast nako.
+      console.warn('Voice start failed', e?.name);
     }
   }
 
@@ -4336,20 +4339,87 @@ export class AddPatientComponent {
     });
   }
 
-  // Best match nivdto. User thambat nahi, mhanun ambiguous asel tari vicharat nahi.
-  // Score barabar asel tar chhota naav jinkto ("CBC" -> "CBC" ani "CBC with ESR" madhe pahila).
+  // "Wellness-1.6" / "wellness 1.6" / "Wellness 1.6" sagle same hotat
+  private compact(s: any): string {
+    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  }
+
+  // ---------------------------------------------------------------
+  // NEW: typo-tolerant helpers
+  // ---------------------------------------------------------------
+
+  /** Spelling var avlambun nahi: "Welllness 1.3" / "welness 1.3" / "Welleness 1.3" -> "wlnss13" */
+  private fkey(s: any): string {
+    return String(s ?? '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, '')
+      .replace(/([a-z])\1+/g, '$1')   // ll -> l
+      .replace(/[aeiouy]/g, '');      // vowels kadha (ee/oo/ye che farak jatat)
+  }
+
+  /** "Wellness 1.3" -> "1.3", "Vitamin B12" -> "12", number nasel tar "" */
+  private numsOf(s: any): string {
+    return (String(s ?? '').match(/\d+(?:\.\d+)*/g) || []).join('|');
+  }
+
+  private lev(a: string, b: string): number {
+    const dp: number[][] = Array.from({ length: a.length + 1 }, (_, i) => {
+      const row = new Array(b.length + 1).fill(0);
+      row[0] = i;
+      return row;
+    });
+    for (let j = 1; j <= b.length; j++) dp[0][j] = j;
+    for (let i = 1; i <= a.length; i++) {
+      for (let j = 1; j <= b.length; j++) {
+        dp[i][j] = Math.min(
+          dp[i - 1][j] + 1,
+          dp[i][j - 1] + 1,
+          dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)
+        );
+      }
+    }
+    return dp[a.length][b.length];
+  }
+
+  /**
+   * Spelling chuklela naav sathi. Number asel tar to exactly same pahije (1.3 != 1.2).
+   * Ek ch clear winner asel tarach pick karto, tie asel tar guess karat nahi.
+   */
+  private fuzzyPick<T>(items: T[], term: string, nameOf: (x: T) => string): T | null {
+    const fq = this.fkey(term);
+    if (fq.length < 4) return null;                  // CBC, HB, TSH sarkhe chhote naave guess karu naka
+    const qNums = this.numsOf(term);
+    const maxD = fq.length <= 8 ? 1 : 2;             // chhote naave: 1 chuk, motha: 2
+
+    const scored = items
+      .filter(x => this.numsOf(nameOf(x)) === qNums)
+      .map(x => ({ x, d: this.lev(this.fkey(nameOf(x)), fq) }))
+      .filter(r => r.d <= maxD)
+      .sort((a, b) => a.d - b.d);
+
+    if (!scored.length) return null;
+    if (scored.length > 1 && scored[1].d === scored[0].d) return null;   // tie = guess karu naka
+    return scored[0].x;
+  }
+
   private pickBest<T>(items: T[], q: string, nameOf: (x: T) => string): T | null {
-    const query = q.toLowerCase().trim();
-    if (!query) return null;
+    const qn = this.norm(q);          // "wellness 1 6"
+    const qc = this.compact(q);       // "wellness16"
+    if (!qc) return null;
+    const qTokens = qn.split(' ').filter(Boolean);
 
     const scored = items
       .map(x => {
-        const n = nameOf(x).toLowerCase();
+        const raw = nameOf(x);
+        const nn = this.norm(raw);
+        const nc = this.compact(raw);
+        const nTokens = nn.split(' ');
         let s = 0;
-        if (n === query) s = 100;
-        else if (n.startsWith(query)) s = 80;
-        else if (n.includes(query)) s = 40;
-        return { x, s, len: n.length };
+        if (nn === qn || nc === qc) s = 100;
+        else if (nn.startsWith(qn) || nc.startsWith(qc)) s = 80;
+        else if (nn.includes(qn) || nc.includes(qc)) s = 40;
+        else if (qTokens.every(t => nTokens.includes(t))) s = 30;
+        return { x, s, len: nc.length };
       })
       .filter(r => r.s > 0)
       .sort((a, b) => b.s - a.s || a.len - b.len);
@@ -4357,12 +4427,115 @@ export class AddPatientComponent {
     return scored.length ? scored[0].x : null;
   }
 
+  private lastItemPrefix = '';
+  private lastItemPrefixAt = 0;
+
+  /** "Wellness 1.2" / "wellness-1.2" -> "wellness12" (spaces, dash, dot ignore) */
+  private key(s: any): string {
+    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  private prefixOf(s: string): string {
+    return String(s).replace(/[\s\-–_.\d]+$/, '').trim();
+  }
+
+  /** "1.3" ekta pathavla tar adhicha prefix ("Wellness") laav (60 sec paryant). */
+  private expandBare(list: string[]): string[] {
+    return list.map(t => {
+      const s = String(t).trim();
+      if (/^\d+(\.\d+)?$/.test(s) && this.lastItemPrefix && Date.now() - this.lastItemPrefixAt < 60000) {
+        return `${this.lastItemPrefix} ${s}`;
+      }
+      const p = this.prefixOf(s);
+      if (p && p !== s) {
+        this.lastItemPrefix = p;
+        this.lastItemPrefixAt = Date.now();
+      }
+      return s;
+    });
+  }
+
+  private withCap<T>(p: Promise<T>, ms: number, fallback: T): Promise<T> {
+    return Promise.race([p, new Promise<T>(r => setTimeout(() => r(fallback), ms))]);
+  }
+
+  /** Number asleli naave ("Wellness 1.3"): backend long query handle karat nahi, mhanun short query ne merge karun client madhe match. */
+  private async searchLoose(
+    fetch: (q: string) => Promise<any[]>,
+    term: string,
+    nameOf: (x: any) => string
+  ): Promise<any[]> {
+    const words = term.split(/[\s\-–_.]+/).filter(Boolean);
+    const tries = [term, this.prefixOf(term), words[0], words[0]?.slice(0, 3)]
+      .filter((x, i, arr) => !!x && x.length >= 2 && arr.indexOf(x) === i);
+
+    // number nasel tar junya pramane: pahila non-empty result (jast search nako)
+    if (!/\d/.test(term)) {
+      for (const q of tries) {
+        const m = await this.withCap(fetch(q), 4000, [] as any[]);
+        if (m?.length) return m;
+      }
+      return [];
+    }
+
+    // number asel tar: merge karat jaa, exact naav sapadla ki thamb
+    const merged = new Map<string, any>();
+    for (const q of tries) {
+      const m = await this.withCap(fetch(q), 4000, [] as any[]);
+      for (const x of m || []) merged.set(this.key(nameOf(x)) || String(merged.size), x);
+      const list = [...merged.values()];
+      const { pick } = this.choosePkg(list, term, nameOf);
+      // CHANGED: typo-tolerant compare (Welllness 1.3 == Wellness 1.3)
+      if (pick && this.fkey(nameOf(pick)) === this.fkey(term)) return list;
+    }
+    return [...merged.values()];
+  }
+
+  private async findPackagesLoose(labId: any, fid: any, term: string): Promise<any[]> {
+    return this.searchLoose(
+      q => this.findPackages(labId, fid, q),
+      term,
+      (p: any) => String(p?.profileName || p?.profile_name || p?.name || '').trim()
+    );
+  }
+
+  private async findTestsLoose(labId: any, fid: any, term: string): Promise<any[]> {
+    return this.searchLoose(q => this.findTests(labId, fid, q), term, (t: any) => String(t?.name || '').trim());
+  }
+
+  /** Package nivad: exact -> spelling-exact -> ekach contains -> ambiguous -> pickBest -> fuzzy. */
+  private choosePkg(m: any[], term: string, nameOf: (x: any) => string): { pick?: any; ambiguous?: any[] } {
+    const q = this.key(term);
+    if (!q || !m?.length) return {};
+
+    const exact = m.filter(x => this.key(nameOf(x)) === q);
+    if (exact.length) return { pick: exact[0] };
+
+    // spelling chuklela pan same naav (Welllness 1.3, welness 1.3)
+    const fq = this.fkey(term);
+    const fexact = m.filter(x => this.fkey(nameOf(x)) === fq);
+    if (fexact.length === 1) return { pick: fexact[0] };
+    if (fexact.length > 1) return { ambiguous: fexact };
+
+    const contains = m.filter(x => this.key(nameOf(x)).includes(q));
+    if (contains.length === 1) return { pick: contains[0] };
+    if (contains.length > 1) return { ambiguous: contains };
+
+    const best = this.pickBest(m, term, nameOf);
+    if (best) return { pick: best };
+
+    const fuzzy = this.fuzzyPick(m, term, nameOf);
+    return fuzzy ? { pick: fuzzy } : {};
+  }
+
+  // ---------------------------------------------------------------
+  // runVoiceToolInner (updated)
+  // ---------------------------------------------------------------
   private async runVoiceToolInner(name: string, a: any): Promise<any> {
     switch (name) {
 
       // ==========================================================
       case 'fill_booking': {
-
 
         // Pahili booking save zali asel tar nava patient suru kara
         if (this.bookingSaved) {
@@ -4370,6 +4543,8 @@ export class AddPatientComponent {
           this.resetFormKeepingDoctorAndFranchise();
           this.step = 1;
           this.clearPending();
+          this.lastItemPrefix = '';
+          this.lastItemPrefixAt = 0;
         }
 
         const problems: string[] = [];
@@ -4381,17 +4556,24 @@ export class AddPatientComponent {
         let reqPkgs = this.uniq([...this.pendingPkgs, ...this.asArr(a.packages)]);
         this.clearPending();
 
+        reqTests = reqTests.map(t => this.TEST_ALIASES[this.norm(t)] ?? t);
+
+        // "1.3" ekta bolla tar adhicha prefix ("Wellness") laav
+        reqTests = this.expandBare(reqTests);
+        reqPkgs = this.expandBare(reqPkgs);
+
         // Bill madhe aadhich asleli test/package skip kara (search nako, toast nako)
         const inBillTest = (term: string) => {
-          const q = term.toLowerCase().trim();
+          const q = this.norm(term);
           return this.selectedTests.some((t: any) => {
-            const n = String(t.name).toLowerCase();
+            if (t.packageName) return false;   // package madhle tests gruhit dharu naka
+            const n = this.norm(t.name);
             return n === q || n.includes(q);
           });
         };
         const inBillPkg = (term: string) => {
-          const q = term.toLowerCase().trim();
-          return this.selectedPackages.some((p: any) => String(p.profileName).toLowerCase().includes(q));
+          const q = this.fkey(term);
+          return this.selectedPackages.some((p: any) => this.fkey(p.profileName) === q);
         };
         reqTests = reqTests.filter(t => !inBillTest(t));
         reqPkgs = reqPkgs.filter(p => !inBillPkg(p));
@@ -4404,8 +4586,8 @@ export class AddPatientComponent {
         // background madhe suru, ithe await nahi
         const searchP = wantsItems
           ? Promise.all([
-            Promise.all(reqTests.map(async tn => ({ tn, m: await this.findTests(labId, franchiseId, tn) }))),
-            Promise.all(reqPkgs.map(async pn => ({ pn, m: await this.findPackages(labId, pkgFranchiseId, pn) })))
+            Promise.all(reqTests.map(async tn => ({ tn, m: await this.findTestsLoose(labId, franchiseId, tn) }))),
+            Promise.all(reqPkgs.map(async pn => ({ pn, m: await this.findPackagesLoose(labId, pkgFranchiseId, pn) })))
           ])
           : null;
 
@@ -4511,35 +4693,6 @@ export class AddPatientComponent {
         if (typeof a.file === 'boolean') this.patient.file = a.file;
 
         // ---------- 2. Doctor ----------
-        // if (a.doctor) {
-        //   if (!this.doctors.length) {
-        //     try {
-        //       const res: any = await this.api(this.labApi.getDoctors());
-        //       this.doctors = this.extractDoctorsResponse(res)
-        //         .map((d: any) => this.normalizeDoctor(d))
-        //         .filter((d: any) => !!d);
-        //     } catch {
-        //       problems.push('Doctor list is slow. Say the doctor again.');
-        //     }
-        //   }
-
-        //   if (this.doctors.length) {
-        //     const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim();
-        //     const pick = this.pickBest(
-        //       this.doctors,
-        //       clean(String(a.doctor)),
-        //       (d: any) => clean(this.getDoctorName(d))
-        //     );
-
-        //     if (pick) {
-        //       this.selectDoctorFromSearch(pick);
-        //       done.push('doctor: ' + this.getDoctorName(pick));
-        //     } else {
-        //       problems.push('Doctor "' + a.doctor + '" not found. Say the name again.');
-        //     }
-        //   }
-        // }
-
         if (a.doctor) {
           if (!this.doctors.length) {
             try {
@@ -4569,9 +4722,8 @@ export class AddPatientComponent {
             }
           }
         }
+
         // ---------- 3. Step 1 -> Step 2 ----------
-
-
         if (this.step === 1 && wantsItems) {
           if (this.step1Missing().length === 0) {
             this.goNext();
@@ -4589,78 +4741,183 @@ export class AddPatientComponent {
           const pkgName = (p: any) =>
             String(p?.profileName || p?.profile_name || p?.name || '').trim();
 
-          const [testResults, pkgResults] = await searchP;
+          // poora search 6 sec madhe. Nahi tar items pending madhe, pudhchya call madhe parat try hotil
+          const timedOut = Symbol('timedOut');
+          const raced: any = await Promise.race([
+            searchP,
+            new Promise(r => setTimeout(() => r(timedOut), 6000))
+          ]);
 
-          // ----- add tests -----
+          let testResults: { tn: string; m: any[] }[] = [];
+          let pkgResults: { pn: string; m: any[] }[] = [];
+
+          if (raced === timedOut) {
+            this.pendingTests = reqTests;
+            this.pendingPkgs = reqPkgs;
+            problems.push('Search is slow. Say it again.');
+          } else {
+            [testResults, pkgResults] = raced;
+          }
+
+          // ----- add tests (test nahi sapadla tar package mhanun try) -----
           for (const { tn, m } of testResults) {
             if (this.failedSearches.delete(tn)) {
               problems.push(`Search for "${tn}" is slow. Say it again.`);
               continue;
             }
-            const pick = this.pickBest(m, tn, (t: any) => t.name);
+
+            // spelling chukla tari jas bolla tasa add
+            let pick = this.pickBest(m, tn, (t: any) => t.name);
 
             if (!pick) {
-              const alt = m.slice(0, 3).map((t: any) => t.name).join(', ');
-              problems.push(alt ? `"${tn}" not found. Try: ${alt}` : `"${tn}" not found`);
+              const fq = this.fkey(tn);
+              const hits = m.filter((t: any) => this.fkey(t.name) === fq);
+              if (hits.length === 1) pick = hits[0];
+            }
+            if (!pick) pick = this.fuzzyPick(m, tn, (t: any) => t.name);
+
+            if (!pick) {
+              // fallback la 3 sec cap
+              const pkgMatches = await this.withCap(
+                this.findPackagesLoose(labId, pkgFranchiseId, tn),
+                3000,
+                [] as any[]
+              );
+              const { pick: asPkg } = this.choosePkg(pkgMatches, tn, pkgName);
+              if (asPkg) {
+                const added = this.addPackageFromPick(asPkg);
+                if (added) done.push('package: ' + added);
+                continue;
+              }
+              // chukicha naav pudhcha item la prefix mhanun lagu naye
+              this.lastItemPrefix = '';
+              this.lastItemPrefixAt = 0;
+
+              // CHANGED: chhota message (AI 2 sec madhe bolun thambto, user chi correction hirvat nahi)
+              problems.push(`"${tn}" not found`);
               continue;
             }
-            if (this.selectedTests.some((t: any) => t.name === pick.name)) continue;
+            if (this.selectedTests.some((t: any) => !t.packageName && t.name === pick.name)) continue;
 
             this.addTest(pick);
-            done.push('test: ' + pick.name);
+            // spelling vegla asel tar user la disel ki kontya bolnyatun match jhala
+            done.push(
+              this.fkey(pick.name) === this.fkey(tn) && this.norm(pick.name) === this.norm(tn)
+                ? 'test: ' + pick.name
+                : `test: ${pick.name} (matched from "${tn}")`
+            );
           }
 
-          // ----- add packages -----
+          // ----- add packages (package nahi sapadla tar test mhanun try) -----
           for (const { pn, m } of pkgResults) {
-            const pick = this.pickBest(m, pn, (p: any) => pkgName(p));
+            if (this.voiceDebugEnabled()) {
+              console.debug('[VOICE] pkg search', pn, m.map(pkgName));
+            }
 
-            if (!pick) {
-              problems.push('package "' + pn + '" not found');
+            const { pick, ambiguous } = this.choosePkg(m, pn, pkgName);
+
+            if (ambiguous) {
+              // "wellness" ekta bolla: number yenar, prefix lakshat thev
+              this.lastItemPrefix = this.prefixOf(pn) || pn;
+              this.lastItemPrefixAt = Date.now();
+              // CHANGED: chhote messages
+              problems.push(
+                !/\d/.test(pn)
+                  ? `"${pn}" has several versions. Say the number.`
+                  : `"${pn}" is not clear. Say the full name.`
+              );
               continue;
             }
-            if (this.selectedPackages.some((p: any) => p.profileName === pkgName(pick))) continue;
 
-            const full = this.allPackages.find((p: any) => pkgName(p) === pkgName(pick)) || pick;
+            if (!pick) {
+              // fallback la 3 sec cap
+              const testMatches = await this.withCap(
+                this.findTests(labId, franchiseId, pn),
+                3000,
+                [] as any[]
+              );
+              this.failedSearches.delete(pn);
+              const asTest = this.pickBest(testMatches, pn, (t: any) => t.name);
+              if (asTest) {
+                if (!this.selectedTests.some((t: any) => !t.packageName && t.name === asTest.name)) {
+                  this.addTest(asTest);
+                  done.push('test: ' + asTest.name);
+                }
+                continue;
+              }
 
-            const realPrice = Number(pick?.profileAssignedPrice || 0) > 0
-              ? Number(pick.profileAssignedPrice)
-              : Number(pick?.total_amount || full?.total_amount || 0);
+              // chukicha naav pudhcha item la prefix mhanun lagu naye
+              this.lastItemPrefix = '';
+              this.lastItemPrefixAt = 0;
 
-            this.addPackage({
-              ...full,
-              profileAssignedPrice: realPrice,
-              b2b: realPrice,
-              assignedPrice: realPrice
-            });
-            done.push('package: ' + pkgName(pick));
+              // CHANGED: "Did you mean" list kadhli
+              problems.push(`package "${pn}" not found`);
+              continue;
+            }
+
+            const added = this.addPackageFromPick(pick);
+            if (added) done.push('package: ' + added);
           }
         }
 
         // ---------- 5. Remove items from bill ----------
-        for (const term of this.asArr(a.removeItems)) {
-          const q = String(term).toLowerCase().trim();
-          if (!q) continue;
+        const individualNow = () => this.selectedTests.filter((t: any) => !t.packageName);
+        const pkgName2 = (p: any) => String(p?.profileName || p?.name || '');
 
-          const individual = this.selectedTests.filter((t: any) => !t.packageName);
-          const ti = individual.findIndex((t: any) => String(t.name).toLowerCase().includes(q));
+        const removeReqs = [
+          ...this.asArr(a.removeTests).map((t: any) => ({ kind: 'test', t })),
+          ...this.asArr(a.removePackages).map((t: any) => ({ kind: 'pkg', t })),
+          ...this.asArr(a.removeItems).map((t: any) => ({ kind: 'any', t })),
+        ];
 
-          if (ti >= 0) {
-            const nm = individual[ti].name;
-            this.removeRow(ti);
-            done.push('removed: ' + nm);
-            continue;
+        if (a.clearAll === true) {
+          let guard = 50;
+          while ((individualNow().length + this.selectedPackages.length) > 0 && guard-- > 0) {
+            this.removeRow(0);
+          }
+          done.push('removed: everything');
+        } else if (removeReqs.length) {
+          // pahile sagle hits shodha, kahi remove karu naka
+          const hits: { kind: 'test' | 'pkg'; name: string }[] = [];
+
+          for (const r of removeReqs) {
+            let found = false;
+
+            if (r.kind !== 'pkg') {
+              const m = this.matchOne(individualNow(), String(r.t), (x: any) => x.name);
+              if (m.hit) { hits.push({ kind: 'test', name: (m.hit as any).name }); found = true; }
+              else if (m.ambiguous) {
+                problems.push(`"${r.t}" matches: ${m.ambiguous.slice(0, 3).map((x: any) => x.name).join(', ')}. Which one?`);
+                continue;
+              }
+            }
+            if (!found && r.kind !== 'test') {
+              const m = this.matchOne(this.selectedPackages, String(r.t), pkgName2);
+              if (m.hit) { hits.push({ kind: 'pkg', name: pkgName2(m.hit) }); found = true; }
+              else if (m.ambiguous) {
+                problems.push(`"${r.t}" matches: ${m.ambiguous.slice(0, 3).map(pkgName2).join(', ')}. Which one?`);
+                continue;
+              }
+            }
+            if (!found) problems.push(`"${r.t}" is not in the bill`);
           }
 
-          const pi = this.selectedPackages.findIndex(
-            (p: any) => String(p.profileName).toLowerCase().includes(q)
-          );
+          const uniqHits = hits.filter((h, i) => hits.findIndex(x => x.kind === h.kind && x.name === h.name) === i);
+          const total = individualNow().length + this.selectedPackages.length;
 
-          if (pi >= 0) {
-            const nm = this.selectedPackages[pi].profileName;
-            this.removeRow(individual.length + pi);
-            done.push('removed: ' + nm);
+          if (uniqHits.length > 0 && uniqHits.length >= total && total > 1) {
+            problems.push('That removes everything. Ask user to confirm.');
           } else {
-            problems.push('"' + term + '" is not in the bill');
+            for (const h of uniqHits) {
+              const ind = individualNow();
+              if (h.kind === 'test') {
+                const i = ind.findIndex((t: any) => t.name === h.name);
+                if (i >= 0) { this.removeRow(i); done.push('removed test: ' + h.name); }
+              } else {
+                const i = this.selectedPackages.findIndex((p: any) => pkgName2(p) === h.name);
+                if (i >= 0) { this.removeRow(ind.length + i); done.push('removed package: ' + h.name); }
+              }
+            }
           }
         }
 
@@ -4737,6 +4994,8 @@ export class AddPatientComponent {
         this.bookingSaved = false;
         this.resetFormKeepingDoctorAndFranchise();
         this.clearPending();
+        this.lastItemPrefix = '';
+        this.lastItemPrefixAt = 0;
         this.loadLastPatient();
         return { ok: true };
       }
@@ -4778,38 +5037,27 @@ export class AddPatientComponent {
     }
   }
 
-  // private async runVoiceTool(name: string, a: any): Promise<any> {
-  //   const t0 = performance.now();
-  //   const res = await this.runVoiceToolInner(name, a);
-  //   console.log('VOICE TOOL', name, Math.round(performance.now() - t0), 'ms');
-
-  //   if (!res || typeof res !== 'object') return res;
-
-  //   res.step = this.step;
-
-  //   // AI fakt problem astana kinva shevti bolto. Baki veli SILENT.
-  //   if (name === 'fill_booking') {
-  //     res.next = res.problems?.length
-  //       ? 'Tell the problems in max 8 words, then stop.'
-  //       : 'SILENT. Output nothing. Do not speak.';
-  //   } else if (name === 'submit_booking') {
-  //     res.next = res.ok ? 'Say only: Saved.' : 'Tell the error in max 8 words.';
-  //   } else if (name === 'go_to_step') {
-  //     res.next = res.ok ? 'SILENT. Output nothing.' : 'Tell the error in max 8 words.';
-  //   } else if (name === 'new_booking') {
-  //     res.next = 'SILENT. Output nothing.';
-  //   }
-
-  //   return res;
-  // }
 
 
 
-  private async runVoiceTool(name: string, a: any): Promise<any> {
+  private voiceChain: Promise<any> = Promise.resolve();
+
+  private runVoiceTool(name: string, a: any): Promise<any> {
+    const job = this.voiceChain.then(() => this.runVoiceToolSafe(name, a));
+    this.voiceChain = job.catch(() => null);   // ek fail jhala tari pudhche chalu rahtil
+    return job;
+  }
+
+  private async runVoiceToolSafe(name: string, a: any): Promise<any> {
     const start = performance.now();
 
     try {
-      const result = await this.runVoiceToolInner(name, a);
+      // 12 sec peksha jast kadhi atku naye
+      const result = await this.withCap<any>(
+        this.runVoiceToolInner(name, a),
+        12000,
+        { ok: true, filled: [], problems: ['It was slow. Say it again.'] }
+      );
 
       if (!result || typeof result !== 'object') {
         return result;
@@ -4821,19 +5069,22 @@ export class AddPatientComponent {
       };
 
       if (name === 'fill_booking') {
-        res.next = res.problems?.length
-          ? 'Tell the problems in max 8 words, then stop.'
-          : 'SILENT. Output nothing. Do not speak.';
+        res.cart = {
+          tests: this.selectedTests.filter((t: any) => !t.packageName).map((t: any) => t.name),
+          packages: this.selectedPackages.map((p: any) => p.profileName)
+        };
+        // CHANGED: success la kahi nahi (SILENT scheduling). Problem asel tarach chhota instruction.
+        if (res.problems?.length) {
+          res.next = 'Say the problem in max 6 words. Then listen. When the user corrects it, call fill_booking with only that item.';
+        }
       } else if (name === 'submit_booking') {
         res.next = res.ok
           ? 'Say only: Saved. Then forget this patient. Next details are a NEW patient.'
           : 'Tell the error in max 8 words.';
       } else if (name === 'go_to_step') {
-        res.next = res.ok
-          ? 'SILENT. Output nothing.'
-          : 'Tell the error in max 8 words.';
+        if (!res.ok) res.next = 'Tell the error in max 8 words.';
       } else if (name === 'new_booking') {
-        res.next = 'SILENT. Output nothing.';
+        // SILENT scheduling ne handle hoto
       } else if (name === 'get_summary') {
         res.next = 'Answer the user from the summary in max 8 words.';
       }
@@ -4845,7 +5096,6 @@ export class AddPatientComponent {
       if (this.voiceDebugEnabled()) {
         console.debug('[VOICE TOOL]', name, {
           elapsedMs: Math.round(performance.now() - start),
-
           result: JSON.stringify(res)
         });
       }
@@ -4867,8 +5117,24 @@ export class AddPatientComponent {
       };
     }
   }
+
   private voiceDebugEnabled(): boolean {
     return isDevMode();
+  }
+
+  handleRefresh(event: any): void {
+    // Voice reset
+    this.voice.stop();
+    this.clearPending();
+
+    // Data parat load. Form madhe bharlele patient details tasech rahtat.
+    this.loadDoctors();
+    this.loadLabs();
+    this.loadTests();
+    this.loadPackages();
+    this.loadLastPatient();
+
+    setTimeout(() => event.target.complete(), 800);
   }
 
   ionViewWillLeave() {
@@ -4876,7 +5142,10 @@ export class AddPatientComponent {
     this.clearPending();
   }
 
-  ngOnDestroy() { this.voice.stop(); }
+  ngOnDestroy() {
+    this.voice.stop();
+    this.voiceErrSub?.unsubscribe();
+  }
 
   private step1Missing(): string[] {
     const m: string[] = [];
@@ -4893,34 +5162,145 @@ export class AddPatientComponent {
   private findTests = async (labId: any, franchiseId: any, term: string): Promise<any[]> => {
     this.failedSearches.delete(term);
     const t0 = performance.now();
-    try {
-      const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, term, 0, 10), 8000);
-      console.log('[SEARCH] test', term, Math.round(performance.now() - t0), 'ms',
-        Array.isArray(res?.content) ? res.content.length : 0, 'results');
-      return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
-        id: t.testId,
-        sampleId: t.sample_type,
-        name: String(t.test_name || 'Unnamed Test').trim(),
-        b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
-        tat: t.tat || 'N/A',
-        mrp: t.test_price ?? 0,
-        dis: 0,
-        fluid: t.sampleTypeName || 'N/A',
-        sampleType: t.sampleTypeName || 'OTHER',
-        color: t.sampleColor || '#a855f7'
-      }));
-    } catch (e) {
-      console.warn('[SEARCH] test FAILED', term, Math.round(performance.now() - t0), 'ms', (e as any)?.name);
+
+    const one = async (q: string): Promise<any[] | null> => {
+      try {
+        const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, q, 0, 10), 8000);
+        return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
+          id: t.testId,
+          sampleId: t.sample_type,
+          name: String(t.test_name || 'Unnamed Test').trim(),
+          b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
+          tat: t.tat || 'N/A',
+          mrp: t.test_price ?? 0,
+          dis: 0,
+          fluid: t.sampleTypeName || 'N/A',
+          sampleType: t.sampleTypeName || 'OTHER',
+          color: t.sampleColor || '#a855f7'
+        }));
+      } catch {
+        return null;
+      }
+    };
+
+    const out = await this.searchWithVariants(term, one, (t: any) => this.compact(t.name));
+
+    if (out === null) {
+      console.warn('[SEARCH] test FAILED', term, Math.round(performance.now() - t0), 'ms');
       this.failedSearches.add(term);
       return [];
     }
+    console.log('[SEARCH] test', term, Math.round(performance.now() - t0), 'ms', out.length, 'results');
+    return out;
   };
+
 
   private findPackages = async (labId: any, franchiseId: any, term: string): Promise<any[]> => {
-    try {
-      const res: any = await this.api(this.labApi.searchProfiles(labId, franchiseId, term, 0, 10), 4000);
-      return Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
-    } catch { return []; }
+    const pName = (p: any) => String(p?.profileName || p?.profile_name || p?.name || '');
+    const qn = this.norm(term);
+    const qc = this.compact(term);
+    const fq = this.fkey(term);                       // NEW
+    const qTokens = qn.split(' ').filter(Boolean);
+
+    // 1) Aadhich load kelelya list madhun (manual search sarkhech, jast fast)
+    const local = this.allPackages
+      .filter((p: any) => {
+        const nn = this.norm(pName(p));
+        return this.compact(pName(p)).includes(qc)
+          || qTokens.every(t => nn.includes(t))
+          || (!!fq && this.fkey(pName(p)).includes(fq));   // CHANGED: typo-tolerant (Welllness 1.3)
+      })
+      .map((p: any) => {
+        const realPrice = Number(p?.profileAssignedPrice || 0) > 0
+          ? Number(p.profileAssignedPrice)
+          : Number(p?.total_amount || 0);
+        return { ...p, profileAssignedPrice: realPrice, b2b: realPrice, assignedPrice: realPrice };
+      });
+    if (local.length) return local;
+
+    // 2) List madhe nahi tar backend search
+    const one = async (q: string): Promise<any[] | null> => {
+      try {
+        const res: any = await this.api(this.labApi.searchProfiles(labId, franchiseId, q, 0, 10), 4000);
+        return Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+      } catch {
+        return null;
+      }
+    };
+    return (await this.searchWithVariants(term, one, (p: any) => this.compact(pName(p)))) ?? [];
   };
 
+
+
+  private norm(s: any): string {
+    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  // Backend search la "wellness 1.6" samajat nahi tar "wellness-1.6" ani pahila shabd pan try karto.
+  private async searchWithVariants<T>(
+    term: string,
+    call: (q: string) => Promise<T[] | null>,
+    keyOf: (x: T) => string
+  ): Promise<T[] | null> {
+    const t = String(term ?? '').trim();
+    const tokens = t.split(/[\s\-_/,]+/).filter(Boolean);
+
+    const variants = Array.from(new Set([t, tokens.join('-')].filter(Boolean)));
+    let results = await Promise.all(variants.map(v => call(v)));
+
+    if (results.every(r => r === null)) return null;          // sagle fail
+
+    let merged = results.flatMap(r => r ?? []);
+    if (!merged.length && tokens.length > 1) {                  // kahich nahi: pahila shabd
+      const r = await call(tokens[0]);
+      merged = r ?? [];
+    }
+
+    const seen = new Set<string>();
+    return merged.filter(x => {
+      const k = keyOf(x);
+      if (seen.has(k)) return false;
+      seen.add(k);
+      return true;
+    });
+  }
+
+  private addPackageFromPick(pick: any): string | null {
+    const nameOf = (p: any) => String(p?.profileName || p?.profile_name || p?.name || '').trim();
+    const name = nameOf(pick);
+    if (!name || this.selectedPackages.some((p: any) => p.profileName === name)) return null;
+
+    const full = this.allPackages.find((p: any) => nameOf(p) === name) || pick;
+    const realPrice = Number(pick?.profileAssignedPrice || 0) > 0
+      ? Number(pick.profileAssignedPrice)
+      : Number(pick?.total_amount || full?.total_amount || 0);
+
+    this.addPackage({
+      ...full,
+      profileAssignedPrice: realPrice,
+      b2b: realPrice,
+      assignedPrice: realPrice
+    });
+    return name;
+  }
+
+  // DB madhe jase naav ahet tase lihaa
+  private readonly TEST_ALIASES: Record<string, string> = {
+    'cbc': 'complete blood count',
+    'hb': 'hemoglobin',
+    'lft': 'liver function test',
+    'kft': 'kidney function test',
+  };
+
+  // exact match adhi, mag ekach partial match. Don-teen asel tar ambiguous.
+  private matchOne<T>(list: T[], term: string, nameOf: (x: T) => string): { hit?: T; ambiguous?: T[] } {
+    const q = this.norm(term);
+    if (!q) return {};
+    const exact = list.filter(x => this.norm(nameOf(x)) === q);
+    if (exact.length === 1) return { hit: exact[0] };
+    const part = list.filter(x => this.norm(nameOf(x)).includes(q));
+    if (part.length === 1) return { hit: part[0] };
+    if (part.length > 1) return { ambiguous: part };
+    return {};
+  }
 }

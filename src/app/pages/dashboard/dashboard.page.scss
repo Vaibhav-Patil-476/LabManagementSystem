@@ -287,6 +287,12 @@ ion-content.menu-content {
   position: relative;
   z-index: 1;
 }
+.status-badge {
+  &.badge-outsource {
+    background: var(--warning) !important;
+    color: #fff !important;
+  }
+}
 
 .ahp-status-dot {
   width: 5px;

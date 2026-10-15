@@ -26,7 +26,12 @@ const config: CapacitorConfig = {
       launchAutoHide: true,
       backgroundColor: '#ffffff',
       showSpinner: false
-    }
+    },
+    android: {
+    webContentsDebuggingEnabled: true
+  }
+
+    
   }
 };
 

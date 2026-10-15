@@ -172,32 +172,33 @@
 
 
 
-/* Optional: Full Width Refresh Button (जसे Image मध्ये Check Status आहे) */
-.refresh-btn-full {
-  --border-radius: 14px;
-  --color: #ffffff;
-  width: 100%;
-  height: 52px;
-  margin: 12px 0;
-  font-weight: 600;
-  font-size: 15px;
+  /* Optional: Full Width Refresh Button (जसे Image मध्ये Check Status आहे) */
+  .refresh-btn-full {
+    --border-radius: 14px;
+    --color: #ffffff;
+    width: 100%;
+    height: 52px;
+    margin: 12px 0;
+    font-weight: 600;
+    font-size: 15px;
 
-  &::part(native) {
-    background: var(--brand-gradient, linear-gradient(135deg, #2563eb, #1e40af));
-    color: #ffffff;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    border-radius: 14px;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
-    transition: all 0.2s ease;
+    &::part(native) {
+      background: var(--brand-gradient, linear-gradient(135deg, #2563eb, #1e40af));
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      border-radius: 14px;
+      box-shadow: 0 6px 18px rgba(37, 99, 235, 0.2);
+      transition: all 0.2s ease;
+    }
+
+    &:active::part(native) {
+      transform: scale(0.97);
+    }
   }
 
-  &:active::part(native) {
-    transform: scale(0.97);
-  }
-}
   :host ::ng-deep ion-select-popover,
   :host ::ng-deep ion-popover {
     --width: min(320px, 92vw);
@@ -309,6 +310,11 @@
 
     &.badge-snr {
       background: #6f42c1 !important;
+    }
+
+    &.badge-outsource {
+      background: var(--warning) !important;
+      color: #fff !important;
     }
 
     &.badge-ready {
@@ -3125,11 +3131,13 @@
     align-items: center;
     gap: 16px; // barcode block आणि buttons मध्ये जास्त breathing space
   }
+
   .bcard-actions .action-icon-btn {
     margin: 0;
     height: 38px;
     width: 38px;
   }
+
   // ✅ NEW — barcode left + buttons right, same row
   .bcard-barcode-inline-actions {
     flex: 1;
@@ -3140,11 +3148,13 @@
     margin-top: 0;
     padding-left: 4px; // ✅ card च्या डाव्या edge पासून breathing space
     padding-right: 4px;
+
     .barcode-line {
       padding: 7px 12px;
       font-size: 12px;
     }
   }
+
   .bcard-actions-buttons {
     display: flex;
     align-items: center;
@@ -3352,7 +3362,9 @@
       padding-left: 10px;
       text-align: right !important;
     }
-  }.bcs-row-with-tests {
+  }
+
+  .bcs-row-with-tests {
     display: flex;
     align-items: flex-start;
     justify-content: space-between;
@@ -3394,7 +3406,9 @@
       opacity: 0.7;
     }
 
-  }/* ============================================================
+  }
+
+  /* ============================================================
     TEST PREVIEW MODAL — small centered popup (eye icon)
   ============================================================ */
   .test-preview-popup {
@@ -3538,8 +3552,13 @@
   }
 
   @keyframes tl-spin {
-    from { transform: rotate(0deg); }
-    to   { transform: rotate(360deg); }
+    from {
+      transform: rotate(0deg);
+    }
+
+    to {
+      transform: rotate(360deg);
+    }
   }
 
   // ===================== PRINT BILL — standalone centered popup =====================
@@ -3606,7 +3625,10 @@
       align-items: center;
       justify-content: center;
 
-      ion-icon { color: #fff; font-size: 20px; }
+      ion-icon {
+        color: #fff;
+        font-size: 20px;
+      }
     }
   }
 
@@ -3671,20 +3693,57 @@
   }
 
   .attachment-row {
-    display: flex; align-items: center; gap: 10px;
-    margin-top: 10px; padding: 10px 12px;
-    background: #f4f4f5; border: 1px solid #e2e5ea; border-radius: 10px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 10px;
+    padding: 10px 12px;
+    background: #f4f4f5;
+    border: 1px solid #e2e5ea;
+    border-radius: 10px;
 
-    .att-index { font-weight: 700; color: #64748b; font-size: 13px; }
-    .att-type-icon { font-size: 22px; color: #2563eb; flex-shrink: 0; }
-    .att-name {
-      flex: 1; min-width: 0; font-size: 14px; font-weight: 600; color: #1e293b;
-      overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+    .att-index {
+      font-weight: 700;
+      color: #64748b;
+      font-size: 13px;
     }
-    .att-actions { display: flex; gap: 14px; flex-shrink: 0; }
-    .att-eye { font-size: 22px; color: #475569; cursor: pointer; }
-    .att-del { font-size: 22px; color: #ef4444; cursor: pointer; }
+
+    .att-type-icon {
+      font-size: 22px;
+      color: #2563eb;
+      flex-shrink: 0;
+    }
+
+    .att-name {
+      flex: 1;
+      min-width: 0;
+      font-size: 14px;
+      font-weight: 600;
+      color: #1e293b;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .att-actions {
+      display: flex;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .att-eye {
+      font-size: 22px;
+      color: #475569;
+      cursor: pointer;
+    }
+
+    .att-del {
+      font-size: 22px;
+      color: #ef4444;
+      cursor: pointer;
+    }
   }
+
   .btn-spinner {
     display: inline-block;
     width: 16px;
@@ -3698,12 +3757,26 @@
   }
 
   @keyframes btn-spin {
-    to { transform: rotate(360deg); }
+    to {
+      transform: rotate(360deg);
+    }
   }
+
   .att-preview-body {
-    padding: 12px; text-align: center;
-    img { max-width: 100%; max-height: 70vh; border-radius: 8px; }
-    iframe { width: 100%; height: 70vh; border: 0; }
+    padding: 12px;
+    text-align: center;
+
+    img {
+      max-width: 100%;
+      max-height: 70vh;
+      border-radius: 8px;
+    }
+
+    iframe {
+      width: 100%;
+      height: 70vh;
+      border: 0;
+    }
   }
 
   .refresh-field-wrap {
@@ -3725,6 +3798,7 @@
       display: none; // mobile वर जागा वाचवायला लपवा
     }
   }
+
   /* ---------- button styel strat  ---------- */
   /* =====================================================================
     DOWNLOAD REPORT MODAL — buttons left/right + red X
@@ -3745,7 +3819,7 @@
     min-width: 0;
     /* HTML madhla inline style="margin-top:10px" kadhto */
     margin: 0 !important;
-  height: 36px !important;
+    height: 36px !important;
     --padding-start: 8px;
     --padding-end: 8px;
     font-size: 13px;
@@ -3806,7 +3880,7 @@
   }
 
   /* ---------- 3. Buttons: transparent + blue border only ---------- */
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row>ion-button {
     flex: 1 1 0 !important;
     width: auto !important;
     min-width: 0 !important;
@@ -3836,12 +3910,12 @@
   }
 
   /* Icon + text ekatra madhyam madhe */
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button::part(native) {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row>ion-button::part(native) {
     justify-content: center;
   }
 
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button ion-icon,
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row > ion-button ion-spinner {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row>ion-button ion-icon,
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.download-btn-row>ion-button ion-spinner {
     margin: 0 6px 0 0 !important;
     font-size: 17px;
     color: var(--app-primary);
@@ -3897,7 +3971,7 @@
     Border/text cha color badalayla: --rn-accent
       blue (default): var(--app-primary)
       red:            var(--app-danger)                                   */
-  ::ng-deep ion-modal.report-not-ready-modal .printbill-modal-body > ion-button.danger-btn {
+  ::ng-deep ion-modal.report-not-ready-modal .printbill-modal-body>ion-button.danger-btn {
     --rn-accent: var(--app-primary);
 
     --background: transparent !important;
@@ -3920,21 +3994,25 @@
   }
 
   /* Page scss ne ::part(native) war direct red gradient dila aahe — to kadha */
-  ::ng-deep ion-modal.report-not-ready-modal .printbill-modal-body > ion-button.danger-btn::part(native) {
+  ::ng-deep ion-modal.report-not-ready-modal .printbill-modal-body>ion-button.danger-btn::part(native) {
     background: transparent !important;
     color: var(--app-primary) !important;
     box-shadow: none !important;
     border: 2px solid var(--app-primary) !important;
   }
+
   ion-button.refresh-btn {
-  
+
     height: 36px !important;
     align-self: flex-end;
     --border-radius: 10px !important;
     --padding-start: 0;
     --padding-end: 0;
   }
-  ion-button.refresh-btn ion-icon { font-size: 18px; }
+
+  ion-button.refresh-btn ion-icon {
+    font-size: 18px;
+  }
 
   /* =====================================================================
     1) TEST PREVIEW MODAL (eye icon) — X button red
@@ -3973,8 +4051,11 @@
     color: #ffffff !important;
     font-size: 20px !important;
   }
+
   // Partially Complete: inactive (dot + count)
-  .tab-dot.badge-partial { background: #BD526F; }
+  .tab-dot.badge-partial {
+    background: #BD526F;
+  }
 
   .tab-count.badge-partial {
     background: #BD526F;
@@ -3985,10 +4066,14 @@
   .status-tab.active.active-partial {
     background: #BD526F;
     border-color: #BD526F;
-    
-    .tab-label { color: #fff; }
 
-    .tab-dot.badge-partial { background: #fff; }
+    .tab-label {
+      color: #fff;
+    }
+
+    .tab-dot.badge-partial {
+      background: #fff;
+    }
 
     .tab-count.badge-partial {
       background: rgba(255, 255, 255, 0.28);
@@ -3997,7 +4082,7 @@
   }
 
   /* ---------- 2. Print Bill buttons: transparent + fakta blue border ---------- */
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body>ion-button.printbill-btn-slim {
     --background: transparent !important;
     --background-hover: rgba(var(--app-primary-rgb), 0.08) !important;
     --background-activated: rgba(var(--app-primary-rgb), 0.14) !important;
@@ -4010,15 +4095,16 @@
     --box-shadow: none !important;
 
     box-shadow: none !important;
-    height: 40px  !important;
-    text-transform: none !important;   /* UPPERCASE band */
+    height: 40px !important;
+    text-transform: none !important;
+    /* UPPERCASE band */
     font-size: 14px;
     font-weight: 700;
     letter-spacing: 0.2px;
   }
 
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim ion-icon,
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body > ion-button.printbill-btn-slim ion-spinner {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body>ion-button.printbill-btn-slim ion-icon,
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body>ion-button.printbill-btn-slim ion-spinner {
     color: var(--app-primary);
     font-size: 18px;
   }
@@ -4047,7 +4133,9 @@
   ::ng-deep ion-modal.printbill-modal .printbill-modal-body .input-wrap:focus-within {
     border-color: var(--app-primary);
     box-shadow: 0 0 0 3px rgba(var(--app-primary-rgb), 0.12);
-  }/* =====================================================================
+  }
+
+  /* =====================================================================
     PRINT BILL MODAL — buttons LEFT + RIGHT (2 column), size kami
     Page scss chya SHEVTI paste kara (test-preview-print-bill.scss chya khali).
 
@@ -4072,16 +4160,17 @@
   }
 
   /* Price Type + Custom Amount wali row: purna width */
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > div:first-child {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid>div:first-child {
     grid-column: 1 / -1;
     margin-bottom: 6px !important;
   }
 
   /* ---------- 3. Buttons: chhote, nowrap, icon + text madhyam madhe ---------- */
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid>ion-button.printbill-btn-slim {
     width: auto !important;
     min-width: 0 !important;
-    margin: 0 !important;             /* HTML madhla inline margin-top:10px kadhto */
+    margin: 0 !important;
+    /* HTML madhla inline margin-top:10px kadhto */
     height: 48px;
     --padding-start: 4px;
     --padding-end: 4px;
@@ -4089,23 +4178,24 @@
     font-weight: 700 !important;
     letter-spacing: 0 !important;
     white-space: nowrap;
-    order: 3;                         /* F buttons khali */
+    order: 3;
+    /* F buttons khali */
   }
 
   /* Order: With | Without  (row 1),  F With | F Without (row 2) */
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim:first-of-type {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid>ion-button.printbill-btn-slim:first-of-type {
     order: 1;
   }
 
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim:last-of-type {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid>ion-button.printbill-btn-slim:last-of-type {
     order: 2;
   }
 
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim::part(native) {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid>ion-button.printbill-btn-slim::part(native) {
     justify-content: center;
   }
 
-  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid > ion-button.printbill-btn-slim ion-icon {
+  ::ng-deep ion-modal.printbill-modal .printbill-modal-body.print-bill-grid>ion-button.printbill-btn-slim ion-icon {
     margin: 0 5px 0 0 !important;
     font-size: 16px;
   }
@@ -4119,7 +4209,7 @@
     }
 
     .new-booking-btn {
-      margin: 0 0 0 auto;   // <- right la push karto
+      margin: 0 0 0 auto; // <- right la push karto
       height: 36px;
       font-weight: 700;
       font-size: 13px;
@@ -4153,7 +4243,10 @@
       background: linear-gradient(135deg, #f5b85c, #e0a040);
       box-shadow: 0 6px 14px rgba(224, 160, 64, 0.35);
 
-      ion-icon { font-size: 20px; color: #fff; }
+      ion-icon {
+        font-size: 20px;
+        color: #fff;
+      }
     }
 
     .lock-text {
@@ -4161,8 +4254,17 @@
       flex-direction: column;
       gap: 2px;
 
-      strong { font-size: 14px; font-weight: 800; color: #8a5a12; }
-      span   { font-size: 12px; color: #a7782f; line-height: 1.35; }
+      strong {
+        font-size: 14px;
+        font-weight: 800;
+        color: #8a5a12;
+      }
+
+      span {
+        font-size: 12px;
+        color: #a7782f;
+        line-height: 1.35;
+      }
     }
   }
 
@@ -4192,7 +4294,10 @@
       background: var(--app-gradient);
       box-shadow: 0 8px 18px rgba(var(--app-primary-rgb), 0.3);
 
-      ion-icon { font-size: 22px; color: #fff; }
+      ion-icon {
+        font-size: 22px;
+        color: #fff;
+      }
     }
 
     .ro-name {
@@ -4239,7 +4344,9 @@
         word-break: break-word;
       }
 
-      &.ro-full { grid-column: 1 / -1; }
+      &.ro-full {
+        grid-column: 1 / -1;
+      }
     }
   }
 
@@ -4251,12 +4358,12 @@
     background: var(--card-bg);
     border: 1px solid var(--card-border);
     box-shadow: 0 8px 22px rgba(var(--app-primary-dark-rgb), 0.08);
-    overflow: hidden;                 // horizontal scroll yeu naye
+    overflow: hidden; // horizontal scroll yeu naye
 
     .ro-head {
       display: flex;
       align-items: center;
-      flex-wrap: wrap;                // chhotya screen var badge khali jail
+      flex-wrap: wrap; // chhotya screen var badge khali jail
       gap: 10px;
       padding-bottom: 12px;
       margin-bottom: 12px;
@@ -4273,7 +4380,10 @@
       background: var(--app-gradient);
       box-shadow: 0 6px 14px rgba(var(--app-primary-rgb), 0.28);
 
-      ion-icon { font-size: 20px; color: #fff; }
+      ion-icon {
+        font-size: 20px;
+        color: #fff;
+      }
     }
 
     .ro-name {
@@ -4298,7 +4408,9 @@
       background: var(--app-warning-bg);
       border: 1px solid var(--app-warning);
 
-      ion-icon { font-size: 15px; }
+      ion-icon {
+        font-size: 15px;
+      }
     }
 
     // ----- TABLE -----
@@ -4310,10 +4422,12 @@
 
     .ro-row {
       display: grid;
-      grid-template-columns: 40% 60%;   // label | value
+      grid-template-columns: 40% 60%; // label | value
       border-bottom: 1px solid var(--card-border);
 
-      &:last-child { border-bottom: none; }
+      &:last-child {
+        border-bottom: none;
+      }
     }
 
     .ro-label,
@@ -4321,8 +4435,8 @@
       padding: 11px 12px;
       font-size: 13px;
       line-height: 1.4;
-      min-width: 0;                    // grid madhe overflow thambvto
-      word-break: break-word;          // lamb text wrap hoto, scroll nahi
+      min-width: 0; // grid madhe overflow thambvto
+      word-break: break-word; // lamb text wrap hoto, scroll nahi
     }
 
     .ro-label {
@@ -4336,7 +4450,9 @@
       font-weight: 500;
       color: var(--text-primary);
 
-      &.strong { font-weight: 800; }
+      &.strong {
+        font-weight: 800;
+      }
 
       &.mono {
         font-family: var(--font-mono);
@@ -4344,7 +4460,9 @@
         letter-spacing: 0.2px;
       }
     }
-  }.summary-bar {
+  }
+
+  .summary-bar {
     .summary-top-row {
       display: flex;
       align-items: center;
@@ -4388,7 +4506,9 @@
         font-size: 18px;
       }
     }
-  }/* =====================================================================
+  }
+
+  /* =====================================================================
     EDIT / VIEW PATIENT — PREMIUM UI (scoped to .ep-modal)
     Primary: #1976d2 (local only, app teal theme untouched)
   ===================================================================== */
@@ -4454,10 +4574,15 @@
       background: linear-gradient(135deg, #2a86e0, #1565c0);
       box-shadow: 0 6px 14px rgba(25, 118, 210, 0.28);
 
-      ion-icon { font-size: 21px; color: #fff; }
+      ion-icon {
+        font-size: 21px;
+        color: #fff;
+      }
     }
 
-    .ep-summary-text { min-width: 0; }
+    .ep-summary-text {
+      min-width: 0;
+    }
 
     .ep-summary-name {
       font-size: 15px;
@@ -4483,7 +4608,7 @@
       border-radius: 18px;
       padding: 16px 16px 18px;
       box-shadow: 0 1px 2px rgba(22, 38, 58, 0.04), 0 8px 24px -14px rgba(22, 38, 58, 0.12);
-      overflow: visible;           // lab suggestion dropdown clip hou naye
+      overflow: visible; // lab suggestion dropdown clip hou naye
     }
 
     .ep-section-head {
@@ -4503,7 +4628,10 @@
       place-items: center;
       background: var(--ep-primary-soft);
 
-      ion-icon { font-size: 16px; color: var(--ep-primary); }
+      ion-icon {
+        font-size: 16px;
+        color: var(--ep-primary);
+      }
     }
 
     .ep-section-title {
@@ -4521,7 +4649,9 @@
       gap: 14px 12px;
     }
 
-    .ep-full { grid-column: 1 / -1; }
+    .ep-full {
+      grid-column: 1 / -1;
+    }
 
     .ep-row-title {
       display: grid;
@@ -4535,7 +4665,9 @@
       gap: 10px;
     }
 
-    .ep-grid-3 { grid-template-columns: minmax(0, 1fr); }
+    .ep-grid-3 {
+      grid-template-columns: minmax(0, 1fr);
+    }
 
     // ---------- Field ----------
     .ep-field {
@@ -4545,7 +4677,9 @@
       min-width: 0;
     }
 
-    .ep-field-rel { position: relative; }
+    .ep-field-rel {
+      position: relative;
+    }
 
     .ep-label {
       font-size: 11px;
@@ -4569,7 +4703,10 @@
       outline: none;
       transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 
-      &::placeholder { color: #9aa9bd; font-weight: 500; }
+      &::placeholder {
+        color: #9aa9bd;
+        font-weight: 500;
+      }
 
       &:focus {
         border-color: var(--ep-primary);
@@ -4621,7 +4758,10 @@
       font-weight: 600;
       transition: border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
 
-      &::part(icon) { color: var(--ep-muted); opacity: 1; }
+      &::part(icon) {
+        color: var(--ep-muted);
+        opacity: 1;
+      }
 
       &.ion-focused,
       &.select-expanded {
@@ -4662,7 +4802,9 @@
       transition: background 0.12s ease;
 
       &:hover,
-      &:active { background: var(--ep-primary-soft); }
+      &:active {
+        background: var(--ep-primary-soft);
+      }
     }
 
     // ---------- Attachments ----------
@@ -4683,10 +4825,19 @@
       cursor: pointer;
       transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
 
-      ion-icon { font-size: 19px; color: var(--ep-primary); }
+      ion-icon {
+        font-size: 19px;
+        color: var(--ep-primary);
+      }
 
-      &:hover { border-color: var(--ep-primary); background: #dfeefb; }
-      &:active { transform: scale(0.98); }
+      &:hover {
+        border-color: var(--ep-primary);
+        background: #dfeefb;
+      }
+
+      &:active {
+        transform: scale(0.98);
+      }
     }
 
     .ep-att-list {
@@ -4719,7 +4870,11 @@
       font-weight: 800;
     }
 
-    .ep-att-type { flex-shrink: 0; font-size: 22px; color: var(--ep-primary); }
+    .ep-att-type {
+      flex-shrink: 0;
+      font-size: 22px;
+      color: var(--ep-primary);
+    }
 
     .ep-att-name {
       flex: 1;
@@ -4732,7 +4887,11 @@
       text-overflow: ellipsis;
     }
 
-    .ep-att-actions { display: flex; gap: 6px; flex-shrink: 0; }
+    .ep-att-actions {
+      display: flex;
+      gap: 6px;
+      flex-shrink: 0;
+    }
 
     .ep-att-eye,
     .ep-att-del {
@@ -4742,11 +4901,26 @@
       cursor: pointer;
       transition: background 0.12s ease, transform 0.1s ease;
 
-      &:active { transform: scale(0.9); }
+      &:active {
+        transform: scale(0.9);
+      }
     }
 
-    .ep-att-eye { color: #4a5b73; &:hover { background: #eef2f8; } }
-    .ep-att-del { color: var(--ep-danger); &:hover { background: #fdecec; } }
+    .ep-att-eye {
+      color: #4a5b73;
+
+      &:hover {
+        background: #eef2f8;
+      }
+    }
+
+    .ep-att-del {
+      color: var(--ep-danger);
+
+      &:hover {
+        background: #fdecec;
+      }
+    }
 
     // ---------- Read-only card (existing markup, blue accents) ----------
     .ro-card {
@@ -4758,11 +4932,27 @@
         box-shadow: 0 6px 14px rgba(25, 118, 210, 0.28);
       }
 
-      .ro-name { color: var(--ep-ink); }
-      .ro-table { border-color: var(--ep-line); }
-      .ro-row { border-color: var(--ep-line); }
-      .ro-label { background: #f6f9fd; border-color: var(--ep-line); color: var(--ep-muted); }
-      .ro-value { color: var(--ep-ink); }
+      .ro-name {
+        color: var(--ep-ink);
+      }
+
+      .ro-table {
+        border-color: var(--ep-line);
+      }
+
+      .ro-row {
+        border-color: var(--ep-line);
+      }
+
+      .ro-label {
+        background: #f6f9fd;
+        border-color: var(--ep-line);
+        color: var(--ep-muted);
+      }
+
+      .ro-value {
+        color: var(--ep-ink);
+      }
     }
 
     // ---------- Footer / primary action ----------
@@ -4803,17 +4993,34 @@
 
     // ---------- Tablet / large ----------
     @media (min-width: 600px) {
-      .ep-scroll { padding: 20px 22px 32px; }
-      .ep-grid-3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .ep-scroll {
+        padding: 20px 22px 32px;
+      }
+
+      .ep-grid-3 {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+      }
     }
 
     // ---------- Very small phones ----------
     @media (max-width: 360px) {
-      .ep-row-title { grid-template-columns: 96px minmax(0, 1fr); }
-      .ep-row-3 { gap: 8px; }
-      .ep-select { font-size: 14px; --padding-start: 10px; --padding-end: 8px; }
+      .ep-row-title {
+        grid-template-columns: 96px minmax(0, 1fr);
+      }
+
+      .ep-row-3 {
+        gap: 8px;
+      }
+
+      .ep-select {
+        font-size: 14px;
+        --padding-start: 10px;
+        --padding-end: 8px;
+      }
     }
-  }/* =====================================================================
+  }
+
+  /* =====================================================================
     BOOKING STATUS — PREMIUM (mockup sarkha) — HTML na badalta
     global.scss chya SHEVTI paste kara (premium-header.scss chya khali).
     Page scss madhe nahi, global madhech thev: tithe :root vapartat.
@@ -4824,6 +5031,7 @@
   :root:root ion-header:has(+ ion-content.booking-content .summary-bar) ion-toolbar {
     --background: var(--hdr-flat);
   }
+
   :root:root ion-header:has(+ ion-content.booking-content .summary-bar) ion-toolbar::part(background) {
     border-radius: 0;
   }
@@ -5008,35 +5216,39 @@
   :root:root:root:root:root:root ion-content.booking-content .summary-bar ion-button.new-booking-btn ion-icon {
     color: #fff !important;
     font-size: 18px;
-  }.delete-icon.disabled-icon {
-  opacity: 0.4;
-  cursor: not-allowed;
-  pointer-events: none;
-}.id-link {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  cursor: pointer;
-  -webkit-tap-highlight-color: transparent;
-  transition: opacity 0.15s ease;
-
-  &:active {
-    opacity: 0.7;
   }
-}
 
-.id-link-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  background: rgba(37, 99, 235, 0.1);
-  color: #2563eb;
-  flex-shrink: 0;
-
-  ion-icon {
-    font-size: 16px;
+  .delete-icon.disabled-icon {
+    opacity: 0.4;
+    cursor: not-allowed;
+    pointer-events: none;
   }
-}
+
+  .id-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    transition: opacity 0.15s ease;
+
+    &:active {
+      opacity: 0.7;
+    }
+  }
+
+  .id-link-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    border-radius: 8px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #2563eb;
+    flex-shrink: 0;
+
+    ion-icon {
+      font-size: 16px;
+    }
+  }

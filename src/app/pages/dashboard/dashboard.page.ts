@@ -5,6 +5,7 @@ import { Checkout } from 'capacitor-razorpay';
 import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
 import { PdfDownloadService } from "../../core/services/pdf-download";
+import { VoiceChatBoxComponent } from '../../core/services/voice-chat-box.component';
 
 
 import {
@@ -36,7 +37,7 @@ import {
   trashOutline, imageOutline, documentOutline, medkitOutline,
   // NEW — Services grid icons
   personAdd, checkmarkDoneCircle, cloudDownload, flask,
-  idCard, pulse, ban, storefront  
+  idCard, pulse, ban, storefront
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -91,7 +92,7 @@ const CLINICAL_NOTIF_DAILY_UPDATE_ID = 6;
     MatDatepickerModule, MatFormFieldModule, MatInputModule,
     StackedBarComponent, IonDatetime, IonButton, IonSearchbar,
     IonRefresher, IonRefresherContent,
-    MatDatepickerModule, MatFormFieldModule, MatInputModule,
+    MatDatepickerModule, MatFormFieldModule, MatInputModule, VoiceChatBoxComponent,
   ]
 })
 export class DashboardPage implements OnInit, OnDestroy {
@@ -361,7 +362,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       'trash-outline': trashOutline,
       'image-outline': imageOutline,
       'document-outline': documentOutline,
-      
+
 
       // NEW — Services grid icons
       'person-add': personAdd,
@@ -2383,6 +2384,13 @@ export class DashboardPage implements OnInit, OnDestroy {
     return !!test.isNewlyAdded || (test.status || '').toLowerCase() === 'snr';
   }
 
+  /** Sample/test/report outsource kela asel tar true (Booking Status page sarkhach) */
+  private isOutsourced(x: any): boolean {
+    if (!x || typeof x !== 'object') return false;
+    const v = String(x?.status || x?.sampleStatus || x?.reportStatus || '').toLowerCase();
+    return v.includes('outsource') || x?.isOutsource === true || x?.outsource === true || x?.outsourced === true;
+  }
+
   // ============================================================
   // BOOKING MAPPING / STATUS LABELS
   // ============================================================
@@ -2399,8 +2407,13 @@ export class DashboardPage implements OnInit, OnDestroy {
         (s: any) => Number(s.testId) === Number(t.testId)
       );
       const isSampleReceived = (matchedSample?.status || '').toUpperCase() === 'RECEIVED';
-      const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
 
+      const sampleOutsourced = this.isOutsourced(matchedSample) || this.isOutsourced(t);
+      const fromReport = statusByTestId.get(t.testId);
+      const reportSt = String(fromReport || t.reportStatus || '').toLowerCase();
+      const reportStillOpen = !reportSt || reportSt === 'pending';
+
+      const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
       const pkg = this.getPackageInfo(t);
 
       return {
@@ -2408,24 +2421,20 @@ export class DashboardPage implements OnInit, OnDestroy {
         testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
         testName: (t.testName || '').trim(),
 
-        // Admin always gets price2 (base rate) first, never the
-        // franchise-specific assignedPrice; Franchise/Staff gets the
-        // reverse. Keeps this in sync with searchTestsInline()'s rule so
-        // the Edit Test modal shows the same price as add-patient does.
         testPrice: this.isAdminRole
           ? (t.price2 ?? t.testPrice ?? t.test_price ?? 0)
           : (t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0),
         testMrp: t.testMrp ?? t.test_mrp ?? 0,
 
-        // package info — Edit Test madhe delete lock karnyasathi
         profileId: pkg.profileId,
         profileName: pkg.profileName,
         isPackageTest: pkg.isPackageTest,
 
         status: (t.cancelDate || t.deleted) ? 'cancel' :
-          (statusByTestId.get(t.testId) ||
-            (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||
-            defaultStatus)
+          (sampleOutsourced && reportStillOpen) ? 'outsource' :
+            (statusByTestId.get(t.testId) ||
+              (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||
+              defaultStatus),
       };
     });
 
@@ -2446,6 +2455,16 @@ export class DashboardPage implements OnInit, OnDestroy {
       });
     });
 
+    console.log('[DASH] outsource check', {
+      statuses: tests.map((t: any) => t.status),
+      samples: (raw.sampleAccessions || raw.samples || []).map((s: any) => ({
+        testId: s.testId,
+        status: s.status,
+        keys: Object.keys(s)
+      })),
+      testKeys: Object.keys((raw.bookingWithTestMappings || raw.tests || [])[0] || {})
+    });
+
     return {
       ...raw,
       tests,
@@ -2463,7 +2482,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (s === 'snr') return 'SNR';
     if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
     if (s.includes('complete') || s.includes('ready')) return 'COMPLETE';
-    if (s.includes('process') || s.includes('outsource') || s.includes('doctor approval')) return 'IN PROCESS';
+    if (s.includes('outsource')) return 'OUTSOURCE';
+    if (s.includes('process') || s.includes('doctor approval')) return 'IN PROCESS';
     return 'PENDING';
   }
 
@@ -2473,7 +2493,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (s === 'snr') return 'badge-snr';
     if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
     if (s.includes('complete') || s.includes('ready')) return 'badge-ready';
-    if (s.includes('process') || s.includes('outsource') || s.includes('doctor approval')) return 'badge-inprocess';
+    if (s.includes('outsource')) return 'badge-outsource';
+    if (s.includes('process') || s.includes('doctor approval')) return 'badge-inprocess';
     return 'badge-pending';
   }
 
@@ -3260,6 +3281,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.markCategorySeen('cancel');   // ✅ क्लिक करताच count 0 होतो
     this.goToPage('cancel-test');
   }
+
 
 
 }

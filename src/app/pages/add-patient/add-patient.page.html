@@ -64,16 +64,20 @@
 
   <ion-content class="booking-content">
 
+    <ion-refresher slot="fixed" (ionRefresh)="handleRefresh($event)">
+      <ion-refresher-content pullingText="Pull to refresh" refreshingText="Refreshing...">
+      </ion-refresher-content>
+    </ion-refresher>
+
     <ng-container *ngIf="voiceState$ | async as vs">
-  <div class="voice-strip" [class.open]="vs !== 'idle'" [attr.data-state]="vs"
-    role="status" aria-live="polite">
-    <div class="voice-strip-inner">
-      <span class="vs-dot"></span>
-      <b class="vs-state">{{ vs | titlecase }}</b>
-      <span class="vs-text" *ngIf="voiceTranscript$ | async as t">{{ t }}</span>
-    </div>
-  </div>
-</ng-container>
+      <div class="voice-strip" [class.open]="vs !== 'idle'" [attr.data-state]="vs" role="status" aria-live="polite">
+        <div class="voice-strip-inner">
+          <span class="vs-dot"></span>
+          <b class="vs-state">{{ vs | titlecase }}</b>
+          <span class="vs-text" *ngIf="voiceTranscript$ | async as t">{{ t }}</span>
+        </div>
+      </div>
+    </ng-container>
 
 
 

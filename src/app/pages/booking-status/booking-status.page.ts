@@ -729,7 +729,18 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
       const sampleStatus = (matchedSample?.status || '').toUpperCase();
       const isSampleReceived = sampleStatus === 'RECEIVED';
-      const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
+      const isOutsourced = (x: any): boolean => {
+        const v = String(x?.status || x?.sampleStatus || x?.reportStatus || '').toLowerCase();
+        return v.includes('outsource') || x?.isOutsource === true || x?.outsource === true || x?.outsourced === true;
+      };
+
+      const sampleOutsourced = isOutsourced(matchedSample) || isOutsourced(t);
+      const reportSt = String(statusByTestId.get(t.testId) || t.reportStatus || '').toLowerCase();
+      const reportStillOpen = !reportSt || reportSt === 'pending';
+
+      const defaultStatus = (sampleOutsourced && reportStillOpen)
+        ? 'outsource'
+        : (isSampleReceived ? 'inprocess' : 'snr');
 
       return {
         testId: t.testId,
@@ -1075,37 +1086,37 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       .length;
     return completedCount === testCount ? 'completed' : 'pending';
   }
+testStatusClass(status?: string): string {
+  const s = this.normalizeStatus(status, 'snr');
 
-  testStatusClass(status?: string): string {
-    const s = this.normalizeStatus(status, 'snr');
+  if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
+  if (s === 'snr') return 'badge-snr';
+  if (s.includes('clinical')) return 'badge-clinical';
+  if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
+  if (this.isCompleteOrReady(s)) return 'badge-ready';
+  if (s.includes('outsource')) return 'badge-outsource';
+  if (s.includes('process') || s.includes('doctor approval')) return 'badge-inprocess';
 
-    if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
-    if (s === 'snr') return 'badge-snr';
-    if (s.includes('clinical')) return 'badge-clinical';
-    if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
-    if (this.isCompleteOrReady(s)) return 'badge-ready';
-    if (s.includes('process') || s.includes('outsource') || s.includes('doctor approval')) return 'badge-inprocess';
+  return 'badge-pending';
+}
 
-    return 'badge-pending';
-  }
+testStatusLabel(status?: string): string {
+  const s = this.normalizeStatus(status, 'snr');
+
+  if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
+  if (s === 'snr') return 'SNR';
+  if (s.includes('clinical')) return 'CLINICAL';
+  if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
+  if (this.isCompleteOrReady(s)) return 'COMPLETE';
+  if (s.includes('outsource')) return 'OUTSOURCE';
+  if (s.includes('process') || s.includes('doctor approval')) return 'IN PROCESS';
+
+  return 'PENDING';
+}
 
   isReportComplete(status: string | undefined): boolean {
     return (status || '').toLowerCase().includes('complete');
   }
-
-  testStatusLabel(status?: string): string {
-    const s = this.normalizeStatus(status, 'snr');
-
-    if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
-    if (s === 'snr') return 'SNR';
-    if (s.includes('clinical')) return 'CLINICAL';
-    if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
-    if (this.isCompleteOrReady(s)) return 'COMPLETE';
-    if (s.includes('process') || s.includes('outsource') || s.includes('doctor approval')) return 'IN PROCESS';
-
-    return 'PENDING';
-  }
-
   // ---------- action menu ----------
   toggleActionMenu(item: BookingListItem, event: MouseEvent): void {
     event.stopPropagation();
@@ -1372,7 +1383,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
   // ---------- edit test ----------
-   editTest(item: BookingListItem): void {
+  editTest(item: BookingListItem): void {
     this.closeActionMenu();
     this.selectedBooking = item;
     this.selectedTests = JSON.parse(JSON.stringify(item.tests || []));
@@ -2229,7 +2240,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
 
 
-    // ---------- package lock ----------
+  // ---------- package lock ----------
   packageTestSets: { name: string; testIds: number[] }[] = [];
 
   private loadPackageSets(franchiseId?: number): void {
