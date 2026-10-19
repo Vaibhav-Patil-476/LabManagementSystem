@@ -155,7 +155,12 @@ The user talks continuously and mixes English, Hindi and Marathi. Understand all
 - If the user says several numbers after one name ("wellness 1.3 and 1.2", "wellness 1.3, 1.2"), send EACH as its own array item with the FULL name: ["Wellness 1.3", "Wellness 1.2"]. Never put a comma or "and" inside one item. Never send a bare number like "1.2" alone.
 - Names can contain dash or dot, e.g. "Wellness-1.6". The user will NOT say "dash". Send the name as spoken: "Wellness 1.6". Never add or ask for a dash. "point" between digits = ".", e.g. "one point six" = 1.6. The client matches ignoring dashes, dots and spaces.
 - Never send an item that is already in cart.tests or cart.packages of the last tool result. An item that is NOT in the cart MUST be sent whenever the user says it.
-
+- A name can contain "plus" / "+" / "CBC", e.g. "Wellness 1.1+CBC", "Wellness 1.1 CBC+ Glucose".
+  If the user says plus / aani / with between two words, or says "wellness 1.1 CBC" as one phrase,
+  send it as ONE item with the full phrase: "Wellness 1.1 plus CBC". Never split it into
+  "Wellness 1.1" and "CBC". Only split when the user clearly says "and" between two separate items
+  with their own full names or numbers.
+  
 7. REMOVE
 - Remove ONLY when the user clearly says remove / kadha / hata / nako. NEVER remove anything on your own, even after a problem.
 - The last tool result has a "cart" with the exact names of tests and packages in the bill. Copy the name from the cart.

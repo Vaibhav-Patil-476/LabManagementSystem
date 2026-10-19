@@ -4255,13 +4255,41 @@ export class AddPatientComponent {
     }
   }
 
-
-
-
-  // ============================================================
+// ============================================================
   // VOICE ASSISTANT
   // ============================================================
 
+  // ---------------------------------------------------------------
+  // NORMALIZERS (UPDATED)
+  // "plus / and / with" kadhun taka, mhanje
+  // "Wellness 1.1 plus CBC" == "WELLNESS-1.1+CBC" == "wellness 1.1 cbc"
+  // Package naav ani voice query donhi sathi same functions vaparle jatat.
+  // ---------------------------------------------------------------
+  private deplus(s: any): string {
+    return String(s ?? '').toLowerCase().replace(/\b(plus|and|with)\b/g, ' ');
+  }
+
+  // "Wellness-1.6" / "wellness 1.6" / "Wellness 1.6" sagle same hotat
+  private compact(s: any): string {
+    return this.deplus(s).replace(/[^a-z0-9]+/g, '');
+  }
+
+  /** Spelling var avlambun nahi: "Welllness 1.3" / "welness 1.3" / "Welleness 1.3" -> "wlnss13" */
+  private fkey(s: any): string {
+    return this.deplus(s)
+      .replace(/[^a-z0-9]/g, '')
+      .replace(/([a-z])\1+/g, '$1')   // ll -> l
+      .replace(/[aeiouy]/g, '');      // vowels kadha (ee/oo/ye che farak jatat)
+  }
+
+  /** "Wellness 1.2" / "wellness-1.2" -> "wellness12" (spaces, dash, dot, plus ignore) */
+  private key(s: any): string {
+    return this.deplus(s).replace(/[^a-z0-9]/g, '');
+  }
+
+  private norm(s: any): string {
+    return this.deplus(s).replace(/[^a-z0-9]+/g, ' ').trim();
+  }
 
   private pendingTests: string[] = [];
   private pendingPkgs: string[] = [];
@@ -4339,23 +4367,9 @@ export class AddPatientComponent {
     });
   }
 
-  // "Wellness-1.6" / "wellness 1.6" / "Wellness 1.6" sagle same hotat
-  private compact(s: any): string {
-    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '');
-  }
-
   // ---------------------------------------------------------------
-  // NEW: typo-tolerant helpers
+  // typo-tolerant helpers
   // ---------------------------------------------------------------
-
-  /** Spelling var avlambun nahi: "Welllness 1.3" / "welness 1.3" / "Welleness 1.3" -> "wlnss13" */
-  private fkey(s: any): string {
-    return String(s ?? '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, '')
-      .replace(/([a-z])\1+/g, '$1')   // ll -> l
-      .replace(/[aeiouy]/g, '');      // vowels kadha (ee/oo/ye che farak jatat)
-  }
 
   /** "Wellness 1.3" -> "1.3", "Vitamin B12" -> "12", number nasel tar "" */
   private numsOf(s: any): string {
@@ -4430,11 +4444,6 @@ export class AddPatientComponent {
   private lastItemPrefix = '';
   private lastItemPrefixAt = 0;
 
-  /** "Wellness 1.2" / "wellness-1.2" -> "wellness12" (spaces, dash, dot ignore) */
-  private key(s: any): string {
-    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '');
-  }
-
   private prefixOf(s: string): string {
     return String(s).replace(/[\s\-–_.\d]+$/, '').trim();
   }
@@ -4459,7 +4468,10 @@ export class AddPatientComponent {
     return Promise.race([p, new Promise<T>(r => setTimeout(() => r(fallback), ms))]);
   }
 
-  /** Number asleli naave ("Wellness 1.3"): backend long query handle karat nahi, mhanun short query ne merge karun client madhe match. */
+  /**
+   * Package + Test sathi common loose search.
+   * Pahila query ne exact naav nahi sapadla tar baki variants PARALLEL pathavto ani merge karto.
+   */
   private async searchLoose(
     fetch: (q: string) => Promise<any[]>,
     term: string,
@@ -4469,24 +4481,35 @@ export class AddPatientComponent {
     const tries = [term, this.prefixOf(term), words[0], words[0]?.slice(0, 3)]
       .filter((x, i, arr) => !!x && x.length >= 2 && arr.indexOf(x) === i);
 
-    // number nasel tar junya pramane: pahila non-empty result (jast search nako)
+    const fq = this.fkey(term);
+    const merged = new Map<string, any>();
+    const addAll = (m: any[]) => {
+      for (const x of m || []) merged.set(this.key(nameOf(x)) || String(merged.size), x);
+    };
+    const hasExact = () => [...merged.values()].some(x => this.fkey(nameOf(x)) === fq);
+
+    // number nasel tar
     if (!/\d/.test(term)) {
-      for (const q of tries) {
-        const m = await this.withCap(fetch(q), 4000, [] as any[]);
-        if (m?.length) return m;
-      }
-      return [];
+      const first = await this.withCap(fetch(tries[0]), 4000, [] as any[]);
+      addAll(first);
+      if (hasExact() || tries.length === 1) return [...merged.values()];
+
+      // exact nahi sapadla: baki variants ekach vela parallel
+      const rest = await Promise.all(
+        tries.slice(1).map(q => this.withCap(fetch(q), 4000, [] as any[]))
+      );
+      rest.forEach(addAll);
+      return [...merged.values()];
     }
 
     // number asel tar: merge karat jaa, exact naav sapadla ki thamb
-    const merged = new Map<string, any>();
     for (const q of tries) {
       const m = await this.withCap(fetch(q), 4000, [] as any[]);
-      for (const x of m || []) merged.set(this.key(nameOf(x)) || String(merged.size), x);
+      addAll(m);
       const list = [...merged.values()];
       const { pick } = this.choosePkg(list, term, nameOf);
-      // CHANGED: typo-tolerant compare (Welllness 1.3 == Wellness 1.3)
-      if (pick && this.fkey(nameOf(pick)) === this.fkey(term)) return list;
+      // typo-tolerant compare (Welllness 1.3 == Wellness 1.3)
+      if (pick && this.fkey(nameOf(pick)) === fq) return list;
     }
     return [...merged.values()];
   }
@@ -4529,7 +4552,7 @@ export class AddPatientComponent {
   }
 
   // ---------------------------------------------------------------
-  // runVoiceToolInner (updated)
+  // runVoiceToolInner
   // ---------------------------------------------------------------
   private async runVoiceToolInner(name: string, a: any): Promise<any> {
     switch (name) {
@@ -4776,6 +4799,22 @@ export class AddPatientComponent {
             }
             if (!pick) pick = this.fuzzyPick(m, tn, (t: any) => t.name);
 
+            // test madhe fakt "javal cha" (partial) match sapadla asel,
+            // tar aadhi tya naavacha package exact ahe ka te tapasa.
+            if (pick && this.fkey(pick.name) !== this.fkey(tn)) {
+              const pkgMatches = await this.withCap(
+                this.findPackagesLoose(labId, pkgFranchiseId, tn),
+                3000,
+                [] as any[]
+              );
+              const { pick: asPkg } = this.choosePkg(pkgMatches, tn, pkgName);
+              if (asPkg && this.key(pkgName(asPkg)) === this.key(tn)) {
+                const added = this.addPackageFromPick(asPkg);
+                if (added) done.push('package: ' + added);
+                continue;
+              }
+            }
+
             if (!pick) {
               // fallback la 3 sec cap
               const pkgMatches = await this.withCap(
@@ -4793,7 +4832,6 @@ export class AddPatientComponent {
               this.lastItemPrefix = '';
               this.lastItemPrefixAt = 0;
 
-              // CHANGED: chhota message (AI 2 sec madhe bolun thambto, user chi correction hirvat nahi)
               problems.push(`"${tn}" not found`);
               continue;
             }
@@ -4820,7 +4858,6 @@ export class AddPatientComponent {
               // "wellness" ekta bolla: number yenar, prefix lakshat thev
               this.lastItemPrefix = this.prefixOf(pn) || pn;
               this.lastItemPrefixAt = Date.now();
-              // CHANGED: chhote messages
               problems.push(
                 !/\d/.test(pn)
                   ? `"${pn}" has several versions. Say the number.`
@@ -4829,15 +4866,36 @@ export class AddPatientComponent {
               continue;
             }
 
-            if (!pick) {
-              // fallback la 3 sec cap
+            // package madhe fakt partial match sapadla asel,
+            // tar aadhi tya naavacha test exact ahe ka te tapasa.
+            if (pick && this.key(pkgName(pick)) !== this.key(pn)) {
               const testMatches = await this.withCap(
-                this.findTests(labId, franchiseId, pn),
+                this.findTestsLoose(labId, franchiseId, pn),
                 3000,
                 [] as any[]
               );
               this.failedSearches.delete(pn);
-              const asTest = this.pickBest(testMatches, pn, (t: any) => t.name);
+              const exactTest = testMatches.find((t: any) => this.key(t.name) === this.key(pn));
+              if (exactTest) {
+                if (!this.selectedTests.some((t: any) => !t.packageName && t.name === exactTest.name)) {
+                  this.addTest(exactTest);
+                  done.push('test: ' + exactTest.name);
+                }
+                continue;
+              }
+            }
+
+            if (!pick) {
+              // fallback la 3 sec cap
+              const testMatches = await this.withCap(
+                this.findTestsLoose(labId, franchiseId, pn),
+                3000,
+                [] as any[]
+              );
+              this.failedSearches.delete(pn);
+              const asTest =
+                this.pickBest(testMatches, pn, (t: any) => t.name) ??
+                this.fuzzyPick(testMatches, pn, (t: any) => t.name);
               if (asTest) {
                 if (!this.selectedTests.some((t: any) => !t.packageName && t.name === asTest.name)) {
                   this.addTest(asTest);
@@ -4850,7 +4908,6 @@ export class AddPatientComponent {
               this.lastItemPrefix = '';
               this.lastItemPrefixAt = 0;
 
-              // CHANGED: "Did you mean" list kadhli
               problems.push(`package "${pn}" not found`);
               continue;
             }
@@ -5037,9 +5094,6 @@ export class AddPatientComponent {
     }
   }
 
-
-
-
   private voiceChain: Promise<any> = Promise.resolve();
 
   private runVoiceTool(name: string, a: any): Promise<any> {
@@ -5073,7 +5127,7 @@ export class AddPatientComponent {
           tests: this.selectedTests.filter((t: any) => !t.packageName).map((t: any) => t.name),
           packages: this.selectedPackages.map((p: any) => p.profileName)
         };
-        // CHANGED: success la kahi nahi (SILENT scheduling). Problem asel tarach chhota instruction.
+        // success la kahi nahi (SILENT scheduling). Problem asel tarach chhota instruction.
         if (res.problems?.length) {
           res.next = 'Say the problem in max 6 words. Then listen. When the user corrects it, call fill_booking with only that item.';
         }
@@ -5156,7 +5210,6 @@ export class AddPatientComponent {
     return m;
   }
 
-
   private failedSearches = new Set<string>();
 
   private findTests = async (labId: any, franchiseId: any, term: string): Promise<any[]> => {
@@ -5165,7 +5218,8 @@ export class AddPatientComponent {
 
     const one = async (q: string): Promise<any[] | null> => {
       try {
-        const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, q, 0, 10), 8000);
+        // 10 -> 20 results (jast naave asleli search madhe khara test pahilya 10 madhe nasto)
+        const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, q, 0, 20), 8000);
         return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
           id: t.testId,
           sampleId: t.sample_type,
@@ -5194,12 +5248,11 @@ export class AddPatientComponent {
     return out;
   };
 
-
   private findPackages = async (labId: any, franchiseId: any, term: string): Promise<any[]> => {
     const pName = (p: any) => String(p?.profileName || p?.profile_name || p?.name || '');
     const qn = this.norm(term);
     const qc = this.compact(term);
-    const fq = this.fkey(term);                       // NEW
+    const fq = this.fkey(term);
     const qTokens = qn.split(' ').filter(Boolean);
 
     // 1) Aadhich load kelelya list madhun (manual search sarkhech, jast fast)
@@ -5208,7 +5261,7 @@ export class AddPatientComponent {
         const nn = this.norm(pName(p));
         return this.compact(pName(p)).includes(qc)
           || qTokens.every(t => nn.includes(t))
-          || (!!fq && this.fkey(pName(p)).includes(fq));   // CHANGED: typo-tolerant (Welllness 1.3)
+          || (!!fq && this.fkey(pName(p)).includes(fq));   // typo-tolerant (Welllness 1.3)
       })
       .map((p: any) => {
         const realPrice = Number(p?.profileAssignedPrice || 0) > 0
@@ -5216,25 +5269,27 @@ export class AddPatientComponent {
           : Number(p?.total_amount || 0);
         return { ...p, profileAssignedPrice: realPrice, b2b: realPrice, assignedPrice: realPrice };
       });
-    if (local.length) return local;
 
-    // 2) List madhe nahi tar backend search
+    // local madhe EXACT naav sapadla tarach thamb.
+    // Nahitar (fakt partial) backend la pan vichar ani merge kar.
+    const hasExact = local.some((p: any) => this.fkey(pName(p)) === fq);
+    if (local.length && hasExact) return local;
+
+    // 2) Backend search
     const one = async (q: string): Promise<any[] | null> => {
       try {
-        const res: any = await this.api(this.labApi.searchProfiles(labId, franchiseId, q, 0, 10), 4000);
+        const res: any = await this.api(this.labApi.searchProfiles(labId, franchiseId, q, 0, 20), 4000);
         return Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
       } catch {
         return null;
       }
     };
-    return (await this.searchWithVariants(term, one, (p: any) => this.compact(pName(p)))) ?? [];
+    const remote = (await this.searchWithVariants(term, one, (p: any) => this.compact(pName(p)))) ?? [];
+
+    // local + remote merge (duplicate nako)
+    const seen = new Set(local.map((p: any) => this.key(pName(p))));
+    return [...local, ...remote.filter((p: any) => !seen.has(this.key(pName(p))))];
   };
-
-
-
-  private norm(s: any): string {
-    return String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
-  }
 
   // Backend search la "wellness 1.6" samajat nahi tar "wellness-1.6" ani pahila shabd pan try karto.
   private async searchWithVariants<T>(
