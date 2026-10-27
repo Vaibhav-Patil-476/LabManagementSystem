@@ -127,7 +127,7 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   openDownloadReportModal(item: ReportBookingRow, event?: MouseEvent): void {
     event?.stopPropagation();
 
-    if (item.bucket !== 'COMPLETE') {
+    if (!this.hasCompletedTest(item)) {
       this.reportNotReadyBookingId = item.bookingId;
       this.isReportNotReadyModalOpen = true;
       return;
@@ -140,6 +140,10 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
     this.downloadReportItem = item;
     this.isDownloadReportModalOpen = true;
+  }
+
+  hasCompletedTest(item: ReportBookingRow): boolean {
+    return item.tests.some(t => this.isCompleteOrReady(this.normalizeStatus(t.status)));
   }
 
   closeDownloadReportModal(): void {
@@ -171,7 +175,11 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
 
     try {
       const res: any = await firstValueFrom(
-        this.labApi.generatePdfReport(bookingIds, { single: bookingIds.length === 1, letterHead })
+        this.labApi.generatePdfReport(bookingIds, {
+          single: bookingIds.length === 1,
+          letterHead,
+          onlyCompleted: true
+        })
       );
 
       if (res?.success && res?.downloadUrl) {
@@ -180,7 +188,10 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
         // APK: saved in Downloads with a notification | Web: opens in a new tab
         await this.pdfDownload.download(res.downloadUrl, fileName);
 
-        this.toast.success('Success', `${bookingIds.length} report(s) downloaded successfully.`);
+        this.toast.success(
+          'Success',
+          `Completed reports downloaded for ${bookingIds.length} booking(s).`
+        );
         if (isBulk) this.selectedIds.clear();
       } else {
         this.toast.error('Generation Failed', res?.message || 'Unable to generate the PDF report.');
@@ -578,70 +589,70 @@ export class DownloadReportsPage implements OnInit, OnDestroy {
   }
 
   // ---------- mapping ----------
-private mapToRow(raw: any): ReportBookingRow {
-  const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
-    .filter((t: any) => !!t.testName);
+  private mapToRow(raw: any): ReportBookingRow {
+    const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
+      .filter((t: any) => !!t.testName);
 
-  const rawSamples: any[] = raw.sampleAccessions || raw.samples || [];
-  const reportsRaw: any[] = raw.reports || [];
+    const rawSamples: any[] = raw.sampleAccessions || raw.samples || [];
+    const reportsRaw: any[] = raw.reports || [];
 
-  const statusByTestId = new Map<number, string>();
-  reportsRaw.forEach((r: any) => {
-    if (r.testId != null) {
-      statusByTestId.set(r.testId, r.reportStatus || 'PENDING');
-    }
-  });
+    const statusByTestId = new Map<number, string>();
+    reportsRaw.forEach((r: any) => {
+      if (r.testId != null) {
+        statusByTestId.set(r.testId, r.reportStatus || 'PENDING');
+      }
+    });
 
-  const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
-    const matchedSample = rawSamples.find(
-      (s: any) => Number(s.testId) === Number(t.testId)
-    );
-    const sampleStatus = (matchedSample?.status || '').toUpperCase();
-    const isSampleReceived = sampleStatus === 'RECEIVED';
-    const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
+    const tests: ReportTestRow[] = rawTestMappings.map((t: any) => {
+      const matchedSample = rawSamples.find(
+        (s: any) => Number(s.testId) === Number(t.testId)
+      );
+      const sampleStatus = (matchedSample?.status || '').toUpperCase();
+      const isSampleReceived = sampleStatus === 'RECEIVED';
+      const defaultStatus = isSampleReceived ? 'inprocess' : 'snr';
+
+      return {
+        name: (t.testName || '').trim(),
+        status: (t.cancelDate || t.deleted) ? 'cancel' :
+          (statusByTestId.get(t.testId) ||
+            (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||
+            defaultStatus),
+        testCode: t.testCode
+      };
+    });
+
+    const seenBarcodes = new Set<string>();
+    const barcodes: string[] = [];
+    rawSamples.forEach((s: any) => {
+      const barcode = s.barCode || s.barcode;
+      if (!barcode || seenBarcodes.has(barcode)) return;
+      seenBarcodes.add(barcode);
+      barcodes.push(barcode);
+    });
+
+    const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
+    const franchiseName = raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
 
     return {
-      name: (t.testName || '').trim(),
-      status: (t.cancelDate || t.deleted) ? 'cancel' :
-        (statusByTestId.get(t.testId) ||
-          (t.reportStatus && t.reportStatus.toUpperCase() !== 'PENDING' ? t.reportStatus : null) ||
-          defaultStatus),
-      testCode: t.testCode
+      bookingId: raw.bookingId,
+      patientId: raw.patientId,
+      title: raw.title,
+      name: raw.customerName || '-',
+      genderAge: raw.gender && raw.age ? `${raw.gender}/${raw.age}` : undefined,
+      barcodes,
+      doctorName: `(${franchiseName}) / Dr. ${doctorName}`,
+      sampleCount: barcodes.length || tests.length,
+      tests,
+      bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined,
+      createdBy: raw.createdBy,
+      reportId: rawTestMappings.find((t: any) => !!t.reportId)?.reportId
+        ?? reportsRaw.find((r: any) => !!r.reportId)?.reportId,
+      remark: raw.remark,
+      file: raw.reportUrl || raw.pdfUrl || raw.file || raw.fileUrl,
+      franchiseId: Number(raw.franchiseId ?? raw.franchise?.franchiseId ?? 0) || undefined,
+      bucket: this.deriveBucket(tests)
     };
-  });
-
-  const seenBarcodes = new Set<string>();
-  const barcodes: string[] = [];
-  rawSamples.forEach((s: any) => {
-    const barcode = s.barCode || s.barcode;
-    if (!barcode || seenBarcodes.has(barcode)) return;
-    seenBarcodes.add(barcode);
-    barcodes.push(barcode);
-  });
-
-  const doctorName = raw.customDoctorName?.trim() || raw.doctorName || raw.doctor?.doctor_name || 'self';
-  const franchiseName = raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF';
-
-  return {
-    bookingId: raw.bookingId,
-    patientId: raw.patientId,
-    title: raw.title,
-    name: raw.customerName || '-',
-    genderAge: raw.gender && raw.age ? `${raw.gender}/${raw.age}` : undefined,
-    barcodes,
-    doctorName: `(${franchiseName}) / Dr. ${doctorName}`,
-    sampleCount: barcodes.length || tests.length,
-    tests,
-    bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined,
-    createdBy: raw.createdBy,
-    reportId: rawTestMappings.find((t: any) => !!t.reportId)?.reportId
-      ?? reportsRaw.find((r: any) => !!r.reportId)?.reportId,
-    remark: raw.remark,
-    file: raw.reportUrl || raw.pdfUrl || raw.file || raw.fileUrl,
-    franchiseId: Number(raw.franchiseId ?? raw.franchise?.franchiseId ?? 0) || undefined,
-    bucket: this.deriveBucket(tests)
-  };
-}
+  }
 
   private deriveBucket(tests: ReportTestRow[]): ReportTabKey {
     if (tests.length === 0) return 'PENDING';
@@ -750,7 +761,7 @@ private mapToRow(raw: any): ReportBookingRow {
   }
 
   get canShowDownloadControls(): boolean {
-    return this.activeTab === 'COMPLETE';
+    return this.activeTab === 'COMPLETE' || this.activeTab === 'PARTIALLY_COMPLETE';
   }
 
   // ---------- selection ----------
@@ -773,6 +784,11 @@ private mapToRow(raw: any): ReportBookingRow {
 
     if (selected.length === 0) {
       this.toast.warning('Selection Required', 'Please select at least one report to download.');
+      return;
+    }
+    const downloadable = selected.filter(r => this.hasCompletedTest(r));
+    if (downloadable.length === 0) {
+      this.toast.warning('Not Ready', 'Selected bookings madhe ekhi complete test nahi.');
       return;
     }
 

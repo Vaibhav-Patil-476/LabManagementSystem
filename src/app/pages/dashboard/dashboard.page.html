@@ -57,11 +57,11 @@
               <div class="sc-header-left">
                 <div class="sc-id-row">
                   <span class="sc-id" (click)="openGlobalDownloadModal(item, $event)">
-  <ng-container *ngIf="canShowDownloadReport; else plainHash">
-    <span class="sc-id-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
-  </ng-container>
-  <ng-template #plainHash>#{{ item.bookingId }}</ng-template>
-</span>
+                    <ng-container *ngIf="canShowDownloadReport; else plainHash">
+                      <span class="sc-id-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
+                    </ng-container>
+                    <ng-template #plainHash>#{{ item.bookingId }}</ng-template>
+                  </span>
                   <span class="sc-date">{{ item.bookingDate }}</span>
                 </div>
                 <div class="sc-name">{{ item.title | titlecase }} {{ item.customerName }}</div>
@@ -200,7 +200,7 @@
               <div class="input-wrap">
                 <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
                   class="premium-select">
-                  <ion-select-option value="myprice">My Price</ion-select-option>
+                  <ion-select-option value="myprice" *ngIf="canSeeMyPrice">My Price</ion-select-option>
                   <ion-select-option value="mrp">MRP</ion-select-option>
                 </ion-select>
               </div>
@@ -261,7 +261,7 @@
         <div style="padding:24px 20px; text-align:center;">
           <ion-icon name="alert-circle-outline" class="global-report-not-ready-icon"></ion-icon>
           <p class="global-report-not-ready-text">
-            This report is not yet complete. Please try again once all tests for this booking have been completed.
+            No test in this booking is complete yet. Please try again once at least one test has been completed.
           </p>
           <ion-button expand="block" fill="solid" class="global-danger-btn" (click)="closeGlobalReportNotReadyModal()">
             GOT IT
@@ -1451,7 +1451,7 @@
 
   </ion-content>
 
-   <app-voice-chat-box></app-voice-chat-box>
+  <app-voice-chat-box></app-voice-chat-box>
   <!-- ================= BOTTOM NAVIGATION BAR ================= -->
   <!-- <nav class="app-bottom-nav" role="navigation" aria-label="Primary">
     <button type="button" class="bn-item" [class.active]="isActiveTab('/dashboard')" (click)="goToPage('dashboard')">

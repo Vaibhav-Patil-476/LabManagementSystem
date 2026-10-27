@@ -10,6 +10,11 @@
       </ion-buttons>
       <ion-title>New Booking</ion-title>
       <ion-buttons slot="end">
+<button type="button" class="trf-btn" [class.busy]="isScanningTrf" [disabled]="isScanningTrf"
+  (click)="openTrfSheet()" aria-label="Scan TRF">
+  <span class="trf-btn-ico"><ion-icon name="document-text-outline"></ion-icon></span>
+  <span class="trf-btn-txt">TRF</span>
+</button>
         <ng-container *ngIf="voiceState$ | async as vs">
           <button type="button" class="bot-btn" [attr.data-state]="vs" (click)="toggleVoice()"
             [attr.aria-pressed]="vs !== 'idle'" aria-label="Voice assistant">
@@ -1081,6 +1086,102 @@
     </ng-template>
   </ion-modal>
 
+  <!-- ===================== TRF SCAN SHEET ===================== -->
+  <ion-modal [isOpen]="trfSheetOpen" cssClass="trf-modal" [backdropDismiss]="trfPhase !== 'scanning'"
+    (didDismiss)="onTrfDismiss()">
+    <ng-template>
+      <div class="trf-sheet">
+        <div class="trf-grabber"></div>
+
+        <div class="trf-head">
+          <div class="trf-head-icon"><ion-icon name="document-text-outline"></ion-icon></div>
+          <div class="trf-head-text">
+            <div class="trf-title">Smart TRF Scan</div>
+            <div class="trf-sub">
+              {{ trfPhase === 'pick' ? 'Choose a patient to continue'
+              : trfPhase === 'scanning' ? 'Please wait a moment'
+              : trfPhase === 'done' ? 'Booking prepared'
+              : 'Auto-fill the booking from a requisition form' }}
+            </div>
+          </div>
+          <button type="button" class="trf-close" *ngIf="trfPhase !== 'scanning'" (click)="closeTrfSheet()"
+            aria-label="Close">
+            <ion-icon name="close-outline"></ion-icon>
+          </button>
+        </div>
+
+        <!-- SOURCE -->
+        <div class="trf-body trf-fade" *ngIf="trfPhase === 'source'">
+          <button type="button" class="trf-source" (click)="chooseTrfSource(false)">
+            <span class="trf-source-ico"><ion-icon name="camera-outline"></ion-icon></span>
+            <span class="trf-source-text">
+              <b>Take a Photo</b>
+              <small>Capture the form with your camera</small>
+            </span>
+            <ion-icon name="chevron-forward-outline" class="trf-arrow"></ion-icon>
+          </button>
+
+          <button type="button" class="trf-source" (click)="chooseTrfSource(true)">
+            <span class="trf-source-ico alt"><ion-icon name="image-outline"></ion-icon></span>
+            <span class="trf-source-text">
+              <b>Choose from Gallery</b>
+              <small>Pick an existing photo of the form</small>
+            </span>
+            <ion-icon name="chevron-forward-outline" class="trf-arrow"></ion-icon>
+          </button>
+
+          <div class="trf-tip">
+            <ion-icon name="sparkles-outline"></ion-icon>
+            <span>For best results, keep the form flat, well lit and fully inside the frame.</span>
+          </div>
+        </div>
+
+        <!-- SCANNING -->
+        <div class="trf-body trf-scan" *ngIf="trfPhase === 'scanning'">
+          <div class="trf-doc">
+            <span></span><span></span><span></span><span></span><span></span>
+            <div class="trf-beam"></div>
+          </div>
+          <div class="trf-scan-title">{{ trfStatus }}</div>
+          <div class="trf-scan-sub">This only takes a few seconds</div>
+        </div>
+
+        <!-- PICK PATIENT -->
+        <div class="trf-body" *ngIf="trfPhase === 'pick'">
+          <div class="trf-found">{{ trfPatients.length }} patients found</div>
+
+          <div class="trf-list">
+            <button type="button" class="trf-patient" *ngFor="let p of trfPatients; let i = index"
+              [style.animation-delay]="(i * 70) + 'ms'" (click)="selectTrfPatient(p)">
+              <span class="trf-avatar" [class.f]="p.gender === 'female'">{{ trfInitials(p.name) }}</span>
+              <span class="trf-pinfo">
+                <span class="trf-pname">{{ p.name }}</span>
+                <span class="trf-chips">
+                  <span class="trf-chip">{{ p.age }} yrs &bull; {{ p.gender === 'female' ? 'Female' : 'Male' }}</span>
+                  <span class="trf-chip test" *ngIf="p.test">{{ p.test }}</span>
+                  <span class="trf-chip sid" *ngIf="p.sid">{{ p.sid }}</span>
+                </span>
+              </span>
+              <ion-icon name="chevron-forward-outline" class="trf-arrow"></ion-icon>
+            </button>
+          </div>
+
+          <button type="button" class="trf-rescan" (click)="trfPhase = 'source'">Scan another document</button>
+        </div>
+
+        <!-- DONE -->
+        <div class="trf-body trf-done" *ngIf="trfPhase === 'done'">
+          <svg class="trf-check" viewBox="0 0 52 52" aria-hidden="true">
+            <circle cx="26" cy="26" r="24" fill="none" />
+            <path fill="none" d="M15 27l8 8 14-16" />
+          </svg>
+          <div class="trf-scan-title">All set</div>
+          <div class="trf-scan-sub">{{ trfSummary }}. Please review before continuing.</div>
+        </div>
+      </div>
+    </ng-template>
+  </ion-modal>
+
   <!-- ===================== PRINT BILL MODAL ===================== -->
   <ion-modal [isOpen]="isPrintBillModalOpen" cssClass="pb-popup" (didDismiss)="closePrintBillModal()">
     <ng-template>
@@ -1100,7 +1201,7 @@
               <label>Price Type</label>
               <div class="input-wrap">
                 <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType">
-                  <ion-select-option value="myprice">My Price</ion-select-option>
+                  <ion-select-option value="myprice" *ngIf="!isFranchiseRole">My Price</ion-select-option>
                   <ion-select-option value="mrp">MRP</ion-select-option>
                 </ion-select>
               </div>

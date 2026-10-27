@@ -387,6 +387,10 @@ export class DashboardPage implements OnInit, OnDestroy {
     return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
   }
 
+  get isFranchiseRole(): boolean {
+  const r = this.roleService.currentRole;
+  return r === this.ROLE_FRANCHISE || r === this.ROLE_FRANCHISE_STAFF;
+}
 
 
   get canEditPatient(): boolean {
@@ -435,6 +439,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   get canShowDownloadReport(): boolean {
     const role = this.authService?.role;
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
+  }
+    /** My Price: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide */
+  get canSeeMyPrice(): boolean {
+    const role = this.authService.role;
+    return role !== ROLE.STAFF && role !== ROLE.FRANCHISE_STAFF;
   }
 
   // ============================================================
@@ -969,71 +978,75 @@ export class DashboardPage implements OnInit, OnDestroy {
     };
   }
 
-  openPrintBillModal(item: any, event?: MouseEvent): void {
-    event?.stopPropagation();
-    this.printBillItem = item;
-    this.selectedBillPriceType = 'myprice';
-    this.customBillAmount = null;
-    this.isPrintBillModalOpen = true;
+ openPrintBillModal(item: any, event?: MouseEvent): void {
+  event?.stopPropagation();
+  this.printBillItem = item;
+    this.selectedBillPriceType = this.canSeeMyPrice ? 'myprice' : 'mrp';
+  this.customBillAmount = null;
+  this.isPrintBillModalOpen = true;
 
-    // franchise list once fetch करून cache करा (ifLetterHead चेक करायला लागतो)
-    if (this.franchiseCache.length === 0) {
-      this.labApi.getFranchises().subscribe({
-        next: (res: any) => {
-          this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
-          this.cdr.detectChanges();
-        },
-        error: () => { /* silent — buttons will just show default 2-button state */ }
-      });
-    }
+  if (this.franchiseCache.length === 0) {
+    this.labApi.getFranchises().subscribe({
+      next: (res: any) => {
+        this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+        this.cdr.detectChanges();
+      },
+      error: () => { /* silent */ }
+    });
   }
+}
+
   closePrintBillModal(): void {
     this.isPrintBillModalOpen = false;
     this.printBillItem = null;
   }
 
-  async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
-    const item = this.printBillItem;
-    if (!item) return;
-    if (this.printingId === item.bookingId) return;
+ async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
+  const item = this.printBillItem;
+  if (!item) return;
+  if (this.printingId === item.bookingId) return;
 
-    this.printingId = item.bookingId;
-    this.isPrintBillModalOpen = false;
+  this.printingId = item.bookingId;
+  this.isPrintBillModalOpen = false;
 
-    const payload = this.labApi.buildBillPayload(
-      item.bookingId,
-      this.selectedBillPriceType,
-      this.customBillAmount || null,
-      letterHead,
-      fLetterHead
-    );
+  const priceType = (!this.canSeeMyPrice && this.selectedBillPriceType === 'myprice')
+    ? 'mrp'
+    : this.selectedBillPriceType;
 
-    try {
-      const res: any = await firstValueFrom(this.labApi.printBill(payload));
+  const payload = this.labApi.buildBillPayload(
+    item.bookingId,
+    priceType,
+    this.customBillAmount || null,
+    letterHead,
+    fLetterHead
+  );
 
-      if (res?.downloadUrl) {
-        const fileName = res.fileName || `bill-${item.bookingId}.pdf`;
-        await this.pdfDownload.download(res.downloadUrl, fileName);
-        this.toastService.success('Success', 'Bill downloaded successfully.');
-      } else {
-        this.toastService.error('Error', res?.message || 'Unable to generate the bill PDF.');
-      }
-    } catch (err) {
-      console.error('PRINT BILL ERROR:', err);
-      this.toastService.error('Error', 'Failed to generate the bill. Please try again.');
-    } finally {
-      this.ngZone.run(() => {
-        this.printingId = null;
-        this.printBillItem = null;
-        this.cdr.detectChanges();
-      });
+  try {
+    const res: any = await firstValueFrom(this.labApi.printBill(payload));
+
+    if (res?.downloadUrl) {
+      const fileName = res.fileName || `bill-${item.bookingId}.pdf`;
+      await this.pdfDownload.download(res.downloadUrl, fileName);
+      this.toastService.success('Success', 'Bill downloaded successfully.');
+    } else {
+      this.toastService.error('Error', res?.message || 'Unable to generate the bill PDF.');
     }
+  } catch (err) {
+    console.error('PRINT BILL ERROR:', err);
+    this.toastService.error('Error', 'Failed to generate the bill. Please try again.');
+  } finally {
+    this.ngZone.run(() => {
+      this.printingId = null;
+      this.printBillItem = null;
+      this.cdr.detectChanges();
+    });
   }
+}
 
   openGlobalDownloadModal(item: any, event?: MouseEvent): void {
     event?.stopPropagation();
 
-    if (item.statusClass !== 'completed') {
+    if (!item.hasCompletedTest) {
       this.globalReportNotReadyBookingId = item.bookingId;
       this.isGlobalReportNotReadyModalOpen = true;
       return;
@@ -1089,13 +1102,13 @@ export class DashboardPage implements OnInit, OnDestroy {
     try {
       const bookingId = Number(item.bookingId);
       const res: any = await firstValueFrom(
-        this.labApi.generatePdfReport([bookingId], { single: true, letterHead })
+        this.labApi.generatePdfReport([bookingId], { single: true, letterHead, onlyCompleted: true })
       );
 
       if (res?.success && res?.downloadUrl) {
         const fileName = res.fileName || `report-${bookingId}.pdf`;
         await this.pdfDownload.download(res.downloadUrl, fileName);
-        this.toastService.success('Success', 'Report downloaded successfully.');
+        this.toastService.success('Success', 'Completed reports downloaded successfully.');
       } else {
         this.toastService.error('Error', res?.message || 'Unable to generate the PDF report.');
       }
@@ -2455,15 +2468,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       });
     });
 
-    console.log('[DASH] outsource check', {
-      statuses: tests.map((t: any) => t.status),
-      samples: (raw.sampleAccessions || raw.samples || []).map((s: any) => ({
-        testId: s.testId,
-        status: s.status,
-        keys: Object.keys(s)
-      })),
-      testKeys: Object.keys((raw.bookingWithTestMappings || raw.tests || [])[0] || {})
-    });
+  
 
     return {
       ...raw,

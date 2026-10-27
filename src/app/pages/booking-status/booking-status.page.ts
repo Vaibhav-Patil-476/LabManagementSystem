@@ -196,13 +196,25 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   actionMenuPosition = { top: 0, left: 0 };
   role = '';
 
+  // ============================================================
+  // DYNAMIC PERMISSIONS (web वर बदल केला की ॲपमध्येही बदलतो)
+  // ============================================================
+  /** server कडून आलेल्या permissions चा ताजा set (UPPERCASE) */
+  private staffPerms = new Set<string>();
+  private permTimer: any = null;
+  private readonly PERM_REFRESH_MS = 180000; // 3 मिनिटे
+
+  /** Web वरचा "Test mrp show for staff" checkbox */
+  private readonly PERM_MRP_FOR_STAFF = 'TEST_MRP_FOR_STAFF';
+
+  // NOTE: HTML मध्ये dropdown च्या div वर #actionDropdown असणे आवश्यक आहे
   @ViewChild('actionDropdown') actionDropdownRef?: ElementRef<HTMLElement>;
 
   readonly statusTabs = [
     { key: 'all', label: 'All', badgeClass: 'badge-all' },
     { key: 'completed', label: 'Completed', badgeClass: 'badge-complete' },
     { key: 'CLINICAL', label: 'Clinical', badgeClass: 'badge-clinical' },
-    { key: 'partial', label: 'Partially Complete', badgeClass: 'badge-partial' },   // ✅ नवीन
+    { key: 'partial', label: 'Partially Complete', badgeClass: 'badge-partial' },
     { key: 'pending', label: 'Pending', badgeClass: 'badge-pending' },
     { key: 'snr', label: 'SNR', badgeClass: 'badge-snr' },
     { key: 'cancel', label: 'Cancel', badgeClass: 'badge-cancel' }
@@ -329,6 +341,56 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   get isStaffRole(): boolean { return this.role === this.ROLE_STAFF; }
   get isFranchiseOnlyRole(): boolean { return this.role === this.ROLE_FRANCHISE; }
 
+  get isFranchiseRole(): boolean {
+    return this.role === this.ROLE_FRANCHISE || this.role === this.ROLE_FRANCHISE_STAFF;
+  }
+
+  /** कोणताही STAFF (ROLE_STAFF, ROLE_FRANCHISE_STAFF, ...) */
+  get isAnyStaff(): boolean {
+    return (this.role || '').toUpperCase().includes('STAFF');
+  }
+
+  // ---------- dynamic permission gates ----------
+
+  /** server च्या response मधून permission names काढतो (एकच ठिकाण; नाव चुकले तर इथेच बदल) */
+  private extractPermissions(raw: any): Set<string> {
+    const out = new Set<string>();
+    const sources = [
+      raw?.permissions, raw?.authorities, raw?.privileges,
+      raw?.roles, raw?.permissionList
+    ];
+
+    for (const list of sources) {
+      if (!Array.isArray(list)) continue;
+      for (const x of list) {
+        const v = typeof x === 'string'
+          ? x
+          : (x?.authority ?? x?.name ?? x?.permission ?? x?.permissionName);
+        if (v) out.add(String(v).trim().toUpperCase());
+      }
+    }
+    return out;
+  }
+
+  private hasPerm(key: string): boolean {
+    return this.staffPerms.has(key.toUpperCase());
+  }
+
+  /** MRP पर्याय: staff ला web वर TEST_MRP_FOR_STAFF असेल तरच; बाकीच्यांना नेहमी */
+  get canSeeMrp(): boolean {
+    return true;
+  }
+
+  /** My Price: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide. Admin आणि Franchise ला show. */
+  get canSeeMyPrice(): boolean {
+    return !this.isAnyStaff;
+  }
+
+  /** Print Bill तेव्हाच जेव्हा किमान एक पर्याय उपलब्ध */
+  get canPrintBill(): boolean {
+    return this.canSeeMrp || this.canSeeMyPrice;
+  }
+
   get canEditPatient(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
 
   isSampleReceivedForBooking(item: BookingListItem): boolean {
@@ -344,7 +406,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return this.isFranchiseOnlyRole && !!item && this.isSampleReceivedForBooking(item);
   }
 
-  get canViewAmount(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
+  get canViewAmount(): boolean {
+    if (this.isAnyStaff) return this.hasPerm(this.PERM_MRP_FOR_STAFF);
+    return this.isAdminRole || this.isFranchiseOnlyRole;
+  }
   get canEditBilling(): boolean { return this.isAdminRole || this.isStaffRole; }
   get canViewPayment(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
   get canSaveBooking(): boolean {
@@ -356,8 +421,6 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   }
   get totalAmount(): number { return Math.max(0, this.subTotal - this.discount); }
   get dueAmount(): number { return Math.max(0, this.totalAmount - this.paidAmount); }
-
-
 
   private testCategory(status: string | undefined): string {
     const s = this.normalizeStatus(status, 'snr');
@@ -451,15 +514,20 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.fromDate = this.formatDateForInput(sevenDaysAgo);
     this.toDate = this.formatDateForInput(today);
 
-    this.loadCurrentUser();
+    // loadCurrentUser() इथे बोलावू नका: ionViewWillEnter आधीच बोलावतो (दुहेरी load टाळण्यासाठी)
   }
 
   ionViewWillEnter(): void {
     this.loadCurrentUser();
+
+    clearInterval(this.permTimer);
+    this.permTimer = setInterval(() => this.refreshPermissions(), this.PERM_REFRESH_MS);
   }
 
   ionViewWillLeave(): void {
     this.closeActionMenu();
+    clearInterval(this.permTimer);
+    this.permTimer = null;
   }
 
   ngOnDestroy(): void {
@@ -467,7 +535,15 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       clearTimeout(this.searchDebounceTimer);
       this.searchDebounceTimer = null;
     }
+    clearInterval(this.permTimer);
+    this.permTimer = null;
     this.searchSub?.unsubscribe();
+  }
+
+  /** ॲप background मधून परत आल्यावर permissions पुन्हा घ्या */
+  @HostListener('document:visibilitychange')
+  onVisibilityChange(): void {
+    if (!document.hidden) this.refreshPermissions();
   }
 
   // ---------- ATTACHMENT (edit patient) ----------
@@ -598,45 +674,45 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     }
   }
 
-  // ---------- current user ----------
+  // ---------- current user (नेहमी server कडून ताजा) ----------
   private loadCurrentUser(): void {
-    const cachedUser = this.authService.currentUserValue;
-
-    if (cachedUser) {
-      this.role = this.authService.role;
-      this.currentUserId = cachedUser?.raw?.id ?? cachedUser?.userId ?? 0;
-
-      // loadFilterFranchises() resolves the franchise first and then loads bookings.
-      this.loadFilterFranchises();
-
-      this.cdr.detectChanges();
-      return;
-    }
-
     this.authService.loadCurrentUser().subscribe({
       next: () => {
         this.ngZone.run(() => {
-          this.role = this.authService.role;
-
-          const currentUser = this.authService.currentUserValue;
-          this.currentUserId = currentUser?.raw?.id ?? currentUser?.userId ?? 0;
-
+          this.applyUser();
           this.loadFilterFranchises();
-
           this.cdr.detectChanges();
         });
       },
 
       error: () => {
         this.ngZone.run(() => {
-          this.role = this.authService.role || '';
-          this.currentUserId = 0;
-
+          // server मिळाला नाही तर cache वरून चालू ठेवा
+          this.applyUser();
           this.loadFilterFranchises();
-
           this.cdr.detectChanges();
         });
       }
+    });
+  }
+
+  /** authService मधील सध्याचा user वाचून role, id आणि permissions भरतो */
+  private applyUser(): void {
+    const u: any = this.authService.currentUserValue;
+
+    this.role = this.authService.role || '';
+    this.currentUserId = u?.raw?.id ?? u?.userId ?? 0;
+    this.staffPerms = this.extractPermissions(u?.raw ?? u);
+  }
+
+  /** page उघडे असताना permissions शांतपणे पुन्हा घ्या (loading/list reload नाही) */
+  private refreshPermissions(): void {
+    this.authService.loadCurrentUser().subscribe({
+      next: () => this.ngZone.run(() => {
+        this.applyUser();
+        this.cdr.detectChanges();
+      }),
+      error: () => { /* शांत: जुन्या permissions चालू राहतील */ }
     });
   }
 
@@ -940,10 +1016,29 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       currentRole === 'ROLE_FRANCHISE' ||
       currentRole === 'ROLE_FRANCHISE_STAFF';
 
-    this.labApi.getFranchises().subscribe({
+    const hasOwnFranchiseId =
+      currentFranchiseId !== null &&
+      currentFranchiseId !== undefined &&
+      Number(currentFranchiseId) > 0;
+
+    // Franchise user ला सगळ्यांची यादी नको: फक्त स्वतःचा रेकॉर्ड (reportLock / ifLetterHead साठी).
+    // Admin/Staff साठी जुनेच getFranchises().
+    const franchises$ = (isFranchiseUser && hasOwnFranchiseId)
+      ? this.labApi.getSingleFranchise(Number(currentFranchiseId))
+      : this.labApi.getFranchises();
+
+    franchises$.subscribe({
       next: (res: any) => {
         this.ngZone.run(() => {
-          this.filterFranchises = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+          if (Array.isArray(res?.content)) {
+            this.filterFranchises = res.content;
+          } else if (Array.isArray(res)) {
+            this.filterFranchises = res;
+          } else if (res && res.franchiseId) {
+            this.filterFranchises = [res];   // single franchise response
+          } else {
+            this.filterFranchises = [];
+          }
 
           this.franchiseReportLock = {};
           this.filterFranchises.forEach((f: any) => {
@@ -959,11 +1054,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
             if (matchedFranchise) {
               this.selectedFranchiseId = Number(matchedFranchise.franchiseId);
               this.franchiseSearchTerm = matchedFranchise.franchiseName || currentFranchiseName || '';
-            } else if (
-              currentFranchiseId !== null &&
-              currentFranchiseId !== undefined &&
-              Number(currentFranchiseId) > 0
-            ) {
+            } else if (hasOwnFranchiseId) {
               this.selectedFranchiseId = Number(currentFranchiseId);
               this.franchiseSearchTerm = currentFranchiseName || '';
             } else {
@@ -986,12 +1077,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
           this.filterFranchises = [];
           this.franchiseReportLock = {};
 
-          if (
-            isFranchiseUser &&
-            currentFranchiseId !== null &&
-            currentFranchiseId !== undefined &&
-            Number(currentFranchiseId) > 0
-          ) {
+          if (isFranchiseUser && hasOwnFranchiseId) {
             this.selectedFranchiseId = Number(currentFranchiseId);
             this.franchiseSearchTerm = currentFranchiseName || '';
           } else {
@@ -1086,33 +1172,33 @@ export class BookingStatusPage implements OnInit, OnDestroy {
       .length;
     return completedCount === testCount ? 'completed' : 'pending';
   }
-testStatusClass(status?: string): string {
-  const s = this.normalizeStatus(status, 'snr');
+  testStatusClass(status?: string): string {
+    const s = this.normalizeStatus(status, 'snr');
 
-  if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
-  if (s === 'snr') return 'badge-snr';
-  if (s.includes('clinical')) return 'badge-clinical';
-  if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
-  if (this.isCompleteOrReady(s)) return 'badge-ready';
-  if (s.includes('outsource')) return 'badge-outsource';
-  if (s.includes('process') || s.includes('doctor approval')) return 'badge-inprocess';
+    if (s === 'cancel' || s === 'cancelled') return 'badge-cancel';
+    if (s === 'snr') return 'badge-snr';
+    if (s.includes('clinical')) return 'badge-clinical';
+    if (s.includes('recheck') || s.includes('hold')) return 'badge-recheck';
+    if (this.isCompleteOrReady(s)) return 'badge-ready';
+    if (s.includes('outsource')) return 'badge-outsource';
+    if (s.includes('process') || s.includes('doctor approval')) return 'badge-inprocess';
 
-  return 'badge-pending';
-}
+    return 'badge-pending';
+  }
 
-testStatusLabel(status?: string): string {
-  const s = this.normalizeStatus(status, 'snr');
+  testStatusLabel(status?: string): string {
+    const s = this.normalizeStatus(status, 'snr');
 
-  if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
-  if (s === 'snr') return 'SNR';
-  if (s.includes('clinical')) return 'CLINICAL';
-  if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
-  if (this.isCompleteOrReady(s)) return 'COMPLETE';
-  if (s.includes('outsource')) return 'OUTSOURCE';
-  if (s.includes('process') || s.includes('doctor approval')) return 'IN PROCESS';
+    if (s === 'cancel' || s === 'cancelled') return 'CANCEL';
+    if (s === 'snr') return 'SNR';
+    if (s.includes('clinical')) return 'CLINICAL';
+    if (s.includes('recheck') || s.includes('hold')) return 'RECHECK & HOLD';
+    if (this.isCompleteOrReady(s)) return 'COMPLETE';
+    if (s.includes('outsource')) return 'OUTSOURCE';
+    if (s.includes('process') || s.includes('doctor approval')) return 'IN PROCESS';
 
-  return 'PENDING';
-}
+    return 'PENDING';
+  }
 
   isReportComplete(status: string | undefined): boolean {
     return (status || '').toLowerCase().includes('complete');
@@ -1179,8 +1265,15 @@ testStatusLabel(status?: string): string {
   // ---------- print bill ----------
   openPrintBillModal(item: BookingListItem): void {
     this.closeActionMenu();
+
+    if (!this.canPrintBill) {
+      this.showToast('You do not have permission to print bills.', 'warning');
+      return;
+    }
+
     this.printBillItem = item;
-    this.selectedBillPriceType = 'myprice';
+    // जो पर्याय अनुमत आहे तोच default
+    this.selectedBillPriceType = this.canSeeMyPrice ? 'myprice' : 'mrp';
     this.customBillAmount = null;
     this.isPrintBillModalOpen = true;
   }
@@ -1190,16 +1283,31 @@ testStatusLabel(status?: string): string {
     this.printBillItem = null;
   }
 
+  /** निवडलेला price type अनुमत नसेल तर अनुमत असलेल्यावर परत आणतो */
+  private resolveAllowedPriceType(requested: string): string {
+    let priceType = requested;
+    if (priceType === 'myprice' && !this.canSeeMyPrice) priceType = 'mrp';
+    if (priceType === 'mrp' && !this.canSeeMrp) priceType = 'myprice';
+    return priceType;
+  }
+
   async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
+    if (!this.canPrintBill) {
+      this.showToast('You do not have permission to print bills.', 'warning');
+      return;
+    }
+
     const item = this.printBillItem;
     if (!item) return;
     if (this.generatingBillId === item.bookingId) return;
     this.generatingBillId = item.bookingId;
     this.isPrintBillModalOpen = false;
 
+    const priceType = this.resolveAllowedPriceType(this.selectedBillPriceType);
+
     const payload = this.labApi.buildBillPayload(
       item.bookingId,
-      this.selectedBillPriceType,
+      priceType,
       this.customBillAmount || null,
       letterHead,
       fLetterHead
@@ -1246,26 +1354,40 @@ testStatusLabel(status?: string): string {
   async openPrintBillOptions(item: BookingListItem): Promise<void> {
     this.closeActionMenu();
 
+    if (!this.canPrintBill) {
+      this.showToast('You do not have permission to print bills.', 'warning');
+      return;
+    }
+
+    const buttons: any[] = [];
+    if (this.canSeeMyPrice) {
+      buttons.push({ text: 'My Price', handler: () => this.printBill(item, 'myprice') });
+    }
+    if (this.canSeeMrp) {
+      buttons.push({ text: 'MRP', handler: () => this.printBill(item, 'mrp') });
+    }
+    buttons.push({ text: 'Cancel', role: 'cancel', cssClass: 'alert-btn-cancel' });
+
     const alert = await this.alertController.create({
       cssClass: 'premium-alert',
       header: 'Print Bill',
       message: 'Select bill type',
-      buttons: [
-        { text: 'My Price', handler: () => this.printBill(item, 'myprice') },
-        { text: 'MRP', handler: () => this.printBill(item, 'mrp') },
-        { text: 'Cancel', role: 'cancel', cssClass: 'alert-btn-cancel' }
-      ]
+      buttons
     });
 
     await alert.present();
   }
 
   async printBill(item: BookingListItem, billType: string = 'myprice'): Promise<void> {
+    if (!this.canPrintBill) {
+      this.showToast('You do not have permission to print bills.', 'warning');
+      return;
+    }
     if (this.generatingBillId === item.bookingId) return;
     this.generatingBillId = item.bookingId;
 
     try {
-      const payload = this.labApi.buildBillPayload(item.bookingId, billType);
+      const payload = this.labApi.buildBillPayload(item.bookingId, this.resolveAllowedPriceType(billType));
       const res: any = await firstValueFrom(this.labApi.printBill(payload));
 
       if (res?.downloadUrl) {
@@ -1291,11 +1413,11 @@ testStatusLabel(status?: string): string {
 
     const tests = item.tests || [];
 
-    const isReportReady =
-      tests.length > 0 &&
-      tests.every(t => this.isCompleteOrReady(this.normalizeStatus(t.status)));
+    const hasCompletedTest = tests.some(t =>
+      this.isCompleteOrReady(this.normalizeStatus(t.status))
+    );
 
-    if (!isReportReady) {
+    if (!hasCompletedTest) {
       this.reportNotReadyBookingId = item.bookingId;
       this.isReportNotReadyModalOpen = true;
       return;
@@ -1309,7 +1431,6 @@ testStatusLabel(status?: string): string {
     this.downloadReportItem = item;
     this.isDownloadReportModalOpen = true;
   }
-
   closeReportNotReadyModal(): void {
     this.isReportNotReadyModalOpen = false;
     this.reportNotReadyBookingId = null;
@@ -1330,13 +1451,17 @@ testStatusLabel(status?: string): string {
 
     try {
       const res: any = await firstValueFrom(
-        this.labApi.generatePdfReport([item.bookingId], { letterHead, single: true })
+        this.labApi.generatePdfReport([item.bookingId], {
+          letterHead,
+          single: true,
+          onlyCompleted: true
+        })
       );
 
       if (res?.downloadUrl) {
         const fileName = res.fileName || `report-${item.bookingId}.pdf`;
         await this.pdfDownload.download(res.downloadUrl, fileName);
-        this.showToast('Report downloaded successfully.', 'success');
+        this.showToast('Completed reports downloaded successfully.', 'success');
       } else {
         this.showToast(res?.message || 'Unable to generate the report PDF.', 'error');
       }
@@ -2217,8 +2342,6 @@ testStatusLabel(status?: string): string {
       this.toastService.success('Copied', 'Barcode ' + value + ' copied to clipboard.');
 
     } catch (err) {
-      console.error('COPY BARCODE ERROR:', err);
-
       // Fallback for older WebViews where navigator.clipboard is unavailable
       const tempInput = document.createElement('textarea');
       tempInput.value = value;

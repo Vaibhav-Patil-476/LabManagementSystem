@@ -6,9 +6,13 @@ import { AlertController } from '@ionic/angular/standalone';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
 import { Clipboard } from '@capacitor/clipboard';
 import { isDevMode } from '@angular/core';
+import Fuse from 'fuse.js';
+import { VoiceAliases } from '../../core/services/voice/voice-aliases';
+import { TrfScanService } from '../../core/services/trf-scan';
+
 
 import { PdfDownloadService } from '../../core/services/pdf-download';
-import { GeminiLiveService } from '../../core/services/gemini-live';
+import { VoiceAssistantService } from '../../core/services/voice/voice-assistant';
 import { secrets } from '../../../environments/secrets'
 import { micOutline, stopCircleOutline } from 'ionicons/icons';
 
@@ -17,8 +21,9 @@ import {
   IonHeader, IonToolbar, IonTitle, IonContent, IonButtons, IonBackButton,
   IonButton, IonIcon, IonInput, IonSelect, IonSelectOption, IonCheckbox,
   IonModal, IonFooter,
-  IonRefresher, IonRefresherContent
+  IonRefresher, IonRefresherContent, ActionSheetController
 } from '@ionic/angular/standalone';
+
 import {
   HostListener
 } from '@angular/core';
@@ -46,7 +51,11 @@ import {
   listOutline,
   addCircleOutline,
   receiptOutline,
-  clipboardOutline
+  clipboardOutline,
+  documentTextOutline,
+  imageOutline,
+  chevronForwardOutline,
+  sparklesOutline
 } from 'ionicons/icons';
 
 import { RoleService } from '../../core/services/role';
@@ -100,24 +109,29 @@ export class AddPatientComponent {
   // ============================================================
 
   role: string = '';
-
-  // 2-step booking flow
-  //   step 1 = Patient Info
-  //   step 2 = Tests + Billing + Barcode
   step: 1 | 2 = 1;
   isSavingBooking = false;
   private pdfDownload = inject(PdfDownloadService);
-  private voice = inject(GeminiLiveService);
+  private voice = inject(VoiceAssistantService);
+  private trf = inject(TrfScanService);
+  private actionSheetCtrl = inject(ActionSheetController);
+  isScanningTrf = false;
+  trfSheetOpen = false;
+  trfPhase: 'source' | 'scanning' | 'pick' | 'done' = 'source';
+  trfStatus = 'Reading document…';
+  trfSummary = '';
+  trfPatients: any[] = [];
   voiceState$ = this.voice.state$;
   voiceTranscript$ = this.voice.transcript$;
+  private voiceFuzzy: { kind: 'test' | 'pkg' | 'doctor'; spoken: string; name: string }[] = [];
   private voiceConsentGiven = false;
   private voiceErrSub?: Subscription;
   private voiceTestCache = new Map<number, any>();
 
-  // booking save झाल्यावर true -> bottom bar (New Booking / Status / Print)
+
   bookingSaved = false;
 
-  // Print Bill modal
+
   isPrintBillModalOpen = false;
   selectedBillPriceType = 'myprice';
   customBillAmount: any = null;
@@ -592,9 +606,12 @@ export class AddPatientComponent {
       'clipboard-outline': clipboardOutline,
       'mic-outline': micOutline,
       'stop-circle-outline': stopCircleOutline,
+      'document-text-outline': documentTextOutline,
+      'image-outline': imageOutline,
+      'chevron-forward-outline': chevronForwardOutline,
+      'sparkles-outline': sparklesOutline,
     });
 
-    // Voice che errors (mic denied, connection failed, greeting zali nahi) -> toast
     this.voiceErrSub = this.voice.error$.subscribe(msg =>
       this.ngZone.run(() => {
         const isPermission = /permission|microphone/i.test(msg);
@@ -602,10 +619,12 @@ export class AddPatientComponent {
           'Voice Error',
           isPermission
             ? msg + ' Phone settings madhe Allow kara.'
-            : msg + ' Please pull down to refresh.'
+            : msg
         );
       })
     );
+
+
   }
 
   @HostListener('document:click', ['$event'])
@@ -2001,8 +2020,19 @@ export class AddPatientComponent {
 
     const labId = this.labApi.getCurrentLabId();
 
-    const currentUserId =
-      (this.authService.currentUserValue as any)?.raw?.id;
+    const user: any = this.authService.currentUserValue;
+    const raw: any = user?.raw || {};
+
+    const currentUserId = Number(raw.id ?? user?.userId ?? 0);
+    const currentUsername = String(raw.username || '').trim().toLowerCase();
+
+    const franchiseIdRaw = Number(
+      (this.authService as any).franchiseId ?? raw.franchiseId ?? 0
+    );
+    const franchiseId =
+      this.isFranchiseRole && franchiseIdRaw > 0
+        ? franchiseIdRaw
+        : undefined;
 
     const today = new Date();
 
@@ -2018,7 +2048,8 @@ export class AddPatientComponent {
         0,
         500,
         fromDate,
-        toDateExclusive
+        toDateExclusive,
+        franchiseId
       )
       .subscribe({
 
@@ -2028,16 +2059,28 @@ export class AddPatientComponent {
 
           list = Array.isArray(list) ? list : [];
 
+          const totalBeforeFilter = list.length;
+
+          // Fakta ROLE_STAFF la swata che bookings.
+          // Franchise / Franchise Staff / Admin la filter nahi.
           if (
-            this.role !== this.ROLE_LAB_ADMIN &&
-            currentUserId
+            this.role === this.ROLE_STAFF &&
+            (currentUserId > 0 || currentUsername)
           ) {
+            list = list.filter((b: any) => {
+              const idMatch =
+                currentUserId > 0 &&
+                Number(b?.createdBy) === currentUserId;
 
-            list = list.filter(
-              (b: any) => b.createdBy === currentUserId
-            );
+              const nameMatch =
+                !!currentUsername &&
+                String(b?.user?.username || '')
+                  .trim()
+                  .toLowerCase() === currentUsername;
+
+              return idMatch || nameMatch;
+            });
           }
-
           list.sort(
             (a: any, b: any) =>
               (b.createdOn || 0) - (a.createdOn || 0)
@@ -4255,34 +4298,288 @@ export class AddPatientComponent {
     }
   }
 
-// ============================================================
+  // ============================================================
+  // TRF / CASE PAPER SCAN
+  // ============================================================
+
+
+  // ---------- TRF sheet (premium flow) ----------
+
+  openTrfSheet(): void {
+    if (this.isScanningTrf) return;
+    this.trfPatients = [];
+    this.trfSummary = '';
+    this.trfPhase = 'source';
+    this.trfSheetOpen = true;
+  }
+
+  closeTrfSheet(): void {
+    if (this.trfPhase === 'scanning') return;
+    this.trfSheetOpen = false;
+  }
+
+  onTrfDismiss(): void {
+    this.trfSheetOpen = false;
+    this.trfPhase = 'source';
+    this.trfPatients = [];
+  }
+
+  trfInitials(name: string): string {
+    const parts = String(name || '').trim().split(/\s+/).filter(Boolean);
+    const first = parts[0]?.[0] || '';
+    const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
+    return (first + last).toUpperCase() || '?';
+  }
+
+  private setTrf(phase: 'source' | 'scanning' | 'pick' | 'done', status?: string): void {
+    this.ngZone.run(() => {
+      this.trfPhase = phase;
+      if (status) this.trfStatus = status;
+    });
+  }
+
+  async chooseTrfSource(fromGallery: boolean): Promise<void> {
+    this.isScanningTrf = true;
+    this.setTrf('scanning', 'Reading document…');
+
+    try {
+      const r: any = await this.trf.scan(fromGallery);
+
+      if (!r) {
+        this.setTrf('source');
+        this.toastService.warning('TRF', 'No text was found. Please take a clearer photo.');
+        return;
+      }
+
+      if (this.voiceDebugEnabled()) console.debug('[TRF] OCR text:\n' + r.rawText, r);
+
+      // One TRF can hold several patients: let the user pick one
+      if (Array.isArray(r.patients) && r.patients.length) {
+        if (r.patients.length === 1) {
+          await this.selectTrfPatient(r.patients[0]);
+          return;
+        }
+        this.ngZone.run(() => {
+          this.trfPatients = r.patients;
+          this.trfPhase = 'pick';
+        });
+        return;
+      }
+
+      await this.completeTrf(r);
+
+    } catch (e: any) {
+      this.setTrf('source');
+      const msg = String(e?.message || e || '');
+      if (!/cancel/i.test(msg)) {
+        console.error('TRF SCAN ERROR:', e);
+        this.toastService.error('TRF Error', 'Unable to scan the TRF. Please try again.');
+      }
+    } finally {
+      this.ngZone.run(() => { this.isScanningTrf = false; });
+    }
+  }
+
+  async selectTrfPatient(p: any): Promise<void> {
+    await this.completeTrf({
+      title: p.gender === 'male' ? 'mr' : 'ms',
+      name: p.name,
+      age: p.age,
+      ageType: 'years',
+      gender: p.gender,
+      items: p.test ? [p.test] : [],
+      rawText: ''
+    });
+  }
+
+  private async completeTrf(r: any): Promise<void> {
+    this.setTrf('scanning', 'Filling booking details…');
+
+    const ok = await this.ngZone.run(() => this.applyTrf(r));
+
+    if (!ok) {
+      this.setTrf('source');
+      return;
+    }
+
+    this.setTrf('done');
+    setTimeout(() => this.ngZone.run(() => this.closeTrfSheet()), 1400);
+  }
+
+  private async applyTrf(r: any): Promise<boolean> {
+
+    // If the scan found nothing usable, keep the current form untouched.
+    const hasData = !!(
+      r?.name || r?.age || r?.phone || r?.aadhaar || r?.uhid ||
+      r?.address || r?.doctor || (Array.isArray(r?.items) && r.items.length)
+    );
+
+    if (!hasData) {
+      this.toastService.warning(
+        'TRF',
+        'No details could be detected. Please take a clearer photo or enter the details manually.'
+      );
+      return false;
+    }
+
+    // Every TRF scan starts a fresh booking: clear the previous patient's
+    // details, tests, packages, sample barcodes, billing and file first.
+    // Ref. doctor and collection center are kept.
+    this.bookingSaved = false;
+    this.resetFormKeepingDoctorAndFranchise();
+    this.step = 1;
+    this.clearPending();
+
+    let fields = 0;
+
+    // ---------- Patient basics ----------
+    if (r.title && ['mr', 'mrs', 'ms', 'dr'].includes(r.title)) {
+      this.patient.title = r.title;
+      this.onTitleChange();
+    }
+    if (r.name && this.NAME_REGEX.test(r.name)) {
+      this.patient.name = r.name; this.clearFieldError('name'); fields++;
+    }
+    if (r.age) {
+      this.patient.age = r.age; this.clearFieldError('age'); fields++;
+      if (r.ageType) this.patient.ageType = r.ageType;
+    }
+    if (r.gender) this.patient.gender = r.gender;
+    if (r.phone && this.MOBILE_REGEX.test(r.phone)) {
+      this.patient.phone = r.phone; this.clearFieldError('mobile'); fields++;
+    }
+    if (r.aadhaar && this.AADHAAR_REGEX.test(r.aadhaar)) {
+      this.patient.aadhaar = r.aadhaar; fields++;
+    }
+    if (r.uhid && this.UHID_REGEX.test(r.uhid)) {
+      this.patient.uhid = r.uhid; fields++;
+    }
+    if (r.address) {
+      this.patient.address = String(r.address).slice(0, 200); fields++;
+    }
+    if (r.history) {
+      this.patient.history = String(r.history).slice(0, 500);
+      this.patient.clinical = true;   // shows the History field
+      fields++;
+    }
+
+    // ---------- Doctor (match from database, otherwise use as custom) ----------
+    if (r.doctor) {
+      if (!this.doctors.length) {
+        try {
+          const res: any = await this.api(this.labApi.getDoctors());
+          this.doctors = this.extractDoctorsResponse(res)
+            .map((d: any) => this.normalizeDoctor(d))
+            .filter((d: any) => !!d);
+        } catch { /* falls back to a custom doctor below */ }
+      }
+
+      const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim();
+      const q = clean(String(r.doctor));
+      const nm = (d: any) => clean(this.getDoctorName(d));
+
+      const pick = this.doctors.length
+        ? (this.pickBest(this.doctors, q, nm) ??
+          this.pickByTokens(this.doctors, q, nm) ??
+          this.fuzzyPick(this.doctors, q, nm))
+        : null;
+
+      if (pick) this.selectDoctorFromSearch(pick);
+      else this.useCustomDoctor(String(r.doctor));
+      fields++;
+    }
+
+    // ---------- Tests + Packages ----------
+    let testsAdded = 0;
+    const items: string[] = Array.isArray(r.items) ? r.items : [];
+
+    if (items.length) {
+      if (!this.allTests.length && !this.allTestsCache.length) await this.preloadTests();
+      const testPool = this.allTests.length ? this.allTests : this.allTestsCache;
+
+      const mkFuse = (list: any[], key: any) =>
+        new Fuse(list, { keys: [key], includeScore: true, threshold: 0.3, ignoreLocation: true, minMatchCharLength: 3 });
+
+      const testFuse = testPool.length ? mkFuse(testPool, 'name') : null;
+      const pkgFuse = this.allPackages.length
+        ? new Fuse(this.allPackages.map((p: any) => ({
+          p, n: String(p?.profileName || p?.profile_name || p?.name || '').trim()
+        })), { keys: ['n'], includeScore: true, threshold: 0.3, ignoreLocation: true, minMatchCharLength: 3 })
+        : null;
+
+      // Builds several spellings of one OCR'd test name and tries them in order:
+      // full text, text without the leading test code (e.g. "HEMOI"), without brackets, then the short code in brackets
+      const variantsOf = (raw: string): string[] => {
+        const s = String(raw).replace(/\s+/g, ' ').trim();
+        const noCode = s.split(' ').length >= 3 ? s.split(' ').slice(1).join(' ') : '';
+        const strip = (x: string) => x.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+        const inner = s.match(/\(([^)]{2,20})\)/)?.[1]?.trim();
+
+        return Array.from(new Set(
+          [s, strip(s), noCode, strip(noCode), inner].filter((x): x is string => !!x && x.length >= 2)
+        ));
+      };
+
+      for (const raw of items) {
+
+        let matched = false;
+
+        for (const v of variantsOf(raw)) {
+          const term = this.TEST_ALIASES[this.norm(v)] ?? v;
+          const single = !/\s/.test(term.trim());
+          const limit = single ? 0.2 : 0.3;   // single-word terms need a stricter match
+
+          const t = testFuse?.search(term)[0];
+          const p = pkgFuse?.search(term)[0];
+
+          const tOk = t && (t.score ?? 1) <= limit;
+          const pOk = p && (p.score ?? 1) <= limit;
+
+          if (pOk && (!tOk || (p!.score ?? 1) <= (t!.score ?? 1))) {
+            if (this.addPackageFromPick(p!.item.p)) testsAdded++;
+            matched = true;
+          } else if (tOk) {
+            const test = t!.item;
+            if (!this.selectedTests.some((x: any) => !x.packageName && x.name === test.name)) {
+              this.addTest(test);
+              testsAdded++;
+            }
+            matched = true;
+          }
+
+          if (matched) break;
+        }
+      }
+    }
+
+    // ---------- Result ----------
+    this.trfSummary = `${fields} field(s) and ${testsAdded} test/package(s) filled`;
+    this.scrollTop();
+    return true;
+  }
+
+
+
+  // ============================================================
   // VOICE ASSISTANT
   // ============================================================
 
-  // ---------------------------------------------------------------
-  // NORMALIZERS (UPDATED)
-  // "plus / and / with" kadhun taka, mhanje
-  // "Wellness 1.1 plus CBC" == "WELLNESS-1.1+CBC" == "wellness 1.1 cbc"
-  // Package naav ani voice query donhi sathi same functions vaparle jatat.
-  // ---------------------------------------------------------------
   private deplus(s: any): string {
     return String(s ?? '').toLowerCase().replace(/\b(plus|and|with)\b/g, ' ');
   }
 
-  // "Wellness-1.6" / "wellness 1.6" / "Wellness 1.6" sagle same hotat
   private compact(s: any): string {
     return this.deplus(s).replace(/[^a-z0-9]+/g, '');
   }
 
-  /** Spelling var avlambun nahi: "Welllness 1.3" / "welness 1.3" / "Welleness 1.3" -> "wlnss13" */
+  /** Spelling var avlambun nahi: "Welllness 1.3" / "welness 1.3" -> same key */
   private fkey(s: any): string {
     return this.deplus(s)
       .replace(/[^a-z0-9]/g, '')
-      .replace(/([a-z])\1+/g, '$1')   // ll -> l
-      .replace(/[aeiouy]/g, '');      // vowels kadha (ee/oo/ye che farak jatat)
+      .replace(/([a-z])\1+/g, '$1')
+      .replace(/[aeiouy]/g, '');
   }
 
-  /** "Wellness 1.2" / "wellness-1.2" -> "wellness12" (spaces, dash, dot, plus ignore) */
   private key(s: any): string {
     return this.deplus(s).replace(/[^a-z0-9]/g, '');
   }
@@ -4294,7 +4591,6 @@ export class AddPatientComponent {
   private pendingTests: string[] = [];
   private pendingPkgs: string[] = [];
 
-  // Observable -> Promise with timeout (atakleli API baki tools thambvat nahi)
   private api<T>(obs: Observable<T>, ms = 7000): Promise<T> {
     return firstValueFrom(obs.pipe(timeout({ each: ms })));
   }
@@ -4328,8 +4624,7 @@ export class AddPatientComponent {
 
     this.clearPending();
 
-    // 3. Doctor list background madhe. Await nako, nahitar tap gesture tutto
-    //    ani speaker suspended rahto.
+    // 3. Doctor list background madhe (await nako)
     if (!this.doctors.length) {
       this.api(this.labApi.getDoctors())
         .then((res: any) => {
@@ -4338,7 +4633,7 @@ export class AddPatientComponent {
             .filter((d: any) => !!d);
         })
         .catch(e => console.warn('Doctor preload failed', e));
-    }
+    } this.preloadTests();
 
     // 4. Voice suru kara
     try {
@@ -4346,7 +4641,6 @@ export class AddPatientComponent {
         this.ngZone.run(() => this.runVoiceTool(name, args))
       );
     } catch (e: any) {
-      // Toast service che error$ madhun already yeto, double toast nako.
       console.warn('Voice start failed', e?.name);
     }
   }
@@ -4356,7 +4650,7 @@ export class AddPatientComponent {
       const alert = await this.alertController.create({
         cssClass: 'premium-alert',
         header: 'Voice Assistant',
-        message: 'Tumcha awaz AI processing sathi Google la pathvla jail. Chalel ka?',
+        message: 'Tumcha awaz phone chya speech recognition ne text madhe badalla jail. Chalel ka?',
         buttons: [
           { text: 'No', role: 'cancel', handler: () => resolve(false) },
           { text: 'Yes', handler: () => resolve(true) }
@@ -4371,7 +4665,6 @@ export class AddPatientComponent {
   // typo-tolerant helpers
   // ---------------------------------------------------------------
 
-  /** "Wellness 1.3" -> "1.3", "Vitamin B12" -> "12", number nasel tar "" */
   private numsOf(s: any): string {
     return (String(s ?? '').match(/\d+(?:\.\d+)*/g) || []).join('|');
   }
@@ -4395,15 +4688,11 @@ export class AddPatientComponent {
     return dp[a.length][b.length];
   }
 
-  /**
-   * Spelling chuklela naav sathi. Number asel tar to exactly same pahije (1.3 != 1.2).
-   * Ek ch clear winner asel tarach pick karto, tie asel tar guess karat nahi.
-   */
   private fuzzyPick<T>(items: T[], term: string, nameOf: (x: T) => string): T | null {
     const fq = this.fkey(term);
-    if (fq.length < 4) return null;                  // CBC, HB, TSH sarkhe chhote naave guess karu naka
+    if (fq.length < 4) return null;
     const qNums = this.numsOf(term);
-    const maxD = fq.length <= 8 ? 1 : 2;             // chhote naave: 1 chuk, motha: 2
+    const maxD = fq.length <= 8 ? 1 : 2;
 
     const scored = items
       .filter(x => this.numsOf(nameOf(x)) === qNums)
@@ -4412,13 +4701,13 @@ export class AddPatientComponent {
       .sort((a, b) => a.d - b.d);
 
     if (!scored.length) return null;
-    if (scored.length > 1 && scored[1].d === scored[0].d) return null;   // tie = guess karu naka
+    if (scored.length > 1 && scored[1].d === scored[0].d) return null;
     return scored[0].x;
   }
 
   private pickBest<T>(items: T[], q: string, nameOf: (x: T) => string): T | null {
-    const qn = this.norm(q);          // "wellness 1 6"
-    const qc = this.compact(q);       // "wellness16"
+    const qn = this.norm(q);
+    const qc = this.compact(q);
     if (!qc) return null;
     const qTokens = qn.split(' ').filter(Boolean);
 
@@ -4448,7 +4737,7 @@ export class AddPatientComponent {
     return String(s).replace(/[\s\-–_.\d]+$/, '').trim();
   }
 
-  /** "1.3" ekta pathavla tar adhicha prefix ("Wellness") laav (60 sec paryant). */
+  /** "1.3" ekta bolla tar adhicha prefix ("Wellness") laav (60 sec paryant). */
   private expandBare(list: string[]): string[] {
     return list.map(t => {
       const s = String(t).trim();
@@ -4468,10 +4757,6 @@ export class AddPatientComponent {
     return Promise.race([p, new Promise<T>(r => setTimeout(() => r(fallback), ms))]);
   }
 
-  /**
-   * Package + Test sathi common loose search.
-   * Pahila query ne exact naav nahi sapadla tar baki variants PARALLEL pathavto ani merge karto.
-   */
   private async searchLoose(
     fetch: (q: string) => Promise<any[]>,
     term: string,
@@ -4488,13 +4773,11 @@ export class AddPatientComponent {
     };
     const hasExact = () => [...merged.values()].some(x => this.fkey(nameOf(x)) === fq);
 
-    // number nasel tar
     if (!/\d/.test(term)) {
       const first = await this.withCap(fetch(tries[0]), 4000, [] as any[]);
       addAll(first);
       if (hasExact() || tries.length === 1) return [...merged.values()];
 
-      // exact nahi sapadla: baki variants ekach vela parallel
       const rest = await Promise.all(
         tries.slice(1).map(q => this.withCap(fetch(q), 4000, [] as any[]))
       );
@@ -4502,13 +4785,11 @@ export class AddPatientComponent {
       return [...merged.values()];
     }
 
-    // number asel tar: merge karat jaa, exact naav sapadla ki thamb
     for (const q of tries) {
       const m = await this.withCap(fetch(q), 4000, [] as any[]);
       addAll(m);
       const list = [...merged.values()];
       const { pick } = this.choosePkg(list, term, nameOf);
-      // typo-tolerant compare (Welllness 1.3 == Wellness 1.3)
       if (pick && this.fkey(nameOf(pick)) === fq) return list;
     }
     return [...merged.values()];
@@ -4523,10 +4804,17 @@ export class AddPatientComponent {
   }
 
   private async findTestsLoose(labId: any, fid: any, term: string): Promise<any[]> {
-    return this.searchLoose(q => this.findTests(labId, fid, q), term, (t: any) => String(t?.name || '').trim());
+    const remote = await this.searchLoose(
+      q => this.findTests(labId, fid, q), term, (t: any) => String(t?.name || '').trim()
+    );
+    if (remote.some((t: any) => this.fkey(t.name) === this.fkey(term))) return remote;
+
+    const { pick } = this.fuseTest(term);
+    if (!pick) return remote;
+    const seen = new Set(remote.map((t: any) => this.key(t.name)));
+    return seen.has(this.key(pick.name)) ? remote : [...remote, pick];
   }
 
-  /** Package nivad: exact -> spelling-exact -> ekach contains -> ambiguous -> pickBest -> fuzzy. */
   private choosePkg(m: any[], term: string, nameOf: (x: any) => string): { pick?: any; ambiguous?: any[] } {
     const q = this.key(term);
     if (!q || !m?.length) return {};
@@ -4534,7 +4822,6 @@ export class AddPatientComponent {
     const exact = m.filter(x => this.key(nameOf(x)) === q);
     if (exact.length) return { pick: exact[0] };
 
-    // spelling chuklela pan same naav (Welllness 1.3, welness 1.3)
     const fq = this.fkey(term);
     const fexact = m.filter(x => this.fkey(nameOf(x)) === fq);
     if (fexact.length === 1) return { pick: fexact[0] };
@@ -4560,7 +4847,6 @@ export class AddPatientComponent {
       // ==========================================================
       case 'fill_booking': {
 
-        // Pahili booking save zali asel tar nava patient suru kara
         if (this.bookingSaved) {
           this.bookingSaved = false;
           this.resetFormKeepingDoctorAndFranchise();
@@ -4574,22 +4860,22 @@ export class AddPatientComponent {
         const done: string[] = [];
         const labId = this.labApi.getCurrentLabId();
 
-        // pending + navin items ekatra
         let reqTests = this.uniq([...this.pendingTests, ...this.asArr(a.tests)]);
         let reqPkgs = this.uniq([...this.pendingPkgs, ...this.asArr(a.packages)]);
         this.clearPending();
 
         reqTests = reqTests.map(t => this.TEST_ALIASES[this.norm(t)] ?? t);
+        reqTests = reqTests.map(t => VoiceAliases.resolve('test', t) ?? t);
+        reqPkgs = reqPkgs.map(p => VoiceAliases.resolve('pkg', p) ?? p);
+        if (a.doctor) a.doctor = VoiceAliases.resolve('doctor', String(a.doctor)) ?? a.doctor;
 
-        // "1.3" ekta bolla tar adhicha prefix ("Wellness") laav
         reqTests = this.expandBare(reqTests);
         reqPkgs = this.expandBare(reqPkgs);
 
-        // Bill madhe aadhich asleli test/package skip kara (search nako, toast nako)
         const inBillTest = (term: string) => {
           const q = this.norm(term);
           return this.selectedTests.some((t: any) => {
-            if (t.packageName) return false;   // package madhle tests gruhit dharu naka
+            if (t.packageName) return false;
             const n = this.norm(t.name);
             return n === q || n.includes(q);
           });
@@ -4606,7 +4892,6 @@ export class AddPatientComponent {
           : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
         const pkgFranchiseId = this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined;
 
-        // background madhe suru, ithe await nahi
         const searchP = wantsItems
           ? Promise.all([
             Promise.all(reqTests.map(async tn => ({ tn, m: await this.findTestsLoose(labId, franchiseId, tn) }))),
@@ -4621,6 +4906,11 @@ export class AddPatientComponent {
             this.patient.title = t;
             this.onTitleChange();
           }
+        }
+
+
+        if (a.name && this.patient.name && !a.nameExplicit) {
+          delete a.name;
         }
 
         if (a.name) {
@@ -4709,7 +4999,6 @@ export class AddPatientComponent {
           }
         }
 
-        // checkboxes
         if (typeof a.eReport === 'boolean') this.patient.eReport = a.eReport;
         if (typeof a.homeCollection === 'boolean') this.patient.homeCollection = a.homeCollection;
         if (typeof a.clinical === 'boolean') this.patient.clinical = a.clinical;
@@ -4729,15 +5018,19 @@ export class AddPatientComponent {
           }
 
           if (this.doctors.length) {
-            const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim();
-            const pick = this.pickBest(
-              this.doctors,
-              clean(String(a.doctor)),
-              (d: any) => clean(this.getDoctorName(d))
-            );
+            const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim()
+            const q = clean(String(a.doctor));
+            const nm = (d: any) => clean(this.getDoctorName(d));
+            const pick =
+              this.pickBest(this.doctors, q, nm) ??
+              this.pickByTokens(this.doctors, q, nm) ??
+              this.fuzzyPick(this.doctors, q, nm);
 
             if (pick) {
               this.selectDoctorFromSearch(pick);
+              if (clean(this.getDoctorName(pick)) !== q) {
+                this.voiceFuzzy.push({ kind: 'doctor', spoken: String(a.doctor), name: this.getDoctorName(pick) });
+              }
               done.push('doctor: ' + this.getDoctorName(pick));
             } else {
               this.useCustomDoctor(String(a.doctor));
@@ -4751,7 +5044,6 @@ export class AddPatientComponent {
           if (this.step1Missing().length === 0) {
             this.goNext();
           } else {
-            // drop karu nako: step 1 purn zalyavar add hotil
             this.pendingTests = reqTests;
             this.pendingPkgs = reqPkgs;
             done.push('tests queued');
@@ -4764,7 +5056,6 @@ export class AddPatientComponent {
           const pkgName = (p: any) =>
             String(p?.profileName || p?.profile_name || p?.name || '').trim();
 
-          // poora search 6 sec madhe. Nahi tar items pending madhe, pudhchya call madhe parat try hotil
           const timedOut = Symbol('timedOut');
           const raced: any = await Promise.race([
             searchP,
@@ -4789,7 +5080,6 @@ export class AddPatientComponent {
               continue;
             }
 
-            // spelling chukla tari jas bolla tasa add
             let pick = this.pickBest(m, tn, (t: any) => t.name);
 
             if (!pick) {
@@ -4797,10 +5087,19 @@ export class AddPatientComponent {
               const hits = m.filter((t: any) => this.fkey(t.name) === fq);
               if (hits.length === 1) pick = hits[0];
             }
-            if (!pick) pick = this.fuzzyPick(m, tn, (t: any) => t.name);
 
-            // test madhe fakt "javal cha" (partial) match sapadla asel,
-            // tar aadhi tya naavacha package exact ahe ka te tapasa.
+            if (!pick) {
+              const f = this.fuseTest(tn);
+              if (f.pick) {
+                pick = f.pick;
+              } else if (f.suggestions?.length) {
+                problems.push(`"${tn}" is not clear. Did you mean: ${f.suggestions.slice(0, 3).map((x: any) => x.name).join(', ')}?`);
+                continue;
+              } else {
+                pick = this.fuzzyPick(m, tn, (t: any) => t.name);
+              }
+            }
+
             if (pick && this.fkey(pick.name) !== this.fkey(tn)) {
               const pkgMatches = await this.withCap(
                 this.findPackagesLoose(labId, pkgFranchiseId, tn),
@@ -4816,7 +5115,6 @@ export class AddPatientComponent {
             }
 
             if (!pick) {
-              // fallback la 3 sec cap
               const pkgMatches = await this.withCap(
                 this.findPackagesLoose(labId, pkgFranchiseId, tn),
                 3000,
@@ -4828,7 +5126,6 @@ export class AddPatientComponent {
                 if (added) done.push('package: ' + added);
                 continue;
               }
-              // chukicha naav pudhcha item la prefix mhanun lagu naye
               this.lastItemPrefix = '';
               this.lastItemPrefixAt = 0;
 
@@ -4837,8 +5134,10 @@ export class AddPatientComponent {
             }
             if (this.selectedTests.some((t: any) => !t.packageName && t.name === pick.name)) continue;
 
+            if (this.norm(pick.name) !== this.norm(tn)) {
+              this.voiceFuzzy.push({ kind: 'test', spoken: tn, name: pick.name });
+            }
             this.addTest(pick);
-            // spelling vegla asel tar user la disel ki kontya bolnyatun match jhala
             done.push(
               this.fkey(pick.name) === this.fkey(tn) && this.norm(pick.name) === this.norm(tn)
                 ? 'test: ' + pick.name
@@ -4855,7 +5154,6 @@ export class AddPatientComponent {
             const { pick, ambiguous } = this.choosePkg(m, pn, pkgName);
 
             if (ambiguous) {
-              // "wellness" ekta bolla: number yenar, prefix lakshat thev
               this.lastItemPrefix = this.prefixOf(pn) || pn;
               this.lastItemPrefixAt = Date.now();
               problems.push(
@@ -4866,8 +5164,6 @@ export class AddPatientComponent {
               continue;
             }
 
-            // package madhe fakt partial match sapadla asel,
-            // tar aadhi tya naavacha test exact ahe ka te tapasa.
             if (pick && this.key(pkgName(pick)) !== this.key(pn)) {
               const testMatches = await this.withCap(
                 this.findTestsLoose(labId, franchiseId, pn),
@@ -4886,7 +5182,6 @@ export class AddPatientComponent {
             }
 
             if (!pick) {
-              // fallback la 3 sec cap
               const testMatches = await this.withCap(
                 this.findTestsLoose(labId, franchiseId, pn),
                 3000,
@@ -4904,12 +5199,15 @@ export class AddPatientComponent {
                 continue;
               }
 
-              // chukicha naav pudhcha item la prefix mhanun lagu naye
               this.lastItemPrefix = '';
               this.lastItemPrefixAt = 0;
 
               problems.push(`package "${pn}" not found`);
               continue;
+            }
+
+            if (this.key(pkgName(pick)) !== this.key(pn)) {
+              this.voiceFuzzy.push({ kind: 'pkg', spoken: pn, name: pkgName(pick) });
             }
 
             const added = this.addPackageFromPick(pick);
@@ -4934,7 +5232,6 @@ export class AddPatientComponent {
           }
           done.push('removed: everything');
         } else if (removeReqs.length) {
-          // pahile sagle hits shodha, kahi remove karu naka
           const hits: { kind: 'test' | 'pkg'; name: string }[] = [];
 
           for (const r of removeReqs) {
@@ -4963,7 +5260,7 @@ export class AddPatientComponent {
           const total = individualNow().length + this.selectedPackages.length;
 
           if (uniqHits.length > 0 && uniqHits.length >= total && total > 1) {
-            problems.push('That removes everything. Ask user to confirm.');
+            problems.push('That removes everything. Say clear all to confirm.');
           } else {
             for (const h of uniqHits) {
               const ind = individualNow();
@@ -5002,7 +5299,7 @@ export class AddPatientComponent {
           }
         }
 
-        return { ok: true, filled: done, problems };
+        return { ok: true, filled: done, problems, missing: this.step1Missing() };
       }
 
       // ==========================================================
@@ -5023,10 +5320,7 @@ export class AddPatientComponent {
             this.goBackStep();
           }
         } else {
-          return {
-            ok: false,
-            error: 'Step must be 1 or 2.'
-          };
+          return { ok: false, error: 'Step must be 1 or 2.' };
         }
 
         return { ok: true, step: this.step };
@@ -5054,6 +5348,7 @@ export class AddPatientComponent {
         this.lastItemPrefix = '';
         this.lastItemPrefixAt = 0;
         this.loadLastPatient();
+        this.voiceFuzzy = [];
         return { ok: true };
       }
 
@@ -5081,8 +5376,19 @@ export class AddPatientComponent {
 
         this.savePatient();
 
-        for (let i = 0; i < 120; i++) {          // max ~12 sec
+        for (let i = 0; i < 120; i++) {
           await new Promise(r => setTimeout(r, 100));
+          if (this.bookingSaved) {
+            for (const f of this.voiceFuzzy) {
+              const stillThere =
+                f.kind === 'test' ? this.selectedTests.some((t: any) => t.name === f.name)
+                  : f.kind === 'pkg' ? this.selectedPackages.some((p: any) => p.profileName === f.name)
+                    : this.patient.doctor === f.name;
+              if (stillThere) VoiceAliases.remember(f.kind, f.spoken, f.name);
+            }
+            this.voiceFuzzy = [];
+            return { ok: true, bookingId: this.savedPatient?.id };
+          }
           if (this.bookingSaved) return { ok: true, bookingId: this.savedPatient?.id };
           if (!this.isSavingBooking) break;
         }
@@ -5098,7 +5404,7 @@ export class AddPatientComponent {
 
   private runVoiceTool(name: string, a: any): Promise<any> {
     const job = this.voiceChain.then(() => this.runVoiceToolSafe(name, a));
-    this.voiceChain = job.catch(() => null);   // ek fail jhala tari pudhche chalu rahtil
+    this.voiceChain = job.catch(() => null);
     return job;
   }
 
@@ -5106,7 +5412,6 @@ export class AddPatientComponent {
     const start = performance.now();
 
     try {
-      // 12 sec peksha jast kadhi atku naye
       const result = await this.withCap<any>(
         this.runVoiceToolInner(name, a),
         12000,
@@ -5117,35 +5422,7 @@ export class AddPatientComponent {
         return result;
       }
 
-      const res: any = {
-        ...result,
-        step: this.step
-      };
-
-      if (name === 'fill_booking') {
-        res.cart = {
-          tests: this.selectedTests.filter((t: any) => !t.packageName).map((t: any) => t.name),
-          packages: this.selectedPackages.map((p: any) => p.profileName)
-        };
-        // success la kahi nahi (SILENT scheduling). Problem asel tarach chhota instruction.
-        if (res.problems?.length) {
-          res.next = 'Say the problem in max 6 words. Then listen. When the user corrects it, call fill_booking with only that item.';
-        }
-      } else if (name === 'submit_booking') {
-        res.next = res.ok
-          ? 'Say only: Saved. Then forget this patient. Next details are a NEW patient.'
-          : 'Tell the error in max 8 words.';
-      } else if (name === 'go_to_step') {
-        if (!res.ok) res.next = 'Tell the error in max 8 words.';
-      } else if (name === 'new_booking') {
-        // SILENT scheduling ne handle hoto
-      } else if (name === 'get_summary') {
-        res.next = 'Answer the user from the summary in max 8 words.';
-      }
-
-      if (res.ok === false && !res.error) {
-        res.error = 'Voice action failed.';
-      }
+      const res: any = { ...result, step: this.step };
 
       if (this.voiceDebugEnabled()) {
         console.debug('[VOICE TOOL]', name, {
@@ -5156,19 +5433,9 @@ export class AddPatientComponent {
 
       return res;
     } catch (error) {
-      const message =
-        error instanceof Error
-          ? error.message
-          : String(error);
-
+      const message = error instanceof Error ? error.message : String(error);
       console.error('[VOICE TOOL ERROR]', name, message);
-
-      return {
-        ok: false,
-        step: this.step,
-        error: message,
-        next: 'Tell the error in max 8 words.'
-      };
+      return { ok: false, step: this.step, error: message };
     }
   }
 
@@ -5177,11 +5444,9 @@ export class AddPatientComponent {
   }
 
   handleRefresh(event: any): void {
-    // Voice reset
     this.voice.stop();
     this.clearPending();
 
-    // Data parat load. Form madhe bharlele patient details tasech rahtat.
     this.loadDoctors();
     this.loadLabs();
     this.loadTests();
@@ -5218,7 +5483,6 @@ export class AddPatientComponent {
 
     const one = async (q: string): Promise<any[] | null> => {
       try {
-        // 10 -> 20 results (jast naave asleli search madhe khara test pahilya 10 madhe nasto)
         const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, q, 0, 20), 8000);
         return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
           id: t.testId,
@@ -5255,13 +5519,12 @@ export class AddPatientComponent {
     const fq = this.fkey(term);
     const qTokens = qn.split(' ').filter(Boolean);
 
-    // 1) Aadhich load kelelya list madhun (manual search sarkhech, jast fast)
     const local = this.allPackages
       .filter((p: any) => {
         const nn = this.norm(pName(p));
         return this.compact(pName(p)).includes(qc)
           || qTokens.every(t => nn.includes(t))
-          || (!!fq && this.fkey(pName(p)).includes(fq));   // typo-tolerant (Welllness 1.3)
+          || (!!fq && this.fkey(pName(p)).includes(fq));
       })
       .map((p: any) => {
         const realPrice = Number(p?.profileAssignedPrice || 0) > 0
@@ -5270,12 +5533,9 @@ export class AddPatientComponent {
         return { ...p, profileAssignedPrice: realPrice, b2b: realPrice, assignedPrice: realPrice };
       });
 
-    // local madhe EXACT naav sapadla tarach thamb.
-    // Nahitar (fakt partial) backend la pan vichar ani merge kar.
     const hasExact = local.some((p: any) => this.fkey(pName(p)) === fq);
     if (local.length && hasExact) return local;
 
-    // 2) Backend search
     const one = async (q: string): Promise<any[] | null> => {
       try {
         const res: any = await this.api(this.labApi.searchProfiles(labId, franchiseId, q, 0, 20), 4000);
@@ -5286,12 +5546,10 @@ export class AddPatientComponent {
     };
     const remote = (await this.searchWithVariants(term, one, (p: any) => this.compact(pName(p)))) ?? [];
 
-    // local + remote merge (duplicate nako)
     const seen = new Set(local.map((p: any) => this.key(pName(p))));
     return [...local, ...remote.filter((p: any) => !seen.has(this.key(pName(p))))];
   };
 
-  // Backend search la "wellness 1.6" samajat nahi tar "wellness-1.6" ani pahila shabd pan try karto.
   private async searchWithVariants<T>(
     term: string,
     call: (q: string) => Promise<T[] | null>,
@@ -5303,10 +5561,10 @@ export class AddPatientComponent {
     const variants = Array.from(new Set([t, tokens.join('-')].filter(Boolean)));
     let results = await Promise.all(variants.map(v => call(v)));
 
-    if (results.every(r => r === null)) return null;          // sagle fail
+    if (results.every(r => r === null)) return null;
 
     let merged = results.flatMap(r => r ?? []);
-    if (!merged.length && tokens.length > 1) {                  // kahich nahi: pahila shabd
+    if (!merged.length && tokens.length > 1) {
       const r = await call(tokens[0]);
       merged = r ?? [];
     }
@@ -5339,7 +5597,6 @@ export class AddPatientComponent {
     return name;
   }
 
-  // DB madhe jase naav ahet tase lihaa
   private readonly TEST_ALIASES: Record<string, string> = {
     'cbc': 'complete blood count',
     'hb': 'hemoglobin',
@@ -5347,7 +5604,6 @@ export class AddPatientComponent {
     'kft': 'kidney function test',
   };
 
-  // exact match adhi, mag ekach partial match. Don-teen asel tar ambiguous.
   private matchOne<T>(list: T[], term: string, nameOf: (x: T) => string): { hit?: T; ambiguous?: T[] } {
     const q = this.norm(term);
     if (!q) return {};
@@ -5358,4 +5614,67 @@ export class AddPatientComponent {
     if (part.length > 1) return { ambiguous: part };
     return {};
   }
+
+  private allTestsCache: any[] = [];
+  private testFuse?: Fuse<any>;
+  private testFuseSize = 0;
+
+  private async preloadTests(): Promise<void> {
+    if (this.allTestsCache.length) return;
+    try {
+      const fid = this.isAdminRole ? undefined
+        : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
+      const res: any = await this.api(this.labApi.getTests(fid), 10000);
+      const arr = Array.isArray(res) ? res : (res?.content ?? []);
+      this.allTestsCache = arr.map((t: any) => ({
+        id: t.testId,
+        sampleId: t.sample_type,
+        name: String(t.test_name || t.name || '').trim(),
+        b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
+        tat: t.tat || 'N/A',
+        mrp: t.test_price ?? 0,
+        dis: 0,
+        fluid: t.sampleTypeName || 'N/A',
+        sampleType: t.sampleTypeName || 'OTHER',
+        color: t.sampleColor || '#a855f7'
+      })).filter((t: any) => t.name);
+    } catch (e) { console.warn('tests preload failed', e); }
+  }
+
+  private fuseTest(term: string): { pick?: any; suggestions?: any[] } {
+    if (!this.allTestsCache.length) return {};
+    if (!this.testFuse || this.testFuseSize !== this.allTestsCache.length) {
+      this.testFuse = new Fuse(this.allTestsCache, {
+        keys: ['name'], includeScore: true, threshold: 0.4,
+        ignoreLocation: true, minMatchCharLength: 3
+      });
+      this.testFuseSize = this.allTestsCache.length;
+    }
+    const r = this.testFuse.search(term).slice(0, 4);
+    if (!r.length) return {};
+    const best = r[0].score ?? 1;
+    const second = r[1]?.score ?? 1;
+    if (best <= 0.15 && second - best >= 0.1) return { pick: r[0].item };
+    return { suggestions: r.filter(x => (x.score ?? 1) <= 0.45).map(x => x.item) };
+  }
+
+  /** "sanket kale <junk>" -> doctor चे सगळे शब्द query मध्ये असतील तर निवड */
+  private pickByTokens<T>(items: T[], q: string, nameOf: (x: T) => string): T | null {
+    const qt = this.norm(q).split(' ').filter(Boolean);
+    const hit = (t: string) =>
+      qt.some(w => w === t || (t.length > 3 && w.length > 3 && this.lev(w, t) <= 1));
+
+    const scored = items
+      .map(x => {
+        const nt = this.norm(nameOf(x)).split(' ').filter(Boolean);
+        return { x, n: nt.length, ok: nt.length > 0 && nt.every(hit) };
+      })
+      .filter(r => r.ok)
+      .sort((a, b) => b.n - a.n);
+
+    if (!scored.length) return null;
+    if (scored.length > 1 && scored[1].n === scored[0].n) return null; // संशय असेल तर चुकीचे निवडू नका
+    return scored[0].x;
+  }
+
 }

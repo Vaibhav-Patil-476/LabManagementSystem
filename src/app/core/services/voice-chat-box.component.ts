@@ -2,13 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, ElementRef, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { Subscription } from 'rxjs';
 import { ChatMessage, DashboardVoiceService } from './dashboard-voice.service';
-import { GeminiLiveService } from './gemini-live';
 
 /**
  * Dashboard var floating chat box (button -> panel).
  * Usage:  <app-voice-chat-box></app-voice-chat-box>   (dashboard page chya template madhe, ion-content nantar)
- * Panel ughadla ki mic + AI automatically suru hoto, band kela ki thambto.
- * Footer madhe Start / Stop button: AI chalu-band karto, chat tasach rahto.
+ * Panel ughadla ki mic automatically suru hoto, band kela ki thambto.
+ * Footer madhe Start / Stop button: mic chalu-band karto, chat tasach rahto.
+ * Header madhe EN / हिं toggle.
  */
 @Component({
   selector: 'app-voice-chat-box',
@@ -51,6 +51,14 @@ import { GeminiLiveService } from './gemini-live';
           <span class="chip" [attr.data-state]="voice.state$ | async">
             <i class="dot"></i>{{ stateText(voice.state$ | async) }}
           </span>
+        </div>
+
+        <!-- Language toggle -->
+        <div class="lang-toggle" role="group" aria-label="Language">
+          <button type="button" [class.on]="(voice.lang$ | async) === 'en-IN'"
+            (click)="voice.setLanguage('en-IN')">EN</button>
+          <button type="button" [class.on]="(voice.lang$ | async) === 'hi-IN'"
+            (click)="voice.setLanguage('hi-IN')">हिं</button>
         </div>
 
         <button type="button" class="icon-btn" (click)="voice.closeChat()" aria-label="Close">
@@ -108,10 +116,10 @@ import { GeminiLiveService } from './gemini-live';
         <div class="empty" *ngIf="!(voice.messages$ | async)?.length">
           <div class="empty-orb" aria-hidden="true"></div>
           <p class="empty-title">How can I help?</p>
-          <p class="empty-sub">Speak in English, Hindi or Marathi</p>
+          <p class="empty-sub">Speak in English or Hindi</p>
           <div class="examples">
-            <span>"What's the status of booking 12345?"</span>
-            <span>"Download report Ajay Thakur"</span>
+            <span>"What's the status of booking 3416?"</span>
+            <span>"Download report 3416"</span>
           </div>
         </div>
       </div>
@@ -316,7 +324,7 @@ import { GeminiLiveService } from './gemini-live';
     .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: #cbd5e1; }
     .chip[data-state='listening'] .dot { background: #4ade80; box-shadow: 0 0 0 0 rgba(74, 222, 128, .7); animation: blink 1.4s infinite; }
     .chip[data-state='speaking'] .dot { background: #fde047; animation: blink .9s infinite; }
-    .chip[data-state='connecting'] .dot { background: #fdba74; animation: blink .8s infinite; }
+    .chip[data-state='thinking'] .dot { background: #fdba74; animation: blink .8s infinite; }
     @keyframes blink {
       0%   { box-shadow: 0 0 0 0 rgba(255, 255, 255, .55); }
       100% { box-shadow: 0 0 0 7px rgba(255, 255, 255, 0); }
@@ -329,6 +337,19 @@ import { GeminiLiveService } from './gemini-live';
       transition: background .15s;
     }
     .icon-btn:hover { background: rgba(255, 255, 255, .3); }
+
+    /* ---------- Language toggle ---------- */
+    .lang-toggle {
+      display: flex; flex: none;
+      background: rgba(255, 255, 255, .18);
+      border-radius: 999px; padding: 2px;
+    }
+    .lang-toggle button {
+      border: 0; background: transparent; color: #fff;
+      font-size: 11px; font-weight: 700;
+      padding: 4px 9px; border-radius: 999px; cursor: pointer;
+    }
+    .lang-toggle button.on { background: #fff; color: var(--blue-1); }
 
     /* ---------- Orb ---------- */
     .orb { position: relative; width: 40px; height: 40px; flex: none; }
@@ -564,10 +585,7 @@ export class VoiceChatBoxComponent implements OnInit, OnDestroy {
   @ViewChild('body') body?: ElementRef<HTMLDivElement>;
   private sub?: Subscription;
 
-  constructor(
-    public voice: DashboardVoiceService,
-    private live: GeminiLiveService
-  ) {}
+  constructor(public voice: DashboardVoiceService) {}
 
   ngOnInit(): void {
     // navin message aala ki khali scroll
@@ -597,48 +615,43 @@ export class VoiceChatBoxComponent implements OnInit, OnDestroy {
   }
 
   /**
-   * Start / Stop. Service madhe kahich add karaychi garaj nahi:
-   *  - Stop : GeminiLiveService (singleton) la direct stop(). Chat tasach rahto.
-   *  - Start: jhunach openChat() (to AI suru karto). Click handler madhunach call hoto,
-   *           mhanje mic/speaker gesture madhe suru hotat.
+   * Start / Stop. Chalu asel tar mic band (chat tasach), band asel tar mic chalu.
+   * Click handler madhunach call hoto, mhanje mic gesture madhe suru hoto.
    */
   toggleVoice(): void {
-    if (this.isIdle(this.live.state$.value)) {
-      void this.voice.openChat();
-    } else {
-      this.live.stop();
-    }
+    void this.voice.toggleVoice();
   }
 
   stateText(s: string | null): string {
     switch (s) {
-      case 'connecting': return 'Connecting…';
+      case 'thinking': return 'Thinking…';
       case 'listening': return 'Listening';
       case 'speaking': return 'Speaking';
       default: return 'Stopped';
     }
   }
 
-  /* ---------- Sample / Report (overall) badge: Pending, Received, Ready ---------- */
+  /* ---------- Sample / Report (overall) badge ---------- */
 
-label(s: string): string {
-  const map: Record<string, string> = {
-    SNR: 'SNR', PENDING: 'Pending', COMPLETE: 'Complete', READY: 'Complete',
-    CLINICAL: 'Clinical', CANCELLED: 'Cancel'
-  };
-  return map[(s || '').toUpperCase()] || 'Pending';
-}
-
-cls(s: string): string {
-  switch ((s || '').toUpperCase()) {
-    case 'COMPLETE': case 'READY': return 'ok';
-    case 'PENDING': return 'warn';
-    case 'SNR': return 'snr';
-    case 'CLINICAL': return 'info';
-    case 'CANCELLED': return 'bad';
-    default: return '';
+  label(s: string): string {
+    const map: Record<string, string> = {
+      SNR: 'SNR', PENDING: 'Pending', COMPLETE: 'Complete', READY: 'Complete',
+      CLINICAL: 'Clinical', CANCELLED: 'Cancel'
+    };
+    return map[(s || '').toUpperCase()] || 'Pending';
   }
-}
+
+  cls(s: string): string {
+    switch ((s || '').toUpperCase()) {
+      case 'COMPLETE': case 'READY': return 'ok';
+      case 'PENDING': return 'warn';
+      case 'SNR': return 'snr';
+      case 'CLINICAL': return 'info';
+      case 'CANCELLED': return 'bad';
+      default: return '';
+    }
+  }
+
   /* ---------- Test-wise badge: Booking Status page sarkhach ---------- */
 
   testLabel(s?: string): string {

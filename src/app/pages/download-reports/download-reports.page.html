@@ -163,9 +163,9 @@
               </label>
 
               <!-- Booking ID -->
-<a class="id-link" (click)="openDownloadReportModal(item, $event)">
-  <span class="id-link-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
-</a>
+              <a class="id-link" (click)="openDownloadReportModal(item, $event)">
+                <span class="id-link-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
+              </a>
 
               <!-- Booking Date -->
               <span class="bcard-date">{{ item.bookingDate | date:'M/d/yyyy, h:mm a' }}</span>
@@ -352,7 +352,7 @@
               <ion-icon name="alert-circle-outline"></ion-icon>
             </div>
             <p class="report-not-ready-text">
-              This report is not yet complete. Please try again once all tests for this booking have been completed.
+              No test in this booking is complete yet. Please try again once at least one test has been completed.
             </p>
 
             <ion-button expand="block" fill="solid" class="modal-save-btn danger-btn"

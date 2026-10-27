@@ -428,6 +428,7 @@
         letterHead?: boolean;
         fLetterHead?: boolean;
         waterMark?: boolean;
+         onlyCompleted?: boolean;
       }
     ): Observable<any> {
       const labId = this.getLabId();
@@ -450,7 +451,8 @@
       labSettingsApi,
       token,
       reportTestId: 'null',
-      cancelTest: 'null'   // ✅ '0' नाही, company 'null' पाठवते
+      cancelTest: 'null' ,  // ✅ '0' नाही, company 'null' पाठवते
+       onlyCompleted: options?.onlyCompleted ?? false  
     }
   };
 

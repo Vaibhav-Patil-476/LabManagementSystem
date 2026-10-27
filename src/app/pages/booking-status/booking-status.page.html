@@ -143,9 +143,9 @@
         <div class="bcard-header">
           <div class="bcard-header-left">
             <div class="bcard-id-row">
-             <a class="id-link" (click)="openDownloadReportModal(item, $event)">
-  <span class="id-link-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
-</a>
+              <a class="id-link" (click)="openDownloadReportModal(item, $event)">
+                <span class="id-link-icon"><ion-icon name="download-outline"></ion-icon></span>{{ item.bookingId }}
+              </a>
               <span class="bcard-date">{{ item.bookingDate }}</span>
             </div>
             <div class="bcard-name-row">
@@ -392,8 +392,8 @@
                       </td>
                       <td *ngIf="canViewAmount">₹{{ test.testPrice }}</td>
                       <td>
-                        <ion-icon *ngIf="!test.isPackageTest; else pkgLocked" name="trash-outline"
-                          class="delete-icon" (click)="removeTest(test)"></ion-icon>
+                        <ion-icon *ngIf="!test.isPackageTest; else pkgLocked" name="trash-outline" class="delete-icon"
+                          (click)="removeTest(test)"></ion-icon>
                         <ng-template #pkgLocked>
                           <ion-icon name="lock-closed-outline" class="delete-icon disabled-icon"
                             title="Package test cannot be removed"></ion-icon>
@@ -1123,8 +1123,8 @@
               <div class="input-wrap">
                 <ion-select interface="popover" placeholder="Select" [(ngModel)]="selectedBillPriceType"
                   class="premium-select">
-                  <ion-select-option value="myprice">My Price</ion-select-option>
-                  <ion-select-option value="mrp">MRP</ion-select-option>
+                  <ion-select-option value="myprice" *ngIf="canSeeMyPrice">My Price</ion-select-option>
+                  <ion-select-option value="mrp" *ngIf="canSeeMrp">MRP</ion-select-option>
                 </ion-select>
               </div>
             </div>
@@ -1223,7 +1223,7 @@
             <ion-icon name="alert-circle-outline"></ion-icon>
           </div>
           <p class="report-not-ready-text">
-            This report is not yet complete. Please try again once all tests for this booking have been completed.
+            No test in this booking is complete yet. Please try again once at least one test has been completed.
           </p>
 
           <ion-button expand="block" fill="solid" class="modal-save-btn danger-btn"
