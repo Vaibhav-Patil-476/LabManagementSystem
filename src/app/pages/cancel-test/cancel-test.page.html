@@ -119,11 +119,12 @@
           </div>
 
           <div class="ct-actions-buttons">
-            <ion-badge *ngIf="item.refundStatus === 'REFUNDED'" class="refund-badge">
+            <!-- Refund badges: ROLE_STAFF la hide (canSeeRefund) -->
+            <ion-badge *ngIf="canSeeRefund && item.refundStatus === 'REFUNDED'" class="refund-badge">
               Refunded ₹{{ item.refundAmount }}
             </ion-badge>
 
-            <ion-badge *ngIf="item.refundStatus === 'PENDING'" class="refund-badge pending">
+            <ion-badge *ngIf="canSeeRefund && item.refundStatus === 'PENDING'" class="refund-badge pending">
               Refund Pending
             </ion-badge>
 

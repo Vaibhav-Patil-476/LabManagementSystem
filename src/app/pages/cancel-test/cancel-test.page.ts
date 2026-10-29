@@ -34,6 +34,15 @@ import {
 } from 'ionicons/icons';
 
 import { LabApiService } from '../../core/services/lab-api';
+import { AuthService } from '../../core/services/auth';
+import { RoleService } from '../../core/services/role';
+
+const ROLE = {
+  LAB_ADMIN: 'ROLE_LAB_ADMIN',
+  STAFF: 'ROLE_STAFF',
+  FRANCHISE: 'ROLE_FRANCHISE',
+  FRANCHISE_STAFF: 'ROLE_FRANCHISE_STAFF'
+} as const;
 
 @Component({
   selector: 'app-cancel-test',
@@ -84,7 +93,9 @@ export class CancelTestPage implements OnInit {
   constructor(
     private labApiService: LabApiService,
     private toastCtrl: ToastController,
-    private loadingCtrl: LoadingController
+    private loadingCtrl: LoadingController,
+    private authService: AuthService,
+    private roleService: RoleService
   ) {
     addIcons({
       closeCircleOutline,
@@ -99,6 +110,16 @@ export class CancelTestPage implements OnInit {
     });
   }
 
+  // ---------- role based visibility ----------
+  /** Refund badge: kontahi STAFF (ROLE_STAFF, ROLE_FRANCHISE_STAFF) la hide.
+   *  Role donhi service madhun ghetla jato; role mahit nasel tar badge hide.
+   */
+  get canSeeRefund(): boolean {
+    const role = (this.roleService.currentRole || this.authService.role || '').toUpperCase();
+    if (!role) return false;
+    return !role.includes('STAFF');
+  }
+
   ngOnInit(): void {
     this.loadCancelTests();
   }
@@ -108,9 +129,10 @@ export class CancelTestPage implements OnInit {
     const d = new Date();
     return new Date(d.getFullYear(), d.getMonth(), 1).toISOString().slice(0, 10);
   }
-today(): string {
-  return new Date().toISOString().slice(0, 10);
-}
+
+  today(): string {
+    return new Date().toISOString().slice(0, 10);
+  }
 
   /** epoch millis -> "12 Aug, 2026, 09:05 PM" sarkha readable format */
   private formatDate(ms: number | null | undefined): string {
@@ -133,10 +155,10 @@ today(): string {
   }
 
   private nextDay(dateStr: string): string {
-  const d = new Date(dateStr + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  return this.formatDateForInput(d);
-}
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + 1);
+    return this.formatDateForInput(d);
+  }
 
   private toDateObj(dateStr: string): Date | null {
     return dateStr ? new Date(dateStr + 'T00:00:00') : null;
@@ -172,7 +194,7 @@ today(): string {
     const refunded = !!raw?.refundAfterCancelTest;
     const refundAmount = testInfo?.testPrice ?? raw?.testPrice ?? 0;
 
-    // ✅ NEW: full test list for the eye-icon preview popup
+    // full test list for the eye-icon preview popup
     const allTests = Array.isArray(raw?.tests) && raw.tests.length > 0
       ? raw.tests.map((t: any) => ({
           testName: t?.testName ?? '-',
@@ -187,9 +209,9 @@ today(): string {
       gender: raw?.gender,
       age: raw?.age,
       testName: raw?.testName ?? testInfo?.testName ?? '',
-      tests: allTests, // ✅ NEW
+      tests: allTests,
 
-      // ✅ FIX: booking-status.page.ts sarkha full fallback cascade —
+      // booking-status.page.ts sarkha full fallback cascade —
       // customFranchiseLab -> flat franchiseName -> nested franchise.franchiseName -> 'SELF'
       labName: raw?.customFranchiseLab?.trim()
         || raw?.franchiseName
@@ -197,7 +219,7 @@ today(): string {
         || raw?.franchise?.centerCode
         || 'SELF',
 
-      // ✅ FIX: customDoctorName -> flat doctorName -> nested doctor.doctor_name -> 'N/A'
+      // customDoctorName -> flat doctorName -> nested doctor.doctor_name -> 'N/A'
       doctorName: raw?.customDoctorName?.trim()
         || raw?.doctorName
         || raw?.doctor?.doctor_name
@@ -216,38 +238,37 @@ today(): string {
     return s ? s.charAt(0).toUpperCase() + s.slice(1) : '';
   }
 
-async loadCancelTests() {
-  this.isLoading = true;
-  try {
-    const res: any = await this.labApiService
-      .getCancelTests(this.startDate, this.nextDay(this.endDate), 500)   // ✅ NEW — end date + 1 day
-      .toPromise();
+  async loadCancelTests() {
+    this.isLoading = true;
+    try {
+      const res: any = await this.labApiService
+        .getCancelTests(this.startDate, this.nextDay(this.endDate), 500)   // end date + 1 day
+        .toPromise();
 
- 
+      let rawList: any[] = [];
+      if (Array.isArray(res)) {
+        rawList = res;
+      } else if (Array.isArray(res?.data)) {
+        rawList = res.data;
+      } else if (Array.isArray(res?.content)) {
+        rawList = res.content;
+      } else if (Array.isArray(res?.data?.content)) {
+        rawList = res.data.content;
+      } else {
+        console.warn('CANCEL TESTS: recognized array sapadli nahi response madhe.');
+        rawList = [];
+      }
 
-    let rawList: any[] = [];
-    if (Array.isArray(res)) {
-      rawList = res;
-    } else if (Array.isArray(res?.data)) {
-      rawList = res.data;
-    } else if (Array.isArray(res?.content)) {
-      rawList = res.content;
-    } else if (Array.isArray(res?.data?.content)) {
-      rawList = res.data.content;
-    } else {
-      console.warn('CANCEL TESTS: recognized array sapadli nahi response madhe.');
-      rawList = [];
+      this.allTests = rawList.map(raw => this.mapRawItem(raw));
+      this.applySearch();
+    } catch (err) {
+      console.error('Cancel test list fetch failed', err);
+      this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
+    } finally {
+      this.isLoading = false;
     }
-
-    this.allTests = rawList.map(raw => this.mapRawItem(raw));
-    this.applySearch();
-  } catch (err) {
-    console.error('Cancel test list fetch failed', err);
-    this.showToast('Data load karta ala nahi. Parat try kara.', 'danger');
-  } finally {
-    this.isLoading = false;
   }
-}
+
   onDateChange() {
     this.loadCancelTests();
   }
