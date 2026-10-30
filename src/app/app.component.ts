@@ -15,14 +15,10 @@ import { Capacitor } from '@capacitor/core';
 })
 export class AppComponent implements OnInit {
 
-  async ngOnInit() {
-
-    if (Capacitor.isNativePlatform()) {
-      await StatusBar.setOverlaysWebView({ overlay: false });
-
-      // ✅ Angular ready zalyavar native splash lगेच hide -
-      // custom overlay/delay ata nahi, tyamule lगेच hide karायचा.
-      await SplashScreen.hide();
-    }
+async ngOnInit() {
+  if (Capacitor.isNativePlatform()) {
+    SplashScreen.hide();
+    await StatusBar.setOverlaysWebView({ overlay: false });
   }
+}
 }

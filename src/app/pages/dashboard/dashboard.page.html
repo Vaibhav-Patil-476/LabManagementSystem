@@ -1474,11 +1474,9 @@
   <div class="app-bottom-nav-wrap">
 
     <!-- Dimmed + blurred backdrop, tapping it closes the popup -->
-    <div class="bn-backdrop" *ngIf="accountMenuOpen" (click)="closeAccountMenu()"></div>
+     <div class="bn-backdrop" *ngIf="canSeeAccount && accountMenuOpen" (click)="closeAccountMenu()"></div>
 
-    <!-- Centered floating card, sits directly above the Account tab -->
-
-    <div class="account-submenu-card" [class.open]="accountMenuOpen">
+    <div class="account-submenu-card" *ngIf="canSeeAccount" [class.open]="accountMenuOpen">
       <button *ngFor="let opt of accountSubOptions" type="button" class="bn-sub-option" [class.locked]="opt.locked"
         (click)="goToAccountSub(opt)">
         <span class="bn-sub-circle">
@@ -1504,8 +1502,8 @@
       </button>
 
       <!-- Account toggles the popup instead of navigating directly -->
-      <button type="button" class="bn-item account-bn-item" [class.active]="accountMenuOpen"
-        (click)="toggleAccountMenu()">
+      <button type="button" class="bn-item account-bn-item" *ngIf="canSeeAccount"
+        [class.active]="accountMenuOpen" (click)="toggleAccountMenu()">
         <ion-icon name="wallet-outline"></ion-icon>
         <span>Account</span>
       </button>

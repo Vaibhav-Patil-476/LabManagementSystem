@@ -440,6 +440,14 @@ export class DashboardPage implements OnInit, OnDestroy {
     const role = this.authService?.role;
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
   }
+
+    /** Account tab: कोणताही STAFF (ROLE_STAFF, ROLE_FRANCHISE_STAFF) ला hide */
+  /** Account tab: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide */
+  get canSeeAccount(): boolean {
+    const role = (this.roleService.currentRole || this.authService.role || '').toUpperCase();
+    if (!role) return false;   // role माहीत नसेल तर hide
+    return role !== ROLE.STAFF && role !== ROLE.FRANCHISE_STAFF;
+  }
     /** My Price: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide */
   get canSeeMyPrice(): boolean {
     const role = this.authService.role;
@@ -3073,9 +3081,10 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ============================================================
 
   toggleAccountMenu(): void {
+    if (!this.canSeeAccount) return;
     this.accountMenuOpen = !this.accountMenuOpen;
   }
-
+  
   closeAccountMenu(): void {
     this.accountMenuOpen = false;
   }

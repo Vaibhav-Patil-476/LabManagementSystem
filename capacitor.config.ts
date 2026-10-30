@@ -5,10 +5,13 @@ const config: CapacitorConfig = {
   appName: 'HyPatho Lab',
   webDir: 'www',
 
-  // फक्त testing साठी. Release build आधी हा block काढा आणि https/wss वापरा.
   server: {
     androidScheme: 'http',
     cleartext: true
+  },
+
+  android: {
+    webContentsDebuggingEnabled: true
   },
 
   plugins: {
@@ -26,13 +29,6 @@ const config: CapacitorConfig = {
       launchAutoHide: true,
       backgroundColor: '#ffffff',
       showSpinner: false
-    },
-    android: {
-    webContentsDebuggingEnabled: true
-  }
-
-    
+    }
   }
 };
-
-export default config;
