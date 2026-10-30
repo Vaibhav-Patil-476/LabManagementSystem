@@ -71,3 +71,4 @@ Thumbs.db
 
 # Secret keys (git madhe jau naye)
 /src/environments/secrets.ts
+*.zip
