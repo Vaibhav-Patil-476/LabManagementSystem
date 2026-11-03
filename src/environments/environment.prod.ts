@@ -6,6 +6,7 @@
 //   domain: 'itlabspeed.com',
 //   authUrl: 'https://devapi.itlabspeed.com/api/v1/auth',
 //   reportTemplateName: 'igen'
+// voiceTokenUrl: 'https://voice-token.vaibhavlab2026.workers.dev',
 // }; 
 
 // Production API
@@ -15,4 +16,5 @@ export const environment = {
   domain: 'itlabspeed.com',
   authUrl: 'https://labapi.hypatholab.in/api/v1/auth',
   reportTemplateName: 'igen',
+  voiceTokenUrl: 'https://voice-token.vaibhavlab2026.workers.dev',
 };

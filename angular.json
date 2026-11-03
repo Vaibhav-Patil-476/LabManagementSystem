@@ -41,6 +41,22 @@
               "src/theme/variables.scss"
             ],
             "scripts": [],
+            "allowedCommonJsDependencies": [
+              "pdfmake",
+              "canvg",
+              "core-js",
+              "raf",
+              "rgbcolor",
+              "regenerator-runtime",
+              "html2canvas",
+              "tesseract.js",
+              "jspdf"
+            ],
+            "stylePreprocessorOptions": {
+              "sass": {
+                "silenceDeprecations": ["import"]
+              }
+            },
             "browser": "src/main.ts"
           },
           "configurations": {

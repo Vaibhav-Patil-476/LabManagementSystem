@@ -1,7 +1,8 @@
 import { Injectable, NgZone, OnDestroy, inject, isDevMode } from '@angular/core';
 import { BehaviorSubject, Subject } from 'rxjs';
 import { secrets } from '../../../environments/secrets';
-
+import { environment } from '../../../environments/environment';
+import { AuthService } from './auth'; 
 
 /* ------------------------------------------------------------------ */
 /* Public types                                                        */
@@ -67,11 +68,12 @@ interface ToolResponse {
 /* Tunables                                                            */
 /* ------------------------------------------------------------------ */
 
-const WS_BASE =
-  'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent';
+
+ const WS_TOKEN_BASE =
+  'wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1alpha.GenerativeService.BidiGenerateContentConstrained';
 
 /** Direct browser -> Google with an API key. Dev only. Keep false in production. */
-const ALLOW_DIRECT_KEY_IN_PROD = true;
+
 const SILENCE_NOISE = /^\s*[\[(<*]*\s*(silent|silence|no speech|no response|nothing|speech)\s*[\])>*.]*\s*$/i;
 /**
  * Declare mutation tools NON_BLOCKING so the model keeps listening and the
@@ -91,7 +93,10 @@ const VAD = {
   silenceDurationMs: 500
 };
 
-const IDLE_MS = 3 * 60 * 1000;
+const IDLE_MS = 20 * 1000;                 // 45 sec bolla nahi -> band
+const AFTER_SAVE_IDLE_MS = 20 * 1000;      // save nantar 20 sec bolla nahi -> band
+const MAX_SESSION_MS = 15 * 60 * 1000;     // kahi hi zale tari 20 min nantar band
+const BACKGROUND_STOP_MS = 20 * 1000;
 const CONNECT_TIMEOUT_MS = 12000;
 const MAX_FAILURES = 8;
 const MAX_BACKOFF_MS = 12000;
@@ -526,7 +531,7 @@ function shortProblem(text: string, strict: boolean): string {
   if (strict && /(\berror\b|exception|undefined|\bnull\b|https?:|\bat \S+ \(|[{}])/i.test(first)) {
     return 'Action failed.';
   }
-  return first.slice(0, 120);
+  return first.slice(0, 220);
 }
 
 function normalizeResult(raw: unknown): VoiceToolResult {
@@ -617,6 +622,10 @@ function safeClose(ws: WebSocket | undefined, code = 1000, reason = ''): void {
 @Injectable({ providedIn: 'root' })
 export class GeminiLiveService implements OnDestroy {
   readonly state$ = new BehaviorSubject<VoiceState>('idle');
+  /** Apoap band zalyavar user la sangnyasathi. */
+  readonly autoStop$ = new Subject<string>();
+  private maxTimer?: ReturnType<typeof setTimeout>;
+  private hiddenTimer?: ReturnType<typeof setTimeout>;
   readonly transcript$ = new BehaviorSubject<string>('');
   /** Short, user-presentable errors (mic denied, fatal connection failure...). */
   readonly error$ = new Subject<string>();
@@ -652,18 +661,38 @@ export class GeminiLiveService implements OnDestroy {
   private halfDuplex = true;
   /** performance.now() timestamp until which mic stays muted (echo tail). */
   private mutedUntil = 0;
-    /** true = AI cha awaz ani chat text drop hoto (tool result nantar faltu bolne). */
+  /** true = AI cha awaz ani chat text drop hoto (tool result nantar faltu bolne). */
   private aiMuted = false;
   private aiMuteTimer?: ReturnType<typeof setTimeout>;
 
-  private cfg: VoiceConnectionConfig = {
-    getWsUrl: async () => {
-      if (!isDevMode() && !ALLOW_DIRECT_KEY_IN_PROD) {
-        throw new VoiceConfigError('Voice backend is not configured');
-      }
-      return `${WS_BASE}?key=${encodeURIComponent(secrets.geminiApiKey)}`;
+private readonly auth = inject(AuthService);
+
+private cfg: VoiceConnectionConfig = {
+  getWsUrl: async () => {
+    await this.auth.tokenReady;
+    const jwt = this.auth.getToken();
+    if (!jwt) {
+      throw new VoiceConfigError('Not logged in');
     }
-  };
+
+    const res = await fetch(environment.voiceTokenUrl, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${jwt}` }
+    });
+
+    if (res.status === 401) {
+      throw new VoiceConfigError('Unauthorized');
+    }
+    if (!res.ok) {
+      throw new Error('Voice token fetch failed');
+    }
+
+    const { token } = (await res.json()) as { token: string };
+    return `${WS_TOKEN_BASE}?access_token=${encodeURIComponent(token)}`;
+  }
+};
+
+
 
   /** Incremented on every start() and stop(); invalidates stale async work. */
   private sessionGen = 0;
@@ -773,6 +802,13 @@ export class GeminiLiveService implements OnDestroy {
     this.recentUserAt = 0;
     this.mutedUntil = 0;
     this.unmuteAi();
+    if (this.maxTimer) {
+      clearTimeout(this.maxTimer);
+    }
+    this.maxTimer = setTimeout(
+      () => this.autoStopWith('Voice stopped: session time limit.'),
+      MAX_SESSION_MS
+    );
 
     this.emitState('connecting');
     this.transcript$.next('');
@@ -871,7 +907,7 @@ export class GeminiLiveService implements OnDestroy {
     this.detachLifecycleListeners();
     this.clearGreetTimers();
 
-    for (const timer of [this.reconnectTimer, this.connectTimer, this.idleTimer]) {
+    for (const timer of [this.reconnectTimer, this.connectTimer, this.idleTimer, this.maxTimer, this.hiddenTimer]) {
       if (timer) {
         clearTimeout(timer);
       }
@@ -879,6 +915,8 @@ export class GeminiLiveService implements OnDestroy {
     this.reconnectTimer = undefined;
     this.connectTimer = undefined;
     this.idleTimer = undefined;
+    this.maxTimer = undefined;
+    this.hiddenTimer = undefined;
 
     this.stopPlayback();
 
@@ -944,7 +982,7 @@ export class GeminiLiveService implements OnDestroy {
     this.recycleAfterTurn = false;
     this.mutationQueue = Promise.resolve();
     this.mutedUntil = 0;
-this.unmuteAi();
+    this.unmuteAi();
     this.emitState('idle');
   }
 
@@ -960,16 +998,31 @@ this.unmuteAi();
     }
   };
 
-  private readonly onVisibility = (): void => {
-    if (document.visibilityState !== 'visible' || !this.isActive()) {
-      return;
+private readonly onVisibility = (): void => {
+  if (!this.isActive()) {
+    return;
+  }
+
+  if (document.visibilityState === 'hidden') {
+    if (!this.hiddenTimer) {
+      this.hiddenTimer = setTimeout(() => {
+        this.hiddenTimer = undefined;
+        this.autoStopWith('Voice stopped: app in background.');
+      }, BACKGROUND_STOP_MS);
     }
-    this.inCtx?.resume().catch(() => undefined);
-    this.outCtx?.resume().catch(() => undefined);
-    if (!this.isSocketAlive()) {
-      this.reconnectNow('visible');
-    }
-  };
+    return;
+  }
+
+  if (this.hiddenTimer) {
+    clearTimeout(this.hiddenTimer);
+    this.hiddenTimer = undefined;
+  }
+  this.inCtx?.resume().catch(() => undefined);
+  this.outCtx?.resume().catch(() => undefined);
+  if (!this.isSocketAlive()) {
+    this.reconnectNow('visible');
+  }
+};
 
   private readonly onPageHide = (): void => {
     this.stop();
@@ -1120,7 +1173,7 @@ this.unmuteAi();
     };
   }
 
-    private muteAi(): void {
+  private muteAi(): void {
     this.aiMuted = true;
     if (this.aiMuteTimer) clearTimeout(this.aiMuteTimer);
     this.aiMuteTimer = setTimeout(() => {
@@ -1598,7 +1651,9 @@ this.unmuteAi();
     this.sendToolResponse(socket, key ?? '', response);
     if (call.name === 'submit_booking' && response.response['ok'] === true) {
       const gen = this.sessionGen;
+      this.touch(AFTER_SAVE_IDLE_MS);
       this.recycleAfterTurn = true;
+
       // turnComplete na aala tar 6 sec nantar recycle kara
       setTimeout(() => {
         if (gen === this.sessionGen && this.recycleAfterTurn) {
@@ -1975,7 +2030,7 @@ this.unmuteAi();
     if (!raw) {
       return;
     }
-        if (role === 'out' && SILENCE_NOISE.test(raw)) {
+    if (role === 'out' && SILENCE_NOISE.test(raw)) {
       return;
     }
 
@@ -1999,14 +2054,19 @@ this.unmuteAi();
 
   /* ------------------------------- misc ------------------------------- */
 
-  private touch(): void {
+  private touch(ms = IDLE_MS): void {
     if (this.idleTimer) {
       clearTimeout(this.idleTimer);
     }
     this.idleTimer = setTimeout(() => {
       this.log('VOICE', 'Idle timeout');
-      this.stop();
-    }, IDLE_MS);
+      this.autoStopWith('Voice stopped: no activity.');
+    }, ms);
+  }
+
+  private autoStopWith(message: string): void {
+    this.stop();
+    this.zone.run(() => this.autoStop$.next(message));
   }
 
   /**

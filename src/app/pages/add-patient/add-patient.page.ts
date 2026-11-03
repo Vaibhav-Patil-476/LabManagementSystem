@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { AlertController } from '@ionic/angular/standalone';
 import { BarcodeScanner } from '@capacitor-mlkit/barcode-scanning';
+import { Capacitor } from '@capacitor/core';
 import { Clipboard } from '@capacitor/clipboard';
 import { isDevMode } from '@angular/core';
 import Fuse from 'fuse.js';
@@ -12,8 +13,7 @@ import { TrfScanService } from '../../core/services/trf-scan';
 
 
 import { PdfDownloadService } from '../../core/services/pdf-download';
-import { VoiceAssistantService } from '../../core/services/voice/voice-assistant';
-import { secrets } from '../../../environments/secrets'
+import { GeminiLiveService } from '../../core/services/gemini-live';
 import { micOutline, stopCircleOutline } from 'ionicons/icons';
 
 import { Subscription, firstValueFrom, Observable, timeout } from 'rxjs';
@@ -112,7 +112,7 @@ export class AddPatientComponent {
   step: 1 | 2 = 1;
   isSavingBooking = false;
   private pdfDownload = inject(PdfDownloadService);
-  private voice = inject(VoiceAssistantService);
+  private voice = inject(GeminiLiveService);
   private trf = inject(TrfScanService);
   private actionSheetCtrl = inject(ActionSheetController);
   isScanningTrf = false;
@@ -128,7 +128,7 @@ export class AddPatientComponent {
   private voiceErrSub?: Subscription;
   private voiceTestCache = new Map<number, any>();
 
-
+  private voiceAutoStopSub?: Subscription;
   bookingSaved = false;
 
 
@@ -545,19 +545,19 @@ export class AddPatientComponent {
   }
 
   newBookingFromSaved(): void {
+    this.voice.resetFillCache();
     this.bookingSaved = false;
-    this.resetFormKeepingDoctorAndFranchise();   // doctor + collection center तसेच राहतात
+    this.resetFormKeepingDoctorAndFranchise();   // doctor + collection center tasech rahtat
     this.step = 1;
     this.loadLastPatient();
     this.scrollTop();
-
   }
-
   goToBookingStatus(): void {
+    this.voice.resetFillCache();
     this.bookingSaved = false;
     this.resetFormKeepingDoctorAndFranchise();
     this.step = 1;
-    this.router.navigate(['/booking-status']);   // तुझा route check कर
+    this.router.navigate(['/booking-status']);
   }
 
   viewInvoice(): void {      // फक्त admin
@@ -611,6 +611,9 @@ export class AddPatientComponent {
       'chevron-forward-outline': chevronForwardOutline,
       'sparkles-outline': sparklesOutline,
     });
+    this.voiceAutoStopSub = this.voice.autoStop$.subscribe(msg =>
+      this.ngZone.run(() => this.toastService.warning('Voice', msg))
+    );
 
     this.voiceErrSub = this.voice.error$.subscribe(msg =>
       this.ngZone.run(() => {
@@ -4178,78 +4181,124 @@ export class AddPatientComponent {
   }
 
   // ============================================================
-  // BARCODE SCAN (camera)
+  // BARCODE SCAN
   // ============================================================
+
+  private isScanningBarcode = false;
+
+  /** Fakt hidden/control characters ani donhi kadche space kadhto. */
+  private sanitizeBarcode(value: any): string {
+    return String(value ?? '')
+      .replace(/[\u0000-\u001F\u007F-\u009F\u200B-\u200D\uFEFF]/g, '')
+      .trim();
+  }
+
+  /** Camera permission + Android var Google scanner module tayar ahe ka te tapasto. */
+  private async ensureScannerReady(): Promise<boolean> {
+
+    const { camera } = await BarcodeScanner.checkPermissions();
+
+    if (camera !== 'granted' && camera !== 'limited') {
+
+      const res = await BarcodeScanner.requestPermissions();
+
+      if (res.camera !== 'granted' && res.camera !== 'limited') {
+        this.toastService.error(
+          'Permission Denied',
+          'Camera permission is required to scan barcode.'
+        );
+        return false;
+      }
+    }
+
+    if (Capacitor.getPlatform() === 'android') {
+
+      const { available } =
+        await BarcodeScanner.isGoogleBarcodeScannerModuleAvailable();
+
+      if (!available) {
+
+        this.toastService.warning(
+          'Scanner Setup',
+          'Installing scanner component. Please try again in a few seconds.'
+        );
+
+        try {
+          await BarcodeScanner.installGoogleBarcodeScannerModule();
+        } catch (e) {
+          console.error('SCANNER MODULE INSTALL ERROR:', e);
+        }
+
+        return false;
+      }
+    }
+
+    return true;
+  }
 
   async scanBarcode(sample: any) {
 
+    if (this.isScanningBarcode) {
+      return;
+    }
+
+    this.isScanningBarcode = true;
+
     try {
 
-      const { camera } = await BarcodeScanner.checkPermissions();
-
-      if (camera !== 'granted' && camera !== 'limited') {
-
-        const { camera: newStatus } = await BarcodeScanner.requestPermissions();
-
-        if (newStatus !== 'granted' && newStatus !== 'limited') {
-
-          this.toastService.error(
-            'Permission Denied',
-            'Camera permission is required to scan barcode.'
-          );
-
-          return;
-        }
+      if (!(await this.ensureScannerReady())) {
+        return;
       }
 
-      const { barcodes } = await BarcodeScanner.scan();
+      // Koni format filter nahi, kuthlahi barcode vachla jato
+      const { barcodes } = await BarcodeScanner.scan({ autoZoom: true } as any);
 
-      if (barcodes && barcodes.length > 0) {
-
-        const scannedValue = String(
-          barcodes[0].rawValue ||
-          barcodes[0].displayValue ||
-          ''
-        ).trim();
-
-        if (!scannedValue) {
-
-          this.toastService.warning(
-            'Empty Barcode',
-            'Scanned barcode was empty. Please try again.'
-          );
-
-          return;
-        }
-
-        // दुसऱ्या sample-type group madhe hach barcode aadhi vaparla
-        // asel tar save karnyaadhich block.
-        if (this.isBarcodeDuplicate(scannedValue, sample)) {
-
-          this.toastService.error(
-            'Duplicate Barcode',
-            'This barcode is already used for another sample. Please scan a different one.'
-          );
-
-          return;
-        }
-
-        this.ngZone.run(() => {
-
-          sample.barcode = scannedValue;
-
-          sample.confirmBarcode = scannedValue;
-
-          sample.barcodeError = false;
-        });
-
-        this.toastService.success(
-          'Barcode Scanned',
-          'Barcode set to ' + scannedValue + '.'
+      if (!barcodes || barcodes.length === 0) {
+        this.toastService.warning(
+          'No Barcode',
+          'No barcode detected. Please try again.'
         );
+        return;
       }
 
-    } catch (err) {
+      // rawValue = barcode madhla exact data
+      const scannedValue = this.sanitizeBarcode(
+        barcodes[0].rawValue || barcodes[0].displayValue
+      );
+
+      if (!scannedValue) {
+        this.toastService.warning(
+          'Empty Barcode',
+          'Scanned barcode was empty. Please try again.'
+        );
+        return;
+      }
+
+      if (this.isBarcodeDuplicate(scannedValue, sample)) {
+        this.toastService.error(
+          'Duplicate Barcode',
+          'This barcode is already used for another sample.'
+        );
+        return;
+      }
+
+      this.ngZone.run(() => {
+        sample.barcode = scannedValue;
+        sample.confirmBarcode = scannedValue;
+        sample.barcodeError = false;
+      });
+
+      this.toastService.success(
+        'Barcode Scanned',
+        'Barcode set to ' + scannedValue + '.'
+      );
+
+    } catch (err: any) {
+
+      // User ne back dabla tar error nako
+      if (/cancel/i.test(String(err?.message || err || ''))) {
+        return;
+      }
 
       console.error('SCAN BARCODE ERROR:', err);
 
@@ -4257,27 +4306,35 @@ export class AddPatientComponent {
         'Scan Failed',
         'Could not scan barcode. Please try again.'
       );
+
+    } finally {
+      this.ngZone.run(() => {
+        this.isScanningBarcode = false;
+      });
     }
   }
 
   private isBarcodeDuplicate(value: string, currentSample: any): boolean {
 
-    const v = String(value || '').trim();
+    const v = this.sanitizeBarcode(value);
 
     if (!v) {
       return false;
     }
 
     return this.selectedSampleTests.some(
-      (s: any) => s !== currentSample && String(s?.barcode || '').trim() === v
+      (s: any) =>
+        s !== currentSample &&
+        this.sanitizeBarcode(s?.barcode) === v
     );
   }
 
   onBarcodeManualInput(sample: any): void {
 
-    const value = String(sample?.barcode || '').trim();
+    const value = this.sanitizeBarcode(sample?.barcode);
 
     sample.barcodeError = false;
+    sample.confirmBarcode = value;
 
     if (!value) {
       return;
@@ -4289,15 +4346,13 @@ export class AddPatientComponent {
 
       this.toastService.error(
         'Duplicate Barcode',
-        'This barcode is already used for another sample. Please enter a different one.'
+        'This barcode is already used for another sample.'
       );
 
-      // Duplicate value tithech theवत nahi — lagech clear.
       sample.barcode = '';
       sample.confirmBarcode = '';
     }
   }
-
   // ============================================================
   // TRF / CASE PAPER SCAN
   // ============================================================
@@ -4425,7 +4480,9 @@ export class AddPatientComponent {
     // Every TRF scan starts a fresh booking: clear the previous patient's
     // details, tests, packages, sample barcodes, billing and file first.
     // Ref. doctor and collection center are kept.
+    this.voice.resetFillCache();
     this.bookingSaved = false;
+
     this.resetFormKeepingDoctorAndFranchise();
     this.step = 1;
     this.clearPending();
@@ -4608,6 +4665,8 @@ export class AddPatientComponent {
     this.pendingPkgs = [];
   }
 
+  private voiceDbgSub?: Subscription;
+
   async toggleVoice(): Promise<void> {
     // 1. Chalu asel tar band kara
     if (this.voice.state$.value !== 'idle') {
@@ -4633,7 +4692,9 @@ export class AddPatientComponent {
             .filter((d: any) => !!d);
         })
         .catch(e => console.warn('Doctor preload failed', e));
-    } this.preloadTests();
+    }
+
+   
 
     // 4. Voice suru kara
     try {
@@ -4887,16 +4948,19 @@ export class AddPatientComponent {
         reqTests = reqTests.filter(t => !inBillTest(t));
         reqPkgs = reqPkgs.filter(p => !inBillPkg(p));
         const wantsItems = reqTests.length + reqPkgs.length > 0;
+
         const franchiseId = this.isAdminRole
           ? undefined
           : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
         const pkgFranchiseId = this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined;
 
-        const searchP = wantsItems
-          ? Promise.all([
-            Promise.all(reqTests.map(async tn => ({ tn, m: await this.findTestsLoose(labId, franchiseId, tn) }))),
-            Promise.all(reqPkgs.map(async pn => ({ pn, m: await this.findPackagesLoose(labId, pkgFranchiseId, pn) })))
-          ])
+        // Search lagech suru: patient fields bharat astana backend call chalu rahto.
+        const jobs = [
+          ...reqTests.map(term => ({ term, hint: 'test' as const })),
+          ...reqPkgs.map(term => ({ term, hint: 'pkg' as const }))
+        ];
+        const itemsP = wantsItems
+          ? Promise.all(jobs.map(j => this.resolveItem(labId, franchiseId, pkgFranchiseId, j.term, j.hint)))
           : null;
 
         // ---------- 1. Patient basics ----------
@@ -4906,11 +4970,6 @@ export class AddPatientComponent {
             this.patient.title = t;
             this.onTitleChange();
           }
-        }
-
-
-        if (a.name && this.patient.name && !a.nameExplicit) {
-          delete a.name;
         }
 
         if (a.name) {
@@ -5018,7 +5077,7 @@ export class AddPatientComponent {
           }
 
           if (this.doctors.length) {
-            const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim()
+            const clean = (s: string) => s.toLowerCase().replace(/^dr\.?\s*/, '').trim();
             const q = clean(String(a.doctor));
             const nm = (d: any) => clean(this.getDoctorName(d));
             const pick =
@@ -5051,167 +5110,50 @@ export class AddPatientComponent {
         }
 
         // ---------- 4. Tests + Packages (Step 2) ----------
-        if (this.step === 2 && wantsItems && searchP) {
+        if (this.step === 2 && wantsItems && itemsP) {
+          const results = await itemsP;
 
-          const pkgName = (p: any) =>
-            String(p?.profileName || p?.profile_name || p?.name || '').trim();
-
-          const timedOut = Symbol('timedOut');
-          const raced: any = await Promise.race([
-            searchP,
-            new Promise(r => setTimeout(() => r(timedOut), 6000))
-          ]);
-
-          let testResults: { tn: string; m: any[] }[] = [];
-          let pkgResults: { pn: string; m: any[] }[] = [];
-
-          if (raced === timedOut) {
-            this.pendingTests = reqTests;
-            this.pendingPkgs = reqPkgs;
-            problems.push('Search is slow. Say it again.');
-          } else {
-            [testResults, pkgResults] = raced;
-          }
-
-          // ----- add tests (test nahi sapadla tar package mhanun try) -----
-          for (const { tn, m } of testResults) {
-            if (this.failedSearches.delete(tn)) {
-              problems.push(`Search for "${tn}" is slow. Say it again.`);
+          for (const r of results) {
+            if (r.slow) {
+              if (r.hint === 'pkg') this.pendingPkgs.push(r.term);
+              else this.pendingTests.push(r.term);
+              problems.push('Search is slow. Say it again.');
               continue;
             }
 
-            let pick = this.pickBest(m, tn, (t: any) => t.name);
-
-            if (!pick) {
-              const fq = this.fkey(tn);
-              const hits = m.filter((t: any) => this.fkey(t.name) === fq);
-              if (hits.length === 1) pick = hits[0];
-            }
-
-            if (!pick) {
-              const f = this.fuseTest(tn);
-              if (f.pick) {
-                pick = f.pick;
-              } else if (f.suggestions?.length) {
-                problems.push(`"${tn}" is not clear. Did you mean: ${f.suggestions.slice(0, 3).map((x: any) => x.name).join(', ')}?`);
-                continue;
-              } else {
-                pick = this.fuzzyPick(m, tn, (t: any) => t.name);
-              }
-            }
-
-            if (pick && this.fkey(pick.name) !== this.fkey(tn)) {
-              const pkgMatches = await this.withCap(
-                this.findPackagesLoose(labId, pkgFranchiseId, tn),
-                3000,
-                [] as any[]
-              );
-              const { pick: asPkg } = this.choosePkg(pkgMatches, tn, pkgName);
-              if (asPkg && this.key(pkgName(asPkg)) === this.key(tn)) {
-                const added = this.addPackageFromPick(asPkg);
-                if (added) done.push('package: ' + added);
-                continue;
-              }
-            }
-
-            if (!pick) {
-              const pkgMatches = await this.withCap(
-                this.findPackagesLoose(labId, pkgFranchiseId, tn),
-                3000,
-                [] as any[]
-              );
-              const { pick: asPkg } = this.choosePkg(pkgMatches, tn, pkgName);
-              if (asPkg) {
-                const added = this.addPackageFromPick(asPkg);
-                if (added) done.push('package: ' + added);
-                continue;
-              }
-              this.lastItemPrefix = '';
-              this.lastItemPrefixAt = 0;
-
-              problems.push(`"${tn}" not found`);
-              continue;
-            }
-            if (this.selectedTests.some((t: any) => !t.packageName && t.name === pick.name)) continue;
-
-            if (this.norm(pick.name) !== this.norm(tn)) {
-              this.voiceFuzzy.push({ kind: 'test', spoken: tn, name: pick.name });
-            }
-            this.addTest(pick);
-            done.push(
-              this.fkey(pick.name) === this.fkey(tn) && this.norm(pick.name) === this.norm(tn)
-                ? 'test: ' + pick.name
-                : `test: ${pick.name} (matched from "${tn}")`
-            );
-          }
-
-          // ----- add packages (package nahi sapadla tar test mhanun try) -----
-          for (const { pn, m } of pkgResults) {
-            if (this.voiceDebugEnabled()) {
-              console.debug('[VOICE] pkg search', pn, m.map(pkgName));
-            }
-
-            const { pick, ambiguous } = this.choosePkg(m, pn, pkgName);
-
-            if (ambiguous) {
-              this.lastItemPrefix = this.prefixOf(pn) || pn;
+            if (r.names?.length) {
+              this.lastItemPrefix = this.prefixOf(r.term) || r.term;   // user fakt "1.3" bolla tari chalel
               this.lastItemPrefixAt = Date.now();
-              problems.push(
-                !/\d/.test(pn)
-                  ? `"${pn}" has several versions. Say the number.`
-                  : `"${pn}" is not clear. Say the full name.`
-              );
+              const shown = r.names.slice(0, 4).join(', ');
+              const more = r.names.length > 4 ? ', and more' : '';
+              problems.push(`Multiple found: ${shown}${more}. Which one?`);
               continue;
             }
 
-            if (pick && this.key(pkgName(pick)) !== this.key(pn)) {
-              const testMatches = await this.withCap(
-                this.findTestsLoose(labId, franchiseId, pn),
-                3000,
-                [] as any[]
-              );
-              this.failedSearches.delete(pn);
-              const exactTest = testMatches.find((t: any) => this.key(t.name) === this.key(pn));
-              if (exactTest) {
-                if (!this.selectedTests.some((t: any) => !t.packageName && t.name === exactTest.name)) {
-                  this.addTest(exactTest);
-                  done.push('test: ' + exactTest.name);
+            if (r.test) {
+              if (!this.selectedTests.some((t: any) => !t.packageName && t.name === r.test.name)) {
+                if (this.norm(r.test.name) !== this.norm(r.term)) {
+                  this.voiceFuzzy.push({ kind: 'test', spoken: r.term, name: r.test.name });
                 }
-                continue;
+                this.addTest(r.test);
+                done.push('test: ' + r.test.name);
               }
-            }
-
-            if (!pick) {
-              const testMatches = await this.withCap(
-                this.findTestsLoose(labId, franchiseId, pn),
-                3000,
-                [] as any[]
-              );
-              this.failedSearches.delete(pn);
-              const asTest =
-                this.pickBest(testMatches, pn, (t: any) => t.name) ??
-                this.fuzzyPick(testMatches, pn, (t: any) => t.name);
-              if (asTest) {
-                if (!this.selectedTests.some((t: any) => !t.packageName && t.name === asTest.name)) {
-                  this.addTest(asTest);
-                  done.push('test: ' + asTest.name);
-                }
-                continue;
-              }
-
-              this.lastItemPrefix = '';
-              this.lastItemPrefixAt = 0;
-
-              problems.push(`package "${pn}" not found`);
               continue;
             }
 
-            if (this.key(pkgName(pick)) !== this.key(pn)) {
-              this.voiceFuzzy.push({ kind: 'pkg', spoken: pn, name: pkgName(pick) });
+            if (r.pkg) {
+              const pn = String(r.pkg?.profileName || r.pkg?.profile_name || r.pkg?.name || '').trim();
+              if (this.key(pn) !== this.key(r.term)) {
+                this.voiceFuzzy.push({ kind: 'pkg', spoken: r.term, name: pn });
+              }
+              const added = this.addPackageFromPick(r.pkg);
+              if (added) done.push('package: ' + added);
+              continue;
             }
 
-            const added = this.addPackageFromPick(pick);
-            if (added) done.push('package: ' + added);
+            this.lastItemPrefix = '';
+            this.lastItemPrefixAt = 0;
+            problems.push(`"${r.term}" not found`);
           }
         }
 
@@ -5241,7 +5183,7 @@ export class AddPatientComponent {
               const m = this.matchOne(individualNow(), String(r.t), (x: any) => x.name);
               if (m.hit) { hits.push({ kind: 'test', name: (m.hit as any).name }); found = true; }
               else if (m.ambiguous) {
-                problems.push(`"${r.t}" matches: ${m.ambiguous.slice(0, 3).map((x: any) => x.name).join(', ')}. Which one?`);
+                problems.push(`Multiple found: ${m.ambiguous.slice(0, 3).map((x: any) => x.name).join(', ')}. Which one?`);
                 continue;
               }
             }
@@ -5249,7 +5191,7 @@ export class AddPatientComponent {
               const m = this.matchOne(this.selectedPackages, String(r.t), pkgName2);
               if (m.hit) { hits.push({ kind: 'pkg', name: pkgName2(m.hit) }); found = true; }
               else if (m.ambiguous) {
-                problems.push(`"${r.t}" matches: ${m.ambiguous.slice(0, 3).map(pkgName2).join(', ')}. Which one?`);
+                problems.push(`Multiple found: ${m.ambiguous.slice(0, 3).map(pkgName2).join(', ')}. Which one?`);
                 continue;
               }
             }
@@ -5389,7 +5331,6 @@ export class AddPatientComponent {
             this.voiceFuzzy = [];
             return { ok: true, bookingId: this.savedPatient?.id };
           }
-          if (this.bookingSaved) return { ok: true, bookingId: this.savedPatient?.id };
           if (!this.isSavingBooking) break;
         }
         return { ok: false, error: 'Booking was not saved. Check the error on screen.' };
@@ -5411,10 +5352,15 @@ export class AddPatientComponent {
   private async runVoiceToolSafe(name: string, a: any): Promise<any> {
     const start = performance.now();
 
+    const cart = () => ({
+      tests: this.selectedTests.filter((t: any) => !t.packageName).map((t: any) => t.name),
+      packages: this.selectedPackages.map((p: any) => p.profileName)
+    });
+
     try {
       const result = await this.withCap<any>(
         this.runVoiceToolInner(name, a),
-        12000,
+        11000,
         { ok: true, filled: [], problems: ['It was slow. Say it again.'] }
       );
 
@@ -5422,7 +5368,7 @@ export class AddPatientComponent {
         return result;
       }
 
-      const res: any = { ...result, step: this.step };
+      const res: any = { ...result, step: this.step, cart: cart() };
 
       if (this.voiceDebugEnabled()) {
         console.debug('[VOICE TOOL]', name, {
@@ -5435,7 +5381,7 @@ export class AddPatientComponent {
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error('[VOICE TOOL ERROR]', name, message);
-      return { ok: false, step: this.step, error: message };
+      return { ok: false, step: this.step, error: message, cart: cart() };
     }
   }
 
@@ -5460,12 +5406,12 @@ export class AddPatientComponent {
     this.voice.stop();
     this.clearPending();
   }
-
   ngOnDestroy() {
     this.voice.stop();
     this.voiceErrSub?.unsubscribe();
+    this.voiceDbgSub?.unsubscribe();
+    this.voiceAutoStopSub?.unsubscribe();
   }
-
   private step1Missing(): string[] {
     const m: string[] = [];
     if (!String(this.patient?.name || '').trim()) m.push('patient name');
@@ -5598,7 +5544,6 @@ export class AddPatientComponent {
   }
 
   private readonly TEST_ALIASES: Record<string, string> = {
-    'cbc': 'complete blood count',
     'hb': 'hemoglobin',
     'lft': 'liver function test',
     'kft': 'kidney function test',
@@ -5677,4 +5622,156 @@ export class AddPatientComponent {
     return scored[0].x;
   }
 
+  /** "Wellness 2" -> ["Wellness 2","Wellness-2","Wellness -2"]; "1.1 plus CBC" -> "1.1+CBC" */
+  private termVariants(term: string): string[] {
+    const t = String(term ?? '').replace(/\s+(plus|with)\s+/gi, '+').trim();
+    const tokens = t.split(/[\s\-–_/,]+/).filter(Boolean);
+    if (tokens.length < 2) return [t];
+    const last = tokens[tokens.length - 1];
+    const head = tokens.slice(0, -1).join(' ');
+    return Array.from(new Set([t, tokens.join('-'), `${head} -${last}`]));
+  }
+
+  /** Sagle variants ekach veli (parallel). Vel = ek API call. */
+  private async multiSearch<T>(
+    variants: string[],
+    call: (q: string) => Promise<T[] | null>,
+    keyOf: (x: T) => string
+  ): Promise<T[] | null> {
+    const all = await Promise.all(variants.map(v => call(v)));
+    if (all.every(r => r === null)) return null;
+    const seen = new Set<string>();
+    const out: T[] = [];
+    for (const r of all) {
+      for (const x of r ?? []) {
+        const k = keyOf(x);
+        if (!seen.has(k)) {
+          seen.add(k);
+          out.push(x);
+        }
+      }
+    }
+    return out;
+  }
+
+  /**
+   * exact = naav / bracket nasleli naav / shevtcha bracket madhla code ("CBC") barobar.
+   * names = ek peksha jast match -> user la vichara.
+   */
+  private pickItem(
+    list: any[],
+    term: string,
+    nameOf: (x: any) => string
+  ): { pick?: any; exact?: boolean; names?: string[] } {
+    if (!list?.length) return {};
+    const fq = this.fkey(term);
+    const qNums = this.numsOf(term);
+    if (!fq) return {};
+
+    const variantsOfName = (raw: string): string[] => {
+      const s = String(raw);
+      const noBr = s.replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+      const tail = s.match(/^[^()]*\(([^)]{1,30})\)\s*$/)?.[1];
+      return [s, noBr, tail].filter((x): x is string => !!x);
+    };
+
+    const uniqNames = (arr: any[]) => Array.from(new Set(arr.map(nameOf)));
+
+    const exact = list.filter(x =>
+      variantsOfName(nameOf(x)).some(v => this.fkey(v) === fq && this.numsOf(v) === qNums)
+    );
+    if (exact.length) {
+      const n = uniqNames(exact);
+      return n.length === 1 ? { pick: exact[0], exact: true } : { names: n };
+    }
+
+    const part = list.filter(x => this.fkey(nameOf(x)).includes(fq));
+    if (part.length) {
+      const n = uniqNames(part);
+      return n.length === 1 ? { pick: part[0] } : { names: n };
+    }
+
+    const fuzzy = this.fuzzyPick(list, term, nameOf);
+    return fuzzy ? { pick: fuzzy } : {};
+  }
+
+  private async fetchTests(labId: any, fid: any, term: string): Promise<any[] | null> {
+    const one = async (q: string): Promise<any[] | null> => {
+      try {
+        const res: any = await this.api(this.labApi.searchTests(labId, fid, q, 0, 20), 8000);
+        return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
+          id: t.testId,
+          sampleId: t.sample_type,
+          name: String(t.test_name || 'Unnamed Test').trim(),
+          b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
+          tat: t.tat || 'N/A',
+          mrp: t.test_price ?? 0,
+          dis: 0,
+          fluid: t.sampleTypeName || 'N/A',
+          sampleType: t.sampleTypeName || 'OTHER',
+          color: t.sampleColor || '#a855f7'
+        }));
+      } catch {
+        return null;
+      }
+    };
+    return this.multiSearch(this.termVariants(term), one, (t: any) => this.key(t.name));
+  }
+
+  private async fetchPkgs(labId: any, fid: any, term: string): Promise<any[] | null> {
+    const pName = (p: any) => String(p?.profileName || p?.profile_name || p?.name || '').trim();
+    const one = async (q: string): Promise<any[] | null> => {
+      try {
+        const res: any = await this.api(this.labApi.searchProfiles(labId, fid, q, 0, 20), 8000);
+        const list = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+        return list.map((p: any) => {
+          const price = Number(p?.profileAssignedPrice || 0) > 0
+            ? Number(p.profileAssignedPrice)
+            : Number(p?.total_amount || 0);
+          return { ...p, profileAssignedPrice: price, b2b: price, assignedPrice: price };
+        });
+      } catch {
+        return null;
+      }
+    };
+    return this.multiSearch(this.termVariants(term), one, (p: any) => this.key(pName(p)));
+  }
+
+  private async resolveItem(
+    labId: any, tFid: any, pFid: any, term: string, hint: 'test' | 'pkg'
+  ): Promise<{ term: string; hint: 'test' | 'pkg'; slow?: boolean; names?: string[]; test?: any; pkg?: any }> {
+
+    const pName = (p: any) => String(p?.profileName || p?.profile_name || p?.name || '').trim();
+
+    // test + package ani tyache dash variants: sagle ekach veli
+    const [tests, pkgs] = await Promise.all([
+      this.fetchTests(labId, tFid, term),
+      this.fetchPkgs(labId, pFid, term)
+    ]);
+
+    if (tests === null && pkgs === null) return { term, hint, slow: true };
+
+    const t = this.pickItem(tests ?? [], term, (x: any) => x.name);
+    const p = this.pickItem(pkgs ?? [], term, pName);
+
+    // 1) exact match sarvat adhi
+    if (t.exact && !p.exact) return { term, hint, test: t.pick };
+    if (p.exact && !t.exact) return { term, hint, pkg: p.pick };
+    if (t.exact && p.exact) {
+      return hint === 'pkg' ? { term, hint, pkg: p.pick } : { term, hint, test: t.pick };
+    }
+
+    // 2) ek peksha jast options -> user la vichara
+    const names = Array.from(new Set([...(t.names ?? []), ...(p.names ?? [])]));
+    if (names.length) return { term, hint, names };
+
+    if (t.pick && p.pick) {
+      return { term, hint, names: Array.from(new Set([t.pick.name, pName(p.pick)])) };
+    }
+
+    // 3) ek-ch match
+    if (t.pick) return { term, hint, test: t.pick };
+    if (p.pick) return { term, hint, pkg: p.pick };
+    return { term, hint };
+  }
 }
