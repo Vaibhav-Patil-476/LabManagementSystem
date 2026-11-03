@@ -4694,7 +4694,7 @@ export class AddPatientComponent {
         .catch(e => console.warn('Doctor preload failed', e));
     }
 
-   
+
 
     // 4. Voice suru kara
     try {
@@ -4711,7 +4711,7 @@ export class AddPatientComponent {
       const alert = await this.alertController.create({
         cssClass: 'premium-alert',
         header: 'Voice Assistant',
-        message: 'Tumcha awaz phone chya speech recognition ne text madhe badalla jail. Chalel ka?',
+        message: 'Your voice will be sent to Google Gemini for real-time processing to fill the booking form. Continue?',
         buttons: [
           { text: 'No', role: 'cancel', handler: () => resolve(false) },
           { text: 'Yes', handler: () => resolve(true) }

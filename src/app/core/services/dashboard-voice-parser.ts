@@ -1,5 +1,3 @@
-
-
 export type DashAction = 'status' | 'download';
 
 export interface DashParse {
@@ -46,6 +44,7 @@ const NOISE = new Set([
   'बताओ', 'बताइए', 'का', 'की', 'के', 'नंबर', 'नम्बर', 'आईडी', 'आयडी', 'मरीज', 'नाम',
   'चाहिए', 'कर', 'करो', 'निकालो', 'मुझे', 'मेरा', 'है', 'हैं', 'और', 'ऑफ', 'फॉर',
   'बारकोड', 'पेशेंट', 'पेशंट', 'प्लीज',
+  'जरा', 'ज़रा', 'देखो', 'बताइये', 'दीजिये', 'कीजिए', 'कीजिये', 'सुनो',
   // stray Marathi
   'गिव्ह', 'मी', 'द्या', 'दाखवा', 'सांगा', 'चा', 'ची', 'चे', 'आहे'
 ]);
@@ -139,7 +138,8 @@ export function parseDashboardVoice(raw: string): DashParse {
     }
     flush();
 
-    if (best) return { stop: false, action, query: best.toUpperCase() };
+    // 1-2 akshari "ID" mhanje khara ID nahi (udaharan "रिपोर्ट दो" -> "2"), te ignore.
+    if (best.length >= 3) return { stop: false, action, query: best.toUpperCase() };
   }
 
   // 2) अंक नाहीत: patient name

@@ -115,6 +115,79 @@ const MSG = {
     }
 } as const;
 
+/* ---------------- Devanagari -> Roman (naavansathi) ---------------- */
+
+const DEV_CONS: Record<string, string> = {
+    'क': 'k', 'ख': 'kh', 'ग': 'g', 'घ': 'gh', 'ङ': 'n',
+    'च': 'ch', 'छ': 'chh', 'ज': 'j', 'झ': 'jh', 'ञ': 'n',
+    'ट': 't', 'ठ': 'th', 'ड': 'd', 'ढ': 'dh', 'ण': 'n',
+    'त': 't', 'थ': 'th', 'द': 'd', 'ध': 'dh', 'न': 'n',
+    'प': 'p', 'फ': 'ph', 'ब': 'b', 'भ': 'bh', 'म': 'm',
+    'य': 'y', 'र': 'r', 'ल': 'l', 'ळ': 'l', 'व': 'v',
+    'श': 'sh', 'ष': 'sh', 'स': 's', 'ह': 'h'
+};
+const DEV_VOWEL: Record<string, string> = {
+    'अ': 'a', 'आ': 'a', 'इ': 'i', 'ई': 'i', 'उ': 'u', 'ऊ': 'u', 'ऋ': 'ri',
+    'ए': 'e', 'ऐ': 'ai', 'ओ': 'o', 'औ': 'au', 'ऑ': 'o'
+};
+const DEV_MATRA: Record<string, string> = {
+    'ा': 'a', 'ि': 'i', 'ी': 'i', 'ु': 'u', 'ू': 'u', 'ृ': 'ri',
+    'े': 'e', 'ै': 'ai', 'ो': 'o', 'ौ': 'au', 'ॉ': 'o', 'ॅ': 'e'
+};
+
+function devToRoman(input: string): string {
+    const chars = Array.from(String(input || '').normalize('NFC'));
+    const isDev = (c?: string) => !!c && /[\u0900-\u097F]/.test(c);
+    let out = '';
+
+    for (let i = 0; i < chars.length; i++) {
+        const c = chars[i];
+
+        if (DEV_CONS[c] !== undefined) {
+            let base = DEV_CONS[c];
+            if (chars[i + 1] === '\u093C') {            // nukta
+                if (c === 'ज') base = 'z';
+                if (c === 'फ') base = 'f';
+                i++;
+            }
+            const n = chars[i + 1];
+            if (n === '\u094D') {                       // halant: swar nahi
+                out += base;
+                i++;
+                continue;
+            }
+            if (n && DEV_MATRA[n] !== undefined) {
+                out += base + DEV_MATRA[n];
+                i++;
+                continue;
+            }
+            const wordEnd = !n || !isDev(n);
+            out += base + (wordEnd ? '' : 'a');         // shevti 'a' padto
+            continue;
+        }
+
+        if (DEV_VOWEL[c] !== undefined) { out += DEV_VOWEL[c]; continue; }
+        if (c === 'ं' || c === 'ँ') { out += 'n'; continue; }
+        if (c === 'ः') { out += 'h'; continue; }
+        if (c === '\u093C' || c === '\u094D') continue;
+        out += c;
+    }
+    return out;
+}
+
+/** Spelling che farak chalavnyasathi: "Supriya" / "Suprya" -> "spr", "Kumari" / "Kumary" -> "kmr" */
+function phoneticKey(s: string): string {
+    const base = String(s || '').toLowerCase().replace(/[^a-z]/g, '');
+    const key = base
+        .replace(/ph/g, 'f')
+        .replace(/w/g, 'v')
+        .replace(/z/g, 'j')
+        .replace(/(sh|ch|th|dh|kh|gh|bh|jh)/g, m => m[0])
+        .replace(/[aeiouy]/g, '')
+        .replace(/(.)\1+/g, '$1');
+    return key || base;
+}
+
 /* ---------------------------- service ---------------------------- */
 
 @Injectable({ providedIn: 'root' })
@@ -147,6 +220,7 @@ export class DashboardVoiceService {
     private idleTimer: any;
     private errCount = 0;
     private lastAction: DashAction = 'status';
+    private lastBooking: BookingStatus | null = null;
 
     constructor(
         private labApi: LabApiService,
@@ -202,6 +276,7 @@ export class DashboardVoiceService {
     clear(): void {
         this.messages$.next([]);
         this.lastRole = null;
+        this.lastBooking = null;
     }
 
     // Start/Stop button sathi. Chat tasach rahto (open$ la haat nahi).
@@ -213,17 +288,21 @@ export class DashboardVoiceService {
         await this.startVoice();
     }
 
+    private starting = false;
+
     private async startVoice(): Promise<void> {
-        if (this.active) return;
-        if (!(await this.askConsent())) {
-            this.open$.next(false);
-            return;
-        }
+        if (this.active || this.starting) return;
+        this.starting = true;
 
         try {
+            if (!(await this.askConsent())) {
+                this.open$.next(false);
+                return;
+            }
+
             const { available } = await SpeechRecognition.available();
             if (!available) {
-                this.notice(this.m.noteNoSpeech);
+                this.notice(MSG['en-IN'].noteNoSpeech);
                 return;
             }
 
@@ -232,7 +311,7 @@ export class DashboardVoiceService {
                 perm = await SpeechRecognition.requestPermissions();
             }
             if (perm.speechRecognition !== 'granted') {
-                this.notice(this.m.noteMic);
+                this.notice(MSG['en-IN'].noteMic);
                 return;
             }
 
@@ -242,13 +321,19 @@ export class DashboardVoiceService {
             this.lastAction = 'status';
             this.touch();
             this.startWatchdog();
-            await this.say(this.m.greeting);
         } catch (e) {
             console.warn('[dashboard-voice] start failed', e);
-            this.notice(this.m.noteStart);
+            this.notice(MSG['en-IN'].noteStart);
             await this.stop();
+            return;
+        } finally {
+            this.starting = false;   // greeting chya adhich reset
         }
+
+        // greeting await nahi, mhanje speak atakla tari Start/Stop kam karto
+        void this.say(this.m.greeting, MSG['en-IN'].greeting);
     }
+
 
     async stop(): Promise<void> {
         this.active = false;
@@ -431,21 +516,25 @@ export class DashboardVoiceService {
 
     /* ----------------------- speak ----------------------- */
 
-    private async say(text: string): Promise<void> {
+    /** spoken = awaz (nivadleli bhasha), chatText = chat madhe disnara English text. */
+    private async say(spoken: string, chatText: string = spoken): Promise<void> {
         if (!this.active) return;
-        this.zone.run(() => this.appendTranscript('ai', text));
+        this.zone.run(() => this.appendTranscript('ai', chatText));
         await this.pauseMic();
         if (!this.active) return;                      // Stop dabla asel tar pudhe jau naka
         this.zone.run(() => this.state$.next('speaking'));
         try {
-            await TextToSpeech.speak({
-                text,
-                lang: this.lang,
-                rate: 1.0,
-                pitch: 1.0,
-                volume: 1.0,
-                category: 'ambient'
-            });
+            await Promise.race([
+                TextToSpeech.speak({
+                    text: spoken,
+                    lang: this.lang,
+                    rate: 1.0,
+                    pitch: 1.0,
+                    volume: 1.0,
+                    category: 'ambient'
+                }),
+                new Promise(resolve => setTimeout(resolve, 15000))
+            ]);
         } catch { /* ignore */ }
 
         if (!this.active) return;                      // Stop dabla asel tar mic parat chalu karu naka
@@ -462,6 +551,7 @@ export class DashboardVoiceService {
         await this.pauseMic();
 
         let reply = '';
+        let chatReply = '';
         try {
             const p = parseDashboardVoice(text);
 
@@ -472,29 +562,38 @@ export class DashboardVoiceService {
 
             this.zone.run(() => this.appendTranscript('user', text));
 
-            if (!p.query) {
+            // "download the report" (naav/ID nahi) -> mage cha booking vapra
+            let query = p.query;
+            if (!query && p.action && this.lastBooking) {
+                query = String(this.lastBooking.bookingId);
+            }
+
+            if (!query) {
                 reply = this.m.askId;
+                chatReply = MSG['en-IN'].askId;
             } else {
                 const action: DashAction = p.action ?? this.lastAction;
                 this.lastAction = action;
                 const tool = action === 'download' ? 'download_report' : 'get_status';
 
                 const r = await this.withTimeout(
-                    this.zone.run(() => this.runTool(tool, { query: p.query })),
-                    tool === 'download_report' ? 25000 : 10000
+                    this.zone.run(() => this.runTool(tool, { query })),
+                    tool === 'download_report' ? 30000 : 25000
                 );
-                reply = this.compose(tool, r);
+                reply = this.compose(tool, r, this.m);
+                chatReply = this.compose(tool, r, MSG['en-IN']);
             }
         } catch (e) {
             console.warn('[dashboard-voice]', e);
             reply = this.m.error;
+            chatReply = MSG['en-IN'].error;
         } finally {
             this.busy = false;
             this.lastRole = null;
         }
 
         if (reply && this.active) {
-            await this.say(reply);
+            await this.say(reply, chatReply);
         } else if (this.active) {
             this.zone.run(() => this.state$.next('listening'));
             this.resumeMic();
@@ -513,9 +612,7 @@ export class DashboardVoiceService {
 
     /* ----------------------- result -> spoken sentence ----------------------- */
 
-    private compose(tool: string, r: any): string {
-        const m = this.m;
-
+    private compose(tool: string, r: any, m: (typeof MSG)[DashLang]): string {
         if (!r?.ok) {
             if (r?.error === 'NOT_FOUND') return m.notFound;
             if (r?.error === 'MULTIPLE') {
@@ -605,6 +702,7 @@ export class DashboardVoiceService {
             }
 
             this.addCard(booking);
+            this.lastBooking = booking;
 
             if (name === 'get_status') {
                 return { ok: true, ...this.forVoice(booking) };
@@ -688,27 +786,101 @@ export class DashboardVoiceService {
     private call<T>(obs: Observable<T>, ms: number): Promise<T> {
         return firstValueFrom(obs.pipe(timeout({ each: ms })));
     }
-
     private async search(query: string): Promise<BookingStatus[]> {
+        // ID / barcode: ekach call
+        if (/\d/.test(query)) {
+            return this.fetchList(query, 12000, 20);
+        }
+
+        const run = async (attempts: string[]): Promise<BookingStatus[]> => {
+            const lists = await Promise.all(
+                attempts.map(q => this.fetchList(q, 12000, 50).catch(() => [] as BookingStatus[]))
+            );
+            const unique = new Map<string, BookingStatus>();
+            for (const l of lists) for (const b of l) unique.set(String(b.bookingId), b);
+            return this.nameMatches([...unique.values()], query);
+        };
+
+        // 1) pratyek shabda + transliteration variants (ksh -> x vagere)
+        let hits = await run(this.nameAttempts(query));
+        if (hits.length) return hits;
+
+        // 2) fallback: pratyek shabdache pahile 2 akshar
+        const short = this.norm(query).split(' ').filter(t => t.length >= 3).map(t => t.slice(0, 2));
+        return run(Array.from(new Set(short)).slice(0, 3));
+    }
+
+    private nameAttempts(query: string): string[] {
+        const tokens = this.norm(query).split(' ').filter(t => t.length >= 3);
+        const out = new Set<string>();
+        for (const t of tokens) {
+            out.add(t);
+            out.add(t.replace(/ksh/g, 'x'));      // lakshman -> laxman
+            out.add(t.replace(/shr/g, 'sr'));     // shri -> sri
+            out.add(t.replace(/ph/g, 'f'));
+            out.add(t.replace(/w/g, 'v'));
+        }
+        return Array.from(out).filter(s => s.length >= 3).slice(0, 5);
+    }
+
+    /** Sarvat lamb shabda (kami common) cha pahile 3 akshar. */
+    private nameKey(query: string): string {
+        const tokens = this.norm(query).split(' ').filter(t => t.length >= 2);
+        if (!tokens.length) return '';
+        const longest = [...tokens].sort((a, b) => b.length - a.length)[0];
+        return longest.slice(0, 3);
+    }
+
+
+    private async fetchList(q: string, ms: number, size = 50): Promise<BookingStatus[]> {
         const labId = this.labApi.getCurrentLabId();
         const res: any = await this.call(
-            this.labApi.searchBookingStatus(labId, query, 10, this.franchiseScope),
-            9000
+            this.labApi.searchBookingStatus(labId, q, size, this.franchiseScope),
+            ms
         );
 
         let list: any[] = Array.isArray(res) ? res : res?.content ?? res?.data ?? res?.bookings ?? [];
 
         if (isDevMode()) {
-            console.debug('[VOICE] booking-status raw sample (first item):', list[0]);
+            console.debug('[VOICE] search', q, 'count', list.length);
         }
 
-        // ROLE_STAFF la fakt swatah ne banvlele bookings.
         if (this.auth.role === 'ROLE_STAFF') {
             const uid = this.auth.userId;
             list = list.filter(b => b?.createdBy === uid);
         }
 
         return list.map(b => this.mapBooking(b));
+    }
+
+    private norm(s: string): string {
+        return String(s || '')
+            .toLowerCase()
+            .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+    }
+
+
+
+    /** Query che sagle shabda naavat (phonetically) astil tevhach match. */
+    /** Query che sagle shabda naavat (phonetically) astil tevhach match. */
+    private nameMatches(list: BookingStatus[], query: string): BookingStatus[] {
+        const qKeys = this.norm(query).split(' ').filter(Boolean).map(phoneticKey);
+
+        const same = (qk: string, nk: string): boolean => {
+            if (qk === nk) return true;
+            // chhota farak (ek akshar jast/kami) fakt lamb keys sathi
+            if (qk.length >= 3 && nk.length >= 3 && Math.abs(qk.length - nk.length) <= 1) {
+                return nk.startsWith(qk) || qk.startsWith(nk);
+            }
+            return false;
+        };
+
+        return list.filter(b => {
+            const nKeys = this.norm(b.patientName).split(' ').filter(Boolean).map(phoneticKey);
+            return qKeys.every(qk => nKeys.some(nk => same(qk, nk)));
+        });
     }
 
     private g(o: any, ...keys: string[]): any {
@@ -834,21 +1006,22 @@ export class DashboardVoiceService {
     private pickOne(found: BookingStatus[], query: string): BookingStatus | null {
         if (found.length === 1) return found[0];
 
-        const q = query.toLowerCase().replace(/\s+/g, ' ').trim();
+        const q = this.norm(query);
 
         // booking id / barcode exact
         const byKey = found.filter(
             b =>
-                String(b.bookingId).toLowerCase() === q ||
-                b.tests.some(t => String(t.barcode ?? '').toLowerCase() === q)
+                this.norm(String(b.bookingId)) === q ||
+                b.tests.some(t => this.norm(String(t.barcode ?? '')) === q)
         );
         if (byKey.length === 1) return byKey[0];
+        if (byKey.length > 1) return this.latest(byKey);
 
-        // same patient che anek bookings -> latest
-        const sameName = found.filter(
-            b => b.patientName.toLowerCase().replace(/\s+/g, ' ').trim() === q
+        // sagle records ekach patient che (spelling farak dhartun) -> latest booking
+        const keys = new Set(
+            found.map(b => this.norm(b.patientName).split(' ').map(phoneticKey).join(' '))
         );
-        if (sameName.length >= 1) return this.latest(sameName);
+        if (keys.size === 1) return this.latest(found);
 
         return null;
     }
@@ -878,9 +1051,10 @@ export class DashboardVoiceService {
     }
 
     private cleanQuery(q: any): string {
-        const s = String(q ?? '').trim();
+        let s = String(q ?? '').trim();
+        if (/[\u0900-\u097F]/.test(s)) s = devToRoman(s);   // Hindi naav -> English letters
         // ID / barcode ("B K 1 2 3" -> "BK123"); naav as-is
-        return /\d/.test(s) ? s.replace(/[\s-]+/g, '').toUpperCase() : s;
+        return /\d/.test(s) ? s.replace(/[\s-]+/g, '').toUpperCase() : s.replace(/\s+/g, ' ').trim();
     }
 
     /* ----------------------- download ----------------------- */
