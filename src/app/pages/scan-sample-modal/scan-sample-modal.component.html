@@ -1,0 +1,99 @@
+<div class="scan-wrap">
+
+  <!-- Header -->
+  <div class="scan-header">
+    <div class="scan-header-text">
+      <h2 class="scan-title">{{ sample ? 'Receive Sample' : 'Scan Sample' }}</h2>
+      <span class="scan-sub" *ngIf="sample">#{{ sample.barCode }}</span>
+    </div>
+    <button type="button" class="scan-close" (click)="close()">
+      <ion-icon name="close-outline"></ion-icon>
+    </button>
+  </div>
+
+  <div class="scan-body">
+
+    <!-- STEP 1: type / scan -->
+    <ng-container *ngIf="!sample">
+      <label class="field-label">Barcode</label>
+      <div class="barcode-box">
+        <button type="button" class="barcode-icon icon-btn" (click)="startScan()">
+          <ion-icon name="scan-outline"></ion-icon>
+        </button>
+        <ion-input #barcodeInput [(ngModel)]="barcode" placeholder="Scan or type barcode"
+          (keyup.enter)="onScan()" autocomplete="off" autocapitalize="characters"></ion-input>
+      </div>
+
+      <div class="scan-actions">
+        <button type="button" class="btn btn-blue" (click)="startScan()">
+          <ion-icon name="camera-outline"></ion-icon> Camera
+        </button>
+        <button type="button" class="btn btn-blue" [disabled]="loading || !barcode" (click)="onScan()">
+          <ion-icon name="search-outline"></ion-icon>
+          {{ loading ? 'Checking...' : 'Search' }}
+        </button>
+        <button type="button" class="btn btn-grey" (click)="close()">
+          <ion-icon name="close-circle-outline"></ion-icon> Close
+        </button>
+      </div>
+    </ng-container>
+
+    <!-- STEP 2: result -->
+    <ng-container *ngIf="sample">
+      <div class="head-row">
+        <span class="chip" [style.background]="sample.sampleColor">{{ sample.sampleType }}</span>
+        <span class="chip chip-green">{{ sample.franchise?.franchiseName || sample.patient?.centerCode }}</span>
+        <span class="chip chip-src" *ngIf="sample.sourceLab?.length">
+          {{ sample.sourceLab[0].lab_name }} / {{ sample.sourceLab[0].labCode }}
+        </span>
+      </div>
+
+      <label class="field-label">Patient</label>
+      <div class="info-box">
+        {{ patientLine }}
+        <span class="dr" *ngIf="sample.doctor?.doctor_name">· Dr. {{ sample.doctor?.doctor_name }}</span>
+      </div>
+
+      <label class="field-label">Barcode</label>
+      <div class="barcode-box readonly">
+        <span class="barcode-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
+        <span class="barcode-text">{{ sample.barCode }}</span>
+      </div>
+
+      <label class="field-label">Tests</label>
+      <div class="test-table">
+        <div class="tt-row tt-head">
+          <div>Test Name</div>
+          <div>TAT</div>
+        </div>
+        <div class="tt-row" *ngFor="let t of sample.bookingtests">
+          <div class="tt-name">{{ t.testName }}</div>
+          <div class="tt-tat">{{ t.tatTime }} Min</div>
+        </div>
+      </div>
+
+      <div class="scan-actions">
+        <button *ngIf="isReceived" type="button" class="btn btn-green"
+          [disabled]="restoring" (click)="restore()">
+          <ion-icon name="refresh-outline"></ion-icon>
+          {{ restoring ? 'Please wait...' : 'Restore' }}
+        </button>
+
+        <button *ngIf="!isReceived" type="button" class="btn btn-blue"
+          [disabled]="receiving" (click)="receiveSample()">
+          <ion-icon name="checkmark-circle-outline"></ion-icon>
+          {{ receiving ? 'Please wait...' : 'Receive Sample' }}
+        </button>
+
+        <button *ngIf="isReceived" type="button" class="btn btn-red" disabled>
+          Already Received
+        </button>
+
+        <button type="button" class="btn btn-grey" (click)="resetScan()">
+          <ion-icon name="close-circle-outline"></ion-icon> Close
+        </button>
+      </div>
+    </ng-container>
+
+  </div>
+</div>

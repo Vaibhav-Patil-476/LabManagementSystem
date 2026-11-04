@@ -3,7 +3,7 @@
 //   BASE_URL: 'https://devapi.itlabspeed.com',
 //   domain: 'dev.itlabspeed.com',
 //   authUrl: 'https://devapi.itlabspeed.com/api/v1/auth' ,  // ⚠️ तुझा actual auth API base बघून बदल
-//  reportTemplateName: 'igen'
+//  reportTemplateName: 'igen',
 // voiceTokenUrl: 'https://voice-token.vaibhavlab2026.workers.dev',
 // };
 

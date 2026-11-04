@@ -25,29 +25,102 @@ ion-content.menu-content {
   padding: 16px;
 }
 
-.menu-logout-section {
-  margin-top: 20px; // small gap, not the huge empty space
-  padding: 0;
+
+.menu-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 12px;
 }
 
-.menu-logout-btn {
+.menu-nav-item {
+  position: relative;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
-  padding: 12px 14px;
-  border: none;
-  border-radius: 10px;
-  background: rgba(231, 76, 60, 0.1);
-  color: #e74c3c;
-  font-weight: 600;
-  font-size: 14px;
+  min-height: 46px;
+  padding: 7px 10px;
+  border: 0;
+  border-radius: 12px;
+  background: transparent;
+  text-align: left;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .15s ease;
 
-  .menu-logout-icon {
-    display: flex;
-    align-items: center;
-    font-size: 18px;
+  .mni-icon {
+    flex: 0 0 32px;
+    width: 32px;
+    height: 32px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    background: #eaf2ff;
+
+    ion-icon {
+      font-size: 17px;
+      color: #1d4ed8;
+    }
+  }
+
+.mni-text {
+  flex: 1;
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1.4;      // descender (g, p) cut honar nahi
+  padding: 2px 0;        // extra safety
+  color: #1e293b;
+  white-space: nowrap;   // overflow:hidden ani text-overflow kaadhle
+}
+
+  .mni-arrow {
+    flex-shrink: 0;
+    font-size: 14px;
+    color: #b3bfd0;
+  }
+
+  &:active {
+    background: #f3f6fb;
+  }
+
+  &.active {
+    background: #eef4ff;
+
+    .mni-text {
+      color: #1d4ed8;
+      font-weight: 700;
+    }
+
+    &::before {
+      content: '';
+      position: absolute;
+      left: -18px;           // .menu-shell padding (18px) cancel karto
+      top: 8px;
+      bottom: 8px;
+      width: 4px;
+      border-radius: 0 4px 4px 0;
+      background: #2563eb;
+    }
+  }
+
+  &.logout {
+    .mni-icon {
+      background: #fdecee;
+
+      ion-icon {
+        color: #dc3545;
+      }
+    }
+
+    .mni-text {
+      color: #b4232f;
+    }
+
+    &:active {
+      background: #fff5f5;
+    }
   }
 }
 

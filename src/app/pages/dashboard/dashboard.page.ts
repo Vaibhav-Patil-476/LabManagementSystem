@@ -6,6 +6,8 @@ import { Capacitor } from '@capacitor/core';
 import { FormsModule } from "@angular/forms";
 import { PdfDownloadService } from "../../core/services/pdf-download";
 import { VoiceChatBoxComponent } from '../../core/services/voice-chat-box.component';
+import { ModalController } from '@ionic/angular/standalone';
+import { ScanSampleModalComponent } from '../../pages/scan-sample-modal/scan-sample-modal.component';
 
 
 import {
@@ -101,7 +103,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   // USER / SUMMARY STATE
   // ============================================================
   user: any = {};
-
+activeMenu: 'scan' | 'logout' | '' = '';
   totalPatients = 0;
   totalBookings = 0;
   totalReports = 0;
@@ -144,6 +146,15 @@ export class DashboardPage implements OnInit, OnDestroy {
   showPackageSuggestions = false;
   private packageSearchTimer: any = null;
 
+  async openScan() {
+    if (!this.isAdminRole) return;
+
+    const modal = await this.modalCtrl.create({
+      component: ScanSampleModalComponent,
+      cssClass: 'scan-modal',
+    });
+    await modal.present();
+  }
 
   private startDayChangeWatcher(): void {
     this.dayWatchSub?.unsubscribe();
@@ -319,6 +330,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     private walletService: WalletService,
     private cdr: ChangeDetectorRef,
     private sanitizer: DomSanitizer,
+    private modalCtrl: ModalController
   ) {
     this.registerIcons();
     this.fromDate = this.toKey(new Date());
@@ -388,9 +400,9 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   get isFranchiseRole(): boolean {
-  const r = this.roleService.currentRole;
-  return r === this.ROLE_FRANCHISE || r === this.ROLE_FRANCHISE_STAFF;
-}
+    const r = this.roleService.currentRole;
+    return r === this.ROLE_FRANCHISE || r === this.ROLE_FRANCHISE_STAFF;
+  }
 
 
   get canEditPatient(): boolean {
@@ -441,14 +453,14 @@ export class DashboardPage implements OnInit, OnDestroy {
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
   }
 
-    /** Account tab: कोणताही STAFF (ROLE_STAFF, ROLE_FRANCHISE_STAFF) ला hide */
+  /** Account tab: कोणताही STAFF (ROLE_STAFF, ROLE_FRANCHISE_STAFF) ला hide */
   /** Account tab: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide */
   get canSeeAccount(): boolean {
     const role = (this.roleService.currentRole || this.authService.role || '').toUpperCase();
     if (!role) return false;   // role माहीत नसेल तर hide
     return role !== ROLE.STAFF && role !== ROLE.FRANCHISE_STAFF;
   }
-    /** My Price: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide */
+  /** My Price: ROLE_STAFF आणि ROLE_FRANCHISE_STAFF ला hide */
   get canSeeMyPrice(): boolean {
     const role = this.authService.role;
     return role !== ROLE.STAFF && role !== ROLE.FRANCHISE_STAFF;
@@ -986,70 +998,70 @@ export class DashboardPage implements OnInit, OnDestroy {
     };
   }
 
- openPrintBillModal(item: any, event?: MouseEvent): void {
-  event?.stopPropagation();
-  this.printBillItem = item;
+  openPrintBillModal(item: any, event?: MouseEvent): void {
+    event?.stopPropagation();
+    this.printBillItem = item;
     this.selectedBillPriceType = this.canSeeMyPrice ? 'myprice' : 'mrp';
-  this.customBillAmount = null;
-  this.isPrintBillModalOpen = true;
+    this.customBillAmount = null;
+    this.isPrintBillModalOpen = true;
 
-  if (this.franchiseCache.length === 0) {
-    this.labApi.getFranchises().subscribe({
-      next: (res: any) => {
-        this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
-        this.cdr.detectChanges();
-      },
-      error: () => { /* silent */ }
-    });
+    if (this.franchiseCache.length === 0) {
+      this.labApi.getFranchises().subscribe({
+        next: (res: any) => {
+          this.franchiseCache = Array.isArray(res?.content) ? res.content : (Array.isArray(res) ? res : []);
+          this.cdr.detectChanges();
+        },
+        error: () => { /* silent */ }
+      });
+    }
   }
-}
 
   closePrintBillModal(): void {
     this.isPrintBillModalOpen = false;
     this.printBillItem = null;
   }
 
- async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
-  const item = this.printBillItem;
-  if (!item) return;
-  if (this.printingId === item.bookingId) return;
+  async confirmPrintBill(letterHead: boolean, fLetterHead: boolean = false): Promise<void> {
+    const item = this.printBillItem;
+    if (!item) return;
+    if (this.printingId === item.bookingId) return;
 
-  this.printingId = item.bookingId;
-  this.isPrintBillModalOpen = false;
+    this.printingId = item.bookingId;
+    this.isPrintBillModalOpen = false;
 
-  const priceType = (!this.canSeeMyPrice && this.selectedBillPriceType === 'myprice')
-    ? 'mrp'
-    : this.selectedBillPriceType;
+    const priceType = (!this.canSeeMyPrice && this.selectedBillPriceType === 'myprice')
+      ? 'mrp'
+      : this.selectedBillPriceType;
 
-  const payload = this.labApi.buildBillPayload(
-    item.bookingId,
-    priceType,
-    this.customBillAmount || null,
-    letterHead,
-    fLetterHead
-  );
+    const payload = this.labApi.buildBillPayload(
+      item.bookingId,
+      priceType,
+      this.customBillAmount || null,
+      letterHead,
+      fLetterHead
+    );
 
-  try {
-    const res: any = await firstValueFrom(this.labApi.printBill(payload));
+    try {
+      const res: any = await firstValueFrom(this.labApi.printBill(payload));
 
-    if (res?.downloadUrl) {
-      const fileName = res.fileName || `bill-${item.bookingId}.pdf`;
-      await this.pdfDownload.download(res.downloadUrl, fileName);
-      this.toastService.success('Success', 'Bill downloaded successfully.');
-    } else {
-      this.toastService.error('Error', res?.message || 'Unable to generate the bill PDF.');
+      if (res?.downloadUrl) {
+        const fileName = res.fileName || `bill-${item.bookingId}.pdf`;
+        await this.pdfDownload.download(res.downloadUrl, fileName);
+        this.toastService.success('Success', 'Bill downloaded successfully.');
+      } else {
+        this.toastService.error('Error', res?.message || 'Unable to generate the bill PDF.');
+      }
+    } catch (err) {
+      console.error('PRINT BILL ERROR:', err);
+      this.toastService.error('Error', 'Failed to generate the bill. Please try again.');
+    } finally {
+      this.ngZone.run(() => {
+        this.printingId = null;
+        this.printBillItem = null;
+        this.cdr.detectChanges();
+      });
     }
-  } catch (err) {
-    console.error('PRINT BILL ERROR:', err);
-    this.toastService.error('Error', 'Failed to generate the bill. Please try again.');
-  } finally {
-    this.ngZone.run(() => {
-      this.printingId = null;
-      this.printBillItem = null;
-      this.cdr.detectChanges();
-    });
   }
-}
 
   openGlobalDownloadModal(item: any, event?: MouseEvent): void {
     event?.stopPropagation();
@@ -2186,7 +2198,7 @@ export class DashboardPage implements OnInit, OnDestroy {
             bookings: resp.totalBookingsCount || 0,
             samples: received + pending + outSourced + rejected + cancelled,
             received, pending, outSourced, rejected, cancelled,
-            amount: Number(resp.totalPaid || 0)
+            amount: Math.ceil(Number(resp.totalPaid || 0))
           };
         });
 
@@ -2362,8 +2374,6 @@ export class DashboardPage implements OnInit, OnDestroy {
       const tests = p.tests || [];
       const samples = p.samples || [];
 
-      // `tests` count is the raw test total; sample buckets come from the
-      // deduplicated sample/barcode array via the matched test's status.
       grouped[key].tests += tests.length;
       grouped[key].samples += samples.length;
 
@@ -2379,7 +2389,7 @@ export class DashboardPage implements OnInit, OnDestroy {
 
     this.dailyBookings = Object.keys(grouped)
       .sort((a, b) => b.localeCompare(a))
-      .map(key => grouped[key])
+      .map(key => ({ ...grouped[key], amount: Math.ceil(grouped[key].amount) }))
       .slice(0, 5);
   }
 
@@ -2476,7 +2486,7 @@ export class DashboardPage implements OnInit, OnDestroy {
       });
     });
 
-  
+
 
     return {
       ...raw,
@@ -3084,7 +3094,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     if (!this.canSeeAccount) return;
     this.accountMenuOpen = !this.accountMenuOpen;
   }
-  
+
   closeAccountMenu(): void {
     this.accountMenuOpen = false;
   }

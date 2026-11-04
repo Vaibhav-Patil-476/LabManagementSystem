@@ -2090,3 +2090,289 @@ $refresh-spin-icon: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org
     margin: 0 !important;
   }
 }
+
+ion-modal.scan-modal {
+  --width: 92%;
+  --max-width: 520px;
+  --height: auto;
+  --border-radius: 20px;
+  --background: transparent;
+  --box-shadow: 0 20px 60px rgba(0, 0, 0, .25);
+  align-items: center;
+}/* =====================================================================
+   GLOBAL SLIM TEXT — saglya app cha text patla
+===================================================================== */
+:root:root:root *:not(ion-icon) {
+  font-weight: 400 !important;
+}
+
+/* Titles / headings */
+:root:root:root h1,
+:root:root:root h2,
+:root:root:root h3,
+:root:root:root h4,
+:root:root:root ion-title,
+:root:root:root strong,
+:root:root:root b,
+:root:root:root th,
+:root:root:root .sheet-title-main,
+:root:root:root .greeting-name,
+:root:root:root .spotlight-count {
+  font-weight: 600 !important;
+}
+
+/* Buttons / labels / chips */
+:root:root:root ion-button,
+:root:root:root button,
+:root:root:root .btn,
+:root:root:root label,
+:root:root:root ion-label,
+:root:root:root .field-label,
+:root:root:root .chip,
+:root:root:root .status-tab {
+  font-weight: 500 !important;
+}
+/* =====================================================================
+   GLOBAL TEXT ONLY: slim + premium (all app)
+   Paste at the VERY END of global.scss
+===================================================================== */
+
+/* 1) Base: sagla text patla */
+:root:root:root:root,
+:root:root:root:root body,
+:root:root:root:root ion-app,
+:root:root:root:root ion-content {
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: .1px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 2) Titles / headings: premium display font, semi-bold */
+:root:root:root:root h1,
+:root:root:root:root h2,
+:root:root:root:root h3,
+:root:root:root:root h4,
+:root:root:root:root ion-title,
+:root:root:root:root .sheet-title-main,
+:root:root:root:root .section-label-title,
+:root:root:root:root .sm-title,
+:root:root:root:root .greeting-name {
+  font-family: var(--font-display);
+  font-weight: 600 !important;
+  letter-spacing: -.2px;
+}
+
+/* 3) Labels / eyebrows: chhote uppercase */
+:root:root:root:root label,
+:root:root:root:root .field-label,
+:root:root:root:root .ep-label,
+:root:root:root:root .summary-field label,
+:root:root:root:root .input-group label,
+:root:root:root:root .eyebrow,
+:root:root:root:root .sheet-title-eyebrow,
+:root:root:root:root .sm-eyebrow,
+:root:root:root:root .menu-overline,
+:root:root:root:root .wm-label,
+:root:root:root:root .ws-label {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* 4) Bold tags: halka semi-bold */
+:root:root:root:root strong,
+:root:root:root:root b {
+  font-weight: 600 !important;
+}
+
+/* 5) Table text */
+:root:root:root:root th {
+  font-size: 11px;
+  font-weight: 600 !important;
+  letter-spacing: .6px;
+}
+:root:root:root:root td {
+  font-size: 13px;
+  font-weight: 400 !important;
+}
+
+/* 6) Buttons / chips / badges cha text (design nahi, fakt font) */
+:root:root:root:root ion-button,
+:root:root:root:root button,
+:root:root:root:root .btn,
+:root:root:root:root .status-tab,
+:root:root:root:root .chip,
+:root:root:root:root .status-badge {
+  font-weight: 500 !important;
+  letter-spacing: .2px;
+}
+
+/* 7) Input text + placeholder */
+:root:root:root:root input,
+:root:root:root:root textarea,
+:root:root:root:root ion-input,
+:root:root:root:root ion-select,
+:root:root:root:root ion-searchbar {
+  font-weight: 400 !important;
+}
+:root:root:root:root input::placeholder,
+:root:root:root:root textarea::placeholder {
+  font-weight: 400;
+  opacity: .55;
+}
+
+/* 8) IDs / barcodes / amounts: mono, medium */
+:root:root:root:root .sc-id,
+:root:root:root:root .barcode-line,
+:root:root:root:root .sc-barcode-row span,
+:root:root:root:root .brc-input,
+:root:root:root:root .patient-id,
+:root:root:root:root .link-id {
+  font-family: var(--font-mono);
+  font-weight: 500 !important;
+  letter-spacing: .3px;
+}
+
+/* 9) Numbers: barabar align */
+:root:root:root:root td,
+:root:root:root:root strong,
+:root:root:root:root .wm-amount,
+:root:root:root:root .ov-stats strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 10) Alerts / toasts */
+ion-alert.premium-alert .alert-title { font-weight: 600 !important; }
+ion-alert.premium-alert .alert-button { font-weight: 500 !important; }
+:root:root:root:root ion-toast { font-weight: 500; }
+
+/* =====================================================================
+   GLOBAL TEXT ONLY: slim + premium (all app)  — FINAL
+   Keep this as the LAST block of global.scss
+===================================================================== */
+
+/* 1) Base */
+:root:root:root:root,
+:root:root:root:root body,
+:root:root:root:root ion-app,
+:root:root:root:root ion-content {
+  font-family: var(--font-body);
+  font-weight: 400;
+  letter-spacing: .1px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* 2) Titles */
+:root:root:root:root h1,
+:root:root:root:root h2,
+:root:root:root:root h3,
+:root:root:root:root h4,
+:root:root:root:root ion-title,
+:root:root:root:root .sheet-title-main,
+:root:root:root:root .section-label-title,
+:root:root:root:root .sm-title,
+:root:root:root:root .greeting-name {
+  font-family: var(--font-display);
+  font-weight: 600 !important;
+  letter-spacing: -.2px;
+}
+
+/* 3) Small uppercase labels (ion-input cha internal label vagala) */
+:root:root:root:root label:not(.input-wrapper),
+:root:root:root:root .field-label,
+:root:root:root:root .ep-label,
+:root:root:root:root .summary-field label,
+:root:root:root:root .input-group label,
+:root:root:root:root .eyebrow,
+:root:root:root:root .sheet-title-eyebrow,
+:root:root:root:root .sm-eyebrow,
+:root:root:root:root .menu-overline,
+:root:root:root:root .wm-label,
+:root:root:root:root .ws-label {
+  font-size: 10.5px !important;
+  font-weight: 600 !important;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+/* 4) Bold tags */
+:root:root:root:root strong,
+:root:root:root:root b {
+  font-weight: 600 !important;
+}
+
+/* 5) Tables */
+:root:root:root:root th {
+  font-size: 11px;
+  font-weight: 600 !important;
+  letter-spacing: .6px;
+}
+:root:root:root:root td {
+  font-size: 13px;
+  font-weight: 400 !important;
+}
+
+/* 6) Buttons / chips text */
+:root:root:root:root ion-button,
+:root:root:root:root button,
+:root:root:root:root .btn,
+:root:root:root:root .status-tab,
+:root:root:root:root .chip,
+:root:root:root:root .status-badge {
+  font-weight: 500 !important;
+  letter-spacing: .2px;
+}
+
+/* 7) INPUT: typed text normal case (capital nahi) */
+:root:root:root:root input,
+:root:root:root:root textarea,
+:root:root:root:root ion-input,
+:root:root:root:root ion-input .input-wrapper,
+:root:root:root:root ion-input .native-input,
+:root:root:root:root ion-textarea,
+:root:root:root:root ion-textarea .native-textarea,
+:root:root:root:root ion-select,
+:root:root:root:root ion-select::part(text),
+:root:root:root:root ion-searchbar,
+:root:root:root:root ion-searchbar input {
+  text-transform: none !important;
+  font-size: 14px !important;
+  font-weight: 400 !important;
+  letter-spacing: .1px !important;
+}
+:root:root:root:root input::placeholder,
+:root:root:root:root textarea::placeholder,
+:root:root:root:root ion-input .native-input::placeholder {
+  text-transform: none !important;
+  font-weight: 400;
+  opacity: .55;
+}
+
+/* 8) IDs / barcodes: mono */
+:root:root:root:root .sc-id,
+:root:root:root:root .barcode-line,
+:root:root:root:root .sc-barcode-row span,
+:root:root:root:root .brc-input,
+:root:root:root:root .patient-id,
+:root:root:root:root .link-id {
+  font-family: var(--font-mono);
+  font-weight: 500 !important;
+  letter-spacing: .3px;
+}
+
+/* 9) Numbers aligned */
+:root:root:root:root td,
+:root:root:root:root strong,
+:root:root:root:root .wm-amount,
+:root:root:root:root .ov-stats strong {
+  font-variant-numeric: tabular-nums;
+}
+
+/* 10) Alerts / toasts */
+ion-alert.premium-alert .alert-title { font-weight: 600 !important; }
+ion-alert.premium-alert .alert-button { font-weight: 500 !important; }
+:root:root:root:root ion-toast { font-weight: 500; }

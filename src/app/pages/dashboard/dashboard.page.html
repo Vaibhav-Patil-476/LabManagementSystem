@@ -15,14 +15,22 @@
         </div>
       </div>
 
-      <!-- ADD THIS: Logout button -->
-      <div class="menu-logout-section">
-        <button type="button" class="menu-logout-btn" (click)="logout()">
-          <span class="menu-logout-icon"><ion-icon name="log-out-outline"></ion-icon></span>
-          <span>Logout</span>
-        </button>
-      </div>
+<nav class="menu-nav">
+  <button type="button" class="menu-nav-item"
+          *ngIf="isAdminRole"
+          [class.active]="activeMenu === 'scan'"
+          (click)="activeMenu = 'scan'; openScan()">
+    <span class="mni-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
+    <span class="mni-text">Type and Scan</span>
+    <ion-icon name="chevron-forward" class="mni-arrow"></ion-icon>
+  </button>
 
+  <button type="button" class="menu-nav-item logout" (click)="logout()">
+    <span class="mni-icon"><ion-icon name="log-out-outline"></ion-icon></span>
+    <span class="mni-text">Logout</span>
+    <ion-icon name="chevron-forward" class="mni-arrow"></ion-icon>
+  </button>
+</nav>
 
 
       <p class="menu-footer">Secure healthcare operations</p>
@@ -1402,9 +1410,10 @@
                 </div>
 
                 <div *ngIf="canViewCollection">
-                  <strong>₹{{ item.amount }}</strong>
+                  <strong>₹{{ item.amount | number:'1.0-0' }}</strong>
                   <span>Amount</span>
                 </div>
+
               </div>
               <app-stacked-bar [received]="item.received" [pending]="item.pending" [outSourced]="item.outSourced"
                 [rejected]="item.rejected" [total]="item.samples">
@@ -1474,7 +1483,7 @@
   <div class="app-bottom-nav-wrap">
 
     <!-- Dimmed + blurred backdrop, tapping it closes the popup -->
-     <div class="bn-backdrop" *ngIf="canSeeAccount && accountMenuOpen" (click)="closeAccountMenu()"></div>
+    <div class="bn-backdrop" *ngIf="canSeeAccount && accountMenuOpen" (click)="closeAccountMenu()"></div>
 
     <div class="account-submenu-card" *ngIf="canSeeAccount" [class.open]="accountMenuOpen">
       <button *ngFor="let opt of accountSubOptions" type="button" class="bn-sub-option" [class.locked]="opt.locked"
@@ -1502,8 +1511,8 @@
       </button>
 
       <!-- Account toggles the popup instead of navigating directly -->
-      <button type="button" class="bn-item account-bn-item" *ngIf="canSeeAccount"
-        [class.active]="accountMenuOpen" (click)="toggleAccountMenu()">
+      <button type="button" class="bn-item account-bn-item" *ngIf="canSeeAccount" [class.active]="accountMenuOpen"
+        (click)="toggleAccountMenu()">
         <ion-icon name="wallet-outline"></ion-icon>
         <span>Account</span>
       </button>
