@@ -79,23 +79,15 @@ const PdfDownload =
  */
 
 interface ProfileListItem {
-
   profileId: number;
-
   profileName: string;
-
   assignedPrice: number;
-
+  b2bPrice: number;
   mrp: number;
-
   testCount: number;
-
   sampleTypes: string[];
-
   testNames: string[];
-
 }
-
 
 /**
  * ============================================================
@@ -252,8 +244,6 @@ export class ProfileListPage
 
       'copy-outline': copyOutline,
 
-
-
     });
 
   }
@@ -305,6 +295,35 @@ export class ProfileListPage
   get isAdminRole(): boolean {
 
     return this.roleService.isLabAdmin;
+
+  }
+
+
+  // ✅ Franchise login -> Assigned + MRP
+  //    Lab Admin login -> B2B + MRP
+  get isFranchiseRole(): boolean {
+
+    return this.authService.role === ROLE.FRANCHISE;
+
+  }
+
+
+  // PDF header sathi label
+  get secondPriceLabel(): string {
+
+    return this.isFranchiseRole
+      ? 'Assigned Price'
+      : 'B2B Price';
+
+  }
+
+
+  // Role pramane Assigned kinva B2B price
+  secondPrice(p: ProfileListItem): number {
+
+    return this.isFranchiseRole
+      ? p.assignedPrice
+      : p.b2bPrice;
 
   }
 
@@ -514,6 +533,11 @@ export class ProfileListPage
       }
     >
   ): ProfileListItem {
+    console.log('RAW PROFILE:', p);
+
+    // 🔍 TEMP DEBUG: B2B price cha field name shodhnyasathi
+    // admin login karun uncomment kara, field milalyavar parat comment kara.
+    // console.log('RAW PROFILE:', p);
 
     const rawTests: any[] =
 
@@ -619,9 +643,8 @@ export class ProfileListPage
           // sapadla nahi (bahuteka inactive/deleted test), pan fallback
           // varun (pt cha raw testName/sampleType) tyala aadhich
           // testNames/sampleTypesSet madhe jodla ahe — tyamule
-          // testCount/sample types barobarच rahtat. Ha ek expected
-          // case ahe, error nahi, tyamule console.warn spam (jya
-          // mule DevTools madhe khup "Issues" distat) kadhun taklay.
+          // testCount/sample types barobar rahtat. Ha ek expected
+          // case ahe, error nahi, tyamule console.warn spam kadhun taklay.
 
         }
 
@@ -649,6 +672,17 @@ export class ProfileListPage
       assignedPrice:
         Number(
           p.profileAssignedPrice ??
+          p.total_amount ??
+          p.totalAmount ??
+          0
+        ) || 0,
+
+
+      // ✅ NEW: B2B price (Lab Admin sathi)
+      // Backend response madhe field cha naav vegla asel tar
+      // yethe tyacha naav jodaa.
+      b2bPrice:
+        Number(
           p.total_amount ??
           p.totalAmount ??
           0
@@ -1074,8 +1108,9 @@ export class ProfileListPage
 
             p.profileName,
 
+            // ✅ Admin -> B2B, Franchise -> Assigned
             this.canViewAmount
-              ? String(p.assignedPrice)
+              ? String(this.secondPrice(p))
               : '-',
 
             this.canViewAmount
@@ -1108,7 +1143,7 @@ export class ProfileListPage
 
             'Sr. No.',
             'Profile Name',
-            'Assigned Price',
+            this.secondPriceLabel,
             'MRP Price',
             'Test Count',
             'Sample Type',

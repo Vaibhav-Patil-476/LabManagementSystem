@@ -87,7 +87,12 @@
         </div>
 
         <div class="tl-price-row" *ngIf="canViewAmount">
-          <span class="tl-price-chip">Assigned <b>₹{{ item.assignedPrice }}</b></span>
+          <span class="tl-price-chip" *ngIf="isFranchiseRole">
+            Assigned <b>₹{{ item.assignedPrice }}</b>
+          </span>
+          <span class="tl-price-chip" *ngIf="!isFranchiseRole">
+            B2B <b>₹{{ item.b2bPrice }}</b>
+          </span>
           <span class="tl-price-chip tl-price-b2b">MRP <b>₹{{ item.mrp }}</b></span>
         </div>
 

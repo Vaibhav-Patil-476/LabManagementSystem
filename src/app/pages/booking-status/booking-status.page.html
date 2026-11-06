@@ -1144,13 +1144,15 @@
             With letterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+           *ngIf="isFranchiseStaff"
             [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             F With LetterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
+           *ngIf="isFranchiseStaff"
             [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             F Without LetterHead

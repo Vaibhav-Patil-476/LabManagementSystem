@@ -399,6 +399,10 @@ activeMenu: 'scan' | 'logout' | '' = '';
     return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
   }
 
+get isFranchiseStaff(): boolean {
+  return this.authService.role === this.ROLE_FRANCHISE_STAFF;
+}
+
   get isFranchiseRole(): boolean {
     const r = this.roleService.currentRole;
     return r === this.ROLE_FRANCHISE || r === this.ROLE_FRANCHISE_STAFF;

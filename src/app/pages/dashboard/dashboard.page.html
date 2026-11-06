@@ -235,13 +235,13 @@
             {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'Without LetterHead' }}
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="isFranchiseStaff"
             [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F With LetterHead' }}
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="printBillFranchiseHasLetterHead"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="isFranchiseStaff"
             [disabled]="printingId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             {{ printingId === printBillItem?.bookingId ? 'Generating...' : 'F Without LetterHead' }}

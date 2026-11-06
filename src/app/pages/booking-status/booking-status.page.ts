@@ -227,6 +227,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return this.isSearchMode ? this.searchResults : this.bookings;
   }
 
+get isFranchiseStaff(): boolean {
+  return this.role === this.ROLE_FRANCHISE_STAFF;
+}
+
   /** Search server kartoy, so ithe local filter nahi. */
   private get queryFiltered(): BookingListItem[] {
     return [...this.baseList];
