@@ -499,6 +499,28 @@ export class AddPatientComponent {
     return row?.isPackage ? ('pkg-' + row.name) : ('test-' + row.name);
   }
 
+  /** Admin ne lab cha swatacha center ("self") nivadla ahe ka */
+  get isSelfCenterSelected(): boolean {
+    const lab: any = this.selectedLab;
+    if (!lab) return false;
+
+    const raw: any = (this.authService.currentUserValue as any)?.raw || {};
+    const labId = String(this.labApi.getCurrentLabId() || raw.labId || '').trim();
+
+    const candidates = [
+      String(raw.labCode || '').trim().toLowerCase(),
+      labId ? ('ils' + labId) : ''
+    ].filter(Boolean);
+
+    const centerCode = String(lab?.centerCode || '').trim().toLowerCase();
+    const name = String(lab?.franchiseName || lab?.name || '').trim().toLowerCase();
+
+    const isSelf = candidates.includes(centerCode) || name === 'self';
+
+    console.log('[SELF CHECK]', { centerCode, name, candidates, isSelf });
+    return isSelf;
+  }
+
   // ============================================================
   // 2-STEP FLOW
   // ============================================================
@@ -1603,15 +1625,10 @@ export class AddPatientComponent {
       };
 
       this.labs = [ownLab];
-
       this.filteredLabs = [...this.labs];
-
       this.selectedLab = ownLab;
-
       this.patient.lab = ownLab.franchiseName;
-
       this.staffLabSearch = ownLab.franchiseName;
-
       this.labSearch = ownLab.franchiseName;
 
       return;
@@ -1639,18 +1656,15 @@ export class AddPatientComponent {
           : this.DEFAULT_FRANCHISE;
 
       this.labs = [own];
-
       this.filteredLabs = [...this.labs];
-
       this.selectedLab = own;
-
       this.patient.lab = own.franchiseName;
-
       this.labSearch = own.franchiseName;
 
       return;
     }
 
+    // ===================== ADMIN =====================
     this.labApi
       .getFranchises()
       .subscribe({
@@ -1658,45 +1672,70 @@ export class AddPatientComponent {
         next: (res: any) => {
 
           this.labs = res?.content || res || [];
-
           this.filteredLabs = [...this.labs];
 
-          // DEFAULT_FRANCHISE (franchiseId 2541) हा फक्त development DB मध्ये
-          // valid आहे. backend कडून आलेल्या list मधला 2541 सापडला तरच तो
-          // वापरायचा, नाहीतर त्याच list मधला पहिला खरा franchise निवडायचा.
-          let defaultLab =
-            this.labs.find(
-              (x: any) =>
-                Number(x?.franchiseId ?? x?.id ?? 0) ===
-                Number(this.DEFAULT_FRANCHISE.franchiseId)
+          const previous = this.selectedLab;
+          const sameId = (a: any, b: any) =>
+            Number(a?.franchiseId ?? a?.id ?? 0) ===
+            Number(b?.franchiseId ?? b?.id ?? 0);
+
+          // 1) user ne adhi nivadlela center list madhe asel tar toch thev
+          let defaultLab: any =
+            previous
+              ? this.labs.find((x: any) => sameId(x, previous))
+              : null;
+
+          // 2) nahi tar lab cha swatacha center ("self")
+          if (!defaultLab) {
+            const raw: any =
+              (this.authService.currentUserValue as any)?.raw || {};
+            const labId =
+              String(this.labApi.getCurrentLabId() || raw.labId || '').trim();
+
+            const codes = [
+              String(raw.labCode || '').trim().toLowerCase(),
+              labId ? ('ils' + labId) : ''
+            ].filter(Boolean);
+
+            defaultLab = this.labs.find((x: any) =>
+              codes.includes(String(x?.centerCode || '').trim().toLowerCase())
             );
 
+            if (!defaultLab) {
+              defaultLab = this.labs.find((x: any) =>
+                String(x?.franchiseName || x?.name || '')
+                  .trim().toLowerCase() === 'self'
+              );
+            }
+          }
+
+          // 3) shevti list madhla pahila
           if (!defaultLab) {
             defaultLab = this.labs[0] || null;
           }
 
+          const changed = !previous || !sameId(defaultLab, previous);
+
           this.selectedLab = defaultLab;
-
           this.labSearch = defaultLab?.franchiseName || '';
-
           this.staffLabSearch = defaultLab?.franchiseName || '';
-
           this.patient.lab = defaultLab?.franchiseName || '';
+
+          // selectedLab ata set zala, mhanun price list parat load kara
+          if (changed) {
+            this.repriceSelectedTests();
+            this.loadTests();
+            this.loadPackages();
+          }
         },
 
         error: () => {
 
-          // API fail झाली तरी DEFAULT_FRANCHISE silently select करू नये.
           this.labs = [];
-
           this.filteredLabs = [];
-
           this.selectedLab = null;
-
           this.labSearch = '';
-
           this.staffLabSearch = '';
-
           this.patient.lab = '';
 
           this.toastService.error(
@@ -1998,19 +2037,16 @@ export class AddPatientComponent {
       ''
     ).trim();
 
-    // Textbox clear करू नका.
     this.labSearch = labName;
-
     this.patient.lab = labName;
-
     this.selectedLab = lab;
-
     this.showLabDropdown = false;
 
-    this.loadTests();
+    this.repriceSelectedTests();   // NAVIN: adhi add kelelya tests cha price
 
-    // Collection center badalla ki current test/package search
-    // franchise-specific price sobat refresh vhaycha.
+    this.loadTests();
+    this.loadPackages();
+
     if (this.testSearch.trim()) this.searchTest();
     if (this.packageSearch.trim()) this.searchPackage();
   }
@@ -2138,37 +2174,92 @@ export class AddPatientComponent {
   // TESTS
   // ============================================================
 
-  loadTests() {
+  /** Test cha b2b price role + center nusar tharavto */
+  /** Test cha b2b price role + center nusar tharavto */
+  private priceFor(t: any, prices?: Map<number, number>): number {
+    if (this.isAdminRole) {
+      if (this.isSelfCenterSelected) {
+        return t.test_price ?? t.price2 ?? 0;                 // self = MRP
+      }
+      return prices?.get(Number(t.testId))                    // center cha assigned price
+        ?? t.assignedPrice
+        ?? t.price2
+        ?? 0;
+    }
+    return t.assignedPrice ?? t.price2 ?? 0;                  // franchise / staff
+  }
 
-    // franchiseId फक्त franchise/staff roles साठी पाठवायचा.
-    // Admin साठी undefined — पूर्ण lab-wide master test list.
+  private mapApiTest(t: any, prices?: Map<number, number>): any {
+    return {
+      id: t.testId,
+      sampleId: t.sample_type,
+      name: String(t.test_name || t.name || 'Unnamed Test').trim(),
+      b2b: this.priceFor(t, prices),
+      base: t.price2 ?? 0,
+      tat: t.tat || 'N/A',
+      mrp: t.test_price ?? 0,
+      dis: 0,
+      fluid: t.sampleTypeName || 'N/A',
+      sampleType: t.sampleTypeName || 'OTHER',
+      color: t.sampleColor || '#a855f7'
+    };
+  }
+
+
+
+  private mapSearchTest(t: any, prices?: Map<number, number>): any {
+    return this.mapApiTest(t, prices);
+  }
+
+  loadTests(): Promise<void> {
+
     const franchiseId = this.isAdminRole
       ? undefined
       : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
 
-    this.labApi.getTests(franchiseId).subscribe({
-      next: (res: any) => {
-        const apiTests = res || [];
-
-        this.allTests = (Array.isArray(apiTests) ? apiTests : []).map((t: any) => ({
-          id: t.testId,
-          sampleId: t.sample_type,
-          name: t.test_name || 'Unnamed Test',
-          b2b: t.price2 ?? 0,
-          tat: t.tat || 'N/A',
-          mrp: t.test_price ?? 0,
-          dis: 0,
-          fluid: t.sampleTypeName || 'N/A',
-          sampleType: t.sampleTypeName || 'OTHER',
-          color: t.sampleColor || '#a855f7'
-        }));
-      },
-      error: () => {
-        this.toastService.error('Error', 'Rate list not assigned to this franchise.');
-      }
+    return new Promise<void>((resolve) => {
+      this.labApi.getTests(franchiseId).subscribe({
+        next: (res: any) => {
+          const apiTests = Array.isArray(res) ? res : (res?.content ?? []);
+          this.allTests = apiTests.map((t: any) => this.mapApiTest(t));
+          this.allTestsCache = [];
+          resolve();
+        },
+        error: () => {
+          this.toastService.error('Error', 'Rate list not assigned to this franchise.');
+          resolve();
+        }
+      });
     });
   }
 
+
+  private priceCache = new Map<string, Map<number, number>>();
+
+  /** Admin sathi: nivadlelya center cha assignedPrice (testId -> price) */
+  private async franchisePriceMap(labId: any, q: string): Promise<Map<number, number>> {
+    const map = new Map<number, number>();
+
+    const fid = this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined;
+    if (!this.isAdminRole || !fid || this.isSelfCenterSelected) return map;
+
+    const key = `${fid}|${q.toLowerCase()}`;
+    const cached = this.priceCache.get(key);
+    if (cached) return cached;
+
+    try {
+      const res: any = await this.api(this.labApi.searchTests(labId, fid, q, 0, 30), 6000);
+      const list = Array.isArray(res?.content) ? res.content : [];
+      for (const t of list) {
+        if (t?.assignedPrice != null) {
+          map.set(Number(t.testId), Number(t.assignedPrice));
+        }
+      }
+      this.priceCache.set(key, map);
+    } catch { /* fail zala tar price2 vapar */ }
+
+    return map;
+  }
   private testSearchTimer: any = null;
 
   searchTest(): void {
@@ -2188,40 +2279,26 @@ export class AddPatientComponent {
 
       const labId = this.labApi.getCurrentLabId();
 
-      // Admin साठी franchiseId undefined पाठवायचा
       const franchiseId = this.isAdminRole
         ? undefined
         : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
 
       this.labApi.searchTests(labId, franchiseId, q).subscribe({
-        next: (res: any) => {
-
+        next: async (res: any) => {
           const list = Array.isArray(res?.content) ? res.content : [];
+          const prices = await this.franchisePriceMap(labId, q);
 
-          this.filteredTests = list
-            .filter((t: any) =>
-              !this.selectedTests.some(
-                (s: any) => s.name === String(t.test_name || '').trim()
+          this.ngZone.run(() => {
+            this.filteredTests = list
+              .filter((t: any) =>
+                !this.selectedTests.some(
+                  (s: any) => s.name === String(t.test_name || '').trim()
+                )
               )
-            )
-            .map((t: any) => ({
-              id: t.testId,
-              sampleId: t.sample_type,
-              name: String(t.test_name || 'Unnamed Test').trim(),
+              .map((t: any) => this.mapSearchTest(t, prices));
 
-              b2b: this.isAdminRole
-                ? (t.price2 ?? 0)
-                : (t.assignedPrice ?? t.price2 ?? 0),
-
-              tat: t.tat || 'N/A',
-              mrp: t.test_price ?? 0,
-              dis: 0,
-              fluid: t.sampleTypeName || 'N/A',
-              sampleType: t.sampleTypeName || 'OTHER',
-              color: t.sampleColor || '#a855f7'
-            }));
-
-          this.showSuggestions = this.filteredTests.length > 0;
+            this.showSuggestions = this.filteredTests.length > 0;
+          });
         },
         error: () => {
           this.filteredTests = [];
@@ -2230,6 +2307,42 @@ export class AddPatientComponent {
       });
 
     }, 250);
+  }
+
+  /** Admin ne center badalla tar adhi add kelelya tests cha price update kara */
+  private async repriceSelectedTests(): Promise<void> {
+    if (!this.isAdminRole) return;
+
+    const self = this.isSelfCenterSelected;
+    const labId = this.labApi.getCurrentLabId();
+    const centerAtStart = this.selectedLab?.franchiseId ?? this.selectedLab?.id;
+
+    const updated: any[] = [];
+
+    for (const t of this.selectedTests) {
+      if (t.packageName || t.base === undefined) {
+        updated.push(t);
+        continue;
+      }
+
+      if (self) {
+        updated.push({ ...t, b2b: Number(t.mrp ?? 0) });
+        continue;
+      }
+
+      const prices = await this.franchisePriceMap(labId, t.name);
+      const price = prices.get(Number(t.id));
+      updated.push({ ...t, b2b: price != null ? price : Number(t.base ?? 0) });
+    }
+
+    // user madhech dusra center nivadla asel tar ha result vaparu naka
+    const centerNow = this.selectedLab?.franchiseId ?? this.selectedLab?.id;
+    if (centerNow !== centerAtStart) return;
+
+    this.ngZone.run(() => {
+      this.selectedTests = updated;
+      this.calculateBilling();
+    });
   }
 
   // ============================================================
@@ -2488,7 +2601,7 @@ export class AddPatientComponent {
   // PACKAGES / PROFILES (test bundles)
   // ============================================================
 
-  loadPackages(): void {
+  loadPackages(): Promise<void> {
 
     const labId = this.labApi.getCurrentLabId();
 
@@ -2497,31 +2610,24 @@ export class AddPatientComponent {
       this.selectedLab?.id ??
       undefined;
 
-    this.labApi.getProfiles(labId, franchiseId).subscribe({
+    return new Promise<void>((resolve) => {
+      this.labApi.getProfiles(labId, franchiseId).subscribe({
 
-      next: (res: any) => {
-
-        const list =
-          Array.isArray(res)
+        next: (res: any) => {
+          const list = Array.isArray(res)
             ? res
-            : (
-              res?.content ||
-              res?.data ||
-              []
-            );
+            : (res?.content || res?.data || []);
 
-        this.allPackages = Array.isArray(list) ? list : [];
-      },
+          this.allPackages = Array.isArray(list) ? list : [];
+          resolve();
+        },
 
-      error: (err: any) => {
-
-        console.error('LOAD PACKAGES ERROR:', err);
-
-        this.toastService.error(
-          'Error',
-          'Failed to load packages.'
-        );
-      }
+        error: (err: any) => {
+          console.error('LOAD PACKAGES ERROR:', err);
+          this.toastService.error('Error', 'Failed to load packages.');
+          resolve();
+        }
+      });
     });
   }
 
@@ -4461,6 +4567,45 @@ export class AddPatientComponent {
     setTimeout(() => this.ngZone.run(() => this.closeTrfSheet()), 1400);
   }
 
+  /** Scan ne match kelelya test cha price manual search sarkha server varun parat aan. */
+  private async repriceTest(test: any): Promise<any> {
+    try {
+      const labId = this.labApi.getCurrentLabId();
+      const fid = this.isAdminRole
+        ? undefined
+        : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
+
+      const list = await this.fetchTests(labId, fid, test.name);
+      const hit = (list ?? []).find(
+        (x: any) => this.key(x.name) === this.key(test.name)
+      );
+
+      return hit ? { ...test, ...hit } : test;
+    } catch {
+      return test;   // fail zala tar junach test vapar
+    }
+  }
+
+  /** Same package sathi. */
+  private async repricePackage(pkg: any): Promise<any> {
+    try {
+      const nameOf = (p: any) =>
+        String(p?.profileName || p?.profile_name || p?.name || '').trim();
+
+      const labId = this.labApi.getCurrentLabId();
+      const fid = this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined;
+
+      const list = await this.fetchPkgs(labId, fid, nameOf(pkg));
+      const hit = (list ?? []).find(
+        (x: any) => this.key(nameOf(x)) === this.key(nameOf(pkg))
+      );
+
+      return hit ? { ...pkg, ...hit } : pkg;
+    } catch {
+      return pkg;
+    }
+  }
+
   private async applyTrf(r: any): Promise<boolean> {
 
     // If the scan found nothing usable, keep the current form untouched.
@@ -4551,8 +4696,11 @@ export class AddPatientComponent {
     const items: string[] = Array.isArray(r.items) ? r.items : [];
 
     if (items.length) {
-      if (!this.allTests.length && !this.allTestsCache.length) await this.preloadTests();
-      const testPool = this.allTests.length ? this.allTests : this.allTestsCache;
+
+      // NAVIN: scan adhi current collection center nusar latest price list ghe
+      await Promise.all([this.loadTests(), this.loadPackages()]);
+
+      const testPool = this.allTests;
 
       const mkFuse = (list: any[], key: any) =>
         new Fuse(list, { keys: [key], includeScore: true, threshold: 0.3, ignoreLocation: true, minMatchCharLength: 3 });
@@ -4564,8 +4712,6 @@ export class AddPatientComponent {
         })), { keys: ['n'], includeScore: true, threshold: 0.3, ignoreLocation: true, minMatchCharLength: 3 })
         : null;
 
-      // Builds several spellings of one OCR'd test name and tries them in order:
-      // full text, text without the leading test code (e.g. "HEMOI"), without brackets, then the short code in brackets
       const variantsOf = (raw: string): string[] => {
         const s = String(raw).replace(/\s+/g, ' ').trim();
         const noCode = s.split(' ').length >= 3 ? s.split(' ').slice(1).join(' ') : '';
@@ -4584,7 +4730,7 @@ export class AddPatientComponent {
         for (const v of variantsOf(raw)) {
           const term = this.TEST_ALIASES[this.norm(v)] ?? v;
           const single = !/\s/.test(term.trim());
-          const limit = single ? 0.2 : 0.3;   // single-word terms need a stricter match
+          const limit = single ? 0.2 : 0.3;
 
           const t = testFuse?.search(term)[0];
           const p = pkgFuse?.search(term)[0];
@@ -4593,10 +4739,15 @@ export class AddPatientComponent {
           const pOk = p && (p.score ?? 1) <= limit;
 
           if (pOk && (!tOk || (p!.score ?? 1) <= (t!.score ?? 1))) {
-            if (this.addPackageFromPick(p!.item.p)) testsAdded++;
+            // NAVIN: package cha correct (role/franchise) price
+            const freshPkg = await this.repricePackage(p!.item.p);
+            if (this.addPackageFromPick(freshPkg)) testsAdded++;
             matched = true;
+
           } else if (tOk) {
-            const test = t!.item;
+            // NAVIN: test cha correct (role/franchise) price
+            const test = await this.repriceTest(t!.item);
+
             if (!this.selectedTests.some((x: any) => !x.packageName && x.name === test.name)) {
               this.addTest(test);
               testsAdded++;
@@ -5430,18 +5581,8 @@ export class AddPatientComponent {
     const one = async (q: string): Promise<any[] | null> => {
       try {
         const res: any = await this.api(this.labApi.searchTests(labId, franchiseId, q, 0, 20), 8000);
-        return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
-          id: t.testId,
-          sampleId: t.sample_type,
-          name: String(t.test_name || 'Unnamed Test').trim(),
-          b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
-          tat: t.tat || 'N/A',
-          mrp: t.test_price ?? 0,
-          dis: 0,
-          fluid: t.sampleTypeName || 'N/A',
-          sampleType: t.sampleTypeName || 'OTHER',
-          color: t.sampleColor || '#a855f7'
-        }));
+        const prices = await this.franchisePriceMap(labId, q);
+        return (Array.isArray(res?.content) ? res.content : []).map((t: any) => this.mapSearchTest(t, prices));
       } catch {
         return null;
       }
@@ -5571,18 +5712,9 @@ export class AddPatientComponent {
         : (this.selectedLab?.franchiseId ?? this.selectedLab?.id ?? undefined);
       const res: any = await this.api(this.labApi.getTests(fid), 10000);
       const arr = Array.isArray(res) ? res : (res?.content ?? []);
-      this.allTestsCache = arr.map((t: any) => ({
-        id: t.testId,
-        sampleId: t.sample_type,
-        name: String(t.test_name || t.name || '').trim(),
-        b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
-        tat: t.tat || 'N/A',
-        mrp: t.test_price ?? 0,
-        dis: 0,
-        fluid: t.sampleTypeName || 'N/A',
-        sampleType: t.sampleTypeName || 'OTHER',
-        color: t.sampleColor || '#a855f7'
-      })).filter((t: any) => t.name);
+      this.allTestsCache = arr
+        .map((t: any) => this.mapApiTest(t))
+        .filter((t: any) => t.name);
     } catch (e) { console.warn('tests preload failed', e); }
   }
 
@@ -5699,18 +5831,9 @@ export class AddPatientComponent {
     const one = async (q: string): Promise<any[] | null> => {
       try {
         const res: any = await this.api(this.labApi.searchTests(labId, fid, q, 0, 20), 8000);
-        return (Array.isArray(res?.content) ? res.content : []).map((t: any) => ({
-          id: t.testId,
-          sampleId: t.sample_type,
-          name: String(t.test_name || 'Unnamed Test').trim(),
-          b2b: this.isAdminRole ? (t.price2 ?? 0) : (t.assignedPrice ?? t.price2 ?? 0),
-          tat: t.tat || 'N/A',
-          mrp: t.test_price ?? 0,
-          dis: 0,
-          fluid: t.sampleTypeName || 'N/A',
-          sampleType: t.sampleTypeName || 'OTHER',
-          color: t.sampleColor || '#a855f7'
-        }));
+        const raw = Array.isArray(res?.content) ? res.content : [];
+        const prices = await this.franchisePriceMap(labId, q);
+        return raw.map((t: any) => this.mapSearchTest(t, prices));
       } catch {
         return null;
       }

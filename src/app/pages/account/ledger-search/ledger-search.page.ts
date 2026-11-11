@@ -303,37 +303,73 @@ loadMorePastLedger(): void {
   }
 
   // ✅ NEW: mapping logic common function मध्ये काढली (searchLedger + loadMore दोन्हीकडे वापरण्यासाठी)
+  // private mapTransactions(list: any[]): any[] {
+  //   return list.map((t: any) => {
+  //     const booking = t.bookingDto;
+  //     const patientName = booking?.customerName?.trim() || '-';
+
+  //     const testNames = (booking?.tests ?? [])
+  //       .map((test: any) => test.testName?.trim())
+  //       .filter(Boolean);
+  //     const testName = testNames.length ? testNames.join(', ') : '-';
+
+  //     const barcodes = (booking?.samples ?? [])
+  //       .map((sample: any) => sample.barcode)
+  //       .filter(Boolean);
+  //     const uniqueBarcodes = [...new Set(barcodes)];
+  //     const barcode = uniqueBarcodes.length ? uniqueBarcodes.join(', ') : '-';
+
+  //     return {
+  //       bookingId: t.bookingId ? t.bookingId : 'NULL',
+  //       bookingDate: t.createdOn ? this.formatDateTime(t.createdOn) : '',
+  //       bookingDateRaw: t.createdOn ?? null,
+  //       type: t.transactionType,
+  //       remark: t.description,
+  //       amount: t.balance,
+  //       patientName,
+  //       testName,
+  //       barcode,
+  //       openingBalance: t.openingBalance,
+  //       closingBalance: t.closingBalance
+  //     };
+  //   });
+  // }
   private mapTransactions(list: any[]): any[] {
-    return list.map((t: any) => {
-      const booking = t.bookingDto;
-      const patientName = booking?.customerName?.trim() || '-';
 
-      const testNames = (booking?.tests ?? [])
-        .map((test: any) => test.testName?.trim())
-        .filter(Boolean);
-      const testName = testNames.length ? testNames.join(', ') : '-';
-
-      const barcodes = (booking?.samples ?? [])
-        .map((sample: any) => sample.barcode)
-        .filter(Boolean);
-      const uniqueBarcodes = [...new Set(barcodes)];
-      const barcode = uniqueBarcodes.length ? uniqueBarcodes.join(', ') : '-';
-
-      return {
-        bookingId: t.bookingId ? t.bookingId : 'NULL',
-        bookingDate: t.createdOn ? this.formatDateTime(t.createdOn) : '',
-        bookingDateRaw: t.createdOn ?? null,
-        type: t.transactionType,
-        remark: t.description,
-        amount: t.balance,
-        patientName,
-        testName,
-        barcode,
-        openingBalance: t.openingBalance,
-        closingBalance: t.closingBalance
-      };
-    });
+  if (list.length) {
+    console.log('[LEDGER RAW]', JSON.stringify(list[0]));   // test zalyavar kadha
   }
+
+  return list.map((t: any) => {
+    const booking = t.bookingDto;
+    const patientName = booking?.customerName?.trim() || '-';
+
+    const testNames = (booking?.tests ?? [])
+      .map((test: any) => test.testName?.trim())
+      .filter(Boolean);
+    const testName = testNames.length ? testNames.join(', ') : '-';
+
+    const barcodes = (booking?.samples ?? [])
+      .map((sample: any) => sample.barcode)
+      .filter(Boolean);
+    const uniqueBarcodes = [...new Set(barcodes)];
+    const barcode = uniqueBarcodes.length ? uniqueBarcodes.join(', ') : '-';
+
+    return {
+      bookingId: t.bookingId ? t.bookingId : 'NULL',
+      bookingDate: t.createdOn ? this.formatDateTime(t.createdOn) : '',
+      bookingDateRaw: t.createdOn ?? null,
+      type: t.transactionType,
+      remark: t.description,
+      amount: t.balance,
+      patientName,
+      testName,
+      barcode,
+      openingBalance: t.openingBalance,
+      closingBalance: t.closingBalance
+    };
+  });
+}
 
   private formatDateTime(value: string | number): string {
     const d = new Date(value);

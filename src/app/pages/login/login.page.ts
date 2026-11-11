@@ -63,7 +63,7 @@ export class LoginPage {
     });
   }
 
- login() {
+login() {
 
   if (!this.email || !this.password) {
     this.toastService.error('Error', 'Username and Password required');
@@ -89,6 +89,8 @@ export class LoginPage {
 
         next: (user) => {
           this.loading = false;
+
+          console.log('ROLE:', this.authService.role, '| USER:', user);
 
           this.toastService.success('Success', 'Login Successful');
           this.router.navigate(['/dashboard']);
