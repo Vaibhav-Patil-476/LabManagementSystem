@@ -168,7 +168,8 @@
             <div class="bcs-row-with-tests">
               <div class="bcs-text-col">
                 <span class="bcs-label">Client / Doctor</span>
-               <span class="bcs-value">{{ item.clientLabel || '(SELF)' }} Dr. {{ item.doctor?.doctor_name || 'self' }}</span>
+                <span class="bcs-value">{{ item.clientLabel || '(SELF)' }} Dr. {{ item.doctor?.doctor_name || 'self'
+                  }}</span>
               </div>
 
               <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
@@ -259,7 +260,7 @@
       <span>{{ isPatientLocked(menuItem) ? 'View Patient' : 'Edit Patient' }}</span>
     </div>
     <!-- Share Report via WhatsApp -->
-    <div class="action-item" [class.item-loading]="sharingWhatsappId === menuItem.bookingId"
+    <div class="action-item" *ngIf="canShareWhatsApp" [class.item-loading]="sharingWhatsappId === menuItem.bookingId"
       (click)="sharingWhatsappId === menuItem.bookingId ? null : shareViaWhatsApp(menuItem)">
       <span class="action-icon-wrap">
         <ion-spinner name="crescent" *ngIf="sharingWhatsappId === menuItem.bookingId"></ion-spinner>

@@ -21,8 +21,8 @@ import { MatDatepickerModule } from "@angular/material/datepicker";
 import { MatFormFieldModule } from "@angular/material/form-field";
 import { MatInputModule } from "@angular/material/input";
 
-import { Subscription, interval, forkJoin, Observable } from "rxjs";
-import { map, startWith } from "rxjs/operators";
+import { Subscription, interval, forkJoin, Observable, of } from "rxjs";
+import { map, startWith, catchError } from "rxjs/operators";
 import { firstValueFrom } from "rxjs";
 
 import { StackedBarComponent } from "../../shared/components/stacked-bar/stacked-bar.component";
@@ -296,6 +296,13 @@ export class DashboardPage implements OnInit, OnDestroy {
   private readonly DASHBOARD_NOTIF_POLL_INTERVAL_MS = 15000;
 
   private readonly NOTIF_LOOKBACK_DAYS = 30; // how far back we scan for "new" items
+  private clinicalDenied = false;
+  private cancelDenied = false;
+
+  private isAccessDenied(err: any): boolean {
+    const msg = String(err?.error?.message || err?.message || '').toLowerCase();
+    return err?.status === 403 || msg.includes('access denied');
+  }
   private notifPollSub?: Subscription;
 
   // ============================================================
@@ -457,6 +464,27 @@ export class DashboardPage implements OnInit, OnDestroy {
   get canShowDownloadReport(): boolean {
     const role = this.authService?.role;
     return role === ROLE.LAB_ADMIN || role === this.ROLE_FRANCHISE;
+  }
+
+
+ private readonly WHATSAPP_ROLES = ['ROLE_ADMIN', 'ROLE_LAB_ADMIN', 'ROLE_STAFF'];
+  private readonly PERM_WHATSAPP = 'REPORT_SEND_TO_WHATSAPP';
+
+
+  get canShareWhatsApp(): boolean {
+    const raw: any = (this.authService.currentUserValue as any)?.raw ?? {};
+    const owned = new Set<string>();
+
+    for (const list of [raw.permissions, raw.authorities, raw.privileges, raw.roles, raw.permissionList]) {
+      if (!Array.isArray(list)) continue;
+      for (const x of list) {
+        const v = typeof x === 'string' ? x : (x?.authority ?? x?.name ?? x?.permission ?? x?.permissionName);
+        if (v) owned.add(String(v).trim().toUpperCase());
+      }
+    }
+
+    if (owned.has(this.PERM_WHATSAPP)) return true;
+    return this.WHATSAPP_ROLES.includes((this.authService.role || '').toUpperCase());
   }
 
   /** Account tab: कोणताही STAFF (ROLE_STAFF, ROLE_FRANCHISE_STAFF) ला hide */
@@ -936,17 +964,51 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.expandedSearchId = this.expandedSearchId === item.bookingId ? null : item.bookingId;
   }
 
+  // private applyStaffOwnershipFilter(list: any[]): any[] {
+  //   if (!this.isStaffRole) return list || [];
+
+  //   const currentUser = this.authService.currentUserValue;
+  //   const currentUserId = currentUser?.raw?.id;
+  //   const currentUsername = currentUser?.raw?.username;
+
+  //   return (list || []).filter((b: any) => {
+  //     const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
+  //     const idMatch = !!currentUserId && b.createdBy === currentUserId;
+  //     return usernameMatch || idMatch;
+  //   });
+  // }
+
   private applyStaffOwnershipFilter(list: any[]): any[] {
     if (!this.isStaffRole) return list || [];
 
-    const currentUser = this.authService.currentUserValue;
-    const currentUserId = currentUser?.raw?.id;
-    const currentUsername = currentUser?.raw?.username;
+    const u: any = this.authService.currentUserValue;
+    const myId = String(u?.raw?.id ?? '').trim();
+    const myName = String(u?.raw?.username ?? '').trim().toLowerCase();
 
     return (list || []).filter((b: any) => {
-      const usernameMatch = !!currentUsername && b.user?.username === currentUsername;
-      const idMatch = !!currentUserId && b.createdBy === currentUserId;
-      return usernameMatch || idMatch;
+      const candidates: string[] = [];
+      const push = (v: any) => {
+        if (v == null || v === '') return;
+        if (typeof v === 'object') {
+          push(v.id); push(v.userId); push(v.username);
+          return;
+        }
+        candidates.push(String(v).trim().toLowerCase());
+      };
+
+      push(b?.createdBy);
+      push(b?.created_by);
+      push(b?.createdById);
+      push(b?.createdByName);
+      push(b?.createdByUsername);
+      push(b?.userId);
+      push(b?.user);
+      push(b?.username);
+
+      // ownership info नसेल तर backend ने आधीच scope केलंय असं समजून ठेवा
+      if (candidates.length === 0) return true;
+
+      return candidates.includes(myId) || (!!myName && candidates.includes(myName));
     });
   }
 
@@ -960,8 +1022,8 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.labApi.searchBookingStatus(labId, q, size, this.currentFranchiseId).subscribe({
       next: (res: any) => {
         const list = res?.content || (Array.isArray(res) ? res : []);
-        const roleFiltered = this.applyStaffOwnershipFilter(list);
-        this.searchResults = roleFiltered.map((b: any) => this.mapSearchItem(b));
+        // Web सारखं: global search मध्ये ownership filter नाही
+        this.searchResults = list.map((b: any) => this.mapSearchItem(b));
         this.isSearching = false;
       },
       error: () => {
@@ -981,8 +1043,7 @@ export class DashboardPage implements OnInit, OnDestroy {
     this.labApi.searchBookingStatus(labId, q, size, this.currentFranchiseId).subscribe({
       next: (res: any) => {
         const list = res?.content || (Array.isArray(res) ? res : []);
-        const roleFiltered = this.applyStaffOwnershipFilter(list);
-        this.searchResults = roleFiltered.map((b: any) => this.mapSearchItem(b));
+        this.searchResults = list.map((b: any) => this.mapSearchItem(b));
       },
       error: () => { /* silent */ }
     });
@@ -1152,6 +1213,11 @@ export class DashboardPage implements OnInit, OnDestroy {
   // ---------- share report via whatsapp (global search) ----------
   shareViaWhatsApp(item: any, event?: MouseEvent): void {
     event?.stopPropagation();
+
+    if (!this.canShareWhatsApp) {
+      this.toastService.warning('Not Allowed', 'You do not have permission to share reports via WhatsApp.');
+      return;
+    }
 
     if (this.sharingWhatsappId === item.bookingId) return;
     this.sharingWhatsappId = item.bookingId;
@@ -2460,25 +2526,25 @@ export class DashboardPage implements OnInit, OnDestroy {
   }
 
   /** Web सारखं "(code) (name)" label बनवतो */
-/** Web सारखं label: API चा centerCode (उदा. "(dar)  (dar1)") */
-private resolveClientLabel(raw: any): string {
-  const center = String(raw?.centerCode ?? '').trim();
-  if (center && center.toLowerCase() !== 'null') {
-    // जास्तीचे spaces काढून "(dar) (dar1)" बनवतो
-    return center.replace(/\s+/g, ' ');
-  }
-
-  const pick = (...vals: any[]): string => {
-    for (const v of vals) {
-      const s = v == null ? '' : String(v).trim();
-      if (s && s.toLowerCase() !== 'null' && s.toLowerCase() !== 'self') return s;
+  /** Web सारखं label: API चा centerCode (उदा. "(dar)  (dar1)") */
+  private resolveClientLabel(raw: any): string {
+    const center = String(raw?.centerCode ?? '').trim();
+    if (center && center.toLowerCase() !== 'null') {
+      // जास्तीचे spaces काढून "(dar) (dar1)" बनवतो
+      return center.replace(/\s+/g, ' ');
     }
-    return '';
-  };
 
-  const name = pick(raw.customFranchiseLab, raw.franchiseName, raw.franchise?.franchiseName);
-  return name ? `(${name})` : '(SELF)';
-}
+    const pick = (...vals: any[]): string => {
+      for (const v of vals) {
+        const s = v == null ? '' : String(v).trim();
+        if (s && s.toLowerCase() !== 'null' && s.toLowerCase() !== 'self') return s;
+      }
+      return '';
+    };
+
+    const name = pick(raw.customFranchiseLab, raw.franchiseName, raw.franchise?.franchiseName);
+    return name ? `(${name})` : '(SELF)';
+  }
   // ============================================================
   // BOOKING MAPPING / STATUS LABELS
   // ============================================================
@@ -2508,7 +2574,7 @@ private resolveClientLabel(raw: any): string {
         testId: t.testId,
         testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
         testName: (t.testName || '').trim(),
-clientLabel: this.resolveClientLabel(raw),
+        clientLabel: this.resolveClientLabel(raw),
         testPrice: this.isAdminRole
           ? (t.price2 ?? t.testPrice ?? t.test_price ?? 0)
           : (t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0),
@@ -2582,6 +2648,7 @@ clientLabel: this.resolveClientLabel(raw),
   // NAVIGATION
   // ============================================================
   private readonly LOCKED_PAGES = ['outsource'];
+
 
   isPageLocked(page: string): boolean {
     return this.LOCKED_PAGES.includes(page);
@@ -3202,60 +3269,74 @@ clientLabel: this.resolveClientLabel(raw),
     return records.filter((r: any) => this.extractRecordTimestamp(r, category) > lastSeen).length;
   }
 
-  /** Fetches both lists and updates the two badge counts. Silent —
-   * never shows an error toast, since this runs on every poll tick
-   * in the background and a transient failure shouldn't be noisy. */
   loadNotificationCounts(): void {
     const today = new Date();
-    const endDate = this.nextDay(this.formatDateParam(today));   // ✅ आधीच nextDay वापरतंय, ठीक आहे
+    const endDate = this.nextDay(this.formatDateParam(today));
     const lookback = new Date(today);
     lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
     const startDate = this.formatDateParam(lookback);
 
     const currentUserId = Number((this.authService.currentUserValue as any)?.raw?.id || 0);
 
-    this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate).subscribe({
-      next: (res: any) => {
-        const list = res?.content || res?.data || res || [];
+    if (!this.clinicalDenied) {
+      this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate).subscribe({
+        next: (res: any) => {
+          const list = res?.content || res?.data || res || [];
 
-        // ✅ list page सारखंच booking+test नुसार group करून प्रत्येक
-        // group मध्ये खरंच "unread" (दुसऱ्याचं + not closed) आहे का बघा
-        const grouped = new Map<string, any[]>();
-        for (const raw of list) {
-          const bookingId = raw?.bookingId;
-          const testId = raw?.testId;
-          const key = `${bookingId}_${testId}`;
-          if (!grouped.has(key)) grouped.set(key, []);
-          grouped.get(key)!.push(raw);
+          const grouped = new Map<string, any[]>();
+          for (const raw of list) {
+            const key = `${raw?.bookingId}_${raw?.testId}`;
+            if (!grouped.has(key)) grouped.set(key, []);
+            grouped.get(key)!.push(raw);
+          }
+
+          let unreadBookingsCount = 0;
+          grouped.forEach((entries) => {
+            const hasUnread = entries.some((e: any) =>
+              Number(e?.created_by ?? e?.createdBy) !== currentUserId &&
+              String(e?.status || '').toLowerCase() !== 'closed'
+            );
+            if (hasUnread) unreadBookingsCount++;
+          });
+
+          this.ngZone.run(() => {
+            this.clinicalUnseenCount = unreadBookingsCount;
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          if (this.isAccessDenied(err)) {
+            this.clinicalDenied = true;      // पुन्हा call करणार नाही
+            this.ngZone.run(() => {
+              this.clinicalUnseenCount = 0;
+              this.cdr.detectChanges();
+            });
+          }
+          /* बाकी errors silent */
         }
+      });
+    }
 
-        let unreadBookingsCount = 0;
-        grouped.forEach((entries) => {
-          const hasUnread = entries.some((e: any) =>
-            Number(e?.created_by ?? e?.createdBy) !== currentUserId &&
-            String(e?.status || '').toLowerCase() !== 'closed'
-          );
-          if (hasUnread) unreadBookingsCount++;
-        });
-
-        this.ngZone.run(() => {
-          this.clinicalUnseenCount = unreadBookingsCount;
-          this.cdr.detectChanges();
-        });
-      },
-      error: () => { /* silent — badge just won't update this tick */ }
-    });
-
-    this.labApi.getCancelTests(startDate, endDate, 500).subscribe({
-      next: (res: any) => {
-        const list = res?.content || res?.data || res || [];
-        this.ngZone.run(() => {
-          this.cancelUnseenCount = this.countUnseen(list, 'cancel');
-          this.cdr.detectChanges();
-        });
-      },
-      error: () => { /* silent */ }
-    });
+    if (!this.cancelDenied) {
+      this.labApi.getCancelTests(startDate, endDate, 500).subscribe({
+        next: (res: any) => {
+          const list = res?.content || res?.data || res || [];
+          this.ngZone.run(() => {
+            this.cancelUnseenCount = this.countUnseen(list, 'cancel');
+            this.cdr.detectChanges();
+          });
+        },
+        error: (err) => {
+          if (this.isAccessDenied(err)) {
+            this.cancelDenied = true;
+            this.ngZone.run(() => {
+              this.cancelUnseenCount = 0;
+              this.cdr.detectChanges();
+            });
+          }
+        }
+      });
+    }
   }
 
   private startDashboardNotifPolling(): void {
@@ -3273,7 +3354,6 @@ clientLabel: this.resolveClientLabel(raw),
     this.notifFetchSub?.unsubscribe();
     this.notifFetchSub = undefined;
   }
-
   private fetchDashboardNotifications(): void {
     if (!this.isPageActive) return;
 
@@ -3293,12 +3373,26 @@ clientLabel: this.resolveClientLabel(raw),
       lookback.setDate(lookback.getDate() - this.NOTIF_LOOKBACK_DAYS);
       const startDate = this.formatDateParam(lookback);
 
-      this.notifFetchSub = forkJoin({
-        clinicalList: this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate),
-        cancelList: this.labApi.getCancelTests(startDate, endDate, 500)
-      }).subscribe({
+      const clinical$ = this.clinicalDenied
+        ? of([])
+        : this.labApi.getClinicalHistoryList(0, 500, undefined, startDate, endDate).pipe(
+          catchError((err) => {
+            if (this.isAccessDenied(err)) this.clinicalDenied = true;
+            return of([]);
+          })
+        );
+
+      const cancel$ = this.cancelDenied
+        ? of([])
+        : this.labApi.getCancelTests(startDate, endDate, 500).pipe(
+          catchError((err) => {
+            if (this.isAccessDenied(err)) this.cancelDenied = true;
+            return of([]);
+          })
+        );
+
+      this.notifFetchSub = forkJoin({ clinicalList: clinical$, cancelList: cancel$ }).subscribe({
         next: ({ clinicalList, cancelList }: any) => {
-          // response yetana user dusrya page var gela asel tar popup nako
           if (!this.isPageActive) return;
 
           const rawPending = clinicalList?.content || clinicalList?.data || clinicalList || [];
@@ -3326,7 +3420,6 @@ clientLabel: this.resolveClientLabel(raw),
       });
     }, 800);
   }
-
   testShowNotifPopup(): void {
     this.dashboardNotifData = {
       clinical: true,

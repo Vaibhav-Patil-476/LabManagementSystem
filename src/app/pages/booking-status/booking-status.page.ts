@@ -132,6 +132,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   private readonly SEARCH_START_DATE = '2015-01-01';
   private searchDebounceTimer: any = null;
   private readonly SEARCH_DEBOUNCE_MS = 400;
+private readonly WHATSAPP_ROLES = ['ROLE_ADMIN', 'ROLE_LAB_ADMIN', 'ROLE_STAFF'];
+  private readonly PERM_WHATSAPP = 'REPORT_SEND_TO_WHATSAPP';
+
+
 
   isTestModalOpen = false;
   isTestLoading = false;
@@ -397,6 +401,10 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return this.canSeeMrp || this.canSeeMyPrice;
   }
 
+  get canShareWhatsApp(): boolean {
+    if (this.hasPerm(this.PERM_WHATSAPP)) return true;
+    return this.WHATSAPP_ROLES.includes((this.role || '').toUpperCase());
+  }
   get canEditPatient(): boolean { return this.isAdminRole || this.isFranchiseOnlyRole; }
 
   isSampleReceivedForBooking(item: BookingListItem): boolean {
@@ -709,6 +717,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     this.role = this.authService.role || '';
     this.currentUserId = u?.raw?.id ?? u?.userId ?? 0;
     this.staffPerms = this.extractPermissions(u?.raw ?? u);
+
   }
 
   /** page उघडे असताना permissions शांतपणे पुन्हा घ्या (loading/list reload नाही) */
@@ -802,9 +811,7 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   // ---------- mapping ----------
   private mapBookingItem(raw: any): BookingListItem {
     if (!raw) return raw;
-    console.log('CLIENT FIELDS:', Object.keys(raw || {}).filter(k =>
-      /franch|client|center|lab|code/i.test(k)
-    ).map(k => [k, raw[k]]));
+
 
     const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
       .filter((t: any) => !!t.testName);
@@ -1510,6 +1517,11 @@ export class BookingStatusPage implements OnInit, OnDestroy {
   shareViaWhatsApp(item: BookingListItem): void {
     this.closeActionMenu();
 
+    if (!this.canShareWhatsApp) {
+      this.showToast('You do not have permission to share reports via WhatsApp.', 'warning');
+      return;
+    }
+
     if (this.sharingWhatsappId === item.bookingId) return;
     this.sharingWhatsappId = item.bookingId;
 
@@ -1519,21 +1531,21 @@ export class BookingStatusPage implements OnInit, OnDestroy {
 
         if (res?.success === false) {
           this.showToast(res?.message || 'Failed to share the report via WhatsApp.', 'error');
+          this.cdr.detectChanges();
           return;
         }
 
         this.showToast('Report shared via WhatsApp successfully.', 'success');
         this.cdr.detectChanges();
       }),
-      error: (err) => {
-        this.ngZone.run(() => {
-          this.sharingWhatsappId = null;
-          this.showToast(
-            err?.error?.message || 'Failed to share the report via WhatsApp. Please try again.',
-            'error'
-          );
-        });
-      }
+      error: (err) => this.ngZone.run(() => {
+        this.sharingWhatsappId = null;
+        this.showToast(
+          err?.error?.message || 'Failed to share the report via WhatsApp. Please try again.',
+          'error'
+        );
+        this.cdr.detectChanges();
+      })
     });
   }
 

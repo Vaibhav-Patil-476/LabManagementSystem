@@ -86,7 +86,8 @@
                 <div class="sc-row-with-tests">
                   <div class="sc-text-col">
                     <span class="sc-stat-label">Client / Doctor</span>
-                  <span class="sc-stat-value">{{ item.clientLabel || '(' + item.franchiseName + ')' }} Dr. {{ item.doctorName }}</span>
+                    <span class="sc-stat-value">{{ item.clientLabel || '(' + item.franchiseName + ')' }} Dr. {{
+                      item.doctorName }}</span>
                   </div>
 
                   <div class="sc-tests-row" (click)="openTestPreview(item, $event)">
@@ -138,7 +139,8 @@
                 </div>
 
                 <!-- Share Report via WhatsApp -->
-                <div class="sc-action-item" [class.item-loading]="sharingWhatsappId === item.bookingId"
+                <div class="sc-action-item" *ngIf="canShareWhatsApp"
+                  [class.item-loading]="sharingWhatsappId === item.bookingId"
                   (click)="sharingWhatsappId === item.bookingId ? null : shareViaWhatsApp(item, $event)">
                   <span class="sc-action-icon">
                     <ion-spinner name="crescent" *ngIf="sharingWhatsappId === item.bookingId"></ion-spinner>
