@@ -32,6 +32,7 @@ export interface BookingSample {
   sampleTypeId?: number;
   status?: string;
   testId?: number;
+
 }
 
 export interface BookingTest {
@@ -90,6 +91,7 @@ export interface BookingListItem {
   bookingDate?: string;
   doctorTitle?: string;
   overallReportStatus?: string;
+  clientLabel?: string;
 }
 
 @Component({
@@ -227,9 +229,9 @@ export class BookingStatusPage implements OnInit, OnDestroy {
     return this.isSearchMode ? this.searchResults : this.bookings;
   }
 
-get isFranchiseStaff(): boolean {
-  return this.role === this.ROLE_FRANCHISE_STAFF;
-}
+  get isFranchiseStaff(): boolean {
+    return this.role === this.ROLE_FRANCHISE_STAFF;
+  }
 
   /** Search server kartoy, so ithe local filter nahi. */
   private get queryFiltered(): BookingListItem[] {
@@ -776,10 +778,33 @@ get isFranchiseStaff(): boolean {
       }
     }, this.SEARCH_DEBOUNCE_MS);
   }
+  /** Web सारखं "(code) (name)" label बनवतो */
+  /** Web सारखं label: API चा centerCode (उदा. "(dar)  (dar1)") */
+  private resolveClientLabel(raw: any): string {
+    const center = String(raw?.centerCode ?? '').trim();
+    if (center && center.toLowerCase() !== 'null') {
+      // जास्तीचे spaces काढून "(dar) (dar1)" बनवतो
+      return center.replace(/\s+/g, ' ');
+    }
+
+    const pick = (...vals: any[]): string => {
+      for (const v of vals) {
+        const s = v == null ? '' : String(v).trim();
+        if (s && s.toLowerCase() !== 'null' && s.toLowerCase() !== 'self') return s;
+      }
+      return '';
+    };
+
+    const name = pick(raw.customFranchiseLab, raw.franchiseName, raw.franchise?.franchiseName);
+    return name ? `(${name})` : '(SELF)';
+  }
 
   // ---------- mapping ----------
   private mapBookingItem(raw: any): BookingListItem {
     if (!raw) return raw;
+    console.log('CLIENT FIELDS:', Object.keys(raw || {}).filter(k =>
+      /franch|client|center|lab|code/i.test(k)
+    ).map(k => [k, raw[k]]));
 
     const rawTestMappings = (raw.bookingWithTestMappings || raw.testMappings || raw.tests || [])
       .filter((t: any) => !!t.testName);
@@ -896,6 +921,7 @@ get isFranchiseStaff(): boolean {
         franchiseName: raw.customFranchiseLab?.trim() || raw.franchiseName || raw.franchise?.franchiseName || 'SELF'
       },
       overallReportStatus,
+      clientLabel: this.resolveClientLabel(raw),
       bookingDate: raw.createdOn ? new Date(raw.createdOn).toLocaleString() : undefined
     };
   }

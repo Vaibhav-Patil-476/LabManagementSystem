@@ -15,22 +15,20 @@
         </div>
       </div>
 
-<nav class="menu-nav">
-  <button type="button" class="menu-nav-item"
-          *ngIf="isAdminRole"
-          [class.active]="activeMenu === 'scan'"
+      <nav class="menu-nav">
+        <button type="button" class="menu-nav-item" *ngIf="isAdminRole" [class.active]="activeMenu === 'scan'"
           (click)="activeMenu = 'scan'; openScan()">
-    <span class="mni-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
-    <span class="mni-text">Type and Scan</span>
-    <ion-icon name="chevron-forward" class="mni-arrow"></ion-icon>
-  </button>
+          <span class="mni-icon"><ion-icon name="qr-code-outline"></ion-icon></span>
+          <span class="mni-text">Type and Scan</span>
+          <ion-icon name="chevron-forward" class="mni-arrow"></ion-icon>
+        </button>
 
-  <button type="button" class="menu-nav-item logout" (click)="logout()">
-    <span class="mni-icon"><ion-icon name="log-out-outline"></ion-icon></span>
-    <span class="mni-text">Logout</span>
-    <ion-icon name="chevron-forward" class="mni-arrow"></ion-icon>
-  </button>
-</nav>
+        <button type="button" class="menu-nav-item logout" (click)="logout()">
+          <span class="mni-icon"><ion-icon name="log-out-outline"></ion-icon></span>
+          <span class="mni-text">Logout</span>
+          <ion-icon name="chevron-forward" class="mni-arrow"></ion-icon>
+        </button>
+      </nav>
 
 
       <p class="menu-footer">Secure healthcare operations</p>
@@ -88,7 +86,7 @@
                 <div class="sc-row-with-tests">
                   <div class="sc-text-col">
                     <span class="sc-stat-label">Client / Doctor</span>
-                    <span class="sc-stat-value">({{ item.franchiseName }}) Dr. {{ item.doctorName }}</span>
+                  <span class="sc-stat-value">{{ item.clientLabel || '(' + item.franchiseName + ')' }} Dr. {{ item.doctorName }}</span>
                   </div>
 
                   <div class="sc-tests-row" (click)="openTestPreview(item, $event)">
@@ -137,6 +135,16 @@
                     <ion-icon name="download-outline"></ion-icon>
                   </span>
                   <span>Download Report</span>
+                </div>
+
+                <!-- Share Report via WhatsApp -->
+                <div class="sc-action-item" [class.item-loading]="sharingWhatsappId === item.bookingId"
+                  (click)="sharingWhatsappId === item.bookingId ? null : shareViaWhatsApp(item, $event)">
+                  <span class="sc-action-icon">
+                    <ion-spinner name="crescent" *ngIf="sharingWhatsappId === item.bookingId"></ion-spinner>
+                    <ion-icon name="logo-whatsapp" *ngIf="sharingWhatsappId !== item.bookingId"></ion-icon>
+                  </span>
+                  <span>{{ sharingWhatsappId === item.bookingId ? 'Sharing...' : 'Share via WhatsApp' }}</span>
                 </div>
               </div>
             </div>

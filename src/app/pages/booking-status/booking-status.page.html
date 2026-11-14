@@ -168,9 +168,7 @@
             <div class="bcs-row-with-tests">
               <div class="bcs-text-col">
                 <span class="bcs-label">Client / Doctor</span>
-                <span class="bcs-value">({{ item.franchise?.franchiseName || 'SELF' }}) Dr. {{ item.doctor?.doctor_name
-                  ||
-                  'self' }}</span>
+               <span class="bcs-value">{{ item.clientLabel || '(SELF)' }} Dr. {{ item.doctor?.doctor_name || 'self' }}</span>
               </div>
 
               <div class="bcard-tests-row" (click)="openTestPreview(item, $event)">
@@ -1144,15 +1142,13 @@
             With letterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
-           *ngIf="isFranchiseStaff"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="isFranchiseStaff"
             [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(true, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             F With LetterHead
           </ion-button>
 
-          <ion-button expand="block" fill="solid" class="printbill-btn-slim"
-           *ngIf="isFranchiseStaff"
+          <ion-button expand="block" fill="solid" class="printbill-btn-slim" *ngIf="isFranchiseStaff"
             [disabled]="generatingBillId === printBillItem?.bookingId" (click)="confirmPrintBill(false, true)">
             <ion-icon slot="start" name="print-outline"></ion-icon>
             F Without LetterHead

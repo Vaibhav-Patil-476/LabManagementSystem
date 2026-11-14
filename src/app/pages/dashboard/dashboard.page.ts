@@ -39,7 +39,7 @@ import {
   trashOutline, imageOutline, documentOutline, medkitOutline,
   // NEW — Services grid icons
   personAdd, checkmarkDoneCircle, cloudDownload, flask,
-  idCard, pulse, ban, storefront
+  idCard, pulse, ban, storefront, logoWhatsapp
 } from "ionicons/icons";
 
 import { AuthService } from "../../core/services/auth";
@@ -103,7 +103,7 @@ export class DashboardPage implements OnInit, OnDestroy {
   // USER / SUMMARY STATE
   // ============================================================
   user: any = {};
-activeMenu: 'scan' | 'logout' | '' = '';
+  activeMenu: 'scan' | 'logout' | '' = '';
   totalPatients = 0;
   totalBookings = 0;
   totalReports = 0;
@@ -276,6 +276,7 @@ activeMenu: 'scan' | 'logout' | '' = '';
   walletPaymentModeFilter = '';
 
   downloadingReportId: any = null;
+  sharingWhatsappId: any = null;
   printingId: any = null;
   isPrintBillModalOpen = false;
   printBillItem: any = null;
@@ -374,6 +375,7 @@ activeMenu: 'scan' | 'logout' | '' = '';
       'trash-outline': trashOutline,
       'image-outline': imageOutline,
       'document-outline': documentOutline,
+      'logo-whatsapp': logoWhatsapp,
 
 
       // NEW — Services grid icons
@@ -399,9 +401,9 @@ activeMenu: 'scan' | 'logout' | '' = '';
     return role === this.ROLE_FRANCHISE || role === ROLE.LAB_ADMIN;
   }
 
-get isFranchiseStaff(): boolean {
-  return this.authService.role === this.ROLE_FRANCHISE_STAFF;
-}
+  get isFranchiseStaff(): boolean {
+    return this.authService.role === this.ROLE_FRANCHISE_STAFF;
+  }
 
   get isFranchiseRole(): boolean {
     const r = this.roleService.currentRole;
@@ -1145,6 +1147,37 @@ get isFranchiseStaff(): boolean {
         this.globalDownloadItem = null;
       });
     }
+  }
+
+  // ---------- share report via whatsapp (global search) ----------
+  shareViaWhatsApp(item: any, event?: MouseEvent): void {
+    event?.stopPropagation();
+
+    if (this.sharingWhatsappId === item.bookingId) return;
+    this.sharingWhatsappId = item.bookingId;
+
+    this.labApi.shareReportViaWhatsApp(item.bookingId).subscribe({
+      next: (res: any) => this.ngZone.run(() => {
+        this.sharingWhatsappId = null;
+
+        if (res?.success === false) {
+          this.toastService.error('Error', res?.message || 'Failed to share the report via WhatsApp.');
+          this.cdr.detectChanges();
+          return;
+        }
+
+        this.toastService.success('Success', 'Report shared via WhatsApp successfully.');
+        this.cdr.detectChanges();
+      }),
+      error: (err: any) => this.ngZone.run(() => {
+        this.sharingWhatsappId = null;
+        this.toastService.error(
+          'Error',
+          err?.error?.message || 'Failed to share the report via WhatsApp. Please try again.'
+        );
+        this.cdr.detectChanges();
+      })
+    });
   }
 
   // ============================================================
@@ -2426,6 +2459,26 @@ get isFranchiseStaff(): boolean {
     return v.includes('outsource') || x?.isOutsource === true || x?.outsource === true || x?.outsourced === true;
   }
 
+  /** Web सारखं "(code) (name)" label बनवतो */
+/** Web सारखं label: API चा centerCode (उदा. "(dar)  (dar1)") */
+private resolveClientLabel(raw: any): string {
+  const center = String(raw?.centerCode ?? '').trim();
+  if (center && center.toLowerCase() !== 'null') {
+    // जास्तीचे spaces काढून "(dar) (dar1)" बनवतो
+    return center.replace(/\s+/g, ' ');
+  }
+
+  const pick = (...vals: any[]): string => {
+    for (const v of vals) {
+      const s = v == null ? '' : String(v).trim();
+      if (s && s.toLowerCase() !== 'null' && s.toLowerCase() !== 'self') return s;
+    }
+    return '';
+  };
+
+  const name = pick(raw.customFranchiseLab, raw.franchiseName, raw.franchise?.franchiseName);
+  return name ? `(${name})` : '(SELF)';
+}
   // ============================================================
   // BOOKING MAPPING / STATUS LABELS
   // ============================================================
@@ -2455,7 +2508,7 @@ get isFranchiseStaff(): boolean {
         testId: t.testId,
         testMappingId: t.testMappingId ?? t.bookingWithTestMappingId,
         testName: (t.testName || '').trim(),
-
+clientLabel: this.resolveClientLabel(raw),
         testPrice: this.isAdminRole
           ? (t.price2 ?? t.testPrice ?? t.test_price ?? 0)
           : (t.assignedPrice ?? t.testPrice ?? t.test_price ?? t.price2 ?? 0),
